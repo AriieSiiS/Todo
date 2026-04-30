@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "todo": {
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\ruta\\a\\Todo\\mcp_server\\start_mcp.ps1"
+      ]
+    }
+  }
+}

@@ -1,0 +1,124 @@
+import 'dart:convert';
+
+import '../entities/category.dart';
+import '../entities/calendar_models.dart';
+import '../entities/enums.dart';
+import '../entities/json_helpers.dart';
+import '../entities/project.dart';
+import '../entities/quick_note.dart';
+import '../entities/settings.dart';
+import '../entities/task.dart';
+
+class AppStateSnapshot {
+  const AppStateSnapshot({
+    required this.tasks,
+    required this.categories,
+    required this.projects,
+    required this.notes,
+    required this.daySettings,
+    required this.notificationSettings,
+    required this.calendarSettings,
+    required this.section,
+    required this.todaySort,
+    this.calendarEvents = const <CalendarEventModel>[],
+    this.visualMode = AppVisualMode.classic,
+    this.updatedAt,
+    this.schemaVersion = 1,
+    this.lastModifiedBy = '',
+  });
+
+  final List<TaskModel> tasks;
+  final List<CategoryModel> categories;
+  final List<ProjectModel> projects;
+  final List<QuickNote> notes;
+  final List<CalendarEventModel> calendarEvents;
+  final DaySettings daySettings;
+  final DeviceNotificationSettings notificationSettings;
+  final CalendarIntegrationSettings calendarSettings;
+  final AppSection section;
+  final TodaySort todaySort;
+  final AppVisualMode visualMode;
+  final DateTime? updatedAt;
+  final int schemaVersion;
+  final String lastModifiedBy;
+
+  DateTime get resolvedUpdatedAt =>
+      updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'tasks': tasks.map((task) => task.toJson()).toList(),
+      'categories': categories.map((category) => category.toJson()).toList(),
+      'projects': projects.map((project) => project.toJson()).toList(),
+      'notes': notes.map((note) => note.toJson()).toList(),
+      'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
+      'daySettings': daySettings.toJson(),
+      'notificationSettings': notificationSettings.toJson(),
+      'calendarSettings': calendarSettings.toJson(),
+      'section': section.name,
+      'todaySort': todaySort.name,
+      'visualMode': visualMode.name,
+      'updatedAt': updatedAt?.toIso8601String(),
+      'schemaVersion': schemaVersion,
+      'lastModifiedBy': lastModifiedBy,
+    };
+  }
+
+  String toEncodedJson() => jsonEncode(toJson());
+
+  factory AppStateSnapshot.fromJson(Map<String, dynamic> json) {
+    return AppStateSnapshot(
+      tasks: (json['tasks'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => TaskModel.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      categories: (json['categories'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => CategoryModel.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      projects: (json['projects'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => ProjectModel.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      notes: (json['notes'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => QuickNote.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      calendarEvents:
+          (json['calendarEvents'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => CalendarEventModel.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      daySettings: DaySettings.fromJson(
+          (json['daySettings'] as Map<dynamic, dynamic>? ??
+                  const <dynamic, dynamic>{})
+              .cast<String, dynamic>()),
+      notificationSettings: DeviceNotificationSettings.fromJson(
+        (json['notificationSettings'] as Map<dynamic, dynamic>? ??
+                const <dynamic, dynamic>{})
+            .cast<String, dynamic>(),
+      ),
+      calendarSettings: CalendarIntegrationSettings.fromJson(
+        (json['calendarSettings'] as Map<dynamic, dynamic>? ??
+                const <dynamic, dynamic>{})
+            .cast<String, dynamic>(),
+      ),
+      section: enumByName(
+          AppSection.values, json['section'] as String?, AppSection.today),
+      todaySort: enumByName(
+          TodaySort.values, json['todaySort'] as String?, TodaySort.manual),
+      visualMode: enumByName(AppVisualMode.values,
+          json['visualMode'] as String?, AppVisualMode.classic),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+      schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
+      lastModifiedBy: json['lastModifiedBy'] as String? ?? '',
+    );
+  }
+
+  factory AppStateSnapshot.fromEncodedJson(String encoded) {
+    return AppStateSnapshot.fromJson(
+        (jsonDecode(encoded) as Map<dynamic, dynamic>).cast<String, dynamic>());
+  }
+}

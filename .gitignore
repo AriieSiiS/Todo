@@ -1,0 +1,13 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.idea/
+.vscode/
+build/
+coverage/
+pubspec.lock
+*.iml
+mcp_server/.env
+.codex_tmp_py/
+runtime/
