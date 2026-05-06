@@ -218,7 +218,7 @@ class IoCalendarService implements CalendarService {
             (item) => CalendarListItemModel(
               id: ((item as Map<dynamic, dynamic>)['id'] as String?) ??
                   'primary',
-              name: (item['name'] as String?) ?? 'Primary',
+              name: (item['name'] as String?) ?? 'Principal',
               primary: item['primary'] as bool? ?? false,
             ),
           )

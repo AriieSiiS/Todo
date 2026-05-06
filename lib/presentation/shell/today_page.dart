@@ -29,7 +29,7 @@ class _LegacyTodayPage extends StatelessWidget {
           tone: const Color(0xFF6E835B),
         ),
         _MetricCard(
-          label: 'Notas inbox',
+          label: 'Notas de entrada',
           value: notes.length.toString(),
           detail: 'Capturas que siguen sin procesar',
           tone: const Color(0xFFB2705A),
@@ -71,7 +71,7 @@ class _LegacyTodayPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Captura rapida',
+              const Text('Captura rápida',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               _QuickCaptureBar(controller: controller),
@@ -155,7 +155,7 @@ class _LegacyTodayPage extends StatelessWidget {
               Row(
                 children: [
                   const Expanded(
-                    child: Text('Inbox de ideas',
+                    child: Text('Entrada de ideas',
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w700)),
                   ),
@@ -249,25 +249,35 @@ class _TodayPageState extends State<TodayPage> {
   String? _categoryFilterId;
   bool _showCompleted = false;
   bool _subtasksExpanded = true;
+  bool _selectionMode = false;
+  late DateTime _selectedDay;
+  final Set<String> _selectedTaskIds = <String>{};
 
   TodoWorkspace get controller => widget.controller;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedDay = controller.logicalDate();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final logicalToday = controller.logicalDate();
-    final allToday = controller.tasksForToday();
-    final visibleToday = _applyTodayFilter(allToday);
+    final allDayTasks = controller.tasksForDate(_selectedDay);
+    final visibleToday = _applyTodayFilter(allDayTasks);
     final notes = controller.inboxNotes();
     final todayCompleted = controller.completedTasks().where((task) {
       final scheduled = task.scheduledAt;
       return !task.isSubtask &&
           scheduled != null &&
-          _sameDay(scheduled, logicalToday);
+          _sameDay(scheduled, _selectedDay);
     }).toList();
+    final selectedTasks = _selectedTasks();
     final wide = MediaQuery.sizeOf(context).width >= 1240;
-    final progress = allToday.isEmpty
+    final progress = allDayTasks.isEmpty
         ? 0.0
-        : todayCompleted.length / (allToday.length + todayCompleted.length);
+        : todayCompleted.length / (allDayTasks.length + todayCompleted.length);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
@@ -276,6 +286,8 @@ class _TodayPageState extends State<TodayPage> {
         children: [
           _ReferenceTodayHeader(
             controller: controller,
+            selectedDay: _selectedDay,
+            logicalToday: logicalToday,
             activeFilterLabel: _activeFilterLabel(),
             activeFilterId: _categoryFilterId,
             onCreateTask: () => showTaskEditor(context, controller),
@@ -293,6 +305,8 @@ class _TodayPageState extends State<TodayPage> {
                         flex: 5,
                         child: _ReferenceTodayBoard(
                           controller: controller,
+                          selectedDay: _selectedDay,
+                          logicalToday: logicalToday,
                           tasks: visibleToday,
                           hasActiveFilter: _categoryFilterId != null,
                           showFilterBadge: _categoryFilterId != null,
@@ -304,11 +318,31 @@ class _TodayPageState extends State<TodayPage> {
                           },
                           completedTasks: todayCompleted,
                           showCompleted: _showCompleted,
+                          selectionMode: _selectionMode,
+                          selectedTaskIds: _selectedTaskIds,
+                          selectedCount: selectedTasks.length,
+                          selectedHasActive: selectedTasks.any(
+                              (task) => task.status != TaskStatus.completed),
+                          selectedHasCompleted: selectedTasks.any(
+                              (task) => task.status == TaskStatus.completed),
                           onToggleCompleted: () {
                             setState(() {
                               _showCompleted = !_showCompleted;
                             });
                           },
+                          onToggleSelectionMode: _toggleSelectionMode,
+                          onToggleTaskSelection: _toggleTaskSelection,
+                          onStartSelection: _startSelection,
+                          onSelectVisible: () => _toggleVisibleSelection(
+                            [
+                              ...visibleToday,
+                              if (_showCompleted) ...todayCompleted,
+                            ],
+                          ),
+                          onMoveSelectedToTomorrow: _moveSelectedToTomorrow,
+                          onCompleteSelected: _completeSelectedTasks,
+                          onReopenSelected: _reopenSelectedTasks,
+                          onDeleteSelected: _deleteSelectedTasks,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -322,14 +356,17 @@ class _TodayPageState extends State<TodayPage> {
                             child: Column(
                               children: [
                                 _ReferenceWeekPanel(
-                                    controller: controller,
-                                    logicalToday: logicalToday),
+                                  controller: controller,
+                                  logicalToday: logicalToday,
+                                  selectedDay: _selectedDay,
+                                  onSelectDay: _setSelectedDay,
+                                ),
                                 const SizedBox(height: 12),
                                 _ReferenceInboxPanel(
                                     controller: controller, notes: notes),
                                 const SizedBox(height: 12),
                                 _ReferenceSummaryPanel(
-                                  totalTasks: allToday.length,
+                                  totalTasks: allDayTasks.length,
                                   completedTasks: todayCompleted.length,
                                   progress: progress,
                                 ),
@@ -344,6 +381,8 @@ class _TodayPageState extends State<TodayPage> {
                     children: [
                       _ReferenceTodayBoard(
                         controller: controller,
+                        selectedDay: _selectedDay,
+                        logicalToday: logicalToday,
                         tasks: visibleToday,
                         hasActiveFilter: _categoryFilterId != null,
                         showFilterBadge: _categoryFilterId != null,
@@ -355,21 +394,45 @@ class _TodayPageState extends State<TodayPage> {
                         },
                         completedTasks: todayCompleted,
                         showCompleted: _showCompleted,
+                        selectionMode: _selectionMode,
+                        selectedTaskIds: _selectedTaskIds,
+                        selectedCount: selectedTasks.length,
+                        selectedHasActive: selectedTasks
+                            .any((task) => task.status != TaskStatus.completed),
+                        selectedHasCompleted: selectedTasks
+                            .any((task) => task.status == TaskStatus.completed),
                         onToggleCompleted: () {
                           setState(() {
                             _showCompleted = !_showCompleted;
                           });
                         },
+                        onToggleSelectionMode: _toggleSelectionMode,
+                        onToggleTaskSelection: _toggleTaskSelection,
+                        onStartSelection: _startSelection,
+                        onSelectVisible: () => _toggleVisibleSelection(
+                          [
+                            ...visibleToday,
+                            if (_showCompleted) ...todayCompleted,
+                          ],
+                        ),
+                        onMoveSelectedToTomorrow: _moveSelectedToTomorrow,
+                        onCompleteSelected: _completeSelectedTasks,
+                        onReopenSelected: _reopenSelectedTasks,
+                        onDeleteSelected: _deleteSelectedTasks,
                       ),
                       const SizedBox(height: 16),
                       _ReferenceWeekPanel(
-                          controller: controller, logicalToday: logicalToday),
+                        controller: controller,
+                        logicalToday: logicalToday,
+                        selectedDay: _selectedDay,
+                        onSelectDay: _setSelectedDay,
+                      ),
                       const SizedBox(height: 16),
                       _ReferenceInboxPanel(
                           controller: controller, notes: notes),
                       const SizedBox(height: 16),
                       _ReferenceSummaryPanel(
-                        totalTasks: allToday.length,
+                        totalTasks: allDayTasks.length,
                         completedTasks: todayCompleted.length,
                         progress: progress,
                       ),
@@ -403,6 +466,140 @@ class _TodayPageState extends State<TodayPage> {
     }
     setState(() {
       _categoryFilterId = selected;
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  void _setSelectedDay(DateTime selected) {
+    if (!mounted || _sameDay(selected, _selectedDay)) {
+      return;
+    }
+    setState(() {
+      _selectedDay = DateTime(selected.year, selected.month, selected.day);
+      _showCompleted = false;
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  List<TaskModel> _selectedTasks() {
+    return _selectedTaskIds
+        .map(controller.taskById)
+        .whereType<TaskModel>()
+        .toList();
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _selectionMode = !_selectionMode;
+      if (!_selectionMode) {
+        _selectedTaskIds.clear();
+      }
+    });
+  }
+
+  void _startSelection(String taskId) {
+    setState(() {
+      _selectionMode = true;
+      _selectedTaskIds.add(taskId);
+    });
+  }
+
+  void _toggleTaskSelection(String taskId) {
+    setState(() {
+      _selectionMode = true;
+      if (_selectedTaskIds.contains(taskId)) {
+        _selectedTaskIds.remove(taskId);
+      } else {
+        _selectedTaskIds.add(taskId);
+      }
+      if (_selectedTaskIds.isEmpty) {
+        _selectionMode = false;
+      }
+    });
+  }
+
+  void _toggleVisibleSelection(List<TaskModel> tasks) {
+    final ids = tasks.map((task) => task.id).toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectionMode = true;
+      final allSelected = ids.every(_selectedTaskIds.contains);
+      if (allSelected) {
+        _selectedTaskIds.removeAll(ids);
+      } else {
+        _selectedTaskIds.addAll(ids);
+      }
+      if (_selectedTaskIds.isEmpty) {
+        _selectionMode = false;
+      }
+    });
+  }
+
+  Future<void> _moveSelectedToTomorrow() async {
+    final ids = _selectedTaskIds.toList(growable: false);
+    if (ids.isEmpty) {
+      return;
+    }
+    await controller.moveTasksToDay(
+      ids,
+      _selectedDay.add(const Duration(days: 1)),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  Future<void> _completeSelectedTasks() async {
+    final ids = _selectedTasks()
+        .where((task) => task.status != TaskStatus.completed)
+        .map((task) => task.id)
+        .toList(growable: false);
+    if (ids.isEmpty) {
+      return;
+    }
+    await controller.completeTasks(ids);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  void _reopenSelectedTasks() {
+    final ids = _selectedTasks()
+        .where((task) => task.status == TaskStatus.completed)
+        .map((task) => task.id)
+        .toList(growable: false);
+    if (ids.isEmpty) {
+      return;
+    }
+    controller.reopenTasks(ids);
+    setState(() {
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  void _deleteSelectedTasks() {
+    final ids = _selectedTaskIds.toList(growable: false);
+    if (ids.isEmpty) {
+      return;
+    }
+    controller.deleteTasks(ids);
+    setState(() {
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+      _showCompleted = false;
     });
   }
 }
@@ -410,6 +607,8 @@ class _TodayPageState extends State<TodayPage> {
 class _ReferenceTodayHeader extends StatelessWidget {
   const _ReferenceTodayHeader({
     required this.controller,
+    required this.selectedDay,
+    required this.logicalToday,
     required this.activeFilterId,
     required this.activeFilterLabel,
     required this.onCreateTask,
@@ -418,6 +617,8 @@ class _ReferenceTodayHeader extends StatelessWidget {
     required this.onReorder,
   });
   final TodoWorkspace controller;
+  final DateTime selectedDay;
+  final DateTime logicalToday;
   final String? activeFilterId;
   final String activeFilterLabel;
   final VoidCallback onCreateTask;
@@ -427,8 +628,8 @@ class _ReferenceTodayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
-    final logicalToday = controller.logicalDate();
     final narrow = MediaQuery.sizeOf(context).width < 1080;
+    final heading = 'Hoy';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -439,10 +640,11 @@ class _ReferenceTodayHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Hoy', style: Theme.of(context).textTheme.displaySmall),
+                  Text(heading,
+                      style: Theme.of(context).textTheme.displaySmall),
                   const SizedBox(height: 6),
                   Text(
-                    '${logicalToday.day}/${logicalToday.month}/${logicalToday.year}',
+                    '${selectedDay.day}/${selectedDay.month}/${selectedDay.year}',
                     style: TextStyle(
                         color: visuals.textMuted, fontSize: 15, height: 1.2),
                   ),
@@ -518,7 +720,7 @@ class _ReferenceHeaderControls extends StatelessWidget {
             CheckedPopupMenuItem<String?>(
               value: null,
               checked: activeFilterId == null,
-              child: const Text('Todas las categorias'),
+              child: const Text('Todas las categorías'),
             ),
             ...activeCategories.map(
               (category) => CheckedPopupMenuItem<String?>(
@@ -563,7 +765,7 @@ class _ReferenceHeaderControls extends StatelessWidget {
             CheckedPopupMenuItem<String>(
               value: TodaySort.category.name,
               checked: controller.todaySort == TodaySort.category,
-              child: const Text('Categoria'),
+              child: const Text('Categoría'),
             ),
             CheckedPopupMenuItem<String>(
               value: TodaySort.project.name,
@@ -649,6 +851,8 @@ class _TodayHeaderButton extends StatelessWidget {
 class _ReferenceTodayBoard extends StatelessWidget {
   const _ReferenceTodayBoard({
     required this.controller,
+    required this.selectedDay,
+    required this.logicalToday,
     required this.tasks,
     required this.hasActiveFilter,
     required this.showFilterBadge,
@@ -657,9 +861,24 @@ class _ReferenceTodayBoard extends StatelessWidget {
     required this.completedTasks,
     required this.showCompleted,
     required this.onToggleCompleted,
+    required this.selectionMode,
+    required this.selectedTaskIds,
+    required this.selectedCount,
+    required this.selectedHasActive,
+    required this.selectedHasCompleted,
+    required this.onToggleSelectionMode,
+    required this.onToggleTaskSelection,
+    required this.onStartSelection,
+    required this.onSelectVisible,
+    required this.onMoveSelectedToTomorrow,
+    required this.onCompleteSelected,
+    required this.onReopenSelected,
+    required this.onDeleteSelected,
   });
 
   final TodoWorkspace controller;
+  final DateTime selectedDay;
+  final DateTime logicalToday;
   final List<TaskModel> tasks;
   final bool hasActiveFilter;
   final bool showFilterBadge;
@@ -668,6 +887,19 @@ class _ReferenceTodayBoard extends StatelessWidget {
   final List<TaskModel> completedTasks;
   final bool showCompleted;
   final VoidCallback onToggleCompleted;
+  final bool selectionMode;
+  final Set<String> selectedTaskIds;
+  final int selectedCount;
+  final bool selectedHasActive;
+  final bool selectedHasCompleted;
+  final VoidCallback onToggleSelectionMode;
+  final ValueChanged<String> onToggleTaskSelection;
+  final ValueChanged<String> onStartSelection;
+  final VoidCallback onSelectVisible;
+  final Future<void> Function() onMoveSelectedToTomorrow;
+  final Future<void> Function() onCompleteSelected;
+  final VoidCallback onReopenSelected;
+  final VoidCallback onDeleteSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -684,7 +916,9 @@ class _ReferenceTodayBoard extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Tareas de hoy',
+                        _sameDay(selectedDay, logicalToday)
+                            ? 'Tareas de hoy'
+                            : 'Tareas del día',
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
@@ -708,6 +942,13 @@ class _ReferenceTodayBoard extends StatelessWidget {
                       ],
                       const Spacer(),
                       TextButton.icon(
+                        onPressed: onToggleSelectionMode,
+                        icon: Icon(selectionMode
+                            ? Icons.close_rounded
+                            : Icons.checklist_rounded),
+                        label: Text(selectionMode ? 'Cancelar' : 'Seleccionar'),
+                      ),
+                      TextButton.icon(
                         onPressed: onToggleSubtasks,
                         icon: Icon(subtasksExpanded
                             ? Icons.expand_less_rounded
@@ -718,13 +959,65 @@ class _ReferenceTodayBoard extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 1),
+                if (selectionMode)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F2E8),
+                      border: Border(
+                        bottom: BorderSide(color: visuals.panelBorder),
+                      ),
+                    ),
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          '$selectedCount seleccionadas',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        OutlinedButton(
+                          onPressed: onSelectVisible,
+                          child: const Text('Seleccionar visibles'),
+                        ),
+                        if (selectedHasActive)
+                          FilledButton.tonalIcon(
+                            onPressed: onMoveSelectedToTomorrow,
+                            icon: const Icon(Icons.east_rounded),
+                            label: const Text('Mañana'),
+                          ),
+                        if (selectedHasActive)
+                          FilledButton.tonalIcon(
+                            onPressed: onCompleteSelected,
+                            icon: const Icon(Icons.check_rounded),
+                            label: const Text('Completar'),
+                          ),
+                        if (selectedHasCompleted)
+                          FilledButton.tonalIcon(
+                            onPressed: onReopenSelected,
+                            icon: const Icon(Icons.undo_rounded),
+                            label: const Text('Reabrir'),
+                          ),
+                        FilledButton.tonalIcon(
+                          onPressed: onDeleteSelected,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          label: const Text('Borrar'),
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: tasks.isEmpty
                       ? Center(
                           child: Text(
                             hasActiveFilter
                                 ? 'No hay tareas para este filtro.'
-                                : 'No hay tareas para hoy.',
+                                : 'No hay tareas para este día.',
                             style: TextStyle(color: visuals.textMuted),
                           ),
                         )
@@ -738,6 +1031,11 @@ class _ReferenceTodayBoard extends StatelessWidget {
                               controller: controller,
                               task: task,
                               subtasksExpanded: subtasksExpanded,
+                              selectionMode: selectionMode,
+                              selected: selectedTaskIds.contains(task.id),
+                              selectedTaskIds: selectedTaskIds,
+                              onToggleSelection: onToggleTaskSelection,
+                              onStartSelection: onStartSelection,
                             );
                           },
                         ),
@@ -778,7 +1076,7 @@ class _ReferenceTodayBoard extends StatelessWidget {
                 if (completedTasks.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(18),
-                    child: Text('Todavia no hay tareas completadas.',
+                    child: Text('Todavía no hay tareas completadas.',
                         style: TextStyle(color: visuals.textMuted)),
                   )
                 else
@@ -786,7 +1084,13 @@ class _ReferenceTodayBoard extends StatelessWidget {
                     (task) => Column(
                       children: [
                         _ReferenceCompletedRow(
-                            controller: controller, task: task),
+                          controller: controller,
+                          task: task,
+                          selectionMode: selectionMode,
+                          selected: selectedTaskIds.contains(task.id),
+                          onToggleSelection: onToggleTaskSelection,
+                          onStartSelection: onStartSelection,
+                        ),
                         if (task != completedTasks.last)
                           const Divider(height: 1),
                       ],
@@ -806,11 +1110,21 @@ class _ReferenceTaskRow extends StatelessWidget {
     required this.controller,
     required this.task,
     required this.subtasksExpanded,
+    required this.selectionMode,
+    required this.selected,
+    required this.selectedTaskIds,
+    required this.onToggleSelection,
+    required this.onStartSelection,
   });
 
   final TodoWorkspace controller;
   final TaskModel task;
   final bool subtasksExpanded;
+  final bool selectionMode;
+  final bool selected;
+  final Set<String> selectedTaskIds;
+  final ValueChanged<String> onToggleSelection;
+  final ValueChanged<String> onStartSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -835,14 +1149,23 @@ class _ReferenceTaskRow extends StatelessWidget {
             details.globalPosition,
           ),
           child: InkWell(
-            onTap: () => showTaskEditor(context, controller, initialTask: task),
+            onTap: selectionMode
+                ? () => onToggleSelection(task.id)
+                : () => showTaskEditor(context, controller, initialTask: task),
+            onLongPress: selectionMode
+                ? () => onToggleSelection(task.id)
+                : () => onStartSelection(task.id),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
               child: Row(
                 children: [
                   Checkbox(
-                    value: task.status == TaskStatus.completed,
-                    onChanged: (_) => controller.completeTask(task.id),
+                    value: selectionMode
+                        ? selected
+                        : task.status == TaskStatus.completed,
+                    onChanged: (_) => selectionMode
+                        ? onToggleSelection(task.id)
+                        : controller.completeTask(task.id),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -874,30 +1197,32 @@ class _ReferenceTaskRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _ReferenceTaskStateGlyph(task: task),
+                  if (!selectionMode) _ReferenceTaskStateGlyph(task: task),
                   const SizedBox(width: 20),
                   SizedBox(
                     width: 66,
-                    child: Text(
-                      task.scheduledAt == null
-                          ? '--:--'
-                          : _timeLabel(task.scheduledAt!),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          color: visuals.textMuted,
-                          fontWeight: FontWeight.w600),
-                    ),
+                    child: task.scheduledAt != null &&
+                            _hasVisibleTime(task.scheduledAt!)
+                        ? Text(
+                            _timeLabel(task.scheduledAt!),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                                color: visuals.textMuted,
+                                fontWeight: FontWeight.w600),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                   const SizedBox(width: 10),
                   _ReferencePriorityFlag(priority: task.priority),
                   const SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_horiz_rounded),
-                    onSelected: (value) =>
-                        _handleTaskAction(context, controller, task, value),
-                    itemBuilder: (context) =>
-                        _taskActionItems(controller, task),
-                  ),
+                  if (!selectionMode)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_horiz_rounded),
+                      onSelected: (value) =>
+                          _handleTaskAction(context, controller, task, value),
+                      itemBuilder: (context) =>
+                          _taskActionItems(controller, task),
+                    ),
                 ],
               ),
             ),
@@ -908,6 +1233,10 @@ class _ReferenceTaskRow extends StatelessWidget {
             (subtask) => _ReferenceSubtaskRow(
               controller: controller,
               task: subtask,
+              selectionMode: selectionMode,
+              selected: selectedTaskIds.contains(subtask.id),
+              onToggleSelection: onToggleSelection,
+              onStartSelection: onStartSelection,
             ),
           ),
       ],
@@ -919,10 +1248,18 @@ class _ReferenceSubtaskRow extends StatelessWidget {
   const _ReferenceSubtaskRow({
     required this.controller,
     required this.task,
+    required this.selectionMode,
+    required this.selected,
+    required this.onToggleSelection,
+    required this.onStartSelection,
   });
 
   final TodoWorkspace controller;
   final TaskModel task;
+  final bool selectionMode;
+  final bool selected;
+  final ValueChanged<String> onToggleSelection;
+  final ValueChanged<String> onStartSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -942,7 +1279,12 @@ class _ReferenceSubtaskRow extends StatelessWidget {
           details.globalPosition,
         ),
         child: InkWell(
-          onTap: () => showTaskEditor(context, controller, initialTask: task),
+          onTap: selectionMode
+              ? () => onToggleSelection(task.id)
+              : () => showTaskEditor(context, controller, initialTask: task),
+          onLongPress: selectionMode
+              ? () => onToggleSelection(task.id)
+              : () => onStartSelection(task.id),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(58, 10, 18, 10),
             child: Row(
@@ -960,8 +1302,12 @@ class _ReferenceSubtaskRow extends StatelessWidget {
                   ),
                 ),
                 Checkbox(
-                  value: task.status == TaskStatus.completed,
-                  onChanged: (_) => controller.completeTask(task.id),
+                  value: selectionMode
+                      ? selected
+                      : task.status == TaskStatus.completed,
+                  onChanged: (_) => selectionMode
+                      ? onToggleSelection(task.id)
+                      : controller.completeTask(task.id),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -973,21 +1319,24 @@ class _ReferenceSubtaskRow extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 66,
-                  child: Text(
-                    task.scheduledAt == null
-                        ? '--:--'
-                        : _timeLabel(task.scheduledAt!),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(color: visuals.textMuted),
-                  ),
+                  child: task.scheduledAt != null &&
+                          _hasVisibleTime(task.scheduledAt!)
+                      ? Text(
+                          _timeLabel(task.scheduledAt!),
+                          textAlign: TextAlign.right,
+                          style: TextStyle(color: visuals.textMuted),
+                        )
+                      : const SizedBox.shrink(),
                 ),
                 const SizedBox(width: 12),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz_rounded),
-                  onSelected: (value) =>
-                      _handleTaskAction(context, controller, task, value),
-                  itemBuilder: (context) => _taskActionItems(controller, task),
-                ),
+                if (!selectionMode)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    onSelected: (value) =>
+                        _handleTaskAction(context, controller, task, value),
+                    itemBuilder: (context) =>
+                        _taskActionItems(controller, task),
+                  ),
               ],
             ),
           ),
@@ -1001,9 +1350,13 @@ class _ReferenceWeekPanel extends StatelessWidget {
   const _ReferenceWeekPanel({
     required this.controller,
     required this.logicalToday,
+    required this.selectedDay,
+    required this.onSelectDay,
   });
   final TodoWorkspace controller;
   final DateTime logicalToday;
+  final DateTime selectedDay;
+  final ValueChanged<DateTime> onSelectDay;
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
@@ -1028,34 +1381,66 @@ class _ReferenceWeekPanel extends StatelessWidget {
           const SizedBox(height: 8),
           ...List<Widget>.generate(7, (index) {
             final day = logicalToday.add(Duration(days: index));
+            final isSelected = _sameDay(day, selectedDay);
             final count = controller
                 .tasksForDate(day)
                 .where((task) => task.scheduledAt != null)
                 .length;
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color:
-                      index == 0 ? const Color(0xFFF1ECE3) : Colors.transparent,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onSelectDay(day),
                   borderRadius: BorderRadius.circular(14),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(_weekdayLabel(day))),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5DFD5),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text('$count'),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFF1ECE3)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: isSelected
+                          ? Border.all(color: const Color(0xFFE3D4C2))
+                          : null,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _weekdayLabel(day),
+                              style: TextStyle(
+                                color: visuals.textStrong,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFD8D0C4)
+                                  : const Color(0xFFE5DFD5),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                color: visuals.textStrong,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1080,7 +1465,7 @@ List<PopupMenuEntry<String>> _taskActionItems(
     const PopupMenuItem(value: 'edit', child: Text('Editar')),
     if (!task.isSubtask)
       const PopupMenuItem(value: 'subtask', child: Text('Crear subtarea')),
-    const PopupMenuItem(value: 'tomorrow', child: Text('Mover a manana')),
+    const PopupMenuItem(value: 'tomorrow', child: Text('Mover a mañana')),
     if (controller.isCalendarConnected) ...[
       const PopupMenuItem(value: 'sync', child: Text('Sincronizar con Google')),
       if (task.calendarLink != null)
@@ -1162,7 +1547,7 @@ class _ReferenceInboxPanel extends StatelessWidget {
                 Icon(Icons.edit_note_rounded, color: visuals.accent),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Nota rapida',
+                  child: Text('Nota rápida',
                       style: Theme.of(context).textTheme.titleMedium),
                 ),
                 IconButton(
@@ -1262,7 +1647,7 @@ class _ReferenceInboxNoteRow extends StatelessWidget {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(value: 'open', child: Text('Abrir en Inbox')),
+              PopupMenuItem(value: 'open', child: Text('Abrir en Entrada')),
               PopupMenuItem(value: 'edit', child: Text('Editar nota')),
               PopupMenuItem(value: 'archive', child: Text('Archivar')),
             ],
@@ -1303,7 +1688,7 @@ class _ReferenceSummaryPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Resumen rapido',
+                  'Resumen rápido',
                   style: Theme.of(context)
                       .textTheme
                       .headlineMedium
@@ -1313,57 +1698,28 @@ class _ReferenceSummaryPanel extends StatelessWidget {
               Icon(Icons.insights_outlined, color: visuals.accent, size: 20),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                  child: _ReferenceSummaryDatum(
-                      value: '$totalTasks', label: 'Tareas hoy')),
+                child: _ReferenceSummaryDatum(
+                  value: '$totalTasks',
+                  label: 'Tareas hoy',
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                  child: _ReferenceSummaryDatum(
-                      value: '$completedTasks', label: 'Completadas')),
-              SizedBox(
-                width: 88,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$percent%',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(fontSize: 32),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Progreso del dia',
-                      style: TextStyle(color: visuals.textMuted, height: 1.2),
-                    ),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            const CircularProgressIndicator(
-                              value: 1,
-                              strokeWidth: 4,
-                              color: Color(0xFFE8E1D6),
-                            ),
-                            CircularProgressIndicator(
-                              value: progress.clamp(0, 1),
-                              strokeWidth: 4,
-                              color: const Color(0xFF70835D),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                child: _ReferenceSummaryDatum(
+                  value: '$completedTasks',
+                  label: 'Completadas',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ReferenceSummaryDatum(
+                  value: '$percent%',
+                  label: 'Progreso\ndel día',
                 ),
               ),
             ],
@@ -1385,17 +1741,49 @@ class _ReferenceSummaryDatum extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value,
-            style: Theme.of(context)
-                .textTheme
-                .headlineMedium
-                ?.copyWith(fontSize: 32)),
-        const SizedBox(height: 4),
-        Text(label),
-      ],
+    final labelLines = label.contains('\n') ? 2 : 1;
+    return SizedBox(
+      height: 72,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 36,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontSize: 31, height: 1),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 30,
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: labelLines,
+                softWrap: labelLines > 1,
+                style: TextStyle(
+                  color: context.visuals.textMuted,
+                  fontSize: 13,
+                  height: 1.12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1404,10 +1792,18 @@ class _ReferenceCompletedRow extends StatelessWidget {
   const _ReferenceCompletedRow({
     required this.controller,
     required this.task,
+    required this.selectionMode,
+    required this.selected,
+    required this.onToggleSelection,
+    required this.onStartSelection,
   });
 
   final TodoWorkspace controller;
   final TaskModel task;
+  final bool selectionMode;
+  final bool selected;
+  final ValueChanged<String> onToggleSelection;
+  final ValueChanged<String> onStartSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -1415,47 +1811,65 @@ class _ReferenceCompletedRow extends StatelessWidget {
     final category = task.categoryIds.isNotEmpty
         ? controller.categoryById(task.categoryIds.first)
         : null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_outline_rounded,
-              color: Color(0xFF70835D)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              task.title,
-              style: TextStyle(
-                color: visuals.textMuted,
-                decoration: TextDecoration.lineThrough,
+    return InkWell(
+      onTap: selectionMode ? () => onToggleSelection(task.id) : null,
+      onLongPress: selectionMode
+          ? () => onToggleSelection(task.id)
+          : () => onStartSelection(task.id),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        child: Row(
+          children: [
+            if (selectionMode)
+              Checkbox(
+                value: selected,
+                onChanged: (_) => onToggleSelection(task.id),
+              )
+            else
+              IconButton(
+                tooltip: 'Reabrir tarea',
+                onPressed: () => controller.reopenTask(task.id),
+                icon: const Icon(Icons.check_circle_outline_rounded),
+                color: const Color(0xFF70835D),
+              ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                task.title,
+                style: TextStyle(
+                  color: visuals.textMuted,
+                  decoration: TextDecoration.lineThrough,
+                ),
               ),
             ),
-          ),
-          if (category != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: _ReferenceTagChip(
-                label: category.name,
-                color: category.color.withValues(alpha: 0.15),
-                textColor: category.color,
+            if (category != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: _ReferenceTagChip(
+                  label: category.name,
+                  color: category.color.withValues(alpha: 0.15),
+                  textColor: category.color,
+                ),
               ),
+            SizedBox(
+              width: 62,
+              child:
+                  task.scheduledAt != null && _hasVisibleTime(task.scheduledAt!)
+                      ? Text(
+                          _timeLabel(task.scheduledAt!),
+                          textAlign: TextAlign.right,
+                          style: TextStyle(color: visuals.textMuted),
+                        )
+                      : const SizedBox.shrink(),
             ),
-          SizedBox(
-            width: 62,
-            child: Text(
-              task.scheduledAt == null
-                  ? '--:--'
-                  : _timeLabel(task.scheduledAt!),
-              textAlign: TextAlign.right,
-              style: TextStyle(color: visuals.textMuted),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: () => controller.reopenTask(task.id),
-            child: const Text('Reabrir'),
-          ),
-        ],
+            const SizedBox(width: 8),
+            if (!selectionMode)
+              TextButton(
+                onPressed: () => controller.reopenTask(task.id),
+                child: const Text('Reabrir'),
+              ),
+          ],
+        ),
       ),
     );
   }

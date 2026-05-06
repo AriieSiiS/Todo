@@ -57,8 +57,8 @@ class CalendarEventModel {
       id: json['id'] as String? ?? '',
       calendarId: json['calendarId'] as String? ?? '',
       title: json['title'] as String? ?? '',
-      startAt: DateTime.tryParse(json['startAt'] as String? ?? '') ??
-          DateTime.now(),
+      startAt:
+          DateTime.tryParse(json['startAt'] as String? ?? '') ?? DateTime.now(),
       endAt:
           DateTime.tryParse(json['endAt'] as String? ?? '') ?? DateTime.now(),
       description: json['description'] as String?,

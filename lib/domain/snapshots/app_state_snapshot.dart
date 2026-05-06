@@ -3,7 +3,10 @@ import 'dart:convert';
 import '../entities/category.dart';
 import '../entities/calendar_models.dart';
 import '../entities/enums.dart';
+import '../entities/financial.dart';
 import '../entities/json_helpers.dart';
+import '../entities/library_goal.dart';
+import '../entities/library_item.dart';
 import '../entities/project.dart';
 import '../entities/quick_note.dart';
 import '../entities/settings.dart';
@@ -15,6 +18,12 @@ class AppStateSnapshot {
     required this.categories,
     required this.projects,
     required this.notes,
+    this.expenses = const <Expense>[],
+    this.expenseCategories = const <ExpenseCategory>[],
+    this.paymentMethods = const <PaymentMethodModel>[],
+    this.fixedPayments = const <FixedPayment>[],
+    this.libraryItems = const <LibraryItem>[],
+    this.libraryGoals = const <LibraryGoal>[],
     required this.daySettings,
     required this.notificationSettings,
     required this.calendarSettings,
@@ -31,6 +40,12 @@ class AppStateSnapshot {
   final List<CategoryModel> categories;
   final List<ProjectModel> projects;
   final List<QuickNote> notes;
+  final List<Expense> expenses;
+  final List<ExpenseCategory> expenseCategories;
+  final List<PaymentMethodModel> paymentMethods;
+  final List<FixedPayment> fixedPayments;
+  final List<LibraryItem> libraryItems;
+  final List<LibraryGoal> libraryGoals;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -51,6 +66,15 @@ class AppStateSnapshot {
       'categories': categories.map((category) => category.toJson()).toList(),
       'projects': projects.map((project) => project.toJson()).toList(),
       'notes': notes.map((note) => note.toJson()).toList(),
+      'expenses': expenses.map((expense) => expense.toJson()).toList(),
+      'expenseCategories':
+          expenseCategories.map((category) => category.toJson()).toList(),
+      'paymentMethods':
+          paymentMethods.map((method) => method.toJson()).toList(),
+      'fixedPayments':
+          fixedPayments.map((payment) => payment.toJson()).toList(),
+      'libraryItems': libraryItems.map((item) => item.toJson()).toList(),
+      'libraryGoals': libraryGoals.map((goal) => goal.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
@@ -84,6 +108,35 @@ class AppStateSnapshot {
           .map((item) => QuickNote.fromJson(
               (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
           .toList(),
+      expenses: (json['expenses'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => Expense.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      expenseCategories:
+          (json['expenseCategories'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => ExpenseCategory.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      paymentMethods:
+          (json['paymentMethods'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => PaymentMethodModel.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      fixedPayments:
+          (json['fixedPayments'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => FixedPayment.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      libraryItems:
+          (json['libraryItems'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => LibraryItem.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      libraryGoals:
+          (json['libraryGoals'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => LibraryGoal.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
       calendarEvents:
           (json['calendarEvents'] as List<dynamic>? ?? const <dynamic>[])
               .map((item) => CalendarEventModel.fromJson(

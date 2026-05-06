@@ -135,7 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Ultima sincronizacion: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
+                                'Última sincronización: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
                                 style: TextStyle(color: visuals.textMuted),
                               ),
                             ),
@@ -144,7 +144,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           _SettingsHintRow(
                             icon: Icons.lock_outline_rounded,
                             text:
-                                'Esta app personal no deberia pedir URL ni claves aqui. La configuracion de Supabase va integrada en el proyecto y en Ajustes solo controlas el estado de la sesion.',
+                                'Esta app personal no debería pedir URL ni claves aquí. La configuración de Supabase va integrada en el proyecto y en Ajustes solo controlas el estado de la sesión.',
                           ),
                           const SizedBox(height: 12),
                           _settingsOutlineShell(
@@ -166,7 +166,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (controller.cloudAllowedEmail.isNotEmpty) ...[
+                                if (controller
+                                    .cloudAllowedEmail.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   Text(
                                     'Cuenta permitida: ${controller.cloudAllowedEmail}',
@@ -449,7 +450,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           _settingsToggleRow(
                             title: 'Aviso de cierre del día',
                             subtitle:
-                                'Te recuerda revisar inbox y pendientes antes del corte.',
+                                'Te recuerda revisar la entrada y los pendientes antes del corte.',
                             value: notificationSettings.dayEndReminderEnabled,
                             onChanged: (value) =>
                                 controller.updateNotificationSettings(
@@ -789,7 +790,7 @@ class _SettingsPageState extends State<SettingsPage> {
             minLines: 12,
             maxLines: 20,
             decoration: const InputDecoration(
-              hintText: 'Pega aqui un snapshot completo en JSON',
+              hintText: 'Pega aquí un snapshot completo en JSON',
             ),
           ),
         ),
@@ -1412,17 +1413,22 @@ String _activityBadgeLabel(DateTime value, DateTime today) {
 }
 
 String _settingsDateTime(DateTime value) {
-  return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} ${_timeLabel(value)}';
+  final dateLabel =
+      '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+  if (!_hasVisibleTime(value)) {
+    return dateLabel;
+  }
+  return '$dateLabel ${_timeLabel(value)}';
 }
 
 String _weekdayLabel(DateTime date) {
-  const names = <String>['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+  const names = <String>['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   final index = date.weekday - 1;
   return '${names[index]} ${date.day}';
 }
 
 String _weekdayShort(DateTime date) {
-  const names = <String>['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+  const names = <String>['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   return names[date.weekday - 1];
 }
 
@@ -1430,10 +1436,10 @@ String _weekdayLong(DateTime date) {
   const names = <String>[
     'Lunes',
     'Martes',
-    'Miercoles',
+    'Miércoles',
     'Jueves',
     'Viernes',
-    'Sabado',
+    'Sábado',
     'Domingo'
   ];
   return names[date.weekday - 1];
@@ -1461,6 +1467,8 @@ String _monthLong(int month) {
 String _timeLabel(DateTime date) {
   return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 }
+
+bool _hasVisibleTime(DateTime date) => date.hour != 0 || date.minute != 0;
 
 String _formatDuration(Duration value) {
   if (value <= Duration.zero) {

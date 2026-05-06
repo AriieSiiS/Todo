@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Se reproduce en bucle automaticamente.'), findsNothing);
   });
 
-  test('controller imports json and can reset to seed', () async {
+  test('controller imports json and can reset to empty state', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final controller = TodoWorkspace.createForTest();
 
@@ -140,8 +140,10 @@ void main() {
 
     await controller.resetToSeed();
 
-    expect(
-        controller.tasks.any((task) => task.title == 'Weekly reset'), isTrue);
+    expect(controller.tasks, isEmpty);
+    expect(controller.categories, isEmpty);
+    expect(controller.projects, isEmpty);
+    expect(controller.notes, isEmpty);
     expect(
         controller.tasks.any((task) => task.title == 'Imported task'), isFalse);
   });

@@ -48,7 +48,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     final initial = widget.initialTask;
     final scheduledAt = initial?.scheduledAt ??
         widget.initialDateOverride ??
-        controller.logicalDate().add(const Duration(hours: 9));
+        controller.logicalDate();
     _titleController = TextEditingController(
       text: initial?.title ?? widget.initialTitle ?? '',
     );
@@ -121,7 +121,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   title: widget.initialTask == null
                       ? 'Nueva tarea'
                       : 'Editar tarea',
-                  subtitle: 'Crea una tarea y organizala para tu dia real.',
+                  subtitle: 'Crea una tarea y organízala para tu día real.',
                 ),
                 const SizedBox(height: 14),
                 Expanded(
@@ -208,7 +208,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                                   _summaryLine(
                                                     Icons
                                                         .calendar_today_outlined,
-                                                    '${_weekdayLong(_date)} · ${_formatTime24(_time)}',
+                                                    _hasVisibleTimeOfDay(_time)
+                                                        ? '${_weekdayLong(_date)} · ${_formatTime24(_time)}'
+                                                        : _weekdayLong(_date),
                                                   ),
                                                   if (_recurrenceType !=
                                                       RecurrenceType.none)
@@ -255,7 +257,11 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                                     color: visuals.textMuted)),
                                             const SizedBox(height: 10),
                                             _appearanceRow(
-                                                _formatTime24(_time), title),
+                                              _hasVisibleTimeOfDay(_time)
+                                                  ? _formatTime24(_time)
+                                                  : 'Sin hora',
+                                              title,
+                                            ),
                                             const SizedBox(height: 16),
                                             const Text('Esta semana',
                                                 style: TextStyle(
@@ -264,18 +270,24 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                                         FontWeight.w700)),
                                             const SizedBox(height: 8),
                                             _appearanceRow(
-                                              '${_weekdayShort(_date)} ${_date.day} ${_monthShort(_date.month)} · ${_formatTime24(_time)}',
+                                              _hasVisibleTimeOfDay(_time)
+                                                  ? '${_weekdayShort(_date)} ${_date.day} ${_monthShort(_date.month)} · ${_formatTime24(_time)}'
+                                                  : '${_weekdayShort(_date)} ${_date.day} ${_monthShort(_date.month)}',
                                               title,
                                             ),
                                             if (_recurrenceType ==
                                                 RecurrenceType.weekly) ...[
                                               const SizedBox(height: 8),
                                               _appearanceRow(
-                                                  'Dom 10 may · ${_formatTime24(_time)}',
+                                                  _hasVisibleTimeOfDay(_time)
+                                                      ? 'Dom 10 may · ${_formatTime24(_time)}'
+                                                      : 'Dom 10 may',
                                                   title),
                                               const SizedBox(height: 8),
                                               _appearanceRow(
-                                                  'Dom 17 may · ${_formatTime24(_time)}',
+                                                  _hasVisibleTimeOfDay(_time)
+                                                      ? 'Dom 17 may · ${_formatTime24(_time)}'
+                                                      : 'Dom 17 may',
                                                   title),
                                             ],
                                           ],
@@ -336,18 +348,18 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('Titulo de la tarea'),
+        _sectionLabel('Título de la tarea'),
         const SizedBox(height: 6),
         TextField(
           controller: _titleController,
           decoration: InputDecoration(
-            hintText: 'Limpiar bano',
+            hintText: 'Limpiar baño',
             suffixText: '${_titleController.text.length}/80',
           ),
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 18),
-        _sectionLabel('Categorias'),
+        _sectionLabel('Categorías'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -437,7 +449,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 context,
                 label: 'Hora',
                 icon: Icons.schedule_rounded,
-                value: _formatTime24(_time),
+                value: _hasVisibleTimeOfDay(_time)
+                    ? _formatTime24(_time)
+                    : 'Sin hora',
                 onTap: () async {
                   final picked = await _showTodoTimePicker(context, _time);
                   if (picked != null) {
@@ -577,7 +591,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   padding: const EdgeInsets.all(14),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Sin subtareas todavia.',
+                    child: Text('Sin subtareas todavía.',
                         style: TextStyle(
                             color: Theme.of(context)
                                 .extension<TodoVisuals>()!

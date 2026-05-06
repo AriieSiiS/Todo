@@ -230,14 +230,14 @@ Future<int?> _showReminderSettingsDialog(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Te avisare ${_reminderPresetLabelGlobal(effectiveMinutes).toLowerCase()}',
+                                    'Te avisaré ${_reminderPresetLabelGlobal(effectiveMinutes).toLowerCase()}',
                                     style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Si la tarea es a las 09:00, el aviso llegara antes segun esta configuracion.',
+                                    'Si la tarea es a las 09:00, el aviso llegará antes según esta configuración.',
                                     style: const TextStyle(
                                         color: Color(0xFF7A7369)),
                                   ),

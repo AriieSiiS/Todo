@@ -69,19 +69,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                 ),
                               ),
                       ),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        width: 254,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              _ReferenceCategoryUnassignedPanel(
-                                  controller: controller),
-                              const SizedBox(height: 14),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   )
                 : ListView(
@@ -105,8 +92,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
                           ),
                           onDeleteCategory: () => _deleteCategory(selected),
                         ),
-                      const SizedBox(height: 14),
-                      _ReferenceCategoryUnassignedPanel(controller: controller),
                     ],
                   ),
           ),
@@ -137,11 +122,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.28),
       builder: (context) => AlertDialog(
-        title: const Text('Borrar categoria'),
+        title: const Text('Borrar categoría'),
         content: Text(
           tasks == 0
-              ? 'La categoria se borrara de forma permanente.'
-              : 'La categoria se borrara y se quitara de $tasks tareas. Las tareas no se eliminaran.',
+              ? 'La categoría se borrará de forma permanente.'
+              : 'La categoría se borrará y se quitará de $tasks tareas. Las tareas no se eliminarán.',
         ),
         actions: [
           TextButton(
@@ -191,7 +176,7 @@ class _ReferenceCategoriesHeader extends StatelessWidget {
                   style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 6),
               Text(
-                'Organiza tus tareas por áreas permanentes de tu vida y tu casa.',
+                'Organiza tus tareas por áreas de tu vida y tu casa.',
                 style: TextStyle(
                     color: context.visuals.textMuted,
                     fontSize: 15,
@@ -210,14 +195,10 @@ class _ReferenceCategoriesHeader extends StatelessWidget {
               icon: Icons.add_rounded,
               onPressed: onCreateCategory,
             ),
-            OutlinedButton.icon(
+            _HeaderSecondaryButton(
               onPressed: onReorder,
-              icon: const Icon(Icons.swap_vert_rounded, size: 18),
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-              label: const Text('Ordenar'),
+              icon: Icons.swap_vert_rounded,
+              label: 'Ordenar',
             ),
             SizedBox(
               height: 48,
@@ -269,9 +250,9 @@ class _ReferenceCategoryGrid extends StatelessWidget {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
+        mainAxisExtent: 190,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.12,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
@@ -291,7 +272,7 @@ class _ReferenceCategoryGrid extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(20),
@@ -306,6 +287,7 @@ class _ReferenceCategoryGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       width: 42,
@@ -342,9 +324,9 @@ class _ReferenceCategoryGrid extends StatelessWidget {
                           color: Color(0xFF70835D), size: 22),
                   ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 14),
                 const Divider(height: 1),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
@@ -357,7 +339,7 @@ class _ReferenceCategoryGrid extends StatelessWidget {
                     Expanded(
                         child: _CategoryMetric(
                             value: '${metrics.completed}',
-                            label: 'Completadas\nesta semana')),
+                            label: 'Completadas')),
                   ],
                 ),
               ],
@@ -386,10 +368,14 @@ class _CategoryMetric extends StatelessWidget {
         Text(value,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.visuals.textMuted, height: 1.15),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.visuals.textMuted, height: 1.15),
+          ),
         ),
       ],
     );
@@ -454,12 +440,6 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                           Text(category.name,
                               style:
                                   Theme.of(context).textTheme.headlineMedium),
-                          const SizedBox(width: 10),
-                          _ReferenceTagChip(
-                            label: 'Categoría permanente',
-                            color: const Color(0xFFEFF3E6),
-                            textColor: const Color(0xFF70835D),
-                          ),
                           const Spacer(),
                           OutlinedButton.icon(
                             onPressed: onEditCategory,
@@ -480,8 +460,8 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                               PopupMenuItem(
                                 value: 'toggle',
                                 child: Text(category.active
-                                    ? 'Pausar categoria'
-                                    : 'Activar categoria'),
+                                    ? 'Pausar categoría'
+                                    : 'Activar categoría'),
                               ),
                               const PopupMenuDivider(),
                               const PopupMenuItem(
@@ -494,7 +474,7 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                       Text(
                         category.description.isNotEmpty
                             ? category.description
-                            : 'Las categorías son permanentes y representan áreas clave de tu vida y tu casa. Los proyectos cambian, pero las categorías siempre están aquí.',
+                            : 'Área clave para organizar tareas, rutinas y proyectos relacionados.',
                         style: TextStyle(
                             color: context.visuals.textStrong, height: 1.45),
                       ),
@@ -709,54 +689,6 @@ class _CategoryDetailSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _ReferenceCategoryUnassignedPanel extends StatelessWidget {
-  const _ReferenceCategoryUnassignedPanel({required this.controller});
-
-  final TodoWorkspace controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final uncategorized = controller.tasks
-        .where((task) =>
-            task.categoryIds.isEmpty && task.status == TaskStatus.active)
-        .length;
-    return _SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.help_outline_rounded, size: 18),
-              const SizedBox(width: 8),
-              Text('Sin asignar / revisar',
-                  style: Theme.of(context).textTheme.titleMedium),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text('$uncategorized',
-              style: Theme.of(context)
-                  .textTheme
-                  .displaySmall
-                  ?.copyWith(fontSize: 26)),
-          const SizedBox(height: 4),
-          Text('Tareas sin categoría',
-              style: TextStyle(color: context.visuals.textMuted)),
-          const SizedBox(height: 12),
-          Text(
-            'Revisa y asigna a la categoría que mejor corresponda.',
-            style: TextStyle(color: context.visuals.textStrong, height: 1.35),
-          ),
-          const SizedBox(height: 18),
-          OutlinedButton(
-            onPressed: () {},
-            child: const Text('Revisar tareas'),
-          ),
         ],
       ),
     );

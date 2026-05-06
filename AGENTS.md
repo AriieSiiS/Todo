@@ -1,19 +1,23 @@
 # AGENTS
 
-Guia corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
+Guía corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
+
+## Regla de idioma
+
+Todo texto visible de la app debe estar en castellano correcto, con tildes, `ñ` y signos adecuados. Antes de entregar cambios de UI hay que buscar y corregir textos sin acentos (`Categoria`, `Mas`, `rapido`, `sesion`, etc.) y cualquier mojibake (`Ã¡`, `Ã±`, `Â¿`, etc.). No se deben introducir textos en inglés salvo nombres técnicos inevitables, marcas o claves internas no visibles.
 
 ## Objetivo del repo
 
-App personal de tareas hecha con Flutter, priorizando `Windows` como plataforma principal. Web y Android siguen soportadas, pero las decisiones de persistencia local, validacion manual y experiencia de escritorio se revisan primero en Windows.
+App personal de tareas hecha con Flutter, priorizando `Windows` como plataforma principal. Web y Android siguen soportadas, pero las decisiones de persistencia local, validación manual y experiencia de escritorio se revisan primero en Windows.
 
 La app tiene:
 
 - estado local persistente en `runtime/todo_state.json`
-- sincronizacion opcional con Supabase
+- sincronización opcional con Supabase
 - servidor MCP local para operar el mismo snapshot desde agentes
-- arquitectura por capas con estado de aplicacion en Riverpod
+- arquitectura por capas con estado de aplicación en Riverpod
 
-## Lectura minima recomendada
+## Lectura mínima recomendada
 
 1. `README.md`
 2. `lib/app/todo_app.dart`
@@ -22,28 +26,28 @@ La app tiene:
 5. `lib/presentation/shell/app_shell.dart`
 6. `mcp_server/README.md` si la tarea toca automatizacion o agentes externos
 
-## Mapa rapido
+## Mapa rápido
 
 ### App
 
-- `lib/main.dart`: arranque y `ProviderScope` raiz
+- `lib/main.dart`: arranque y `ProviderScope` raíz
 - `lib/app/todo_app.dart`: carga `TodoWorkspace`, aplica tema y monta el shell
 - `lib/app/app_launch_intent.dart`: argumentos de arranque para abrir secciones o editores
 - `lib/app/todo_theme.dart`: tema visual
 
 ### Application
 
-- `lib/application/state/todo_workspace.dart`: estado de aplicacion y operaciones del producto
+- `lib/application/state/todo_workspace.dart`: estado de aplicación y operaciones del producto
 - `lib/application/providers/todo_providers.dart`: providers Riverpod
 
-`TodoWorkspace` es la fuente de verdad de runtime. Maneja tareas, proyectos, categorias, notas, calendario, ajustes, notificaciones, persistencia y sincronizacion.
+`TodoWorkspace` es la fuente de verdad de runtime. Maneja tareas, proyectos, categorías, notas, calendario, ajustes, notificaciones, persistencia y sincronización.
 
 ### Domain
 
 - `lib/domain/entities/`: entidades y value objects
 - `lib/domain/snapshots/`: contrato JSON compartido con local, Supabase y MCP
 - `lib/domain/repositories/`: contratos de persistencia, nube, calendario y notificaciones
-- `lib/domain/models.dart`: barrel publico de dominio
+- `lib/domain/models.dart`: barrel público de dominio
 
 ### Data e integraciones
 
@@ -56,15 +60,15 @@ La app tiene:
 ### Presentation
 
 - `lib/presentation/shell/app_shell.dart`: archivo raiz con parts del shell
-- `lib/presentation/shell/shell_chrome.dart`: shell, sidebar, navegacion y reproductor
+- `lib/presentation/shell/shell_chrome.dart`: shell, sidebar, navegación y reproductor
 - `lib/presentation/shell/today_page.dart`: vista Hoy
 - `lib/presentation/shell/projects_page.dart`: vista Proyectos
-- `lib/presentation/shell/categories_page.dart`: vista Categorias
+- `lib/presentation/shell/categories_page.dart`: vista Categorías
 - `lib/presentation/shell/calendar_page.dart`: vista Calendario
 - `lib/presentation/shell/completed_page.dart`: vista Completadas
 - `lib/presentation/shell/settings_page.dart`: vista Ajustes
 - `lib/presentation/shell/shared_widgets.dart`: widgets compartidos del shell
-- `lib/presentation/shared/editors.dart`: API publica de editores
+- `lib/presentation/shared/editors.dart`: API pública de editores
 - `lib/presentation/shared/*_editor.dart`: editores por entidad
 - `lib/presentation/shared/editor_pickers.dart`: pickers de fecha, hora, recordatorio, color e icono
 
@@ -93,7 +97,7 @@ flutter run -d windows -- --section=calendar
 flutter run -d windows -- --new-task
 ```
 
-## Fuente de verdad segun tarea
+## Fuente de verdad según tarea
 
 UI o flujo visual:
 
@@ -101,7 +105,7 @@ UI o flujo visual:
 - `lib/presentation/shared/*_editor.dart`
 - `lib/app/todo_theme.dart`
 
-Logica de producto:
+Lógica de producto:
 
 - `lib/application/state/todo_workspace.dart`
 - `lib/domain/entities/`
@@ -120,7 +124,7 @@ MCP:
 - `mcp_server/server.py`
 - `mcp_server/start_mcp.ps1`
 
-## Validacion recomendada
+## Validación recomendada
 
 Para cambios generales:
 
@@ -130,4 +134,4 @@ flutter test
 flutter build windows --debug
 ```
 
-Para cambios visuales importantes, arrancar Windows con la seccion exacta que se haya tocado.
+Para cambios visuales importantes, arrancar Windows con la sección exacta que se haya tocado.

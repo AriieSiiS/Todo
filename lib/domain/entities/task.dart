@@ -24,6 +24,7 @@ class TaskModel {
     this.collapsed = false,
     this.calendarLink,
     this.reminderRule,
+    this.completedAt,
   });
 
   final String id;
@@ -44,6 +45,7 @@ class TaskModel {
   final bool collapsed;
   final CalendarLink? calendarLink;
   final ReminderRule? reminderRule;
+  final DateTime? completedAt;
 
   bool get isSubtask => parentTaskId != null;
 
@@ -71,6 +73,8 @@ class TaskModel {
     bool clearCalendarLink = false,
     ReminderRule? reminderRule,
     bool clearReminderRule = false,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -94,6 +98,7 @@ class TaskModel {
           clearCalendarLink ? null : calendarLink ?? this.calendarLink,
       reminderRule:
           clearReminderRule ? null : reminderRule ?? this.reminderRule,
+      completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
     );
   }
 
@@ -117,6 +122,7 @@ class TaskModel {
       'collapsed': collapsed,
       'calendarLink': calendarLink?.toJson(),
       'reminderRule': reminderRule?.toJson(),
+      'completedAt': completedAt?.toIso8601String(),
     };
   }
 
@@ -156,6 +162,9 @@ class TaskModel {
           : ReminderRule.fromJson(
               (json['reminderRule'] as Map<dynamic, dynamic>)
                   .cast<String, dynamic>()),
+      completedAt: json['completedAt'] == null
+          ? null
+          : DateTime.tryParse(json['completedAt'] as String),
     );
   }
 }

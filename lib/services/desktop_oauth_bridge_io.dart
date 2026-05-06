@@ -87,7 +87,7 @@ Future<bool> signInWithDesktopGoogleOAuth({
           _htmlPage(
             title: 'Todo ya esta conectado',
             body:
-                'La sesion se ha guardado. Puedes cerrar esta ventana y volver a la app.',
+                'La sesión se ha guardado. Puedes cerrar esta ventana y volver a la app.',
             success: true,
           ),
           true,
@@ -99,7 +99,7 @@ Future<bool> signInWithDesktopGoogleOAuth({
           _htmlPage(
             title: 'No se pudo completar',
             body:
-                'La app recibio la vuelta de Google, pero no pudo guardar la sesion. Prueba otra vez.',
+                'La app recibió la vuelta de Google, pero no pudo guardar la sesión. Prueba otra vez.',
             success: false,
           ),
           false,
@@ -126,7 +126,7 @@ Future<bool> signInWithDesktopGoogleOAuth({
     return await completer.future.timeout(
       const Duration(minutes: 3),
       onTimeout: () async {
-        setError('Google tardo demasiado en volver a la app.');
+        setError('Google tardó demasiado en volver a la app.');
         await subscription?.cancel();
         await server?.close(force: true);
         return false;

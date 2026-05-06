@@ -11,6 +11,7 @@ class ProjectsPage extends StatefulWidget {
 
 class _ProjectsPageState extends State<ProjectsPage> {
   String? _selectedProjectId;
+  String? _openedProjectId;
   ProjectStatus? _statusFilter;
 
   TodoWorkspace get controller => widget.controller;
@@ -24,9 +25,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
             .where((project) => project.status == _statusFilter)
             .toList();
     final selectedProject = _resolveSelectedProject(projects);
-    final selectedTasks = selectedProject == null
-        ? const <TaskModel>[]
-        : _projectTasks(selectedProject);
+    final openedProject = _openedProjectId == null
+        ? null
+        : controller.projectById(_openedProjectId!);
     final wide = MediaQuery.sizeOf(context).width >= 1240;
 
     return Padding(
@@ -34,96 +35,102 @@ class _ProjectsPageState extends State<ProjectsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ReferenceProjectsHeader(
-            filterActive: _statusFilter != null,
-            onCreateProject: () => showProjectEditor(context, controller),
-            onOpenFilter: _showStatusFilterMenu,
-            onReorder: _sortProjectsByUrgency,
-          ),
+          if (openedProject == null)
+            _ReferenceProjectsHeader(
+              filterActive: _statusFilter != null,
+              onCreateProject: () => showProjectEditor(context, controller),
+              onOpenFilter: _showStatusFilterMenu,
+              onReorder: _sortProjectsByUrgency,
+            ),
           const SizedBox(height: 16),
           Expanded(
-            child: wide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: _ReferenceProjectsBoard(
-                                controller: controller,
-                                projects: projects,
-                                selectedProjectId: selectedProject?.id,
-                                onSelectProject: (projectId) {
-                                  setState(() {
-                                    _selectedProjectId = projectId;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            if (selectedProject != null)
-                              _ReferenceProjectDetailPanel(
-                                controller: controller,
-                                project: selectedProject,
-                                tasks: selectedTasks,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.topCenter,
-                          child: SizedBox(
-                            width: 320,
+            child: openedProject != null
+                ? _ReferenceProjectFullView(
+                    controller: controller,
+                    project: openedProject,
+                    tasks: _projectTasks(openedProject),
+                    onBack: () => setState(() => _openedProjectId = null),
+                  )
+                : wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 5,
                             child: Column(
                               children: [
-                                _ReferenceProjectSummaryPanel(
+                                Expanded(
+                                  child: _ReferenceProjectsBoard(
                                     controller: controller,
-                                    projects: allProjects),
-                                const SizedBox(height: 12),
-                                _ReferenceProjectMilestonesPanel(
-                                  controller: controller,
-                                  projects: allProjects,
+                                    projects: projects,
+                                    selectedProjectId: selectedProject?.id,
+                                    onSelectProject: (projectId) {
+                                      setState(() {
+                                        _selectedProjectId = projectId;
+                                      });
+                                    },
+                                    onOpenProject: (projectId) {
+                                      setState(() {
+                                        _selectedProjectId = projectId;
+                                        _openedProjectId = projectId;
+                                      });
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 16),
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.topCenter,
+                              child: SizedBox(
+                                width: 320,
+                                child: Column(
+                                  children: [
+                                    _ReferenceProjectSummaryPanel(
+                                        controller: controller,
+                                        projects: allProjects),
+                                    const SizedBox(height: 12),
+                                    _ReferenceProjectMilestonesPanel(
+                                      controller: controller,
+                                      projects: allProjects,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView(
+                        children: [
+                          _ReferenceProjectsBoard(
+                            controller: controller,
+                            projects: projects,
+                            selectedProjectId: selectedProject?.id,
+                            onSelectProject: (projectId) {
+                              setState(() {
+                                _selectedProjectId = projectId;
+                              });
+                            },
+                            onOpenProject: (projectId) {
+                              setState(() {
+                                _selectedProjectId = projectId;
+                                _openedProjectId = projectId;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          _ReferenceProjectSummaryPanel(
+                              controller: controller, projects: allProjects),
+                          const SizedBox(height: 12),
+                          _ReferenceProjectMilestonesPanel(
+                              controller: controller, projects: allProjects),
+                        ],
                       ),
-                    ],
-                  )
-                : ListView(
-                    children: [
-                      _ReferenceProjectsBoard(
-                        controller: controller,
-                        projects: projects,
-                        selectedProjectId: selectedProject?.id,
-                        onSelectProject: (projectId) {
-                          setState(() {
-                            _selectedProjectId = projectId;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      if (selectedProject != null)
-                        _ReferenceProjectDetailPanel(
-                          controller: controller,
-                          project: selectedProject,
-                          tasks: selectedTasks,
-                        ),
-                      const SizedBox(height: 14),
-                      _ReferenceProjectSummaryPanel(
-                          controller: controller, projects: allProjects),
-                      const SizedBox(height: 12),
-                      _ReferenceProjectMilestonesPanel(
-                          controller: controller, projects: allProjects),
-                    ],
-                  ),
           ),
         ],
       ),
@@ -253,23 +260,15 @@ class _ReferenceProjectsHeader extends StatelessWidget {
               icon: Icons.add_rounded,
               onPressed: onCreateProject,
             ),
-            OutlinedButton.icon(
+            _HeaderSecondaryButton(
               onPressed: onOpenFilter,
-              icon: const Icon(Icons.filter_alt_outlined, size: 18),
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-              label: Text(filterActive ? 'Filtrar · Activo' : 'Filtrar'),
+              icon: Icons.filter_alt_outlined,
+              label: filterActive ? 'Filtrar · Activo' : 'Filtrar',
             ),
-            OutlinedButton.icon(
+            _HeaderSecondaryButton(
               onPressed: onReorder,
-              icon: const Icon(Icons.swap_vert_rounded, size: 18),
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              ),
-              label: const Text('Ordenar'),
+              icon: Icons.swap_vert_rounded,
+              label: 'Ordenar',
             ),
           ],
         ),
@@ -284,12 +283,14 @@ class _ReferenceProjectsBoard extends StatelessWidget {
     required this.projects,
     required this.selectedProjectId,
     required this.onSelectProject,
+    required this.onOpenProject,
   });
 
   final TodoWorkspace controller;
   final List<ProjectModel> projects;
   final String? selectedProjectId;
   final ValueChanged<String> onSelectProject;
+  final ValueChanged<String> onOpenProject;
 
   @override
   Widget build(BuildContext context) {
@@ -345,6 +346,7 @@ class _ReferenceProjectsBoard extends StatelessWidget {
                     project: project,
                     selected: project.id == selectedProjectId,
                     onTap: () => onSelectProject(project.id),
+                    onDoubleTap: () => onOpenProject(project.id),
                   );
                 },
               ),
@@ -361,12 +363,14 @@ class _ReferenceProjectRow extends StatelessWidget {
     required this.project,
     required this.selected,
     required this.onTap,
+    required this.onDoubleTap,
   });
 
   final TodoWorkspace controller;
   final ProjectModel project;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -393,6 +397,7 @@ class _ReferenceProjectRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onDoubleTap: onDoubleTap,
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -418,17 +423,21 @@ class _ReferenceProjectRow extends StatelessWidget {
             ),
             const SizedBox(width: 18),
             Expanded(
-              flex: 4,
+              flex: 5,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(project.name,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(
+                    project.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     project.description,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: context.visuals.textMuted, height: 1.3),
@@ -496,7 +505,7 @@ class _ReferenceProjectRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     dueDate == null
-                        ? 'limite'
+                        ? 'límite'
                         : '${dueDate.day} de ${_monthName(dueDate.month)}',
                     style: TextStyle(color: context.visuals.textMuted),
                   ),
@@ -505,7 +514,7 @@ class _ReferenceProjectRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             SizedBox(
-              width: 90,
+              width: 132,
               child: category == null
                   ? const SizedBox.shrink()
                   : Align(
@@ -545,6 +554,7 @@ class _ReferenceProjectRow extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ReferenceProjectDetailPanel extends StatelessWidget {
   const _ReferenceProjectDetailPanel({
     required this.controller,
@@ -685,6 +695,407 @@ class _ReferenceProjectDetailPanel extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReferenceProjectFullView extends StatelessWidget {
+  const _ReferenceProjectFullView({
+    required this.controller,
+    required this.project,
+    required this.tasks,
+    required this.onBack,
+  });
+
+  final TodoWorkspace controller;
+  final ProjectModel project;
+  final List<TaskModel> tasks;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeTasks =
+        tasks.where((task) => task.status == TaskStatus.active).toList();
+    final completedTasks =
+        tasks.where((task) => task.status == TaskStatus.completed).length;
+    final progress = tasks.isEmpty ? 0.0 : completedTasks / tasks.length;
+    final dueDate = tasks
+        .where((task) =>
+            task.status == TaskStatus.active && task.scheduledAt != null)
+        .map((task) => task.scheduledAt!)
+        .fold<DateTime?>(
+          null,
+          (current, value) =>
+              current == null || value.isBefore(current) ? value : current,
+        );
+    final category = project.categoryIds.isNotEmpty
+        ? controller.categoryById(project.categoryIds.first)
+        : null;
+
+    return ListView(
+      children: [
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: onBack,
+              icon: const Icon(Icons.chevron_left_rounded),
+              label: const Text('Proyectos'),
+            ),
+            Text(
+              '/ ${project.name}',
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+            const Spacer(),
+            _HeaderActionButton(
+              label: 'Añadir tarea',
+              icon: Icons.add_rounded,
+              onPressed: () => showTaskEditor(context, controller),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: () => showProjectEditor(
+                context,
+                controller,
+                initialProject: project,
+              ),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Editar proyecto'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: project.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(project.icon, color: project.color, size: 34),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    project.name,
+                    style: Theme.of(context).textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Text(
+                      project.description,
+                      style: const TextStyle(fontSize: 16, height: 1.35),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _ReferenceTagChip(
+                        label: _projectStatusLabel(project.status),
+                        color: _projectStatusColor(project.status)
+                            .withValues(alpha: 0.16),
+                        textColor: _projectStatusColor(project.status),
+                      ),
+                      if (category != null)
+                        _ReferenceTagChip(
+                          label: category.name,
+                          color: category.color.withValues(alpha: 0.14),
+                          textColor: category.color,
+                        ),
+                      Text(
+                        dueDate == null
+                            ? 'Sin fecha límite'
+                            : 'Fecha límite: ${_friendlyTaskDay(dueDate)}',
+                        style: TextStyle(color: context.visuals.textMuted),
+                      ),
+                      Text(
+                        '${(progress * 100).round()}% completado',
+                        style: TextStyle(color: context.visuals.textMuted),
+                      ),
+                      Text(
+                        '${activeTasks.length} abiertas de ${tasks.length} tareas',
+                        style: TextStyle(color: context.visuals.textMuted),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _SurfaceCard(
+          padding: const EdgeInsets.all(22),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Progreso del proyecto',
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0, 1),
+                        minHeight: 8,
+                        backgroundColor: const Color(0xFFE8E1D6),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          project.color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 28),
+              _ProjectFullMetric(
+                value: '${(progress * 100).round()}%',
+                label: 'Completado',
+              ),
+              _ProjectFullMetric(
+                value: '${activeTasks.length}',
+                label: 'Tareas abiertas',
+              ),
+              _ProjectFullMetric(
+                value: dueDate == null
+                    ? '-'
+                    : '${dueDate.day} ${_monthName(dueDate.month)}',
+                label: 'Fecha límite',
+              ),
+              _ProjectFullMetric(
+                value: '${tasks.length}',
+                label: 'Tareas totales',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 22),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 7,
+              child: _SurfaceCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Tareas del proyecto',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 10),
+                          _miniBadge(
+                            '${activeTasks.length} abiertas',
+                            const Color(0xFFF0ECE4),
+                            const Color(0xFF6D655B),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: () =>
+                                showTaskEditor(context, controller),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Añadir tarea'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    if (tasks.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Text(
+                          'No hay tareas en este proyecto.',
+                          style: TextStyle(color: context.visuals.textMuted),
+                        ),
+                      )
+                    else
+                      ...tasks.map(
+                        (task) => Column(
+                          children: [
+                            _ReferenceProjectTaskRow(
+                              controller: controller,
+                              task: task,
+                            ),
+                            if (task != tasks.last) const Divider(height: 1),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 18),
+            SizedBox(
+              width: 360,
+              child: Column(
+                children: [
+                  _ProjectFullSidebarList(
+                    title: 'Próximas tareas',
+                    tasks: activeTasks.take(4).toList(),
+                    controller: controller,
+                  ),
+                  const SizedBox(height: 14),
+                  _ProjectFullSidebarList(
+                    title: 'Actividad reciente',
+                    tasks: tasks
+                        .where((task) => task.status == TaskStatus.completed)
+                        .take(4)
+                        .toList(),
+                    controller: controller,
+                    completed: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ProjectFullMetric extends StatelessWidget {
+  const _ProjectFullMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 128,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0xFFE6D9C8))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(color: context.visuals.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectFullSidebarList extends StatelessWidget {
+  const _ProjectFullSidebarList({
+    required this.title,
+    required this.tasks,
+    required this.controller,
+    this.completed = false,
+  });
+
+  final String title;
+  final List<TaskModel> tasks;
+  final TodoWorkspace controller;
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 14),
+          if (tasks.isEmpty)
+            Text(
+              completed ? 'Sin actividad reciente.' : 'No hay tareas próximas.',
+              style: TextStyle(color: context.visuals.textMuted),
+            )
+          else
+            ...tasks.map((task) {
+              final category = task.categoryIds.isNotEmpty
+                  ? controller.categoryById(task.categoryIds.first)
+                  : null;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: (category?.color ?? const Color(0xFF70835D))
+                            .withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        category?.icon ?? Icons.task_alt_rounded,
+                        size: 18,
+                        color: category?.color ?? const Color(0xFF70835D),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(task.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(
+                            completed
+                                ? _completedActivityTime(task)
+                                : task.scheduledAt == null
+                                    ? 'Sin fecha'
+                                    : _friendlyTaskDay(task.scheduledAt!),
+                            style: TextStyle(
+                              color: context.visuals.textMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (category != null) ...[
+                      const SizedBox(width: 8),
+                      _miniBadge(
+                        category.name,
+                        category.color.withValues(alpha: 0.14),
+                        category.color,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -923,7 +1334,7 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Próximos hitos',
+                  child: Text('Próximas tareas',
                       style: Theme.of(context)
                           .textTheme
                           .headlineMedium
@@ -952,6 +1363,7 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
                             width: 44,
@@ -970,32 +1382,40 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(project?.name ?? task.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 4),
                                 Text(task.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         color: context.visuals.textMuted)),
                               ],
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(task.scheduledAt == null
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 82,
+                            child: Text(
+                              task.scheduledAt == null
                                   ? 'Sin fecha'
-                                  : _milestoneDate(task.scheduledAt!)),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _priorityColor(task.priority),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
+                                  : _milestoneDate(task.scheduledAt!),
+                              textAlign: TextAlign.right,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _priorityColor(task.priority),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ],
                       ),
@@ -1012,7 +1432,7 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                      child: Text('Ver todos los hitos',
+                      child: Text('Ver todas las tareas',
                           style: TextStyle(color: context.visuals.textMuted))),
                   const Icon(Icons.chevron_right_rounded),
                 ],

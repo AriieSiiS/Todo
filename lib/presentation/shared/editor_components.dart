@@ -345,20 +345,20 @@ String _shortDate(DateTime value) =>
 String _weekdayLong(DateTime value) => const <String>[
       'Lunes',
       'Martes',
-      'Miercoles',
+      'Miércoles',
       'Jueves',
       'Viernes',
-      'Sabado',
+      'Sábado',
       'Domingo'
     ][value.weekday - 1];
 
 String _weekdayShort(DateTime value) => const <String>[
       'Lun',
       'Mar',
-      'Mie',
+      'Mié',
       'Jue',
       'Vie',
-      'Sab',
+      'Sáb',
       'Dom'
     ][value.weekday - 1];
 
@@ -397,6 +397,9 @@ String _monthShort(int month) => const <String>[
 String _formatTime24(TimeOfDay value) {
   return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 }
+
+bool _hasVisibleTimeOfDay(TimeOfDay value) =>
+    value.hour != 0 || value.minute != 0;
 
 String _priorityLabel(TaskPriority priority) => switch (priority) {
       TaskPriority.low => 'Baja prioridad',

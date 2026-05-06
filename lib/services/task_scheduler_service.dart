@@ -59,7 +59,7 @@ class TaskSchedulerService {
           id: 910002,
           title: 'Notas pendientes antes del cierre del dia',
           body:
-              'Todavia tienes ${notes.where((note) => note.status == NoteStatus.inbox).length} notas sin procesar.',
+              'Todavía tienes ${notes.where((note) => note.status == NoteStatus.inbox).length} notas sin procesar.',
           when: nextEndWarning,
         ),
       );

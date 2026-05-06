@@ -91,7 +91,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       AppSection.today => TodayPage(controller: controller),
       AppSection.projects => ProjectsPage(controller: controller),
       AppSection.categories => CategoriesPage(controller: controller),
+      AppSection.expenses => ExpensesPage(controller: controller),
       AppSection.calendar => CalendarPage(controller: controller),
+      AppSection.library => LibraryPage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
       AppSection.settings => SettingsPage(controller: controller),
@@ -149,7 +151,7 @@ class _Sidebar extends StatelessWidget {
       (
         section: AppSection.inbox,
         icon: Icons.note_alt_outlined,
-        label: 'Inbox'
+        label: 'Entrada'
       ),
       (
         section: AppSection.projects,
@@ -159,12 +161,22 @@ class _Sidebar extends StatelessWidget {
       (
         section: AppSection.categories,
         icon: Icons.category_rounded,
-        label: 'Categorias'
+        label: 'Categorías'
+      ),
+      (
+        section: AppSection.expenses,
+        icon: Icons.receipt_long_rounded,
+        label: 'Gastos y pagos'
       ),
       (
         section: AppSection.calendar,
         icon: Icons.calendar_month_rounded,
         label: 'Calendario'
+      ),
+      (
+        section: AppSection.library,
+        icon: Icons.local_library_rounded,
+        label: 'Biblioteca'
       ),
       (
         section: AppSection.completed,
@@ -212,9 +224,7 @@ class _Sidebar extends StatelessWidget {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              visuals.isPhantom
-                                  ? 'Phantom House'
-                                  : 'Casa Clara',
+                              'Todo',
                               style: TextStyle(
                                 color: visuals.isPhantom
                                     ? visuals.textStrong
@@ -443,7 +453,9 @@ class _MobileNav extends StatelessWidget {
       AppSection.inbox,
       AppSection.projects,
       AppSection.categories,
+      AppSection.expenses,
       AppSection.calendar,
+      AppSection.library,
       AppSection.completed,
       AppSection.settings,
     ];
@@ -455,13 +467,17 @@ class _MobileNav extends StatelessWidget {
       destinations: const [
         NavigationDestination(icon: Icon(Icons.today_rounded), label: 'Hoy'),
         NavigationDestination(
-            icon: Icon(Icons.note_alt_outlined), label: 'Inbox'),
+            icon: Icon(Icons.note_alt_outlined), label: 'Entrada'),
         NavigationDestination(
             icon: Icon(Icons.folder_open_rounded), label: 'Proyectos'),
         NavigationDestination(
-            icon: Icon(Icons.category_rounded), label: 'Categorias'),
+            icon: Icon(Icons.category_rounded), label: 'Categorías'),
+        NavigationDestination(
+            icon: Icon(Icons.receipt_long_rounded), label: 'Gastos'),
         NavigationDestination(
             icon: Icon(Icons.calendar_month_rounded), label: 'Calendario'),
+        NavigationDestination(
+            icon: Icon(Icons.local_library_rounded), label: 'Biblioteca'),
         NavigationDestination(
             icon: Icon(Icons.done_all_rounded), label: 'Hechas'),
         NavigationDestination(icon: Icon(Icons.tune_rounded), label: 'Ajustes'),

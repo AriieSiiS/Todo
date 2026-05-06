@@ -3,7 +3,7 @@ import 'calendar_service.dart';
 
 class UnsupportedCalendarService implements CalendarService {
   final String _lastError =
-      'Google Calendar no esta soportado en esta plataforma.';
+      'Google Calendar no está soportado en esta plataforma.';
 
   @override
   Future<bool> connect(CalendarIntegrationSettings settings) async => false;

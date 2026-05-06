@@ -49,7 +49,7 @@ class SupabaseCloudService {
 
   Future<bool> signInWithGoogle() async {
     if (!isConfigured) {
-      _lastError = 'Falta la configuracion de Supabase.';
+      _lastError = 'Falta la configuración de Supabase.';
       return false;
     }
     try {
@@ -61,9 +61,8 @@ class SupabaseCloudService {
     if (!kIsWeb) {
       try {
         final launched = await signInWithDesktopGoogleOAuth(
-          redirectUrl: redirectUrl.isNotEmpty
-              ? redirectUrl
-              : 'http://localhost:3000/',
+          redirectUrl:
+              redirectUrl.isNotEmpty ? redirectUrl : 'http://localhost:3000/',
           setError: (message) {
             _lastError = message;
           },
@@ -101,7 +100,7 @@ class SupabaseCloudService {
       await Supabase.instance.client.auth.signOut();
       _lastError = '';
     } catch (error) {
-      _lastError = 'No se pudo cerrar la sesion. ${_cleanError(error)}';
+      _lastError = 'No se pudo cerrar la sesión. ${_cleanError(error)}';
       rethrow;
     }
   }

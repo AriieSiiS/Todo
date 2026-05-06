@@ -58,7 +58,7 @@ class CompletedPage extends StatelessWidget {
       ),
       _CompletedSectionData(
         id: 'older',
-        title: 'Mas antiguas',
+        title: 'Más antiguas',
         subtitle: '',
         tasks: olderTasks,
       ),
@@ -89,7 +89,7 @@ class CompletedPage extends StatelessWidget {
               _PageHeader(
                 title: 'Completadas',
                 subtitle:
-                    'Revisa lo que ya has resuelto y manten perspectiva de tu progreso.',
+                    'Revisa lo que ya has resuelto y mantén perspectiva de tu progreso.',
               ),
               const SizedBox(height: 18),
               _CompletedSummaryCard(
@@ -242,7 +242,7 @@ class _CompletedToolbar extends StatelessWidget {
                 value: _CompletedDateFilter.lastWeek,
                 child: Text('Semana pasada')),
             PopupMenuItem(
-                value: _CompletedDateFilter.older, child: Text('Mas antiguas')),
+                value: _CompletedDateFilter.older, child: Text('Más antiguas')),
           ],
           child: _CompletedToolbarButton(
             icon: Icons.calendar_month_outlined,
@@ -265,10 +265,10 @@ class _CompletedToolbar extends StatelessWidget {
           itemBuilder: (context) => const [
             PopupMenuItem(
                 value: _CompletedSortOrder.newestFirst,
-                child: Text('Mas recientes')),
+                child: Text('Más recientes')),
             PopupMenuItem(
                 value: _CompletedSortOrder.oldestFirst,
-                child: Text('Mas antiguas')),
+                child: Text('Más antiguas')),
             PopupMenuItem(
                 value: _CompletedSortOrder.alphabetical, child: Text('A-Z')),
           ],
@@ -353,7 +353,7 @@ class _CompletedEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Prueba otra busqueda o vuelve a mostrar las antiguas.',
+              'Prueba otra búsqueda o vuelve a mostrar las antiguas.',
               style: TextStyle(color: context.visuals.textMuted),
             ),
           ],
@@ -432,8 +432,12 @@ class _CompletedSectionCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle_rounded,
-                            color: Color(0xFF738B57)),
+                        IconButton(
+                          tooltip: 'Reabrir tarea',
+                          onPressed: () => controller.reopenTask(task.id),
+                          icon: const Icon(Icons.check_circle_rounded),
+                          color: const Color(0xFF738B57),
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Text(
@@ -540,26 +544,34 @@ class _CompletedSummaryCard extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
-                    Text('Buen trabajo, sigue asi.',
+                    Text('Buen trabajo, sigue así.',
                         style: TextStyle(color: context.visuals.textMuted)),
                   ],
                 ),
               ),
               SizedBox(
-                width: 74,
-                height: 74,
+                width: 88,
+                height: 88,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     CircularProgressIndicator(
                       value: progress.clamp(0, 1),
-                      strokeWidth: 4,
+                      strokeWidth: 5,
                       backgroundColor: const Color(0xFFEDE6DA),
                       color: const Color(0xFF70835D),
                     ),
-                    Text('${(progress * 100).round()}%',
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w600)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          '${(progress * 100).round()}%',
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -571,7 +583,7 @@ class _CompletedSummaryCard extends StatelessWidget {
           _settingsMetricRow(Icons.calendar_today_outlined,
               '$completedThisWeek', 'Completadas esta semana'),
           _settingsMetricRow(Icons.local_fire_department_outlined, '$streak',
-              'Racha de dias activos'),
+              'Racha de días activos'),
           _settingsMetricRow(Icons.track_changes_outlined, '$totalCompleted',
               'Total completadas'),
           const SizedBox(height: 10),
@@ -627,7 +639,8 @@ class _CompletedActivityCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Completada ${_activityWhenLabel(task.scheduledAt ?? fallbackDate, fallbackDate)} a las ${task.scheduledAt == null ? '07:20' : _timeLabel(task.scheduledAt!)}',
+                          _completedActivityTime(task,
+                              fallbackDate: fallbackDate),
                           style: TextStyle(color: context.visuals.textMuted),
                         ),
                       ],
@@ -635,7 +648,8 @@ class _CompletedActivityCard extends StatelessWidget {
                   ),
                   _miniBadge(
                     _activityBadgeLabel(
-                        task.scheduledAt ?? fallbackDate, fallbackDate),
+                        task.completedAt ?? task.scheduledAt ?? fallbackDate,
+                        fallbackDate),
                     const Color(0xFFE8F1DD),
                     const Color(0xFF6A8254),
                   ),
@@ -662,28 +676,60 @@ String _dateFilterLabel(_CompletedDateFilter value) {
     _CompletedDateFilter.yesterday => 'Ayer',
     _CompletedDateFilter.thisWeek => 'Esta semana',
     _CompletedDateFilter.lastWeek => 'Semana pasada',
-    _CompletedDateFilter.older => 'Mas antiguas',
+    _CompletedDateFilter.older => 'Más antiguas',
   };
 }
 
 String _sortOrderLabel(_CompletedSortOrder value) {
   return switch (value) {
-    _CompletedSortOrder.newestFirst => 'Mas recientes',
-    _CompletedSortOrder.oldestFirst => 'Mas antiguas',
+    _CompletedSortOrder.newestFirst => 'Más recientes',
+    _CompletedSortOrder.oldestFirst => 'Más antiguas',
     _CompletedSortOrder.alphabetical => 'A-Z',
   };
 }
 
 String _completedTaskTimeLabel(TaskModel task, DateTime today) {
-  final stamp = task.scheduledAt;
+  final stamp = task.completedAt ?? task.scheduledAt;
   if (stamp == null) {
-    return '--:--';
+    return '-';
   }
+  final timeLabel = _completedTaskClockLabel(task);
   if (_sameDay(stamp, today) ||
       _sameDay(stamp, today.subtract(const Duration(days: 1)))) {
-    return _timeLabel(stamp);
+    return timeLabel;
   }
-  return '${_weekdayShort(stamp)} ${stamp.day}, ${_timeLabel(stamp)}';
+  return '${_weekdayShort(stamp)} ${stamp.day}, $timeLabel';
+}
+
+String _completedTaskClockLabel(TaskModel task) {
+  final stamp = task.completedAt ?? task.scheduledAt;
+  if (stamp == null ||
+      (task.completedAt == null && _isCompletedTaskWithoutVisibleTime(task))) {
+    return '-';
+  }
+  return _timeLabel(stamp);
+}
+
+String _completedActivityTime(TaskModel task, {DateTime? fallbackDate}) {
+  final reference = task.completedAt ?? task.scheduledAt ?? fallbackDate;
+  if (reference == null) {
+    return 'Completada · Sin hora registrada';
+  }
+  final when = _activityWhenLabel(reference, fallbackDate ?? DateTime.now());
+  if (task.completedAt == null) {
+    return 'Completada $when · Sin hora registrada';
+  }
+  return 'Completada $when a las ${_timeLabel(task.completedAt!)}';
+}
+
+bool _isCompletedTaskWithoutVisibleTime(TaskModel task) {
+  final stamp = task.scheduledAt;
+  return stamp != null &&
+      stamp.hour == 0 &&
+      stamp.minute == 0 &&
+      stamp.second == 0 &&
+      stamp.millisecond == 0 &&
+      stamp.microsecond == 0;
 }
 
 String _completedTimestampLabel(DateTime value, DateTime today) {

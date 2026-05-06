@@ -236,7 +236,7 @@ class _CalendarTopHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 196,
+                  width: 154,
                   child: _HeaderActionButton(
                     label: 'Nueva tarea / evento',
                     icon: Icons.add_rounded,
@@ -267,7 +267,7 @@ class _CalendarFixedActionSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(width: 108, child: child);
+    return SizedBox(width: 154, child: child);
   }
 }
 
@@ -346,16 +346,10 @@ class _CalendarGhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
+    return _HeaderSecondaryButton(
+      label: label,
+      icon: icon,
       onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-        backgroundColor: Colors.white.withValues(alpha: 0.6),
-        side: const BorderSide(color: Color(0xFFE8DCCB)),
-      ),
-      label: Text(label),
     );
   }
 }
@@ -749,7 +743,7 @@ class _CalendarMonthSidePanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${_weekdayLabelForMonth(selectedDay)} ${selectedDay.day} ${_monthLong(selectedDay.month)}',
+                    '${_weekdayLong(selectedDay)} ${selectedDay.day} de ${_monthLong(selectedDay.month)}',
                     style: Theme.of(context)
                         .textTheme
                         .headlineMedium
@@ -775,14 +769,14 @@ class _CalendarMonthSidePanel extends StatelessWidget {
                 Expanded(
                   child: _CalendarStatCard(
                     value: '${events.length}',
-                    label: 'evento',
+                    label: events.length == 1 ? 'evento' : 'eventos',
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _CalendarStatCard(
                     value: '${completedTasks.length}',
-                    label: 'completadas',
+                    label: 'hechas',
                   ),
                 ),
               ],
@@ -900,20 +894,29 @@ class _CalendarStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      height: 78,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFCF8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE8DCCB)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             value,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: context.visuals.textMuted)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+          ),
         ],
       ),
     );
@@ -955,6 +958,7 @@ class _CalendarTaskRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             entry.isCompleted
@@ -980,8 +984,11 @@ class _CalendarTaskRow extends StatelessWidget {
             ),
           ),
           if (entry.categoryLabel != null)
-            _miniBadge(
-                entry.categoryLabel!, entry.background, entry.foreground),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 94),
+              child: _miniBadge(
+                  entry.categoryLabel!, entry.background, entry.foreground),
+            ),
         ],
       ),
     );
@@ -1016,7 +1023,7 @@ class _CalendarEventSideRow extends StatelessWidget {
                     Expanded(child: Text(entry.title)),
                     if (!entry.allDay)
                       Text(
-                        _timeLabel(entry.start),
+                        _entryTimeLabel(entry),
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                   ],
@@ -1147,7 +1154,7 @@ class _CalendarWeekView extends StatelessWidget {
                                             .map((entry) => _miniBadge(
                                                   entry.allDay
                                                       ? entry.title
-                                                      : '${_timeLabel(entry.start)} ${entry.title}',
+                                                      : '${_entryTimeLabel(entry)} ${entry.title}',
                                                   entry.background,
                                                   entry.foreground,
                                                 ))
@@ -1391,7 +1398,7 @@ class _CalendarAgendaRow extends StatelessWidget {
           SizedBox(
             width: 70,
             child: Text(
-              entry.allDay ? 'Todo el día' : _timeLabel(entry.start),
+              _entryTimeLabel(entry),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
             ),
           ),
@@ -1746,7 +1753,7 @@ class _CalendarAgendaSidebarList extends StatelessWidget {
                             Text(
                               entry.allDay
                                   ? '${_weekdayShort(entry.start)} ${entry.start.day} ${_monthShort(entry.start.month)} · Todo el día'
-                                  : '${_weekdayShort(entry.start)} ${entry.start.day} ${_monthShort(entry.start.month)} · ${_timeLabel(entry.start)}',
+                                  : '${_weekdayShort(entry.start)} ${entry.start.day} ${_monthShort(entry.start.month)} · ${_entryTimeLabel(entry)}',
                               style:
                                   TextStyle(color: context.visuals.textMuted),
                             ),
@@ -1891,6 +1898,25 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
     ..sort((left, right) => left.start.compareTo(right.start));
 }
 
+bool _isTaskWithoutVisibleTime(_CalendarEntry entry) {
+  return entry.isTask &&
+      entry.start.hour == 0 &&
+      entry.start.minute == 0 &&
+      entry.start.second == 0 &&
+      entry.start.millisecond == 0 &&
+      entry.start.microsecond == 0;
+}
+
+String _entryTimeLabel(_CalendarEntry entry) {
+  if (entry.allDay) {
+    return 'Todo el día';
+  }
+  if (_isTaskWithoutVisibleTime(entry)) {
+    return '–';
+  }
+  return _timeLabel(entry.start);
+}
+
 DateTime _shiftMonth(DateTime source, int delta) {
   final monthValue = source.month + delta;
   return DateTime(source.year, monthValue);
@@ -1919,19 +1945,6 @@ DateTime _endOfWeek(DateTime day) => DateTime(
 
 DateTime _endOfDay(DateTime day) =>
     DateTime(day.year, day.month, day.day, 23, 59, 59);
-
-String _weekdayLabelForMonth(DateTime day) {
-  const labels = <int, String>{
-    DateTime.monday: 'Lun',
-    DateTime.tuesday: 'Mar',
-    DateTime.wednesday: 'Mié',
-    DateTime.thursday: 'Jue',
-    DateTime.friday: 'Vie',
-    DateTime.saturday: 'Sáb',
-    DateTime.sunday: 'Dom',
-  };
-  return labels[day.weekday] ?? _weekdayShort(day);
-}
 
 String _monthShort(int month) {
   const labels = <int, String>{
@@ -1973,7 +1986,12 @@ Widget _miniBadge(String text, Color background, Color foreground) {
       color: background,
       borderRadius: BorderRadius.circular(999),
     ),
-    child: Text(text, style: TextStyle(fontSize: 12, color: foreground)),
+    child: Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 12, color: foreground),
+    ),
   );
 }
 

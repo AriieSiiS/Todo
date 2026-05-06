@@ -103,7 +103,7 @@ class CalendarIntegrationSettings {
     this.desktopClientId = '',
     this.desktopClientSecret = '',
     this.selectedCalendarId = 'primary',
-    this.selectedCalendarName = 'Primary',
+    this.selectedCalendarName = 'Principal',
     this.connectedEmail = '',
     this.connected = false,
     this.lastError = '',
@@ -160,7 +160,7 @@ class CalendarIntegrationSettings {
       desktopClientSecret: json['desktopClientSecret'] as String? ?? '',
       selectedCalendarId: json['selectedCalendarId'] as String? ?? 'primary',
       selectedCalendarName:
-          json['selectedCalendarName'] as String? ?? 'Primary',
+          json['selectedCalendarName'] as String? ?? 'Principal',
       connectedEmail: json['connectedEmail'] as String? ?? '',
       connected: json['connected'] as bool? ?? false,
       lastError: json['lastError'] as String? ?? '',

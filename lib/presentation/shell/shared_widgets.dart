@@ -30,12 +30,10 @@ class _QuickCaptureBar extends StatelessWidget {
     final action = FilledButton.tonal(
       onPressed: () => showQuickNoteComposer(context, controller),
       style: FilledButton.styleFrom(
-        backgroundColor: visuals.isPhantom
-            ? visuals.panelAlt
-            : const Color(0xFFF7F1E8),
-        foregroundColor: visuals.isPhantom
-            ? visuals.textStrong
-            : const Color(0xFF243127),
+        backgroundColor:
+            visuals.isPhantom ? visuals.panelAlt : const Color(0xFFF7F1E8),
+        foregroundColor:
+            visuals.isPhantom ? visuals.textStrong : const Color(0xFF243127),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
@@ -44,7 +42,7 @@ class _QuickCaptureBar extends StatelessWidget {
         children: [
           const Icon(Icons.edit_note_rounded, size: 18),
           const SizedBox(width: 8),
-          Text(compact ? 'Abrir nota rapida' : 'Nueva nota rapida'),
+          Text(compact ? 'Abrir nota rápida' : 'Nueva nota rápida'),
         ],
       ),
     );
@@ -53,7 +51,7 @@ class _QuickCaptureBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Apunta algo rapido y lo revisas despues.',
+            'Apunta algo rápido y lo revisas después.',
             style: TextStyle(color: visuals.textMuted, height: 1.35),
           ),
           const SizedBox(height: 12),
@@ -85,7 +83,8 @@ class _QuickNoteComposerDialog extends StatefulWidget {
   final QuickNote? initialNote;
 
   @override
-  State<_QuickNoteComposerDialog> createState() => _QuickNoteComposerDialogState();
+  State<_QuickNoteComposerDialog> createState() =>
+      _QuickNoteComposerDialogState();
 }
 
 class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
@@ -166,7 +165,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Apunta algo rapido y lo revisas despues.',
+                              'Apunta algo rápido y lo revisas después.',
                               style: TextStyle(color: visuals.textMuted),
                             ),
                           ],
@@ -186,7 +185,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                   minLines: 9,
                   autofocus: true,
                   decoration: const InputDecoration(
-                    hintText: 'Escribe una nota rapida...',
+                    hintText: 'Escribe una nota rápida...',
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -396,7 +395,8 @@ class _TaskCard extends StatelessWidget {
                                 ),
                               if (project != null)
                                 _SoftChip(label: project.name),
-                              if (task.scheduledAt != null)
+                              if (task.scheduledAt != null &&
+                                  _hasVisibleTime(task.scheduledAt!))
                                 _SoftChip(label: _timeLabel(task.scheduledAt!)),
                               _SoftChip(label: task.priority.name),
                               if (task.reminderRule?.enabled ?? false)
@@ -454,7 +454,7 @@ class _TaskCard extends StatelessWidget {
                       const PopupMenuItem(
                           value: 'subtask', child: Text('Crear subtarea')),
                       const PopupMenuItem(
-                          value: 'tomorrow', child: Text('Mover a manana')),
+                          value: 'tomorrow', child: Text('Mover a mañana')),
                       if (controller.isCalendarConnected) ...[
                         const PopupMenuItem(
                             value: 'sync',
@@ -692,23 +692,73 @@ class _HeaderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
-    return FilledButton.tonalIcon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-      style: FilledButton.styleFrom(
-        backgroundColor:
-            visuals.isPhantom ? visuals.accent : const Color(0xFF2E382A),
-        foregroundColor: const Color(0xFFF9F3E9),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        shape: visuals.isPhantom
-            ? const BeveledRectangleBorder(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(3),
-                  bottomRight: Radius.circular(22),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 154, minHeight: 48),
+      child: FilledButton.tonalIcon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(154, 48),
+          backgroundColor:
+              visuals.isPhantom ? visuals.accent : const Color(0xFF263625),
+          foregroundColor: const Color(0xFFFFFCF8),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          shape: visuals.isPhantom
+              ? const BeveledRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(3),
+                    bottomRight: Radius.circular(22),
+                  ),
+                )
+              : RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              )
-            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderSecondaryButton extends StatelessWidget {
+  const _HeaderSecondaryButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 154, minHeight: 48),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(154, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          backgroundColor: Colors.white.withValues(alpha: 0.62),
+          side: const BorderSide(color: Color(0xFFE8DCCB)),
+          foregroundColor: const Color(0xFF2D2A25),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
       ),
     );
   }

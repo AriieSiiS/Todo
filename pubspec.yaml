@@ -8,7 +8,10 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  file_selector: ^1.1.0
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.6.1
   google_fonts: ^6.3.2
@@ -31,3 +34,4 @@ flutter:
   uses-material-design: true
   assets:
     - resources/Persona 5 but it's Lofi ~ Chill Lofi Mix for Study_Work (1 Hour) [aM9dxd2nRwE] (1).mp3
+    - resources/task-complete.wav

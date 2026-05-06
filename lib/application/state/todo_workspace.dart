@@ -19,6 +19,7 @@ import '../../domain/repositories/todo_state_repository.dart';
 import '../../services/calendar_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_cloud_service.dart';
+import '../../services/task_feedback_service.dart';
 import '../../services/task_scheduler_service.dart';
 
 class TodoWorkspace extends ChangeNotifier {
@@ -28,6 +29,7 @@ class TodoWorkspace extends ChangeNotifier {
     this._calendarService,
     this._notificationService,
     this._scheduler,
+    this._feedback,
   );
 
   static Future<TodoWorkspace> create() async {
@@ -37,6 +39,7 @@ class TodoWorkspace extends ChangeNotifier {
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
       TaskSchedulerService(),
+      TaskFeedbackService(),
     );
     await controller._load();
     return controller;
@@ -50,12 +53,13 @@ class TodoWorkspace extends ChangeNotifier {
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
       TaskSchedulerService(),
+      TaskFeedbackService(),
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
       controller._loadedFromPersistence = true;
     } else {
-      controller._seed();
+      controller._clearStateToDefaults();
     }
     return controller;
   }
@@ -65,12 +69,19 @@ class TodoWorkspace extends ChangeNotifier {
   final CalendarRepository _calendarService;
   final NotificationRepository _notificationService;
   final TaskSchedulerService _scheduler;
+  final TaskFeedbackService _feedback;
   final Random _random = Random();
 
   final List<TaskModel> _tasks = <TaskModel>[];
   final List<CategoryModel> _categories = <CategoryModel>[];
   final List<ProjectModel> _projects = <ProjectModel>[];
   final List<QuickNote> _notes = <QuickNote>[];
+  final List<Expense> _expenses = <Expense>[];
+  final List<ExpenseCategory> _expenseCategories = <ExpenseCategory>[];
+  final List<PaymentMethodModel> _paymentMethods = <PaymentMethodModel>[];
+  final List<FixedPayment> _fixedPayments = <FixedPayment>[];
+  final List<LibraryItem> _libraryItems = <LibraryItem>[];
+  final List<LibraryGoal> _libraryGoals = <LibraryGoal>[];
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
 
   DaySettings _daySettings = const DaySettings();
@@ -103,6 +114,17 @@ class TodoWorkspace extends ChangeNotifier {
       List<CategoryModel>.unmodifiable(_categories);
   List<ProjectModel> get projects => List<ProjectModel>.unmodifiable(_projects);
   List<QuickNote> get notes => List<QuickNote>.unmodifiable(_notes);
+  List<Expense> get expenses => List<Expense>.unmodifiable(_expenses);
+  List<ExpenseCategory> get expenseCategories =>
+      List<ExpenseCategory>.unmodifiable(_expenseCategories);
+  List<PaymentMethodModel> get paymentMethods =>
+      List<PaymentMethodModel>.unmodifiable(_paymentMethods);
+  List<FixedPayment> get fixedPayments =>
+      List<FixedPayment>.unmodifiable(_fixedPayments);
+  List<LibraryItem> get libraryItems =>
+      List<LibraryItem>.unmodifiable(_libraryItems);
+  List<LibraryGoal> get libraryGoals =>
+      List<LibraryGoal>.unmodifiable(_libraryGoals);
   List<CalendarEventModel> get calendarEvents =>
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
@@ -203,8 +225,10 @@ class TodoWorkspace extends ChangeNotifier {
         .where((task) => task.status == TaskStatus.completed && !task.isSubtask)
         .toList()
       ..sort(
-        (left, right) => (right.scheduledAt ?? DateTime(1970))
-            .compareTo(left.scheduledAt ?? DateTime(1970)),
+        (left, right) => (right.completedAt ??
+                right.scheduledAt ??
+                DateTime(1970))
+            .compareTo(left.completedAt ?? left.scheduledAt ?? DateTime(1970)),
       );
   }
 
@@ -260,6 +284,12 @@ class TodoWorkspace extends ChangeNotifier {
       categories: categories,
       projects: projects,
       notes: notes,
+      expenses: expenses,
+      expenseCategories: expenseCategories,
+      paymentMethods: paymentMethods,
+      fixedPayments: fixedPayments,
+      libraryItems: libraryItems,
+      libraryGoals: libraryGoals,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -334,6 +364,25 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void deleteTasks(Iterable<String> taskIds) {
+    final ids = taskIds.toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    _tasks.removeWhere(
+      (task) => ids.contains(task.id) || ids.contains(task.parentTaskId),
+    );
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      final filtered =
+          task.subtaskIds.where((id) => !ids.contains(id)).toList();
+      if (filtered.length != task.subtaskIds.length) {
+        _tasks[i] = task.copyWith(subtaskIds: filtered);
+      }
+    }
+    _commit();
+  }
+
   Future<void> completeTask(String taskId) async {
     final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
@@ -341,8 +390,11 @@ class TodoWorkspace extends ChangeNotifier {
     }
     final task = _tasks[index];
     final willComplete = task.status != TaskStatus.completed;
+    final completedAt = willComplete ? DateTime.now() : null;
     _tasks[index] = task.copyWith(
       status: willComplete ? TaskStatus.completed : TaskStatus.active,
+      completedAt: completedAt,
+      clearCompletedAt: !willComplete,
     );
     if (willComplete && task.recurrence.isRecurring) {
       _tasks.add(
@@ -352,11 +404,15 @@ class TodoWorkspace extends ChangeNotifier {
           scheduledAt: _nextRecurrence(task),
           manualOrder: _nextManualOrder(),
           collapsed: false,
+          clearCompletedAt: true,
         ),
       );
     }
     if (task.calendarLink != null && _calendarSettings.connected) {
       await syncTaskToCalendar(taskId, silent: true);
+    }
+    if (willComplete) {
+      unawaited(_feedback.playTaskCompleted());
     }
     _commit();
   }
@@ -366,8 +422,33 @@ class TodoWorkspace extends ChangeNotifier {
     if (index == -1) {
       return;
     }
-    _tasks[index] = _tasks[index].copyWith(status: TaskStatus.active);
+    _tasks[index] = _tasks[index].copyWith(
+      status: TaskStatus.active,
+      clearCompletedAt: true,
+    );
     _commit();
+  }
+
+  void reopenTasks(Iterable<String> taskIds) {
+    final ids = taskIds.toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    var changed = false;
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      if (!ids.contains(task.id) || task.status != TaskStatus.completed) {
+        continue;
+      }
+      _tasks[i] = task.copyWith(
+        status: TaskStatus.active,
+        clearCompletedAt: true,
+      );
+      changed = true;
+    }
+    if (changed) {
+      _commit();
+    }
   }
 
   TaskModel createSubtask(String parentTaskId, String title) {
@@ -395,6 +476,82 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
     if (_tasks[index].calendarLink != null && _calendarSettings.connected) {
       await syncTaskToCalendar(taskId, silent: true);
+    }
+  }
+
+  Future<void> moveTasksToDay(Iterable<String> taskIds, DateTime date) async {
+    final ids = taskIds.toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    final tasksToSync = <String>[];
+    for (var i = 0; i < _tasks.length; i++) {
+      final source = _tasks[i];
+      if (!ids.contains(source.id)) {
+        continue;
+      }
+      final current = source.scheduledAt ?? logicalDate();
+      _tasks[i] = source.copyWith(
+        scheduledAt: DateTime(
+            date.year, date.month, date.day, current.hour, current.minute),
+        calendarLink: source.calendarLink
+            ?.copyWith(syncStatus: CalendarSyncStatus.pending),
+      );
+      if (_tasks[i].calendarLink != null && _calendarSettings.connected) {
+        tasksToSync.add(source.id);
+      }
+    }
+    _commit();
+    for (final id in tasksToSync) {
+      await syncTaskToCalendar(id, silent: true);
+    }
+  }
+
+  Future<void> completeTasks(Iterable<String> taskIds) async {
+    final ids = taskIds.toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    final tasksToSync = <String>[];
+    final spawnedTasks = <TaskModel>[];
+    var changed = false;
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      if (!ids.contains(task.id) || task.status == TaskStatus.completed) {
+        continue;
+      }
+      _tasks[i] = task.copyWith(
+        status: TaskStatus.completed,
+        completedAt: DateTime.now(),
+      );
+      changed = true;
+      if (task.recurrence.isRecurring) {
+        spawnedTasks.add(
+          task.copyWith(
+            id: _id('task'),
+            status: TaskStatus.active,
+            scheduledAt: _nextRecurrence(task),
+            manualOrder: _nextManualOrder(),
+            collapsed: false,
+            clearCompletedAt: true,
+          ),
+        );
+      }
+      if (task.calendarLink != null && _calendarSettings.connected) {
+        tasksToSync.add(task.id);
+      }
+    }
+    if (spawnedTasks.isNotEmpty) {
+      _tasks.addAll(spawnedTasks);
+      changed = true;
+    }
+    if (!changed) {
+      return;
+    }
+    unawaited(_feedback.playTaskCompleted());
+    _commit();
+    for (final id in tasksToSync) {
+      await syncTaskToCalendar(id, silent: true);
     }
   }
 
@@ -479,7 +636,10 @@ class TodoWorkspace extends ChangeNotifier {
       final task = _tasks[i];
       if (task.projectIds.contains(projectId) &&
           task.status == TaskStatus.active) {
-        _tasks[i] = task.copyWith(status: TaskStatus.completed);
+        _tasks[i] = task.copyWith(
+          status: TaskStatus.completed,
+          completedAt: DateTime.now(),
+        );
       }
     }
     _commit();
@@ -1015,28 +1175,403 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   Future<void> resetToSeed() async {
-    _tasks.clear();
-    _categories.clear();
-    _projects.clear();
-    _notes.clear();
-    _calendarEvents.clear();
-    _calendarAccount = null;
-    _daySettings = const DaySettings();
-    _notificationSettings = const DeviceNotificationSettings();
-    _calendarSettings = const CalendarIntegrationSettings();
-    _section = AppSection.today;
-    _todaySort = TodaySort.manual;
-    _loadedFromPersistence = false;
+    _clearStateToDefaults();
     await _calendarService.disconnect();
     await _store.clearCalendarSession();
-    _seed();
     _commit();
   }
 
-  @override
-  void dispose() {
-    _saveDebounce?.cancel();
-    super.dispose();
+  ExpenseCategory? expenseCategoryById(String id) {
+    for (final category in _expenseCategories) {
+      if (category.id == id) {
+        return category;
+      }
+    }
+    return null;
+  }
+
+  PaymentMethodModel? paymentMethodById(String id) {
+    for (final method in _paymentMethods) {
+      if (method.id == id) {
+        return method;
+      }
+    }
+    return null;
+  }
+
+  Expense? expenseById(String id) {
+    for (final expense in _expenses) {
+      if (expense.id == id) {
+        return expense;
+      }
+    }
+    return null;
+  }
+
+  Expense createExpense({
+    required DateTime date,
+    String concept = '',
+    required double amount,
+    required String categoryId,
+    String? paymentMethodId,
+    List<String> projectIds = const <String>[],
+    String? note,
+    bool isRecurringInstance = false,
+    String? fixedPaymentId,
+  }) {
+    final now = DateTime.now();
+    final expense = Expense(
+      id: _id('expense'),
+      date: DateTime(date.year, date.month, date.day),
+      concept: concept.trim().isEmpty ? 'Gasto' : concept.trim(),
+      amount: amount,
+      categoryId: categoryId,
+      paymentMethodId: paymentMethodId,
+      projectIds: List<String>.from(projectIds),
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+      isRecurringInstance: isRecurringInstance,
+      fixedPaymentId: fixedPaymentId,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _expenses.add(expense);
+    _commit();
+    return expense;
+  }
+
+  void updateExpense(Expense updated) {
+    final index = _expenses.indexWhere((expense) => expense.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _expenses[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  void duplicateExpense(String expenseId) {
+    final source = expenseById(expenseId);
+    if (source == null) {
+      return;
+    }
+    createExpense(
+      date: source.date,
+      concept: '${source.concept} copia',
+      amount: source.amount,
+      categoryId: source.categoryId,
+      paymentMethodId: source.paymentMethodId,
+      projectIds: source.projectIds,
+      note: source.note,
+      isRecurringInstance: source.isRecurringInstance,
+      fixedPaymentId: source.fixedPaymentId,
+    );
+  }
+
+  void deleteExpense(String expenseId) {
+    _expenses.removeWhere((expense) => expense.id == expenseId);
+    _commit();
+  }
+
+  ExpenseCategory createExpenseCategory({
+    required String name,
+    required int colorValue,
+    required IconData icon,
+  }) {
+    final now = DateTime.now();
+    final category = ExpenseCategory(
+      id: _id('expense-category'),
+      name: name.trim(),
+      colorValue: colorValue,
+      icon: icon,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _expenseCategories.add(category);
+    _commit();
+    return category;
+  }
+
+  void updateExpenseCategory(ExpenseCategory updated) {
+    final index =
+        _expenseCategories.indexWhere((category) => category.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _expenseCategories[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  PaymentMethodModel createPaymentMethod({
+    required String name,
+    required IconData icon,
+    required int colorValue,
+  }) {
+    final now = DateTime.now();
+    final method = PaymentMethodModel(
+      id: _id('payment-method'),
+      name: name.trim(),
+      icon: icon,
+      colorValue: colorValue,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _paymentMethods.add(method);
+    _commit();
+    return method;
+  }
+
+  void updatePaymentMethod(PaymentMethodModel updated) {
+    final index =
+        _paymentMethods.indexWhere((method) => method.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _paymentMethods[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  FixedPayment createFixedPayment({
+    required String name,
+    required double amount,
+    required String categoryId,
+    String? paymentMethodId,
+    FixedPaymentFrequency frequency = FixedPaymentFrequency.monthly,
+    String? customInterval,
+    required DateTime nextPaymentDate,
+    String? note,
+  }) {
+    final now = DateTime.now();
+    final payment = FixedPayment(
+      id: _id('fixed-payment'),
+      name: name.trim(),
+      amount: amount,
+      categoryId: categoryId,
+      paymentMethodId: paymentMethodId,
+      frequency: frequency,
+      customInterval: customInterval,
+      nextPaymentDate: DateTime(
+          nextPaymentDate.year, nextPaymentDate.month, nextPaymentDate.day),
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    _fixedPayments.add(payment);
+    _commit();
+    return payment;
+  }
+
+  void updateFixedPayment(FixedPayment updated) {
+    final index =
+        _fixedPayments.indexWhere((payment) => payment.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _fixedPayments[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  LibraryItem createLibraryItem({
+    required LibraryItemType type,
+    required String title,
+    required DateTime completedDate,
+    String? coverUrl,
+    double? rating,
+    String? note,
+    String? platform,
+    String? developer,
+    String? author,
+    LibraryMediaType? mediaType,
+    int? releaseYear,
+    String? creatorOrDirector,
+  }) {
+    final now = DateTime.now();
+    final item = LibraryItem(
+      id: _id('library'),
+      type: type,
+      title: title.trim(),
+      completedDate: completedDate,
+      coverUrl: coverUrl?.trim().isEmpty == true ? null : coverUrl?.trim(),
+      rating: rating,
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+      platform: platform?.trim().isEmpty == true ? null : platform?.trim(),
+      developer: developer?.trim().isEmpty == true ? null : developer?.trim(),
+      author: author?.trim().isEmpty == true ? null : author?.trim(),
+      mediaType: mediaType,
+      releaseYear: releaseYear,
+      creatorOrDirector: creatorOrDirector?.trim().isEmpty == true
+          ? null
+          : creatorOrDirector?.trim(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    _libraryItems.add(item);
+    _commit();
+    return item;
+  }
+
+  void updateLibraryItem(LibraryItem updated) {
+    final index = _libraryItems.indexWhere((item) => item.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _libraryItems[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  LibraryGoal createLibraryGoal({
+    required LibraryItemType type,
+    required String title,
+    required int targetYear,
+    bool isFavorite = false,
+    String? coverUrl,
+    String? note,
+    String? platform,
+    String? author,
+    LibraryMediaType? mediaType,
+    int? releaseYear,
+    String? creatorOrDirector,
+  }) {
+    final now = DateTime.now();
+    final goal = LibraryGoal(
+      id: _id('library_goal'),
+      type: type,
+      title: title.trim(),
+      targetYear: targetYear,
+      isFavorite: isFavorite,
+      coverUrl: coverUrl?.trim().isEmpty == true ? null : coverUrl?.trim(),
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+      platform: platform?.trim().isEmpty == true ? null : platform?.trim(),
+      author: author?.trim().isEmpty == true ? null : author?.trim(),
+      mediaType: mediaType,
+      releaseYear: releaseYear,
+      creatorOrDirector: creatorOrDirector?.trim().isEmpty == true
+          ? null
+          : creatorOrDirector?.trim(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    _libraryGoals.add(goal);
+    _commit();
+    return goal;
+  }
+
+  void updateLibraryGoal(LibraryGoal updated) {
+    final index = _libraryGoals.indexWhere((goal) => goal.id == updated.id);
+    if (index == -1) {
+      return;
+    }
+    _libraryGoals[index] = updated.copyWith(updatedAt: DateTime.now());
+    _commit();
+  }
+
+  void toggleLibraryGoalCompleted(String goalId) {
+    final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
+    if (index == -1) {
+      return;
+    }
+    final goal = _libraryGoals[index];
+    _libraryGoals[index] = goal.copyWith(
+      status: goal.isCompleted
+          ? LibraryGoalStatus.pending
+          : LibraryGoalStatus.completed,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void toggleLibraryGoalFavorite(String goalId) {
+    final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
+    if (index == -1) {
+      return;
+    }
+    final goal = _libraryGoals[index];
+    _libraryGoals[index] = goal.copyWith(
+      isFavorite: !goal.isFavorite,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  Expense createExpenseFromFixedPayment(String fixedPaymentId) {
+    final payment =
+        _fixedPayments.firstWhere((item) => item.id == fixedPaymentId);
+    return createExpense(
+      date: payment.nextPaymentDate,
+      concept: payment.name,
+      amount: payment.amount,
+      categoryId: payment.categoryId,
+      paymentMethodId: payment.paymentMethodId,
+      note: payment.note,
+      isRecurringInstance: true,
+      fixedPaymentId: payment.id,
+    );
+  }
+
+  List<Expense> expensesForMonth(int year, int month) {
+    return _expenses
+        .where((expense) =>
+            expense.date.year == year && expense.date.month == month)
+        .toList()
+      ..sort((left, right) => right.date.compareTo(left.date));
+  }
+
+  double expenseTotalForMonth(int year, int month) {
+    return expensesForMonth(year, month)
+        .fold<double>(0, (total, expense) => total + expense.amount);
+  }
+
+  double expenseTotalForCategoryMonth(String categoryId, int year, int month) {
+    return _expenses
+        .where((expense) =>
+            expense.categoryId == categoryId &&
+            expense.date.year == year &&
+            expense.date.month == month)
+        .fold<double>(0, (total, expense) => total + expense.amount);
+  }
+
+  double expenseTotalForCategoryYear(String categoryId, int year) {
+    return _expenses
+        .where((expense) =>
+            expense.categoryId == categoryId && expense.date.year == year)
+        .fold<double>(0, (total, expense) => total + expense.amount);
+  }
+
+  double expenseTotalForYear(int year) {
+    return _expenses
+        .where((expense) => expense.date.year == year)
+        .fold<double>(0, (total, expense) => total + expense.amount);
+  }
+
+  String exportFinancialJson() {
+    return const JsonEncoder.withIndent('  ').convert(<String, dynamic>{
+      'expenses': expenses.map((expense) => expense.toJson()).toList(),
+      'expenseCategories':
+          expenseCategories.map((category) => category.toJson()).toList(),
+      'paymentMethods':
+          paymentMethods.map((method) => method.toJson()).toList(),
+      'fixedPayments':
+          fixedPayments.map((payment) => payment.toJson()).toList(),
+      'generatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  String exportFinancialCsv() {
+    final rows = <List<String>>[
+      ['fecha', 'concepto', 'importe', 'categoría', 'método', 'nota'],
+      ..._expenses.map((expense) {
+        return [
+          expense.date.toIso8601String().split('T').first,
+          expense.concept,
+          expense.amount.toStringAsFixed(2),
+          expenseCategoryById(expense.categoryId)?.name ?? '',
+          paymentMethodById(expense.paymentMethodId ?? '')?.name ?? '',
+          expense.note ?? '',
+        ];
+      }),
+    ];
+    return rows
+        .map((row) =>
+            row.map((cell) => '"${cell.replaceAll('"', '""')}"').join(','))
+        .join('\n');
   }
 
   Future<void> _load() async {
@@ -1045,8 +1580,11 @@ class TodoWorkspace extends ChangeNotifier {
     if (persisted != null) {
       _applySnapshot(persisted);
       _loadedFromPersistence = true;
+      if (_normalizeLoadedSpanishText()) {
+        await _persist();
+      }
     } else {
-      _seed();
+      _clearStateToDefaults();
     }
     final session = await _store.loadCalendarSession();
     await _calendarService.restoreSession(session);
@@ -1081,6 +1619,26 @@ class TodoWorkspace extends ChangeNotifier {
     _notes
       ..clear()
       ..addAll(snapshot.notes);
+    _expenses
+      ..clear()
+      ..addAll(snapshot.expenses);
+    _expenseCategories
+      ..clear()
+      ..addAll(snapshot.expenseCategories);
+    _paymentMethods
+      ..clear()
+      ..addAll(snapshot.paymentMethods);
+    _fixedPayments
+      ..clear()
+      ..addAll(snapshot.fixedPayments);
+    _ensureFinancialSeed();
+    _libraryItems
+      ..clear()
+      ..addAll(
+          snapshot.libraryItems.where((item) => !_isDemoLibraryItem(item)));
+    _libraryGoals
+      ..clear()
+      ..addAll(snapshot.libraryGoals);
     _calendarEvents
       ..clear()
       ..addAll(snapshot.calendarEvents);
@@ -1090,6 +1648,188 @@ class TodoWorkspace extends ChangeNotifier {
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
     _visualMode = snapshot.visualMode;
+  }
+
+  bool _normalizeLoadedSpanishText() {
+    var changed = false;
+
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      final title = _cleanSpanishText(task.title);
+      final description = _cleanNullableSpanishText(task.description);
+      final checklist = task.checklist.map(_cleanSpanishText).toList();
+      final materials = task.materials.map(_cleanSpanishText).toList();
+      if (title != task.title ||
+          description != task.description ||
+          !_sameStringList(checklist, task.checklist) ||
+          !_sameStringList(materials, task.materials)) {
+        _tasks[i] = task.copyWith(
+          title: title,
+          description: description,
+          clearDescription: description == null,
+          checklist: checklist,
+          materials: materials,
+        );
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _categories.length; i++) {
+      final category = _categories[i];
+      final name = _cleanSpanishText(category.name);
+      final description = _cleanSpanishText(category.description);
+      if (name != category.name || description != category.description) {
+        _categories[i] = category.copyWith(
+          name: name,
+          description: description,
+        );
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _projects.length; i++) {
+      final project = _projects[i];
+      final name = _cleanSpanishText(project.name);
+      final description = _cleanSpanishText(project.description);
+      if (name != project.name || description != project.description) {
+        _projects[i] = project.copyWith(name: name, description: description);
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      final content = _cleanSpanishText(note.content);
+      if (content != note.content) {
+        _notes[i] = note.copyWith(content: content);
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _calendarEvents.length; i++) {
+      final event = _calendarEvents[i];
+      final title = _cleanSpanishText(event.title);
+      final description = _cleanNullableSpanishText(event.description);
+      if (title != event.title || description != event.description) {
+        _calendarEvents[i] = event.copyWith(
+          title: title,
+          description: description,
+          clearDescription: description == null,
+        );
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _expenses.length; i++) {
+      final expense = _expenses[i];
+      final concept = _cleanSpanishText(expense.concept);
+      final note = _cleanNullableSpanishText(expense.note);
+      if (concept != expense.concept || note != expense.note) {
+        _expenses[i] = expense.copyWith(
+          concept: concept,
+          note: note,
+          clearNote: note == null,
+        );
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _expenseCategories.length; i++) {
+      final category = _expenseCategories[i];
+      final name = _cleanSpanishText(category.name);
+      if (name != category.name) {
+        _expenseCategories[i] = category.copyWith(name: name);
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _paymentMethods.length; i++) {
+      final method = _paymentMethods[i];
+      final name = _cleanSpanishText(method.name);
+      if (name != method.name) {
+        _paymentMethods[i] = method.copyWith(name: name);
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _fixedPayments.length; i++) {
+      final payment = _fixedPayments[i];
+      final name = _cleanSpanishText(payment.name);
+      final note = _cleanNullableSpanishText(payment.note);
+      if (name != payment.name || note != payment.note) {
+        _fixedPayments[i] = payment.copyWith(
+          name: name,
+          note: note,
+          clearNote: note == null,
+        );
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
+  String? _cleanNullableSpanishText(String? value) {
+    if (value == null) {
+      return null;
+    }
+    return _cleanSpanishText(value);
+  }
+
+  String _cleanSpanishText(String value) {
+    const replacements = <String, String>{
+      'ÃƒÂ¡': 'á',
+      'ÃƒÂ©': 'é',
+      'ÃƒÂ­': 'í',
+      'ÃƒÂ³': 'ó',
+      'ÃƒÂº': 'ú',
+      'ÃƒÂ±': 'ñ',
+      'ÃƒÂ¼': 'ü',
+      'ÃƒÂÁ': 'Á',
+      'ÃƒÂ‰': 'É',
+      'ÃƒÂÍ': 'Í',
+      'ÃƒÂ“': 'Ó',
+      'ÃƒÂš': 'Ú',
+      'ÃƒÂ‘': 'Ñ',
+      'ÃƒÂœ': 'Ü',
+      'Ã‚Â¿': '¿',
+      'Ã‚Â¡': '¡',
+      'Ã¡': 'á',
+      'Ã©': 'é',
+      'Ã­': 'í',
+      'Ã³': 'ó',
+      'Ãº': 'ú',
+      'Ã±': 'ñ',
+      'Ã¼': 'ü',
+      'ÃÁ': 'Á',
+      'Ã‰': 'É',
+      'ÃÍ': 'Í',
+      'Ã“': 'Ó',
+      'Ãš': 'Ú',
+      'Ã‘': 'Ñ',
+      'Ãœ': 'Ü',
+      'Â¿': '¿',
+      'Â¡': '¡',
+    };
+    var result = value;
+    for (var pass = 0; pass < 2; pass++) {
+      replacements.forEach((from, to) {
+        result = result.replaceAll(from, to);
+      });
+    }
+    return result;
+  }
+
+  bool _sameStringList(List<String> left, List<String> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _commit() {
@@ -1130,6 +1870,12 @@ class TodoWorkspace extends ChangeNotifier {
       categories: categories,
       projects: projects,
       notes: notes,
+      expenses: expenses,
+      expenseCategories: expenseCategories,
+      paymentMethods: paymentMethods,
+      fixedPayments: fixedPayments,
+      libraryItems: libraryItems,
+      libraryGoals: libraryGoals,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -1281,131 +2027,269 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
-  void _seed() {
-    final categories = <CategoryModel>[
-      CategoryModel(
-        id: 'cat-home',
-        name: 'Casa',
-        description: 'Categoría base para probar edición y organización.',
-        colorValue: const Color(0xFF607A5A).toARGB32(),
-        icon: Icons.home_rounded,
-      ),
-    ];
-    _categories.addAll(categories);
+  void _clearStateToDefaults() {
+    _tasks.clear();
+    _categories.clear();
+    _projects.clear();
+    _notes.clear();
+    _expenses.clear();
+    _expenseCategories.clear();
+    _paymentMethods.clear();
+    _fixedPayments.clear();
+    _ensureFinancialSeed();
+    _libraryItems.clear();
+    _libraryGoals.clear();
+    _calendarEvents.clear();
+    _daySettings = const DaySettings();
+    _notificationSettings = const DeviceNotificationSettings();
+    _calendarSettings = const CalendarIntegrationSettings();
+    _calendarAccount = null;
+    _section = AppSection.today;
+    _todaySort = TodaySort.manual;
+    _visualMode = AppVisualMode.classic;
+    _lastSavedAt = null;
+    _lastCloudSyncAt = null;
+    _loadedFromPersistence = false;
+  }
 
-    final projects = <ProjectModel>[
-      ProjectModel(
-        id: 'project-bathroom',
-        name: 'Fix bathroom cabinet',
-        description: 'Sort products, measure shelves and move overflow.',
-        colorValue: const Color(0xFFAA5C4D).toARGB32(),
-        icon: Icons.handyman_rounded,
-        categoryIds: const <String>['cat-home'],
-      ),
-      ProjectModel(
-        id: 'project-reset',
-        name: 'Weekly reset',
-        description: 'Bring home systems back to baseline without overload.',
-        colorValue: const Color(0xFF607A5A).toARGB32(),
-        icon: Icons.refresh_rounded,
-        categoryIds: const <String>['cat-home'],
-      ),
-    ];
-    _projects.addAll(projects);
+  void _ensureFinancialSeed() {
+    if (_expenseCategories.isNotEmpty || _paymentMethods.isNotEmpty) {
+      return;
+    }
+    final now = DateTime.now();
+    ExpenseCategory category(
+      String id,
+      String name,
+      int color,
+      IconData icon,
+    ) {
+      return ExpenseCategory(
+        id: id,
+        name: name,
+        colorValue: color,
+        icon: icon,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
 
-    final today = logicalDate(now);
-
-    _tasks.addAll(<TaskModel>[
-      TaskModel(
-        id: 'task-reset',
-        title: 'Weekly reset',
-        description: 'Clean inbox, review calendar, set the top three tasks.',
-        categoryIds: const <String>['cat-home'],
-        projectIds: const <String>['project-reset'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 8),
-        priority: TaskPriority.urgent,
-        origin: TaskOrigin.project,
-        manualOrder: 0,
-        subtaskIds: const <String>['task-reset-sub-1', 'task-reset-sub-2'],
-        reminderRule: ReminderRule(
-          enabled: true,
-          minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
-        ),
-      ),
-      TaskModel(
-        id: 'task-reset-sub-1',
-        title: 'Clear quick captures',
-        categoryIds: const <String>['cat-home'],
-        projectIds: const <String>['project-reset'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 8),
-        priority: TaskPriority.high,
-        parentTaskId: 'task-reset',
-        manualOrder: 0,
-      ),
-      TaskModel(
-        id: 'task-reset-sub-2',
-        title: 'Block focus time on calendar',
-        categoryIds: const <String>['cat-home'],
-        projectIds: const <String>['project-reset'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 8, 30),
-        priority: TaskPriority.medium,
-        parentTaskId: 'task-reset',
-        manualOrder: 1,
-      ),
-      TaskModel(
-        id: 'task-laundry',
-        title: 'Laundry and fold',
-        categoryIds: const <String>['cat-home'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 18, 30),
-        priority: TaskPriority.medium,
-        manualOrder: 1,
-      ),
-      TaskModel(
-        id: 'task-cabinet',
-        title: 'Empty bathroom cabinet top shelf',
-        categoryIds: const <String>['cat-home'],
-        projectIds: const <String>['project-bathroom'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 16),
-        priority: TaskPriority.high,
-        origin: TaskOrigin.project,
-        manualOrder: 2,
-      ),
-      TaskModel(
-        id: 'task-bed',
-        title: 'Make the bed',
-        categoryIds: const <String>['cat-home'],
-        scheduledAt: DateTime(today.year, today.month, today.day, 10),
-        priority: TaskPriority.low,
-        recurrence: const RecurrenceRule(type: RecurrenceType.daily),
-        origin: TaskOrigin.recurring,
-        manualOrder: 3,
-        reminderRule: ReminderRule(
-          enabled: true,
-          minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
-        ),
-      ),
-      TaskModel(
-        id: 'task-completed',
-        title: 'Order detergents',
-        categoryIds: const <String>['cat-home'],
-        scheduledAt: DateTime(today.year, today.month, today.day),
-        priority: TaskPriority.medium,
-        status: TaskStatus.completed,
-        manualOrder: 4,
-      ),
+    _expenseCategories.addAll([
+      category('expense-cat-supermercado', 'Supermercado',
+          const Color(0xFFDBA62D).toARGB32(), Icons.shopping_cart_rounded),
+      category('expense-cat-comer-fuera', 'Comer fuera',
+          const Color(0xFFC7744E).toARGB32(), Icons.restaurant_rounded),
+      category('expense-cat-ropa', 'Ropa', const Color(0xFF9D7AA5).toARGB32(),
+          Icons.checkroom_rounded),
+      category('expense-cat-bienestar', 'Bienestar',
+          const Color(0xFF7FA37A).toARGB32(), Icons.favorite_rounded),
+      category('expense-cat-libros-juegos', 'Libros y juegos',
+          const Color(0xFF6C7B8E).toARGB32(), Icons.menu_book_rounded),
+      category('expense-cat-casa', 'Casa', const Color(0xFFB4845F).toARGB32(),
+          Icons.home_rounded),
+      category('expense-cat-deporte', 'Deporte',
+          const Color(0xFF78996B).toARGB32(), Icons.fitness_center_rounded),
+      category('expense-cat-ocio', 'Ocio', const Color(0xFF8F8AB8).toARGB32(),
+          Icons.sports_esports_rounded),
+      category('expense-cat-regalos', 'Regalos',
+          const Color(0xFFB96C68).toARGB32(), Icons.redeem_rounded),
+      category('expense-cat-otros', 'Otros', const Color(0xFF8E8A7D).toARGB32(),
+          Icons.inventory_2_rounded),
     ]);
 
-    _notes.addAll(<QuickNote>[
-      QuickNote(
-        id: 'note-1',
-        content: 'Check if the bathroom mirror light can be replaced this week',
-        createdAt: now.subtract(const Duration(hours: 2)),
+    PaymentMethodModel method(
+        String id, String name, IconData icon, int color) {
+      return PaymentMethodModel(
+        id: id,
+        name: name,
+        icon: icon,
+        colorValue: color,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+
+    _paymentMethods.addAll([
+      method('payment-card', 'Tarjeta', Icons.credit_card_rounded,
+          const Color(0xFF6C7B8E).toARGB32()),
+      method('payment-cash', 'Efectivo', Icons.payments_rounded,
+          const Color(0xFF7FA37A).toARGB32()),
+      method('payment-bank', 'Cuenta bancaria', Icons.account_balance_rounded,
+          const Color(0xFFB4845F).toARGB32()),
+      method('payment-paypal', 'PayPal', Icons.account_balance_wallet_rounded,
+          const Color(0xFF5F89B1).toARGB32()),
+      method('payment-bizum', 'Bizum', Icons.phone_iphone_rounded,
+          const Color(0xFF7C9164).toARGB32()),
+      method('payment-amazon', 'Amazon', Icons.inventory_2_rounded,
+          const Color(0xFFC08A3B).toARGB32()),
+      method('payment-other', 'Otro', Icons.more_horiz_rounded,
+          const Color(0xFF8E8A7D).toARGB32()),
+    ]);
+
+    if (_expenses.isNotEmpty) {
+      return;
+    }
+    final sampleYear = now.year;
+    final samples =
+        <({String categoryId, int month, double amount, String concept})>[
+      (
+        categoryId: 'expense-cat-supermercado',
+        month: 1,
+        amount: 246.42,
+        concept: 'Compra mensual'
       ),
-      QuickNote(
-        id: 'note-2',
-        content: 'Maybe create a small gym recovery project',
-        createdAt: now.subtract(const Duration(hours: 6)),
+      (
+        categoryId: 'expense-cat-comer-fuera',
+        month: 1,
+        amount: 40,
+        concept: 'Comer fuera'
+      ),
+      (
+        categoryId: 'expense-cat-ropa',
+        month: 1,
+        amount: 66.11,
+        concept: 'Ropa'
+      ),
+      (
+        categoryId: 'expense-cat-bienestar',
+        month: 1,
+        amount: 99.09,
+        concept: 'Bienestar'
+      ),
+      (
+        categoryId: 'expense-cat-casa',
+        month: 1,
+        amount: 571.97,
+        concept: 'Casa'
+      ),
+      (
+        categoryId: 'expense-cat-deporte',
+        month: 1,
+        amount: 32,
+        concept: 'Deporte'
+      ),
+      (
+        categoryId: 'expense-cat-ocio',
+        month: 1,
+        amount: 175.18,
+        concept: 'Ocio'
+      ),
+      (
+        categoryId: 'expense-cat-regalos',
+        month: 1,
+        amount: 20,
+        concept: 'Regalos'
+      ),
+      (categoryId: 'expense-cat-otros', month: 1, amount: 16, concept: 'Otros'),
+      (
+        categoryId: 'expense-cat-supermercado',
+        month: 2,
+        amount: 75,
+        concept: 'Supermercado'
+      ),
+      (
+        categoryId: 'expense-cat-comer-fuera',
+        month: 2,
+        amount: 8,
+        concept: 'Café'
+      ),
+      (categoryId: 'expense-cat-ropa', month: 2, amount: 45, concept: 'Ropa'),
+      (
+        categoryId: 'expense-cat-bienestar',
+        month: 2,
+        amount: 370,
+        concept: 'Bienestar'
+      ),
+      (
+        categoryId: 'expense-cat-libros-juegos',
+        month: 2,
+        amount: 183,
+        concept: 'Libros y juegos'
+      ),
+      (categoryId: 'expense-cat-casa', month: 2, amount: 50, concept: 'Casa'),
+      (
+        categoryId: 'expense-cat-deporte',
+        month: 2,
+        amount: 24,
+        concept: 'Deporte'
+      ),
+      (
+        categoryId: 'expense-cat-regalos',
+        month: 2,
+        amount: 24,
+        concept: 'Regalos'
+      ),
+      (
+        categoryId: 'expense-cat-otros',
+        month: 2,
+        amount: 478.5,
+        concept: 'Otros'
+      ),
+    ];
+    for (final sample in samples) {
+      _expenses.add(
+        Expense(
+          id: _id('expense-seed'),
+          date: DateTime(sampleYear, sample.month, 12),
+          concept: sample.concept,
+          amount: sample.amount,
+          categoryId: sample.categoryId,
+          paymentMethodId: 'payment-card',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+    _fixedPayments.addAll([
+      FixedPayment(
+        id: 'fixed-internet',
+        name: 'Internet',
+        amount: 39.99,
+        categoryId: 'expense-cat-casa',
+        paymentMethodId: 'payment-bank',
+        frequency: FixedPaymentFrequency.monthly,
+        nextPaymentDate: DateTime(now.year, now.month, 5),
+        note: 'Pago domiciliado',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      FixedPayment(
+        id: 'fixed-gym',
+        name: 'Gimnasio',
+        amount: 32,
+        categoryId: 'expense-cat-deporte',
+        paymentMethodId: 'payment-card',
+        frequency: FixedPaymentFrequency.monthly,
+        nextPaymentDate: DateTime(now.year, now.month, 10),
+        createdAt: now,
+        updatedAt: now,
       ),
     ]);
+  }
+
+  bool _isDemoLibraryItem(LibraryItem item) {
+    return const <String>{
+      'library-game-prey',
+      'library-game-ffx',
+      'library-game-silksong',
+      'library-game-dragon-age',
+      'library-game-control',
+      'library-book-priorato',
+      'library-book-frankenstein',
+      'library-book-orgullo',
+      'library-book-mala-costumbre',
+      'library-book-entre-fuegos',
+      'library-film-godfather',
+      'library-film-28-days',
+      'library-film-sinners',
+      'library-film-shawshank',
+      'library-film-martian',
+    }.contains(item.id);
+  }
+
+  @override
+  void dispose() {
+    _saveDebounce?.cancel();
+    _feedback.dispose();
+    super.dispose();
   }
 }

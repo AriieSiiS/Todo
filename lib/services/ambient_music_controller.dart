@@ -45,7 +45,6 @@ class AmbientMusicController extends ChangeNotifier {
       _isReady = true;
       _errorMessage = null;
       notifyListeners();
-      unawaited(play());
     } catch (error) {
       _errorMessage = 'No se pudo cargar la musica: $error';
       notifyListeners();

@@ -37,7 +37,7 @@ class CalendarRestClient {
       final map = (item as Map<dynamic, dynamic>).cast<String, dynamic>();
       return CalendarListItemModel(
         id: map['id'] as String? ?? 'primary',
-        name: map['summary'] as String? ?? 'Primary',
+        name: map['summary'] as String? ?? 'Principal',
         primary: map['primary'] as bool? ?? false,
       );
     }).toList();

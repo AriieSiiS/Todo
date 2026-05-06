@@ -37,13 +37,12 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.initialProject?.name ?? widget.initialName ?? '');
-    _descriptionController =
-        TextEditingController(
-            text: widget.initialProject?.description ??
-                widget.initialDescription ??
-                '');
+    _nameController = TextEditingController(
+        text: widget.initialProject?.name ?? widget.initialName ?? '');
+    _descriptionController = TextEditingController(
+        text: widget.initialProject?.description ??
+            widget.initialDescription ??
+            '');
     _notesController = TextEditingController();
     _colorValue =
         widget.initialProject?.colorValue ?? const Color(0xFFF2A67A).toARGB32();
@@ -172,7 +171,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                   TextField(
                     controller: _nameController,
                     decoration: InputDecoration(
-                      hintText: 'Cumpleanos de Ana',
+                      hintText: 'Cumpleaños de Ana',
                       suffixText: '${_nameController.text.length}/100',
                     ),
                     onChanged: (_) => setState(() {}),
@@ -391,7 +390,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
           ],
         ),
         const SizedBox(height: 18),
-        _sectionLabel('Categorias relacionadas'),
+        _sectionLabel('Categorías relacionadas'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -442,7 +441,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Arrastra para reordenar · Agrega fecha limite para lo importante.',
+          'Arrastra para reordenar · Agrega fecha límite para lo importante.',
           style: TextStyle(
               color: Theme.of(context).extension<TodoVisuals>()!.textMuted,
               fontSize: 13),
@@ -560,7 +559,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                     minLines: 3,
                     maxLines: 5,
                     decoration: InputDecoration(
-                      hintText: 'Presupuesto, ideas o detalles importantes.',
+                      hintText: 'Ideas, contexto o detalles importantes.',
                       suffixText: '${_notesController.text.length}/1000',
                     ),
                   ),
@@ -688,7 +687,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                     _summaryLine(Icons.format_list_bulleted_rounded,
                         '${tasks.length} tareas iniciales'),
                     _summaryLine(Icons.event_note_outlined,
-                        '${tasks.where((item) => item.dueDate != null).length} con fecha limite'),
+                        '${tasks.where((item) => item.dueDate != null).length} con fecha límite'),
                   ],
                 ),
               ),
@@ -697,7 +696,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
         ),
         const SizedBox(height: 14),
         _AsideCard(
-          title: 'Proximas tareas con fecha limite',
+          title: 'Próximas tareas con fecha límite',
           child: Column(
             children: [
               for (final task in tasks.take(4))
@@ -724,7 +723,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
         if (selectedCategories.isNotEmpty) ...[
           const SizedBox(height: 14),
           _AsideCard(
-            title: 'Categorias vinculadas',
+            title: 'Categorías vinculadas',
             child: Wrap(
               spacing: 8,
               runSpacing: 8,

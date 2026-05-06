@@ -55,35 +55,18 @@ class _InboxPageState extends State<InboxPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _PageHeader(
-            title: 'Inbox',
-            subtitle: 'Aqui llegan las notas rapidas para revisarlas despues.',
+            title: 'Entrada',
+            subtitle: 'Aquí llegan las notas rápidas para revisarlas después.',
             trailing: wide
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _HeaderActionButton(
-                        label: 'Nueva nota',
-                        icon: Icons.add_rounded,
-                        onPressed: () =>
-                            showQuickNoteComposer(context, controller),
-                      ),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 320,
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (value) {
-                            setState(() {
-                              _query = value;
-                            });
-                          },
-                          decoration: const InputDecoration(
-                            hintText: 'Buscar una nota...',
-                            prefixIcon: Icon(Icons.search_rounded),
-                          ),
-                        ),
-                      ),
-                    ],
+                ? _InboxHeaderControls(
+                    searchController: _searchController,
+                    onCreateNote: () =>
+                        showQuickNoteComposer(context, controller),
+                    onSearchChanged: (value) {
+                      setState(() {
+                        _query = value;
+                      });
+                    },
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,17 +78,13 @@ class _InboxPageState extends State<InboxPage> {
                             showQuickNoteComposer(context, controller),
                       ),
                       const SizedBox(height: 12),
-                      TextField(
+                      _InboxSearchField(
                         controller: _searchController,
                         onChanged: (value) {
                           setState(() {
                             _query = value;
                           });
                         },
-                        decoration: const InputDecoration(
-                          hintText: 'Buscar una nota...',
-                          prefixIcon: Icon(Icons.search_rounded),
-                        ),
                       ),
                     ],
                   ),
@@ -806,13 +785,77 @@ class _InboxTargetButton extends StatelessWidget {
   }
 }
 
+class _InboxHeaderControls extends StatelessWidget {
+  const _InboxHeaderControls({
+    required this.searchController,
+    required this.onCreateNote,
+    required this.onSearchChanged,
+  });
+
+  final TextEditingController searchController;
+  final VoidCallback onCreateNote;
+  final ValueChanged<String> onSearchChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 568,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          _HeaderActionButton(
+            icon: Icons.add_rounded,
+            label: 'Nueva nota',
+            onPressed: onCreateNote,
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 386,
+            child: _InboxSearchField(
+              controller: searchController,
+              onChanged: onSearchChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InboxSearchField extends StatelessWidget {
+  const _InboxSearchField({
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: const InputDecoration(
+          hintText: 'Buscar una nota...',
+          prefixIcon: Icon(Icons.search_rounded),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ),
+    );
+  }
+}
+
 String _notePreviewLine(QuickNote note) {
   final collapsed = note.content
       .split('\n')
       .map((line) => line.trim())
       .where((line) => line.isNotEmpty)
       .join(' ');
-  return collapsed.isEmpty ? 'Nota vacia' : collapsed;
+  return collapsed.isEmpty ? 'Nota vacía' : collapsed;
 }
 
 String _formatInboxCreatedAt(DateTime value) {
