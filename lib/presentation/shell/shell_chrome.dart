@@ -146,49 +146,8 @@ class _Sidebar extends StatelessWidget {
     if (compact) {
       return const SizedBox.shrink();
     }
-    final destinations = <({AppSection section, IconData icon, String label})>[
-      (section: AppSection.today, icon: Icons.today_rounded, label: 'Hoy'),
-      (
-        section: AppSection.inbox,
-        icon: Icons.note_alt_outlined,
-        label: 'Entrada'
-      ),
-      (
-        section: AppSection.projects,
-        icon: Icons.folder_open_rounded,
-        label: 'Proyectos'
-      ),
-      (
-        section: AppSection.categories,
-        icon: Icons.category_rounded,
-        label: 'Categorías'
-      ),
-      (
-        section: AppSection.expenses,
-        icon: Icons.receipt_long_rounded,
-        label: 'Gastos y pagos'
-      ),
-      (
-        section: AppSection.calendar,
-        icon: Icons.calendar_month_rounded,
-        label: 'Calendario'
-      ),
-      (
-        section: AppSection.library,
-        icon: Icons.local_library_rounded,
-        label: 'Biblioteca'
-      ),
-      (
-        section: AppSection.completed,
-        icon: Icons.done_all_rounded,
-        label: 'Completadas'
-      ),
-      (
-        section: AppSection.settings,
-        icon: Icons.tune_rounded,
-        label: 'Ajustes'
-      ),
-    ];
+    final destinations =
+        controller.navOrder.map(_sidebarDestinationFor).toList();
     return SizedBox(
       width: 230,
       child: Padding(
@@ -203,25 +162,19 @@ class _Sidebar extends StatelessWidget {
                 width: visuals.isPhantom ? 1.6 : 0),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
+                  padding: const EdgeInsets.fromLTRB(6, 10, 6, 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.home_outlined,
-                            color: visuals.isPhantom
-                                ? visuals.textStrong
-                                : const Color(0xFFF5E9D8),
-                            size: visuals.isPhantom ? 28 : 26,
-                          ),
-                          const SizedBox(width: 10),
+                          const _SidebarLogoMark(),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Todo',
@@ -266,60 +219,88 @@ class _Sidebar extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: ListView.separated(
+                  child: ReorderableListView.builder(
                     padding: EdgeInsets.zero,
                     itemCount: destinations.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    buildDefaultDragHandles: false,
+                    proxyDecorator: (child, index, animation) => Material(
+                      color: Colors.transparent,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 1, end: 1.02)
+                            .animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    onReorder: controller.reorderNavigation,
                     itemBuilder: (context, index) {
                       final item = destinations[index];
                       final selected = controller.section == item.section;
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => controller.setSection(item.section),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 13),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(
-                                visuals.isPhantom ? 0 : 18),
-                            color: selected
-                                ? visuals.sidebarAccent
-                                : Colors.transparent,
-                            border: visuals.isPhantom && selected
-                                ? Border(
-                                    left: BorderSide(
-                                        color: visuals.accentAlt, width: 5),
-                                    bottom: BorderSide(
-                                        color: visuals.textStrong, width: 1.2),
-                                  )
-                                : null,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(item.icon,
-                                  color: selected
-                                      ? Colors.white
-                                      : (visuals.isPhantom
-                                          ? visuals.textMuted
-                                          : const Color(0xFFC6CEBD))),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                      return Padding(
+                        key: ValueKey(item.section),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => controller.setSection(item.section),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.fromLTRB(9, 13, 7, 13),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                  visuals.isPhantom ? 0 : 18),
+                              color: selected
+                                  ? visuals.sidebarAccent
+                                  : Colors.transparent,
+                              border: visuals.isPhantom && selected
+                                  ? Border(
+                                      left: BorderSide(
+                                          color: visuals.accentAlt, width: 5),
+                                      bottom: BorderSide(
+                                          color: visuals.textStrong,
+                                          width: 1.2),
+                                    )
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(item.icon,
                                     color: selected
                                         ? Colors.white
                                         : (visuals.isPhantom
-                                            ? visuals.textStrong
-                                            : const Color(0xFFF1EADC)),
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: visuals.isPhantom ? 0.5 : 0,
+                                            ? visuals.textMuted
+                                            : const Color(0xFFC6CEBD))),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: selected
+                                          ? Colors.white
+                                          : (visuals.isPhantom
+                                              ? visuals.textStrong
+                                              : const Color(0xFFF1EADC)),
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing:
+                                          visuals.isPhantom ? 0.5 : 0,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 4),
+                                    child: Icon(
+                                      Icons.drag_indicator_rounded,
+                                      size: 18,
+                                      color: selected
+                                          ? Colors.white.withValues(alpha: 0.72)
+                                          : const Color(0xFFB9C1B6)
+                                              .withValues(alpha: 0.58),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -441,6 +422,99 @@ class _SidebarStatusRow extends StatelessWidget {
   }
 }
 
+class _SidebarDestination {
+  const _SidebarDestination({
+    required this.section,
+    required this.icon,
+    required this.label,
+  });
+
+  final AppSection section;
+  final IconData icon;
+  final String label;
+}
+
+_SidebarDestination _sidebarDestinationFor(AppSection section) {
+  return switch (section) {
+    AppSection.today => const _SidebarDestination(
+        section: AppSection.today,
+        icon: Icons.today_rounded,
+        label: 'Hoy',
+      ),
+    AppSection.inbox => const _SidebarDestination(
+        section: AppSection.inbox,
+        icon: Icons.note_alt_outlined,
+        label: 'Entrada',
+      ),
+    AppSection.projects => const _SidebarDestination(
+        section: AppSection.projects,
+        icon: Icons.folder_open_rounded,
+        label: 'Proyectos',
+      ),
+    AppSection.categories => const _SidebarDestination(
+        section: AppSection.categories,
+        icon: Icons.category_rounded,
+        label: 'Categorías',
+      ),
+    AppSection.expenses => const _SidebarDestination(
+        section: AppSection.expenses,
+        icon: Icons.receipt_long_rounded,
+        label: 'Gastos y pagos',
+      ),
+    AppSection.calendar => const _SidebarDestination(
+        section: AppSection.calendar,
+        icon: Icons.calendar_month_rounded,
+        label: 'Calendario',
+      ),
+    AppSection.library => const _SidebarDestination(
+        section: AppSection.library,
+        icon: Icons.local_library_rounded,
+        label: 'Biblioteca',
+      ),
+    AppSection.completed => const _SidebarDestination(
+        section: AppSection.completed,
+        icon: Icons.done_all_rounded,
+        label: 'Completadas',
+      ),
+    AppSection.settings => const _SidebarDestination(
+        section: AppSection.settings,
+        icon: Icons.tune_rounded,
+        label: 'Ajustes',
+      ),
+  };
+}
+
+class _SidebarLogoMark extends StatelessWidget {
+  const _SidebarLogoMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 50,
+      height: 50,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFF5E9D8), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: Image.asset(
+          'assets/branding/todo_logo.png',
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+        ),
+      ),
+    );
+  }
+}
+
 class _MobileNav extends StatelessWidget {
   const _MobileNav({required this.controller});
 
@@ -448,39 +522,16 @@ class _MobileNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const sections = <AppSection>[
-      AppSection.today,
-      AppSection.inbox,
-      AppSection.projects,
-      AppSection.categories,
-      AppSection.expenses,
-      AppSection.calendar,
-      AppSection.library,
-      AppSection.completed,
-      AppSection.settings,
-    ];
+    final sections = controller.navOrder;
+    final destinations = sections.map(_sidebarDestinationFor).toList();
     return NavigationBar(
       selectedIndex: sections.contains(controller.section)
           ? sections.indexOf(controller.section)
           : 0,
       onDestinationSelected: (index) => controller.setSection(sections[index]),
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.today_rounded), label: 'Hoy'),
-        NavigationDestination(
-            icon: Icon(Icons.note_alt_outlined), label: 'Entrada'),
-        NavigationDestination(
-            icon: Icon(Icons.folder_open_rounded), label: 'Proyectos'),
-        NavigationDestination(
-            icon: Icon(Icons.category_rounded), label: 'Categorías'),
-        NavigationDestination(
-            icon: Icon(Icons.receipt_long_rounded), label: 'Gastos'),
-        NavigationDestination(
-            icon: Icon(Icons.calendar_month_rounded), label: 'Calendario'),
-        NavigationDestination(
-            icon: Icon(Icons.local_library_rounded), label: 'Biblioteca'),
-        NavigationDestination(
-            icon: Icon(Icons.done_all_rounded), label: 'Hechas'),
-        NavigationDestination(icon: Icon(Icons.tune_rounded), label: 'Ajustes'),
+      destinations: [
+        for (final item in destinations)
+          NavigationDestination(icon: Icon(item.icon), label: item.label),
       ],
     );
   }

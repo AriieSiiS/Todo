@@ -1021,21 +1021,41 @@ class _ReferenceTodayBoard extends StatelessWidget {
                             style: TextStyle(color: visuals.textMuted),
                           ),
                         )
-                      : ListView.separated(
+                      : ReorderableListView.builder(
+                          buildDefaultDragHandles: false,
                           padding: EdgeInsets.zero,
                           itemCount: tasks.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          onReorder: (oldIndex, newIndex) {
+                            final reordered = List<TaskModel>.from(tasks);
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final item = reordered.removeAt(oldIndex);
+                            reordered.insert(newIndex, item);
+                            controller.setTodaySort(TodaySort.manual);
+                            controller.changeManualOrder(
+                              reordered.map((task) => task.id).toList(),
+                            );
+                          },
                           itemBuilder: (context, index) {
                             final task = tasks[index];
-                            return _ReferenceTaskRow(
-                              controller: controller,
-                              task: task,
-                              subtasksExpanded: subtasksExpanded,
-                              selectionMode: selectionMode,
-                              selected: selectedTaskIds.contains(task.id),
-                              selectedTaskIds: selectedTaskIds,
-                              onToggleSelection: onToggleTaskSelection,
-                              onStartSelection: onStartSelection,
+                            return Column(
+                              key: ValueKey(task.id),
+                              children: [
+                                _ReferenceTaskRow(
+                                  controller: controller,
+                                  task: task,
+                                  reorderIndex: index,
+                                  subtasksExpanded: subtasksExpanded,
+                                  selectionMode: selectionMode,
+                                  selected: selectedTaskIds.contains(task.id),
+                                  selectedTaskIds: selectedTaskIds,
+                                  onToggleSelection: onToggleTaskSelection,
+                                  onStartSelection: onStartSelection,
+                                ),
+                                if (index != tasks.length - 1)
+                                  const Divider(height: 1),
+                              ],
                             );
                           },
                         ),
@@ -1109,6 +1129,7 @@ class _ReferenceTaskRow extends StatelessWidget {
   const _ReferenceTaskRow({
     required this.controller,
     required this.task,
+    required this.reorderIndex,
     required this.subtasksExpanded,
     required this.selectionMode,
     required this.selected,
@@ -1119,6 +1140,7 @@ class _ReferenceTaskRow extends StatelessWidget {
 
   final TodoWorkspace controller;
   final TaskModel task;
+  final int reorderIndex;
   final bool subtasksExpanded;
   final bool selectionMode;
   final bool selected;
@@ -1159,6 +1181,16 @@ class _ReferenceTaskRow extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
               child: Row(
                 children: [
+                  if (!selectionMode) ...[
+                    ReorderableDragStartListener(
+                      index: reorderIndex,
+                      child: Icon(
+                        Icons.drag_indicator_rounded,
+                        color: visuals.textMuted.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Checkbox(
                     value: selectionMode
                         ? selected

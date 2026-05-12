@@ -78,94 +78,99 @@ class CompletedPage extends StatelessWidget {
         ? 0.0
         : completed.length / (denominator <= 0 ? 1 : denominator);
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 1200;
-          final main = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PageHeader(
-                title: 'Completadas',
-                subtitle:
-                    'Revisa lo que ya has resuelto y mantén perspectiva de tu progreso.',
-              ),
-              const SizedBox(height: 18),
-              _CompletedSummaryCard(
-                progress: progress,
-                completedToday: completedToday,
-                completedThisWeek: completedThisWeek,
-                streak: _completedStreak(completed, today),
-                totalCompleted: completed.length,
-                onViewProgress: () {},
-              ),
-              const SizedBox(height: 16),
-              for (final section in sections) ...[
-                _CompletedSectionCard(
-                  controller: controller,
-                  section: section,
-                  expanded: true,
-                  onToggle: () {},
-                ),
-                const SizedBox(height: 16),
-              ],
-            ],
-          );
-
-          if (wide) {
-            return Row(
+    return SizedBox.expand(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 1200;
+            final main = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: SingleChildScrollView(
-                    child: main,
-                  ),
+                _PageHeader(
+                  title: 'Completadas',
+                  subtitle:
+                      'Revisa lo que ya has resuelto y mantén perspectiva de tu progreso.',
                 ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _CompletedActivityCard(
-                          tasks: completed.take(5).toList(),
-                          fallbackDate: today,
-                          onViewAll: () {},
-                        ),
-                        const SizedBox(height: 16),
-                        _CompletedRecoverCard(
-                          onRecover: completed.isEmpty
-                              ? null
-                              : () => controller.reopenTask(completed.first.id),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                main,
-                _CompletedActivityCard(
-                  tasks: completed.take(5).toList(),
-                  fallbackDate: today,
-                  onViewAll: () {},
+                const SizedBox(height: 18),
+                _CompletedSummaryCard(
+                  progress: progress,
+                  completedToday: completedToday,
+                  completedThisWeek: completedThisWeek,
+                  streak: _completedStreak(completed, today),
+                  totalCompleted: completed.length,
+                  onViewProgress: () {},
                 ),
                 const SizedBox(height: 16),
-                _CompletedRecoverCard(
-                  onRecover: completed.isEmpty
-                      ? null
-                      : () => controller.reopenTask(completed.first.id),
-                ),
+                for (final section in sections) ...[
+                  _CompletedSectionCard(
+                    controller: controller,
+                    section: section,
+                    expanded: true,
+                    onToggle: () {},
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ],
-            ),
-          );
-        },
+            );
+
+            if (wide) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      child: main,
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _CompletedActivityCard(
+                            tasks: completed.take(5).toList(),
+                            fallbackDate: today,
+                            onViewAll: () {},
+                          ),
+                          const SizedBox(height: 16),
+                          _CompletedRecoverCard(
+                            onRecover: completed.isEmpty
+                                ? null
+                                : () =>
+                                    controller.reopenTask(completed.first.id),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  main,
+                  _CompletedActivityCard(
+                    tasks: completed.take(5).toList(),
+                    fallbackDate: today,
+                    onViewAll: () {},
+                  ),
+                  const SizedBox(height: 16),
+                  _CompletedRecoverCard(
+                    onRecover: completed.isEmpty
+                        ? null
+                        : () => controller.reopenTask(completed.first.id),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

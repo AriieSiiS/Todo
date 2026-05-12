@@ -1,0 +1,72 @@
+{
+  "tool": "bulk_upsert_library_goals",
+  "arguments": {
+    "goals": [
+      {
+        "type": "game",
+        "title": "Prey",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/2/29/Prey_cover_art.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Final Fantasy X",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/a/a7/Ffxboxart.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Half Life",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/f/fa/Half-Life_Cover_Art.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Hollow Knight Silksong",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/0/05/Silksong.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Dragon Age Origins",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/8/89/Dragon_Age_Origins_cover.png"
+      },
+      {
+        "type": "game",
+        "title": "Control",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/e/e5/Control_game_cover_art.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Death Stranding",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/2/22/Death_Stranding.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Shadow of Mordor",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/0/01/Shadow_of_Mordor_cover_art.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Blasphemous",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/c/cd/Blasphemous_%28video_game%29.jpg"
+      },
+      {
+        "type": "game",
+        "title": "Subnautica",
+        "target_year": 2026,
+        "cover_url": "https://upload.wikimedia.org/wikipedia/en/6/6d/Subnautica_cover_art.png"
+      },
+      {
+        "type": "book",
+        "title": "Comer\u00e1s flores",
+        "target_year": 2026
+      }
+    ]
+  }
+}

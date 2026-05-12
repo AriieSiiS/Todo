@@ -29,6 +29,7 @@ class AppStateSnapshot {
     required this.calendarSettings,
     required this.section,
     required this.todaySort,
+    this.navOrder = const <AppSection>[],
     this.calendarEvents = const <CalendarEventModel>[],
     this.visualMode = AppVisualMode.classic,
     this.updatedAt,
@@ -52,6 +53,7 @@ class AppStateSnapshot {
   final CalendarIntegrationSettings calendarSettings;
   final AppSection section;
   final TodaySort todaySort;
+  final List<AppSection> navOrder;
   final AppVisualMode visualMode;
   final DateTime? updatedAt;
   final int schemaVersion;
@@ -81,6 +83,7 @@ class AppStateSnapshot {
       'calendarSettings': calendarSettings.toJson(),
       'section': section.name,
       'todaySort': todaySort.name,
+      'navOrder': navOrder.map((section) => section.name).toList(),
       'visualMode': visualMode.name,
       'updatedAt': updatedAt?.toIso8601String(),
       'schemaVersion': schemaVersion,
@@ -160,6 +163,10 @@ class AppStateSnapshot {
           AppSection.values, json['section'] as String?, AppSection.today),
       todaySort: enumByName(
           TodaySort.values, json['todaySort'] as String?, TodaySort.manual),
+      navOrder: (json['navOrder'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) =>
+              enumByName(AppSection.values, item as String?, AppSection.today))
+          .toList(),
       visualMode: enumByName(AppVisualMode.values,
           json['visualMode'] as String?, AppVisualMode.classic),
       updatedAt: json['updatedAt'] == null

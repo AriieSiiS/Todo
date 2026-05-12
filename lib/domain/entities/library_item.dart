@@ -16,6 +16,11 @@ class LibraryItem {
     this.mediaType,
     this.releaseYear,
     this.creatorOrDirector,
+    this.genre,
+    this.format,
+    this.duration,
+    this.pages,
+    this.country,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -33,6 +38,11 @@ class LibraryItem {
   final LibraryMediaType? mediaType;
   final int? releaseYear;
   final String? creatorOrDirector;
+  final String? genre;
+  final String? format;
+  final String? duration;
+  final String? pages;
+  final String? country;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -61,6 +71,16 @@ class LibraryItem {
     bool clearReleaseYear = false,
     String? creatorOrDirector,
     bool clearCreatorOrDirector = false,
+    String? genre,
+    bool clearGenre = false,
+    String? format,
+    bool clearFormat = false,
+    String? duration,
+    bool clearDuration = false,
+    String? pages,
+    bool clearPages = false,
+    String? country,
+    bool clearCountry = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -80,6 +100,11 @@ class LibraryItem {
       creatorOrDirector: clearCreatorOrDirector
           ? null
           : creatorOrDirector ?? this.creatorOrDirector,
+      genre: clearGenre ? null : genre ?? this.genre,
+      format: clearFormat ? null : format ?? this.format,
+      duration: clearDuration ? null : duration ?? this.duration,
+      pages: clearPages ? null : pages ?? this.pages,
+      country: clearCountry ? null : country ?? this.country,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -101,6 +126,11 @@ class LibraryItem {
       'mediaType': mediaType?.name,
       'releaseYear': releaseYear,
       'creatorOrDirector': creatorOrDirector,
+      'genre': genre,
+      'format': format,
+      'duration': duration,
+      'pages': pages,
+      'country': country,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -135,6 +165,11 @@ class LibraryItem {
             ),
       releaseYear: (json['releaseYear'] as num?)?.toInt(),
       creatorOrDirector: json['creatorOrDirector'] as String?,
+      genre: json['genre'] as String?,
+      format: json['format'] as String?,
+      duration: json['duration'] as String?,
+      pages: json['pages'] as String?,
+      country: json['country'] as String?,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ?? completed,
       updatedAt:

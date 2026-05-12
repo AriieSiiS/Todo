@@ -45,6 +45,18 @@ class TodoWorkspace extends ChangeNotifier {
     return controller;
   }
 
+  static const List<AppSection> defaultNavOrder = <AppSection>[
+    AppSection.today,
+    AppSection.inbox,
+    AppSection.projects,
+    AppSection.categories,
+    AppSection.expenses,
+    AppSection.calendar,
+    AppSection.library,
+    AppSection.completed,
+    AppSection.settings,
+  ];
+
   @visibleForTesting
   static TodoWorkspace createForTest({AppStateSnapshot? snapshot}) {
     final controller = TodoWorkspace._(
@@ -93,6 +105,7 @@ class TodoWorkspace extends ChangeNotifier {
   AppSection _section = AppSection.today;
   TodaySort _todaySort = TodaySort.manual;
   AppVisualMode _visualMode = AppVisualMode.classic;
+  List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   DateTime? _lastSavedAt;
   bool _loadedFromPersistence = false;
   bool _calendarBusy = false;
@@ -135,6 +148,7 @@ class TodoWorkspace extends ChangeNotifier {
   AppSection get section => _section;
   TodaySort get todaySort => _todaySort;
   AppVisualMode get visualMode => _visualMode;
+  List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   DateTime? get lastSavedAt => _lastSavedAt;
   bool get loadedFromPersistence => _loadedFromPersistence;
   bool get calendarBusy => _calendarBusy;
@@ -156,6 +170,23 @@ class TodoWorkspace extends ChangeNotifier {
 
   void setSection(AppSection value) {
     _section = value;
+    _commit();
+  }
+
+  void reorderNavigation(int oldIndex, int newIndex) {
+    final next = List<AppSection>.of(_navOrder);
+    if (oldIndex < 0 || oldIndex >= next.length) {
+      return;
+    }
+    if (newIndex > next.length) {
+      return;
+    }
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final moved = next.removeAt(oldIndex);
+    next.insert(newIndex.clamp(0, next.length), moved);
+    _navOrder = _normalizeNavOrder(next);
     _commit();
   }
 
@@ -295,6 +326,7 @@ class TodoWorkspace extends ChangeNotifier {
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       visualMode: visualMode,
+      navOrder: navOrder,
     );
   }
 
@@ -1382,6 +1414,11 @@ class TodoWorkspace extends ChangeNotifier {
     LibraryMediaType? mediaType,
     int? releaseYear,
     String? creatorOrDirector,
+    String? genre,
+    String? format,
+    String? duration,
+    String? pages,
+    String? country,
   }) {
     final now = DateTime.now();
     final item = LibraryItem(
@@ -1400,6 +1437,11 @@ class TodoWorkspace extends ChangeNotifier {
       creatorOrDirector: creatorOrDirector?.trim().isEmpty == true
           ? null
           : creatorOrDirector?.trim(),
+      genre: genre?.trim().isEmpty == true ? null : genre?.trim(),
+      format: format?.trim().isEmpty == true ? null : format?.trim(),
+      duration: duration?.trim().isEmpty == true ? null : duration?.trim(),
+      pages: pages?.trim().isEmpty == true ? null : pages?.trim(),
+      country: country?.trim().isEmpty == true ? null : country?.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -1417,6 +1459,14 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void deleteLibraryItem(String itemId) {
+    final before = _libraryItems.length;
+    _libraryItems.removeWhere((item) => item.id == itemId);
+    if (_libraryItems.length != before) {
+      _commit();
+    }
+  }
+
   LibraryGoal createLibraryGoal({
     required LibraryItemType type,
     required String title,
@@ -1425,10 +1475,16 @@ class TodoWorkspace extends ChangeNotifier {
     String? coverUrl,
     String? note,
     String? platform,
+    String? developer,
     String? author,
     LibraryMediaType? mediaType,
     int? releaseYear,
     String? creatorOrDirector,
+    String? genre,
+    String? format,
+    String? duration,
+    String? pages,
+    String? country,
   }) {
     final now = DateTime.now();
     final goal = LibraryGoal(
@@ -1440,12 +1496,18 @@ class TodoWorkspace extends ChangeNotifier {
       coverUrl: coverUrl?.trim().isEmpty == true ? null : coverUrl?.trim(),
       note: note?.trim().isEmpty == true ? null : note?.trim(),
       platform: platform?.trim().isEmpty == true ? null : platform?.trim(),
+      developer: developer?.trim().isEmpty == true ? null : developer?.trim(),
       author: author?.trim().isEmpty == true ? null : author?.trim(),
       mediaType: mediaType,
       releaseYear: releaseYear,
       creatorOrDirector: creatorOrDirector?.trim().isEmpty == true
           ? null
           : creatorOrDirector?.trim(),
+      genre: genre?.trim().isEmpty == true ? null : genre?.trim(),
+      format: format?.trim().isEmpty == true ? null : format?.trim(),
+      duration: duration?.trim().isEmpty == true ? null : duration?.trim(),
+      pages: pages?.trim().isEmpty == true ? null : pages?.trim(),
+      country: country?.trim().isEmpty == true ? null : country?.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -1463,19 +1525,78 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void deleteLibraryGoal(String goalId) {
+    final before = _libraryGoals.length;
+    _libraryGoals.removeWhere((goal) => goal.id == goalId);
+    if (_libraryGoals.length != before) {
+      _commit();
+    }
+  }
+
   void toggleLibraryGoalCompleted(String goalId) {
     final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
     if (index == -1) {
       return;
     }
     final goal = _libraryGoals[index];
+    final willComplete = !goal.isCompleted;
     _libraryGoals[index] = goal.copyWith(
-      status: goal.isCompleted
-          ? LibraryGoalStatus.pending
-          : LibraryGoalStatus.completed,
+      status: willComplete
+          ? LibraryGoalStatus.completed
+          : LibraryGoalStatus.pending,
       updatedAt: DateTime.now(),
     );
+    if (willComplete) {
+      _createLibraryItemFromCompletedGoal(_libraryGoals[index]);
+    }
     _commit();
+  }
+
+  bool _createLibraryItemFromCompletedGoal(LibraryGoal goal) {
+    final completedDate = logicalDate();
+    final normalizedTitle = goal.title.trim().toLowerCase();
+    final alreadyExists = _libraryItems.any((item) =>
+        item.type == goal.type &&
+        item.title.trim().toLowerCase() == normalizedTitle &&
+        item.completedDate.year == completedDate.year);
+    if (alreadyExists) {
+      return false;
+    }
+    final now = DateTime.now();
+    _libraryItems.add(
+      LibraryItem(
+        id: _id('library'),
+        type: goal.type,
+        title: goal.title.trim(),
+        completedDate: completedDate,
+        coverUrl: goal.coverUrl,
+        note: goal.note?.trim().isEmpty == true ? null : goal.note?.trim(),
+        platform: goal.platform,
+        developer: goal.developer,
+        author: goal.author,
+        mediaType: goal.mediaType,
+        releaseYear: goal.releaseYear,
+        creatorOrDirector: goal.creatorOrDirector,
+        genre: goal.genre,
+        format: goal.format,
+        duration: goal.duration,
+        pages: goal.pages,
+        country: goal.country,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    return true;
+  }
+
+  bool _syncCompletedLibraryGoalsIntoItems() {
+    var changed = false;
+    for (final goal in _libraryGoals) {
+      if (goal.isCompleted) {
+        changed = _createLibraryItemFromCompletedGoal(goal) || changed;
+      }
+    }
+    return changed;
   }
 
   void toggleLibraryGoalFavorite(String goalId) {
@@ -1580,7 +1701,9 @@ class TodoWorkspace extends ChangeNotifier {
     if (persisted != null) {
       _applySnapshot(persisted);
       _loadedFromPersistence = true;
-      if (_normalizeLoadedSpanishText()) {
+      final normalized = _normalizeLoadedSpanishText();
+      final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
+      if (normalized || syncedLibraryGoals) {
         await _persist();
       }
     } else {
@@ -1648,6 +1771,7 @@ class TodoWorkspace extends ChangeNotifier {
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
     _visualMode = snapshot.visualMode;
+    _navOrder = _normalizeNavOrder(snapshot.navOrder);
   }
 
   bool _normalizeLoadedSpanishText() {
@@ -1883,6 +2007,7 @@ class TodoWorkspace extends ChangeNotifier {
       section: section,
       todaySort: todaySort,
       visualMode: visualMode,
+      navOrder: navOrder,
       updatedAt: DateTime.now(),
       schemaVersion: 1,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
@@ -2047,9 +2172,25 @@ class TodoWorkspace extends ChangeNotifier {
     _section = AppSection.today;
     _todaySort = TodaySort.manual;
     _visualMode = AppVisualMode.classic;
+    _navOrder = List<AppSection>.of(defaultNavOrder);
     _lastSavedAt = null;
     _lastCloudSyncAt = null;
     _loadedFromPersistence = false;
+  }
+
+  List<AppSection> _normalizeNavOrder(List<AppSection> source) {
+    final next = <AppSection>[];
+    for (final section in source) {
+      if (defaultNavOrder.contains(section) && !next.contains(section)) {
+        next.add(section);
+      }
+    }
+    for (final section in defaultNavOrder) {
+      if (!next.contains(section)) {
+        next.add(section);
+      }
+    }
+    return next;
   }
 
   void _ensureFinancialSeed() {

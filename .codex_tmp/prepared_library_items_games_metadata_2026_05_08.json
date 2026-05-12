@@ -1,0 +1,67 @@
+{
+  "tool": "bulk_upsert_library_items",
+  "arguments": {
+    "items": [
+      {
+        "type": "game",
+        "title": "The Last Spell",
+        "completed_date": "2026-05-08",
+        "platform": "PC",
+        "developer": "Ishtar Games",
+        "release_year": 2023,
+        "creator_or_director": "Ishtar Games",
+        "format": "Digital",
+        "genre": "Action, Indie, RPG, Strategy",
+        "note": "Editor: Nacon, The Arcade Crew, Gamera Games, DANGEN Entertainment.\nSteam appid: 1105670."
+      },
+      {
+        "type": "game",
+        "title": "BioShock Remastered",
+        "completed_date": "2026-05-08",
+        "platform": "PC",
+        "developer": "2K Boston, 2K Australia, Blind Squirrel, Feral Interactive (Mac)",
+        "release_year": 2016,
+        "creator_or_director": "2K Boston, 2K Australia, Blind Squirrel, Feral Interactive (Mac)",
+        "format": "Digital",
+        "genre": "Action, RPG",
+        "note": "Editor: 2K, Feral Interactive (Mac).\nSteam appid: 409710."
+      },
+      {
+        "type": "game",
+        "title": "CloverPit",
+        "completed_date": "2026-05-08",
+        "platform": "PC",
+        "developer": "Panik Arcade",
+        "release_year": 2025,
+        "creator_or_director": "Panik Arcade",
+        "format": "Digital",
+        "genre": "Action, Adventure, Indie, Simulation, Sports, Strategy",
+        "note": "Editor: Future Friends Games.\nSteam appid: 3314790."
+      },
+      {
+        "type": "game",
+        "title": "Subnautica",
+        "completed_date": "2026-05-08",
+        "platform": "PC",
+        "developer": "Unknown Worlds Entertainment",
+        "release_year": 2018,
+        "creator_or_director": "Unknown Worlds Entertainment",
+        "format": "Digital",
+        "genre": "Adventure, Indie",
+        "note": "Editor: Unknown Worlds Entertainment.\nSteam appid: 264710."
+      },
+      {
+        "type": "game",
+        "title": "Persona 5 Royal",
+        "completed_date": "2026-05-08",
+        "platform": "PC",
+        "developer": "ATLUS",
+        "release_year": 2022,
+        "creator_or_director": "ATLUS",
+        "format": "Digital",
+        "genre": "RPG",
+        "note": "Editor: SEGA.\nSteam appid: 1687950."
+      }
+    ]
+  }
+}

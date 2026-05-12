@@ -33,5 +33,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/branding/todo_logo.png
     - resources/Persona 5 but it's Lofi ~ Chill Lofi Mix for Study_Work (1 Hour) [aM9dxd2nRwE] (1).mp3
     - resources/task-complete.wav

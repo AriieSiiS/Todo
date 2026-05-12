@@ -1,0 +1,67 @@
+{
+  "tool": "bulk_upsert_library_items",
+  "arguments": {
+    "items": [
+      {
+        "type": "movieSeries",
+        "title": "Kill Bill: Vol. 1",
+        "completed_date": "2026-05-08",
+        "media_type": "movie",
+        "release_year": 2003,
+        "creator_or_director": "Quentin Tarantino",
+        "duration": "111 min",
+        "genre": "Accion, artes marciales, thriller, crimen",
+        "country": "Estados Unidos",
+        "note": "Referencia usada: Kill Bill: Volume 1."
+      },
+      {
+        "type": "movieSeries",
+        "title": "Kill Bill Vol. 2",
+        "completed_date": "2026-05-08",
+        "media_type": "movie",
+        "release_year": 2004,
+        "creator_or_director": "Quentin Tarantino",
+        "duration": "137 min",
+        "genre": "Accion, artes marciales, thriller, crimen",
+        "country": "Estados Unidos",
+        "note": "Titulo original: Kill Bill: Volume 2."
+      },
+      {
+        "type": "movieSeries",
+        "title": "Hamnet",
+        "completed_date": "2026-05-08",
+        "media_type": "movie",
+        "release_year": 2025,
+        "creator_or_director": "Chloé Zhao",
+        "duration": "126 min",
+        "genre": "Drama historico, drama biografico, romance",
+        "country": "Reino Unido, Estados Unidos",
+        "note": "Basada en la novela de Maggie O'Farrell."
+      },
+      {
+        "type": "movieSeries",
+        "title": "Abogado del Diablo",
+        "completed_date": "2026-05-08",
+        "media_type": "movie",
+        "release_year": 1997,
+        "creator_or_director": "Taylor Hackford",
+        "duration": "144 min",
+        "genre": "Terror sobrenatural, thriller legal, drama",
+        "country": "Estados Unidos",
+        "note": "Titulo original: The Devil's Advocate."
+      },
+      {
+        "type": "movieSeries",
+        "title": "The Housemaid",
+        "completed_date": "2026-05-08",
+        "media_type": "movie",
+        "release_year": 2025,
+        "creator_or_director": "Paul Feig",
+        "duration": "125 min",
+        "genre": "Thriller psicologico, suspense, drama",
+        "country": "Estados Unidos",
+        "note": "Basada en la novela de Freida McFadden."
+      }
+    ]
+  }
+}

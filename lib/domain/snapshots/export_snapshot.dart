@@ -28,6 +28,7 @@ class ExportSnapshot {
     required this.notificationSettings,
     required this.calendarSettings,
     this.visualMode = AppVisualMode.classic,
+    this.navOrder = const <AppSection>[],
   });
 
   final List<TaskModel> tasks;
@@ -45,6 +46,7 @@ class ExportSnapshot {
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
   final AppVisualMode visualMode;
+  final List<AppSection> navOrder;
 
   String toPrettyJson() {
     return const JsonEncoder.withIndent('  ').convert(<String, dynamic>{
@@ -66,6 +68,7 @@ class ExportSnapshot {
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
       'visualMode': visualMode.name,
+      'navOrder': navOrder.map((section) => section.name).toList(),
     });
   }
 }

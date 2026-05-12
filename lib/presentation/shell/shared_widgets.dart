@@ -754,7 +754,7 @@ class _HeaderSecondaryButton extends StatelessWidget {
           backgroundColor: Colors.white.withValues(alpha: 0.62),
           side: const BorderSide(color: Color(0xFFE8DCCB)),
           foregroundColor: const Color(0xFF2D2A25),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
