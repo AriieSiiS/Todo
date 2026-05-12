@@ -81,10 +81,16 @@ class _LibraryPageState extends State<LibraryPage> {
                           const SizedBox(width: 18),
                           SizedBox(
                             width: 330,
-                            child: _LibrarySidePanel(
-                              controller: controller,
-                              items: controller.libraryItems,
-                              year: _year,
+                            child: ScrollConfiguration(
+                              behavior: const MaterialScrollBehavior()
+                                  .copyWith(scrollbars: false),
+                              child: SingleChildScrollView(
+                                child: _LibrarySidePanel(
+                                  controller: controller,
+                                  items: controller.libraryItems,
+                                  year: _year,
+                                ),
+                              ),
                             ),
                           ),
                         ],
