@@ -995,7 +995,6 @@ class TodoWorkspace extends ChangeNotifier {
     try {
       final granted = await _notificationService.requestPermissions();
       _notificationSettings = _notificationSettings.copyWith(
-        webPermissionGranted: granted,
         windowsPermissionGranted: granted,
       );
       _commit();

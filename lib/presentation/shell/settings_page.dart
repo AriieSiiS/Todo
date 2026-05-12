@@ -12,7 +12,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late final TextEditingController _webClientController;
   late final TextEditingController _desktopClientController;
   late final TextEditingController _desktopSecretController;
 
@@ -21,8 +20,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _webClientController =
-        TextEditingController(text: controller.calendarSettings.webClientId);
     _desktopClientController = TextEditingController(
         text: controller.calendarSettings.desktopClientId);
     _desktopSecretController = TextEditingController(
@@ -31,7 +28,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    _webClientController.dispose();
     _desktopClientController.dispose();
     _desktopSecretController.dispose();
     super.dispose();
@@ -300,12 +296,6 @@ class _SettingsPageState extends State<SettingsPage> {
                                     const TextStyle(color: Color(0xFF9D4436))),
                           ],
                           const Divider(height: 26),
-                          TextField(
-                            controller: _webClientController,
-                            decoration: const InputDecoration(
-                                labelText: 'Web Client ID'),
-                          ),
-                          const SizedBox(height: 12),
                           TextField(
                             controller: _desktopClientController,
                             decoration: const InputDecoration(
@@ -749,7 +739,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveAndConnectCalendar() async {
     await controller.updateCalendarSettings(
       controller.calendarSettings.copyWith(
-        webClientId: _webClientController.text.trim(),
         desktopClientId: _desktopClientController.text.trim(),
         desktopClientSecret: _desktopSecretController.text.trim(),
       ),

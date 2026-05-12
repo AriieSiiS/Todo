@@ -55,7 +55,6 @@ La app tiene:
 
 - `lib/data/local_store.dart`: contrato de store local
 - `lib/data/local_store_file_backed.dart`: store principal para Windows/IO
-- `lib/data/local_store_shared_prefs.dart`: store para web
 - `lib/data/repositories/`: adaptadores hacia repositorios de dominio
 - `lib/services/`: integraciones de plataforma, Supabase, calendario, notificaciones y scheduler
 

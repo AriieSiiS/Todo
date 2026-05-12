@@ -36,7 +36,6 @@ class DaySettings {
 class DeviceNotificationSettings {
   const DeviceNotificationSettings({
     this.notificationsEnabled = true,
-    this.webPermissionGranted = false,
     this.windowsPermissionGranted = true,
     this.dayStartReminderEnabled = true,
     this.dayEndReminderEnabled = true,
@@ -44,7 +43,6 @@ class DeviceNotificationSettings {
   });
 
   final bool notificationsEnabled;
-  final bool webPermissionGranted;
   final bool windowsPermissionGranted;
   final bool dayStartReminderEnabled;
   final bool dayEndReminderEnabled;
@@ -52,7 +50,6 @@ class DeviceNotificationSettings {
 
   DeviceNotificationSettings copyWith({
     bool? notificationsEnabled,
-    bool? webPermissionGranted,
     bool? windowsPermissionGranted,
     bool? dayStartReminderEnabled,
     bool? dayEndReminderEnabled,
@@ -60,7 +57,6 @@ class DeviceNotificationSettings {
   }) {
     return DeviceNotificationSettings(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      webPermissionGranted: webPermissionGranted ?? this.webPermissionGranted,
       windowsPermissionGranted:
           windowsPermissionGranted ?? this.windowsPermissionGranted,
       dayStartReminderEnabled:
@@ -75,7 +71,6 @@ class DeviceNotificationSettings {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'notificationsEnabled': notificationsEnabled,
-      'webPermissionGranted': webPermissionGranted,
       'windowsPermissionGranted': windowsPermissionGranted,
       'dayStartReminderEnabled': dayStartReminderEnabled,
       'dayEndReminderEnabled': dayEndReminderEnabled,
@@ -86,7 +81,6 @@ class DeviceNotificationSettings {
   factory DeviceNotificationSettings.fromJson(Map<String, dynamic> json) {
     return DeviceNotificationSettings(
       notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
-      webPermissionGranted: json['webPermissionGranted'] as bool? ?? false,
       windowsPermissionGranted:
           json['windowsPermissionGranted'] as bool? ?? true,
       dayStartReminderEnabled: json['dayStartReminderEnabled'] as bool? ?? true,
@@ -99,7 +93,6 @@ class DeviceNotificationSettings {
 
 class CalendarIntegrationSettings {
   const CalendarIntegrationSettings({
-    this.webClientId = '',
     this.desktopClientId = '',
     this.desktopClientSecret = '',
     this.selectedCalendarId = 'primary',
@@ -109,7 +102,6 @@ class CalendarIntegrationSettings {
     this.lastError = '',
   });
 
-  final String webClientId;
   final String desktopClientId;
   final String desktopClientSecret;
   final String selectedCalendarId;
@@ -119,7 +111,6 @@ class CalendarIntegrationSettings {
   final String lastError;
 
   CalendarIntegrationSettings copyWith({
-    String? webClientId,
     String? desktopClientId,
     String? desktopClientSecret,
     String? selectedCalendarId,
@@ -129,7 +120,6 @@ class CalendarIntegrationSettings {
     String? lastError,
   }) {
     return CalendarIntegrationSettings(
-      webClientId: webClientId ?? this.webClientId,
       desktopClientId: desktopClientId ?? this.desktopClientId,
       desktopClientSecret: desktopClientSecret ?? this.desktopClientSecret,
       selectedCalendarId: selectedCalendarId ?? this.selectedCalendarId,
@@ -142,7 +132,6 @@ class CalendarIntegrationSettings {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'webClientId': webClientId,
       'desktopClientId': desktopClientId,
       'desktopClientSecret': desktopClientSecret,
       'selectedCalendarId': selectedCalendarId,
@@ -155,7 +144,6 @@ class CalendarIntegrationSettings {
 
   factory CalendarIntegrationSettings.fromJson(Map<String, dynamic> json) {
     return CalendarIntegrationSettings(
-      webClientId: json['webClientId'] as String? ?? '',
       desktopClientId: json['desktopClientId'] as String? ?? '',
       desktopClientSecret: json['desktopClientSecret'] as String? ?? '',
       selectedCalendarId: json['selectedCalendarId'] as String? ?? 'primary',

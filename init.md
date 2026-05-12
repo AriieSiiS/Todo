@@ -2,35 +2,31 @@
 
 ## Objetivo
 
-Levantar la base tecnica de una app de tareas personal, multiplataforma y minimalista.
+Levantar la base técnica de una app de tareas personal para Windows.
 
 ## Decisiones iniciales
 
-- Cliente unico con Flutter.
-- Soporte objetivo: Windows, web y Android.
-- Persistencia local prevista con Drift y SQLite.
-- Sincronizacion prevista con Firebase.
-- Integracion prevista con Google Calendar.
-- Notificaciones previstas para Android, web y Windows.
+- Cliente único con Flutter.
+- Soporte objetivo: Windows.
+- Persistencia local en archivo para escritorio.
+- Sincronización opcional con Supabase.
+- Integración prevista con Google Calendar.
+- Notificaciones previstas para Windows.
 
 ## Lo que queda preparado en esta fase
 
 - Repositorio Git inicializado.
 - Estructura base del proyecto en `lib/`.
 - Primera pantalla de tareas con estilo minimalista.
-- Tema visual base en codigo.
-- Documentacion inicial para producto y diseno.
+- Tema visual base en código.
+- Documentación inicial para producto y diseño.
 
 ## Bloqueadores actuales
 
-- Flutter y Dart no estan disponibles en el entorno actual.
-- Aun no existen wrappers generados para `android/`, `web/` y `windows/`.
-- Firebase y Google Calendar aun no tienen credenciales configuradas.
+- Google Calendar aún no tiene credenciales configuradas.
 
-## Arranque recomendado cuando Flutter este instalado
+## Arranque recomendado
 
 1. Abrir esta carpeta como proyecto.
-2. Ejecutar `flutter create .`
-3. Ejecutar `flutter pub get`
-4. Lanzar `flutter run -d chrome` o el dispositivo deseado
-
+2. Ejecutar `flutter pub get`.
+3. Lanzar `flutter run -d windows`.

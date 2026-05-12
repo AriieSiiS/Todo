@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
@@ -58,36 +57,21 @@ class SupabaseCloudService {
       return false;
     }
 
-    if (!kIsWeb) {
-      try {
-        final launched = await signInWithDesktopGoogleOAuth(
-          redirectUrl:
-              redirectUrl.isNotEmpty ? redirectUrl : 'http://localhost:3000/',
-          setError: (message) {
-            _lastError = message;
-          },
-        );
-        if (!launched && _lastError.isEmpty) {
-          _lastError = 'No se pudo abrir el acceso de Google.';
-        }
-        return launched;
-      } catch (error) {
-        _lastError =
-            'No se pudo iniciar el acceso en Windows. ${_cleanError(error)}';
-        return false;
-      }
-    }
-
     try {
-      final launched = await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: redirectUrl.isEmpty ? null : redirectUrl,
-        authScreenLaunchMode: LaunchMode.platformDefault,
+      final launched = await signInWithDesktopGoogleOAuth(
+        redirectUrl:
+            redirectUrl.isNotEmpty ? redirectUrl : 'http://localhost:3000/',
+        setError: (message) {
+          _lastError = message;
+        },
       );
-      _lastError = launched ? '' : 'No se pudo abrir el acceso de Google.';
+      if (!launched && _lastError.isEmpty) {
+        _lastError = 'No se pudo abrir el acceso de Google.';
+      }
       return launched;
     } catch (error) {
-      _lastError = 'No se pudo iniciar el acceso web. ${_cleanError(error)}';
+      _lastError =
+          'No se pudo iniciar el acceso en Windows. ${_cleanError(error)}';
       return false;
     }
   }

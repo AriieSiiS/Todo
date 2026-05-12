@@ -1,6 +1,5 @@
 import '../domain/models.dart';
-import 'local_store_shared_prefs.dart'
-    if (dart.library.io) 'local_store_file_backed.dart';
+import 'local_store_file_backed.dart';
 
 abstract class LocalStore {
   factory LocalStore() => createLocalStore();
