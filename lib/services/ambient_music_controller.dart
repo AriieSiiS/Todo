@@ -46,7 +46,7 @@ class AmbientMusicController extends ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
     } catch (error) {
-      _errorMessage = 'No se pudo cargar la musica: $error';
+      _errorMessage = 'No se pudo cargar la música: $error';
       notifyListeners();
     }
   }
@@ -59,7 +59,7 @@ class AmbientMusicController extends ChangeNotifier {
       await _player!.play();
     } catch (error) {
       _errorMessage =
-          'No se pudo reproducir automaticamente. Pulsa play para intentarlo.';
+          'No se pudo reproducir automáticamente. Pulsa play para intentarlo.';
       notifyListeners();
     }
   }

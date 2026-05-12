@@ -67,12 +67,12 @@ Future<int?> _showReminderSettingsDialog(
   required String subtitle,
 }) async {
   String selectedUnit = currentMinutes >= 1440 && currentMinutes % 1440 == 0
-      ? 'dias'
+      ? 'días'
       : currentMinutes >= 60 && currentMinutes % 60 == 0
           ? 'horas'
           : 'minutos';
   int amount = switch (selectedUnit) {
-    'dias' => (currentMinutes / 1440).round(),
+    'días' => (currentMinutes / 1440).round(),
     'horas' => (currentMinutes / 60).round(),
     _ => currentMinutes,
   };
@@ -80,7 +80,7 @@ Future<int?> _showReminderSettingsDialog(
 
   int minutesFromSelection() {
     return switch (selectedUnit) {
-      'dias' => amount * 1440,
+      'días' => amount * 1440,
       'horas' => amount * 60,
       _ => amount,
     };
@@ -149,7 +149,7 @@ Future<int?> _showReminderSettingsDialog(
                               onSelected: (_) {
                                 setLocalState(() {
                                   selectedUnit = minutes >= 1440
-                                      ? 'dias'
+                                      ? 'días'
                                       : minutes >= 60
                                           ? 'horas'
                                           : 'minutos';
@@ -192,7 +192,7 @@ Future<int?> _showReminderSettingsDialog(
                                 DropdownMenuItem(
                                     value: 'horas', child: Text('horas')),
                                 DropdownMenuItem(
-                                    value: 'dias', child: Text('dias')),
+                                    value: 'días', child: Text('días')),
                               ],
                               onChanged: (value) => setLocalState(
                                   () => selectedUnit = value ?? selectedUnit),

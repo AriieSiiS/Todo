@@ -324,7 +324,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_tasks",
-            "description": "Lista tareas, con filtros opcionales por estado, proyecto, categoria o fecha.",
+            "description": "Lista tareas, con filtros opcionales por estado, proyecto, categoría o fecha.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -398,7 +398,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "move_task_to_day",
-            "description": "Mueve una tarea a otro dia, conservando la hora si ya la tenia.",
+            "description": "Mueve una tarea a otro día, conservando la hora si ya la tenia.",
             "inputSchema": {
                 "type": "object",
                 "required": ["task_id", "date"],
@@ -415,12 +415,12 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_categories",
-            "description": "Lista categorias existentes.",
+            "description": "Lista categorías existentes.",
             "inputSchema": {"type": "object", "properties": {}},
         },
         {
             "name": "list_expenses",
-            "description": "Lista gastos, con filtros opcionales por ano, mes, categoria, metodo de pago o proyecto.",
+            "description": "Lista gastos, con filtros opcionales por año, mes, categoría, método de pago o proyecto.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -485,12 +485,12 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_expense_categories",
-            "description": "Lista categorias de gasto.",
+            "description": "Lista categorías de gasto.",
             "inputSchema": {"type": "object", "properties": {"include_inactive": {"type": "boolean"}}},
         },
         {
             "name": "create_expense_category",
-            "description": "Crea una categoria de gasto.",
+            "description": "Crea una categoría de gasto.",
             "inputSchema": {
                 "type": "object",
                 "required": ["name"],
@@ -504,7 +504,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "update_expense_category",
-            "description": "Actualiza una categoria de gasto.",
+            "description": "Actualiza una categoría de gasto.",
             "inputSchema": {
                 "type": "object",
                 "required": ["category_id"],
@@ -519,7 +519,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "delete_expense_category",
-            "description": "Borra o desactiva una categoria de gasto. Si hay gastos vinculados, usa replacement_category_id o deactivate=true.",
+            "description": "Borra o desactiva una categoría de gasto. Si hay gastos vinculados, usa replacement_category_id o deactivate=true.",
             "inputSchema": {
                 "type": "object",
                 "required": ["category_id"],
@@ -532,12 +532,12 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_payment_methods",
-            "description": "Lista metodos de pago.",
+            "description": "Lista métodos de pago.",
             "inputSchema": {"type": "object", "properties": {"include_inactive": {"type": "boolean"}}},
         },
         {
             "name": "create_payment_method",
-            "description": "Crea un metodo de pago.",
+            "description": "Crea un método de pago.",
             "inputSchema": {
                 "type": "object",
                 "required": ["name"],
@@ -551,7 +551,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "update_payment_method",
-            "description": "Actualiza un metodo de pago.",
+            "description": "Actualiza un método de pago.",
             "inputSchema": {
                 "type": "object",
                 "required": ["payment_method_id"],
@@ -566,7 +566,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "delete_payment_method",
-            "description": "Borra o desactiva un metodo de pago. Si hay gastos o pagos fijos vinculados, usa replacement_payment_method_id o deactivate=true.",
+            "description": "Borra o desactiva un método de pago. Si hay gastos o pagos fijos vinculados, usa replacement_payment_method_id o deactivate=true.",
             "inputSchema": {
                 "type": "object",
                 "required": ["payment_method_id"],
@@ -647,7 +647,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_library_goals",
-            "description": "Lista propositos de Biblioteca, con filtros opcionales por ano y tipo.",
+            "description": "Lista propósitos de Biblioteca, con filtros opcionales por año y tipo.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -661,7 +661,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_library_items",
-            "description": "Lista elementos completados de Biblioteca, con filtros opcionales por ano y tipo.",
+            "description": "Lista elementos completados de Biblioteca, con filtros opcionales por año y tipo.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -728,7 +728,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "create_library_goal",
-            "description": "Crea un proposito anual dentro de Biblioteca.",
+            "description": "Crea un propósito anual dentro de Biblioteca.",
             "inputSchema": {
                 "type": "object",
                 "required": ["type", "title", "target_year"],
@@ -755,14 +755,14 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "bulk_create_library_goals",
-            "description": "Crea varios propositos de Biblioteca de una vez.",
+            "description": "Crea varios propósitos de Biblioteca de una vez.",
             "inputSchema": {
                 "type": "object",
                 "required": ["goals"],
                 "properties": {
                     "replace_year": {
                         "type": "integer",
-                        "description": "Si se informa, borra antes los propositos de ese ano.",
+                        "description": "Si se informa, borra antes los propósitos de ese año.",
                     },
                     "goals": {
                         "type": "array",
@@ -795,22 +795,22 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "update_library_goal",
-            "description": "Actualiza un proposito de Biblioteca existente.",
+            "description": "Actualiza un propósito de Biblioteca existente.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "goal_id": {"type": "string"},
                     "title": {
                         "type": "string",
-                        "description": "Titulo actual usado para localizar el proposito.",
+                        "description": "Título actual usado para localizar el propósito.",
                     },
                     "target_year": {
                         "type": "integer",
-                        "description": "Ano actual usado para localizar el proposito.",
+                        "description": "Año actual usado para localizar el propósito.",
                     },
                     "type": {
                         "type": "string",
-                        "description": "Tipo actual usado para localizar el proposito.",
+                        "description": "Tipo actual usado para localizar el propósito.",
                     },
                     "new_title": {"type": "string"},
                     "new_target_year": {"type": "integer"},
@@ -848,7 +848,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "bulk_upsert_library_goals",
-            "description": "Crea o actualiza varios propositos de Biblioteca sin duplicarlos.",
+            "description": "Crea o actualiza varios propósitos de Biblioteca sin duplicarlos.",
             "inputSchema": {
                 "type": "object",
                 "required": ["goals"],
@@ -898,7 +898,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "clear_library_goals",
-            "description": "Borra propositos de Biblioteca, opcionalmente solo de un ano.",
+            "description": "Borra propósitos de Biblioteca, opcionalmente solo de un año.",
             "inputSchema": {
                 "type": "object",
                 "properties": {"target_year": {"type": "integer"}},
@@ -906,7 +906,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "create_category",
-            "description": "Crea una nueva categoria.",
+            "description": "Crea una nueva categoría.",
             "inputSchema": {
                 "type": "object",
                 "required": ["name"],
@@ -1024,7 +1024,7 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("bulk_complete_tasks", "Completa varias tareas.", {"task_ids": strings}, ["task_ids"]),
         tool("bulk_reopen_tasks", "Reabre varias tareas.", {"task_ids": strings}, ["task_ids"]),
         tool("bulk_delete_tasks", "Borra varias tareas.", {"task_ids": strings, "confirm": boolean}, ["task_ids", "confirm"]),
-        tool("bulk_move_tasks_to_day", "Mueve varias tareas a un dia.", {"task_ids": strings, "date": string}, ["task_ids", "date"]),
+        tool("bulk_move_tasks_to_day", "Mueve varias tareas a un día.", {"task_ids": strings, "date": string}, ["task_ids", "date"]),
         tool("reorder_tasks", "Actualiza el orden manual de una lista de tareas.", {"ordered_ids": strings}, ["ordered_ids"]),
         tool("create_subtask", "Crea una subtarea vinculada a una tarea padre.", {"parent_task_id": string, "title": string}, ["parent_task_id", "title"]),
         tool("set_task_reminder", "Configura el recordatorio de una tarea.", task_fields, ["task_id"]),
@@ -1034,9 +1034,9 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("complete_project", "Marca un proyecto como completado.", {"project_id": string}, ["project_id"]),
         tool("cancel_project", "Marca un proyecto como cancelado.", {"project_id": string}, ["project_id"]),
         tool("delete_project", "Borra un proyecto y limpia sus referencias en tareas.", {"project_id": string, "confirm": boolean}, ["project_id", "confirm"]),
-        tool("update_category", "Actualiza una categoria.", {"category_id": string, "name": string, "description": string, "color_value": integer, "icon_code_point": integer, "active": boolean}, ["category_id"]),
-        tool("toggle_category", "Activa o desactiva una categoria.", {"category_id": string}, ["category_id"]),
-        tool("delete_category", "Borra una categoria y limpia sus referencias.", {"category_id": string, "confirm": boolean}, ["category_id", "confirm"]),
+        tool("update_category", "Actualiza una categoría.", {"category_id": string, "name": string, "description": string, "color_value": integer, "icon_code_point": integer, "active": boolean}, ["category_id"]),
+        tool("toggle_category", "Activa o desactiva una categoría.", {"category_id": string}, ["category_id"]),
+        tool("delete_category", "Borra una categoría y limpia sus referencias.", {"category_id": string, "confirm": boolean}, ["category_id", "confirm"]),
         tool("list_notes", "Lista notas de Entrada.", {"status": string}, []),
         tool("create_note", "Crea una nota rapida.", {"content": string, "scheduled_for": string}, ["content"]),
         tool("update_note", "Actualiza una nota.", {"note_id": string, "content": string, "scheduled_for": string, "clear_scheduled_for": boolean, "status": string}, ["note_id"]),
@@ -1051,14 +1051,14 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("link_task_to_calendar_event", "Enlaza una tarea a un evento de calendario.", {"task_id": string, "calendar_id": string, "event_id": string, "sync_status": string}, ["task_id", "calendar_id", "event_id"]),
         tool("unlink_task_from_calendar_event", "Quita el enlace calendario de una tarea.", {"task_id": string}, ["task_id"]),
         tool("disconnect_calendar", "Desconecta calendario y limpia eventos/enlaces.", {"confirm": boolean}, ["confirm"]),
-        tool("get_settings", "Devuelve ajustes de app, dia, notificaciones, calendario, navegacion y modo visual.", {}, []),
-        tool("update_day_settings", "Actualiza ajustes de dia.", {"day_ends_at_hour": integer, "next_day_visible_at_hour": integer}, []),
+        tool("get_settings", "Devuelve ajustes de app, día, notificaciones, calendario, navegación y modo visual.", {}, []),
+        tool("update_day_settings", "Actualiza ajustes de día.", {"day_ends_at_hour": integer, "next_day_visible_at_hour": integer}, []),
         tool("update_notification_settings", "Actualiza ajustes de notificaciones.", {"notifications_enabled": boolean, "web_permission_granted": boolean, "windows_permission_granted": boolean, "day_start_reminder_enabled": boolean, "day_end_reminder_enabled": boolean, "default_minutes_before_task": integer}, []),
         tool("update_calendar_settings", "Actualiza ajustes de integracion de calendario.", {"web_client_id": string, "desktop_client_id": string, "desktop_client_secret": string, "selected_calendar_id": string, "selected_calendar_name": string, "connected_email": string, "connected": boolean, "last_error": string}, []),
         tool("set_today_sort", "Cambia el orden de Hoy.", {"today_sort": string}, ["today_sort"]),
         tool("set_visual_mode", "Cambia el modo visual.", {"visual_mode": string}, ["visual_mode"]),
-        tool("reorder_navigation", "Actualiza el orden de navegacion lateral.", {"sections": strings}, ["sections"]),
-        tool("sync_with_cloud", "Fuerza sincronizacion con nube si hay credenciales.", {}, []),
+        tool("reorder_navigation", "Actualiza el orden de navegación lateral.", {"sections": strings}, ["sections"]),
+        tool("sync_with_cloud", "Fuerza sincronización con nube si hay credenciales.", {}, []),
         tool("disconnect_cloud", "Desconecta la nube en el snapshot local.", {"confirm": boolean}, ["confirm"]),
         tool("duplicate_expense", "Duplica un gasto.", {"expense_id": string}, ["expense_id"]),
         tool("expense_totals", "Calcula totales de gastos.", {"year": integer, "month": integer, "group_by": string}, []),
@@ -1067,9 +1067,9 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("create_library_item", "Crea un item completado de Biblioteca.", library_fields, ["type", "title"]),
         tool("update_library_item", "Actualiza un item completado de Biblioteca.", library_fields, ["item_id"]),
         tool("delete_library_item", "Borra un item completado de Biblioteca.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
-        tool("delete_library_goal", "Borra un proposito de Biblioteca.", {"goal_id": string, "confirm": boolean}, ["goal_id", "confirm"]),
+        tool("delete_library_goal", "Borra un propósito de Biblioteca.", {"goal_id": string, "confirm": boolean}, ["goal_id", "confirm"]),
         tool("toggle_library_goal_completed", "Alterna pendiente/completado y sincroniza con Biblioteca.", {"goal_id": string}, ["goal_id"]),
-        tool("toggle_library_goal_favorite", "Alterna favorito en un proposito.", {"goal_id": string}, ["goal_id"]),
+        tool("toggle_library_goal_favorite", "Alterna favorito en un propósito.", {"goal_id": string}, ["goal_id"]),
     ]
 
 
@@ -1152,7 +1152,7 @@ def find_category(state: dict[str, Any], category_id: str) -> tuple[int, dict[st
     for index, category in enumerate(state["categories"]):
         if category.get("id") == category_id:
             return index, category
-    raise ValueError(f"No existe la categoria '{category_id}'.")
+    raise ValueError(f"No existe la categoría '{category_id}'.")
 
 
 def create_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1405,12 +1405,12 @@ def find_by_id(items: list[dict[str, Any]], item_id: str, label: str) -> tuple[i
 
 
 def validate_expense_category(state: dict[str, Any], category_id: str) -> None:
-    find_by_id(state["expenseCategories"], category_id, "la categoria de gasto")
+    find_by_id(state["expenseCategories"], category_id, "la categoría de gasto")
 
 
 def validate_payment_method(state: dict[str, Any], payment_method_id: str | None) -> None:
     if payment_method_id:
-        find_by_id(state["paymentMethods"], payment_method_id, "el metodo de pago")
+        find_by_id(state["paymentMethods"], payment_method_id, "el método de pago")
 
 
 def normalize_frequency(value: str | None) -> str:
@@ -1543,7 +1543,7 @@ def create_expense_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def update_expense_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_financial_lists(state)
-    index, category = find_by_id(state["expenseCategories"], arguments["category_id"], "la categoria de gasto")
+    index, category = find_by_id(state["expenseCategories"], arguments["category_id"], "la categoría de gasto")
     updated = copy.deepcopy(category)
     if "name" in arguments:
         updated["name"] = arguments["name"].strip()
@@ -1563,7 +1563,7 @@ def delete_expense_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_financial_lists(state)
     category_id = arguments["category_id"]
-    index, category = find_by_id(state["expenseCategories"], category_id, "la categoria de gasto")
+    index, category = find_by_id(state["expenseCategories"], category_id, "la categoría de gasto")
     replacement_id = arguments.get("replacement_category_id")
     linked_expenses = [expense for expense in state["expenses"] if expense.get("categoryId") == category_id]
     linked_fixed = [payment for payment in state["fixedPayments"] if payment.get("categoryId") == category_id]
@@ -1582,7 +1582,7 @@ def delete_expense_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
             state["expenseCategories"][index] = category
             save_state(state)
             return {"deactivated": category, "linked_expenses": len(linked_expenses), "linked_fixed_payments": len(linked_fixed)}
-        raise ValueError("La categoria tiene gastos o pagos fijos vinculados. Usa replacement_category_id o deactivate=true.")
+        raise ValueError("La categoría tiene gastos o pagos fijos vinculados. Usa replacement_category_id o deactivate=true.")
     deleted = state["expenseCategories"].pop(index)
     save_state(state)
     return {"deleted": deleted}
@@ -1617,7 +1617,7 @@ def create_payment_method_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def update_payment_method_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_financial_lists(state)
-    index, method = find_by_id(state["paymentMethods"], arguments["payment_method_id"], "el metodo de pago")
+    index, method = find_by_id(state["paymentMethods"], arguments["payment_method_id"], "el método de pago")
     updated = copy.deepcopy(method)
     if "name" in arguments:
         updated["name"] = arguments["name"].strip()
@@ -1637,7 +1637,7 @@ def delete_payment_method_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_financial_lists(state)
     method_id = arguments["payment_method_id"]
-    index, method = find_by_id(state["paymentMethods"], method_id, "el metodo de pago")
+    index, method = find_by_id(state["paymentMethods"], method_id, "el método de pago")
     replacement_id = arguments.get("replacement_payment_method_id")
     linked_expenses = [expense for expense in state["expenses"] if expense.get("paymentMethodId") == method_id]
     linked_fixed = [payment for payment in state["fixedPayments"] if payment.get("paymentMethodId") == method_id]
@@ -1656,7 +1656,7 @@ def delete_payment_method_impl(arguments: dict[str, Any]) -> dict[str, Any]:
             state["paymentMethods"][index] = method
             save_state(state)
             return {"deactivated": method, "linked_expenses": len(linked_expenses), "linked_fixed_payments": len(linked_fixed)}
-        raise ValueError("El metodo tiene gastos o pagos fijos vinculados. Usa replacement_payment_method_id o deactivate=true.")
+        raise ValueError("El método tiene gastos o pagos fijos vinculados. Usa replacement_payment_method_id o deactivate=true.")
     deleted = state["paymentMethods"].pop(index)
     save_state(state)
     return {"deleted": deleted}
@@ -1784,7 +1784,7 @@ def normalize_library_type(value: str) -> str:
     }
     normalized = aliases.get(value.strip())
     if normalized is None:
-        raise ValueError("Tipo de biblioteca no valido. Usa game, book o movieSeries.")
+        raise ValueError("Tipo de biblioteca no válido. Usa game, book o movieSeries.")
     return normalized
 
 
@@ -1801,7 +1801,7 @@ def normalize_media_type(value: str | None) -> str | None:
     }
     normalized = aliases.get(value.strip())
     if normalized is None:
-        raise ValueError("Tipo de medio no valido. Usa movie o series.")
+        raise ValueError("Tipo de medio no válido. Usa movie o series.")
     return normalized
 
 
@@ -1818,7 +1818,7 @@ def normalize_goal_status(value: str | None) -> str:
     }
     normalized = aliases.get(value.strip())
     if normalized is None:
-        raise ValueError("Estado de proposito no valido. Usa pending o completed.")
+        raise ValueError("Estado de propósito no válido. Usa pending o completed.")
     return normalized
 
 
@@ -2034,9 +2034,9 @@ def find_library_goal_index(state: dict[str, Any], arguments: dict[str, Any]) ->
         matches.append(index)
 
     if not matches:
-        raise ValueError("No se encontro ningun proposito con esos filtros.")
+        raise ValueError("No se encontró ningún propósito con esos filtros.")
     if len(matches) > 1:
-        raise ValueError("Los filtros coinciden con varios propositos; usa goal_id.")
+        raise ValueError("Los filtros coinciden con varios propósitos; usa goal_id.")
     return matches[0]
 
 
@@ -2243,13 +2243,13 @@ def ensure_core_lists(state: dict[str, Any]) -> None:
 def ensure_value(value: str, valid: set[str], label: str) -> str:
     normalized = value.strip()
     if normalized not in valid:
-        raise ValueError(f"{label} no valido. Usa uno de: {', '.join(sorted(valid))}.")
+        raise ValueError(f"{label} no válido. Usa uno de: {', '.join(sorted(valid))}.")
     return normalized
 
 
 def ensure_task_refs(state: dict[str, Any], category_ids: list[str] | None = None, project_ids: list[str] | None = None) -> None:
     for category_id in category_ids or []:
-        find_by_id(state["categories"], category_id, "la categoria")
+        find_by_id(state["categories"], category_id, "la categoría")
     for project_id in project_ids or []:
         find_by_id(state["projects"], project_id, "el proyecto")
 
@@ -2426,7 +2426,7 @@ def delete_project_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def update_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
-    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoria")
+    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoría")
     updated = copy.deepcopy(category)
     if "name" in arguments:
         updated["name"] = arguments["name"].strip()
@@ -2445,7 +2445,7 @@ def update_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def toggle_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
-    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoria")
+    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoría")
     updated = copy.deepcopy(category)
     updated["active"] = not bool(updated.get("active", True))
     state["categories"][index] = updated
@@ -2456,7 +2456,7 @@ def toggle_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def delete_category_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     require_confirm(arguments, "delete_category")
     state = load_state()
-    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoria")
+    index, category = find_by_id(state["categories"], arguments["category_id"], "la categoría")
     deleted = state["categories"].pop(index)
     for task in state["tasks"]:
         task["categoryIds"] = [category_id for category_id in task.get("categoryIds", []) if category_id != deleted["id"]]
@@ -2949,7 +2949,7 @@ def delete_library_goal_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     require_confirm(arguments, "delete_library_goal")
     state = load_state()
     ensure_library_goal_lists(state)
-    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el proposito")
+    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el propósito")
     deleted = state["libraryGoals"].pop(index)
     save_state(state)
     return {"deleted": deleted}
@@ -2958,7 +2958,7 @@ def delete_library_goal_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def toggle_library_goal_completed_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_library_goal_lists(state)
-    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el proposito")
+    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el propósito")
     updated = copy.deepcopy(goal)
     updated["status"] = "pending" if updated.get("status") == "completed" else "completed"
     updated["updatedAt"] = now_iso()
@@ -2971,7 +2971,7 @@ def toggle_library_goal_completed_impl(arguments: dict[str, Any]) -> dict[str, A
 def toggle_library_goal_favorite_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_library_goal_lists(state)
-    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el proposito")
+    index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el propósito")
     updated = copy.deepcopy(goal)
     updated["isFavorite"] = not bool(updated.get("isFavorite", False))
     updated["updatedAt"] = now_iso()

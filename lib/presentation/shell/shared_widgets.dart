@@ -425,7 +425,7 @@ class _TaskCard extends StatelessWidget {
                               Text('Materiales: ${task.materials.join(', ')}',
                                   style: TextStyle(color: visuals.textMuted)),
                             if (task.checklist.isNotEmpty)
-                              Text('Checklist: ${task.checklist.join(' Â· ')}',
+                              Text('Checklist: ${task.checklist.join(' · ')}',
                                   style: TextStyle(color: visuals.textMuted)),
                           ],
                         ],

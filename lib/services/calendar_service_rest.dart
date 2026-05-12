@@ -77,7 +77,7 @@ class CalendarRestClient {
       return CalendarEventModel(
         id: map['id'] as String? ?? '',
         calendarId: calendarId,
-        title: map['summary'] as String? ?? 'Evento sin titulo',
+        title: map['summary'] as String? ?? 'Evento sin título',
         startAt: DateTime.tryParse(startRaw)?.toLocal() ?? from,
         endAt: DateTime.tryParse(endRaw)?.toLocal() ?? to,
         description: map['description'] as String?,

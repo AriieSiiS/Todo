@@ -1,34 +1,34 @@
 # Todo
 
-Base de una app personal de tareas pensada para Windows, web y Android.
+Base de una app personal de tareas pensada para Windows.
 
-## Mapa rapido para nuevos chats o agentes
+## Mapa rápido para nuevos chats o agentes
 
-Si un chat nuevo necesita orientarse sin volver a recorrer todo el repo, empieza por [AGENTS.md](</C:/Users/AlejandroAfonso/Documents/Todo/AGENTS.md>). Ahi esta el mapa corto del proyecto, las rutas clave y los atajos para abrir cada vista directamente.
+Si un chat nuevo necesita orientarse sin volver a recorrer todo el repo, empieza por [AGENTS.md](</C:/Users/AlejandroAfonso/Documents/Todo/AGENTS.md>). Ahí está el mapa corto del proyecto, las rutas clave y los atajos para abrir cada vista directamente.
 
-La app esta migrada a una estructura por capas:
+La app está migrada a una estructura por capas:
 
 - `domain/`: entidades, snapshots JSON y contratos
 - `application/`: estado principal `TodoWorkspace` y providers Riverpod
 - `data/`: adaptadores de persistencia, Supabase, calendario y notificaciones
 - `presentation/`: shell, vistas y editores
 
-Windows es la plataforma prioritaria. La persistencia de escritorio usa archivo local en `runtime/todo_state.json`, y la validacion principal recomendada es `flutter build windows --debug`.
+Windows es la plataforma prioritaria. La persistencia de escritorio usa archivo local en `runtime/todo_state.json`, y la validación principal recomendada es `flutter build windows --debug`.
 
 ## Estado actual
 
 Este repositorio contiene:
 
-- una app Flutter funcional con secciones `Hoy`, `Proyectos`, `Categorias`, `Calendario`, `Completadas` y `Ajustes`
+- una app Flutter funcional con secciones `Hoy`, `Proyectos`, `Categorías`, `Calendario`, `Completadas` y `Ajustes`
 - modelo interno preparado para operaciones futuras por MCP o agente externo
-- logica de dia real configurable
-- persistencia local automatica para web y Windows
-- sincronizacion opcional con Supabase para compartir el mismo estado entre app, web, movil y MCP
-- documentacion inicial de arranque, diseno y plan
+- lógica de día real configurable
+- persistencia local automática para Windows
+- sincronización opcional con Supabase para compartir el mismo estado entre app, Windows y MCP
+- documentación inicial de arranque, diseño y plan
 
 ## Supabase compartido
 
-La sincronizacion nueva usa un snapshot unico por cuenta. Eso encaja bien con una app de uso personal porque simplifica mucho la coherencia entre dispositivos y tambien deja el MCP hablando con la misma fuente de verdad.
+La sincronización nueva usa un snapshot único por cuenta. Eso encaja bien con una app de uso personal porque simplifica mucho la coherencia entre dispositivos y también deja el MCP hablando con la misma fuente de verdad.
 
 Pasos base:
 
@@ -43,29 +43,28 @@ Pasos base:
 --dart-define=SUPABASE_REDIRECT_URL=...
 ```
 
-Tambien acepta directamente los nombres que suele mostrar Supabase al copiar variables:
+También acepta directamente los nombres que suele mostrar Supabase al copiar variables:
 
 ```text
 --dart-define=NEXT_PUBLIC_SUPABASE_URL=...
 --dart-define=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
-Cuando la app tenga esa configuracion, desde `Ajustes` podras conectar la nube, seguir guardando en local como cache y sincronizar el mismo estado con Supabase.
+Cuando la app tenga esa configuración, desde `Ajustes` podrás conectar la nube, seguir guardando en local como caché y sincronizar el mismo estado con Supabase.
 
-Scripts utiles:
+Scripts útiles:
 
-- web con Supabase ya preparado: [tooling/run_web_supabase.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/tooling/run_web_supabase.ps1>)
 - Windows con Supabase ya preparado: [tooling/run_windows_supabase.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/tooling/run_windows_supabase.ps1>)
 - prueba MCP contra Supabase: [tooling/test_supabase_mcp_sync.py](</C:/Users/AlejandroAfonso/Documents/Todo/tooling/test_supabase_mcp_sync.py>)
 
-Para completar el login real de la app, todavia hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
+Para completar el login real de la app, todavía hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
 
 ## MCP local
 
 La app ya trae una base para control externo por IA mediante un servidor MCP local en [mcp_server/README.md](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/README.md>).
 
-- La app mantiene cache local en `Documents/Todo/runtime/todo_state.json`
+- La app mantiene caché local en `Documents/Todo/runtime/todo_state.json`
 - El servidor MCP vive en [mcp_server/server.py](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/server.py>)
-- El arranque portable del repo esta en [mcp_server/start_mcp.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.ps1>) y [mcp_server/start_mcp.bat](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.bat>)
-- Hay una configuracion de ejemplo para clientes en [mcp_server/client.example.json](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/client.example.json>)
+- El arranque portable del repo está en [mcp_server/start_mcp.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.ps1>) y [mcp_server/start_mcp.bat](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.bat>)
+- Hay una configuración de ejemplo para clientes en [mcp_server/client.example.json](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/client.example.json>)
 - Si quieres que el MCP use la misma nube que la app, copia [mcp_server/.env.example](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/.env.example>) a `mcp_server/.env` y rellena sus valores

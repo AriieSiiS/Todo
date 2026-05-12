@@ -525,7 +525,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 child: Text('Semanal', style: fieldTextStyle)),
             DropdownMenuItem(
                 value: RecurrenceType.everyXDays,
-                child: Text('Cada X dias', style: fieldTextStyle)),
+                child: Text('Cada X días', style: fieldTextStyle)),
             DropdownMenuItem(
                 value: RecurrenceType.yearly,
                 child: Text('Anual', style: fieldTextStyle)),

@@ -194,7 +194,7 @@ class _LibraryHeader extends StatelessWidget {
                   style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 6),
               Text(
-                'AquÃ­ se guardan los juegos, libros y pelÃ­culas/series que ya has completado.',
+                'Aquí se guardan los juegos, libros y películas/series que ya has completado.',
                 style: TextStyle(
                   color: context.visuals.textMuted,
                   fontSize: 15,
@@ -216,7 +216,7 @@ class _LibraryHeader extends StatelessWidget {
                 onPressed: onYearChanged,
               ),
             _HeaderActionButton(
-              label: isGoals ? 'AÃ±adir propÃ³sito' : 'AÃ±adir completado',
+              label: isGoals ? 'Añadir propósito' : 'Añadir completado',
               icon: Icons.add_rounded,
               onPressed: onAdd,
             ),
@@ -244,7 +244,7 @@ class _LibraryTabs extends StatelessWidget {
         ),
         const SizedBox(width: 24),
         _LibraryTabButton(
-          label: 'PropÃ³sitos',
+          label: 'Propósitos',
           active: tab == _LibraryTab.goals,
           onTap: () => onChanged(_LibraryTab.goals),
         ),
@@ -563,7 +563,7 @@ class _LibraryTypeCard extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: 'Â¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -725,7 +725,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: 'Â¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
     );
     if (confirmed) {
       widget.controller.deleteLibraryItem(item.id);
@@ -755,7 +755,7 @@ class _CompactLibrarySearchField extends StatelessWidget {
               ? null
               : IconButton(
                   icon: const Icon(Icons.close_rounded),
-                  tooltip: 'Limpiar bÃºsqueda',
+                  tooltip: 'Limpiar búsqueda',
                   onPressed: () {
                     controller.clear();
                     onChanged();
@@ -1028,7 +1028,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(30),
                         child: Text(
-                          'No hay completados en esta categorÃ­a.',
+                          'No hay completados en esta categoría.',
                           style: TextStyle(color: context.visuals.textMuted),
                         ),
                       ),
@@ -1070,7 +1070,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: 'Â¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -1111,7 +1111,7 @@ class _LibrarySidePanel extends StatelessWidget {
               const Text('Recientes',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text('Ãšltimos completados',
+              Text('Últimos completados',
                   style: TextStyle(color: context.visuals.textMuted)),
               const SizedBox(height: 16),
               if (recent.isEmpty)
@@ -1194,15 +1194,15 @@ class _LibrarySidePanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('AÃ±os',
+              const Text('Años',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text('Explora tu biblioteca por aÃ±o',
+              Text('Explora tu biblioteca por año',
                   style: TextStyle(color: context.visuals.textMuted)),
               const SizedBox(height: 14),
               if (years.isEmpty)
                 Text(
-                  'AÃºn no hay aÃ±os registrados.',
+                  'Aún no hay años registrados.',
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
@@ -1224,7 +1224,7 @@ class _LibrarySidePanel extends StatelessWidget {
                       ],
                     ),
                   ),
-              _LibrarySideLink(label: 'Ver todos los aÃ±os', onTap: () {}),
+              _LibrarySideLink(label: 'Ver todos los años', onTap: () {}),
             ],
           ),
         ),
@@ -1248,7 +1248,7 @@ class _LibrarySidePanel extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: 'Â¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -1491,12 +1491,12 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('PropÃ³sitos',
+                  const Text('Propósitos',
                       style:
                           TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 3),
                   Text(
-                    'Las cosas que quiero jugar, leer y ver este aÃ±o sÃ­ o sÃ­.',
+                    'Las cosas que quiero jugar, leer y ver este año sí o sí.',
                     style: TextStyle(color: context.visuals.textMuted),
                   ),
                 ],
@@ -1633,8 +1633,8 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
   Future<void> _deleteGoal(BuildContext context, LibraryGoal goal) async {
     final confirmed = await _confirmLibraryDelete(
       context,
-      title: 'Borrar propÃ³sito',
-      message: 'Â¿Quieres borrar "${goal.title}" de tus propÃ³sitos?',
+      title: 'Borrar propósito',
+      message: '¿Quieres borrar "${goal.title}" de tus propósitos?',
     );
     if (confirmed) {
       widget.controller.deleteLibraryGoal(goal.id);
@@ -1690,7 +1690,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
                   ),
                 ),
                 _miniBadge(
-                  '${goals.length} ${goals.length == 1 ? 'propÃ³sito' : 'propÃ³sitos'}',
+                  '${goals.length} ${goals.length == 1 ? 'propósito' : 'propósitos'}',
                   _libraryColor(type).withValues(alpha: 0.12),
                   _libraryColor(type),
                 ),
@@ -2235,7 +2235,7 @@ class _LibraryFilterDialogState extends State<_LibraryFilterDialog> {
                     value: LibraryItemType.book, child: Text('Libros')),
                 DropdownMenuItem(
                   value: LibraryItemType.movieSeries,
-                  child: Text('PelÃ­culas y series'),
+                  child: Text('Películas y series'),
                 ),
               ],
               onChanged: (value) => setState(() => _type = value),
@@ -2243,7 +2243,7 @@ class _LibraryFilterDialogState extends State<_LibraryFilterDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
               initialValue: _year,
-              decoration: const InputDecoration(labelText: 'AÃ±o'),
+              decoration: const InputDecoration(labelText: 'Año'),
               items: const [
                 DropdownMenuItem(value: 2026, child: Text('2026')),
                 DropdownMenuItem(value: 2025, child: Text('2025')),
@@ -2259,14 +2259,14 @@ class _LibraryFilterDialogState extends State<_LibraryFilterDialog> {
             TextField(
               controller: _query,
               decoration:
-                  const InputDecoration(labelText: 'Buscar por tÃ­tulo'),
+                  const InputDecoration(labelText: 'Buscar por título'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _rating,
               keyboardType: TextInputType.number,
               decoration:
-                  const InputDecoration(labelText: 'ValoraciÃ³n mÃ­nima'),
+                  const InputDecoration(labelText: 'Valoración mínima'),
             ),
           ],
         ),
@@ -2410,16 +2410,16 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
                         children: [
                           Text(
                             _isEditing
-                                ? 'Editar propÃ³sito'
-                                : 'AÃ±adir propÃ³sito',
+                                ? 'Editar propósito'
+                                : 'Añadir propósito',
                             style: const TextStyle(
                                 fontSize: 23, fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 3),
                           Text(
                             _isEditing
-                                ? 'Actualiza los datos de este propÃ³sito.'
-                                : 'Registra algo que quieres completar este aÃ±o.',
+                                ? 'Actualiza los datos de este propósito.'
+                                : 'Registra algo que quieres completar este año.',
                             style: TextStyle(color: visuals.textMuted),
                           ),
                         ],
@@ -2468,7 +2468,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _LibraryContentTypeButton(
-                                label: 'PelÃ­cula / Serie / Anime',
+                                label: 'Película / Serie / Anime',
                                 icon: Icons.movie_creation_outlined,
                                 active: _type == LibraryItemType.movieSeries,
                                 onTap: () => setState(
@@ -2540,7 +2540,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
   Widget _goalTypedFields() {
     return Column(
       children: [
-        _goalDialogField(_title, 'TÃ­tulo *', _goalTitleHint()),
+        _goalDialogField(_title, 'Título *', _goalTitleHint()),
         const SizedBox(height: 16),
         if (_type == LibraryItemType.game) ...[
           Row(
@@ -2551,7 +2551,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _releaseYear,
-                  'AÃ±o de lanzamiento',
+                  'Año de lanzamiento',
                   'Ej. 2017',
                   keyboardType: TextInputType.number,
                 ),
@@ -2568,7 +2568,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               const SizedBox(width: 14),
               Expanded(
                 child:
-                    _goalDialogField(_genre, 'GÃ©nero', 'Ej. Inmersivo, RPG'),
+                    _goalDialogField(_genre, 'Género', 'Ej. Inmersivo, RPG'),
               ),
             ],
           ),
@@ -2592,7 +2592,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _releaseYear,
-                  'AÃ±o de publicaciÃ³n',
+                  'Año de publicación',
                   'Ej. 2023',
                   keyboardType: TextInputType.number,
                 ),
@@ -2628,7 +2628,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _releaseYear,
-                  'AÃ±o de estreno',
+                  'Año de estreno',
                   'Ej. 1972',
                   keyboardType: TextInputType.number,
                 ),
@@ -2641,7 +2641,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _duration,
-                  'DuraciÃ³n',
+                  'Duración',
                   'Ej. 2h 55m',
                 ),
               ),
@@ -2649,7 +2649,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _country,
-                  'PaÃ­s de origen',
+                  'País de origen',
                   'Ej. Estados Unidos',
                 ),
               ),
@@ -2669,8 +2669,8 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               Expanded(
                 child: _goalDialogField(
                   _genre,
-                  'GÃ©nero',
-                  'Ej. Drama, AcciÃ³n',
+                  'Género',
+                  'Ej. Drama, Acción',
                 ),
               ),
             ],
@@ -2694,7 +2694,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
           ],
         ),
         const SizedBox(height: 16),
-        _goalDialogField(_note, 'Nota opcional', 'AÃ±ade contexto o motivo...'),
+        _goalDialogField(_note, 'Nota opcional', 'Añade contexto o motivo...'),
       ],
     );
   }
@@ -2724,7 +2724,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
       label: 'Tipo *',
       controller: _creator,
       fallback: 'Libro',
-      options: const ['Libro', 'Manga', 'CÃ³mic'],
+      options: const ['Libro', 'Manga', 'Cómic'],
     );
   }
 
@@ -2733,7 +2733,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
       label: 'Formato *',
       controller: _format,
       fallback: 'Digital',
-      options: const ['FÃ­sico', 'Digital'],
+      options: const ['Físico', 'Digital'],
     );
   }
 
@@ -2742,7 +2742,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
       label: 'Formato *',
       controller: _format,
       fallback: 'eBook',
-      options: const ['FÃ­sico', 'eBook'],
+      options: const ['Físico', 'eBook'],
     );
   }
 
@@ -2781,7 +2781,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('AÃ±o *', style: TextStyle(fontWeight: FontWeight.w700)),
+        const Text('Año *', style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         DropdownButtonFormField<int>(
           initialValue: _year,
@@ -2812,7 +2812,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
           decoration: const InputDecoration(),
           items: const [
             DropdownMenuItem(
-                value: LibraryMediaType.movie, child: Text('PelÃ­cula')),
+                value: LibraryMediaType.movie, child: Text('Película')),
             DropdownMenuItem(
                 value: LibraryMediaType.series, child: Text('Serie')),
           ],
@@ -2827,10 +2827,10 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
   }
 
   String _goalDialogInfoTitle() => switch (_type) {
-        LibraryItemType.game => 'InformaciÃ³n del juego',
-        LibraryItemType.book => 'InformaciÃ³n del libro / manga',
+        LibraryItemType.game => 'Información del juego',
+        LibraryItemType.book => 'Información del libro / manga',
         LibraryItemType.movieSeries =>
-          'InformaciÃ³n de la pelÃ­cula / serie / anime',
+          'Información de la película / serie / anime',
       };
 
   String _goalTitleHint() => switch (_type) {
@@ -2840,9 +2840,9 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
       };
 
   String _goalImageLabel() => switch (_type) {
-        LibraryItemType.game => 'CarÃ¡tula',
+        LibraryItemType.game => 'Carátula',
         LibraryItemType.book => 'Portada',
-        LibraryItemType.movieSeries => 'PÃ³ster',
+        LibraryItemType.movieSeries => 'Póster',
       };
 
   void _save() {
@@ -3031,7 +3031,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                           Text(
                             _isEditing
                                 ? 'Editar en la biblioteca'
-                                : 'AÃ±adir a la biblioteca',
+                                : 'Añadir a la biblioteca',
                             style: const TextStyle(
                                 fontSize: 23, fontWeight: FontWeight.w800),
                           ),
@@ -3088,7 +3088,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _LibraryContentTypeButton(
-                                label: 'PelÃ­cula / Serie / Anime',
+                                label: 'Película / Serie / Anime',
                                 icon: Icons.movie_creation_outlined,
                                 active: _type == LibraryItemType.movieSeries,
                                 onTap: () => setState(
@@ -3161,7 +3161,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     return switch (_type) {
       LibraryItemType.game => Column(
           children: [
-            _dialogField(_title, 'TÃ­tulo *', 'Ej. Prey'),
+            _dialogField(_title, 'Título *', 'Ej. Prey'),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -3170,7 +3170,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _releaseYear, 'AÃ±o de lanzamiento', 'Ej. 2017',
+                        _releaseYear, 'Año de lanzamiento', 'Ej. 2017',
                         keyboardType: TextInputType.number)),
               ],
             ),
@@ -3191,7 +3191,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _genre, 'GÃ©nero', 'Ej. Inmersivo, RPG...')),
+                        _genre, 'Género', 'Ej. Inmersivo, RPG...')),
               ],
             ),
             const SizedBox(height: 16),
@@ -3200,7 +3200,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
         ),
       LibraryItemType.book => Column(
           children: [
-            _dialogField(_title, 'TÃ­tulo *', 'Ej. El Priorato del Naranjo'),
+            _dialogField(_title, 'Título *', 'Ej. El Priorato del Naranjo'),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -3210,7 +3210,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _releaseYear, 'AÃ±o de publicaciÃ³n', 'Ej. 2023',
+                        _releaseYear, 'Año de publicación', 'Ej. 2023',
                         keyboardType: TextInputType.number)),
               ],
             ),
@@ -3229,17 +3229,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _genre, 'GÃ©nero', 'Ej. FantasÃ­a, Manga...')),
+                        _genre, 'Género', 'Ej. Fantasía, Manga...')),
               ],
             ),
             const SizedBox(height: 16),
-            _dialogField(_pages, 'PÃ¡ginas / VolÃºmenes',
-                'Ej. 832 pÃ¡ginas / 3 tomos (opcional)'),
+            _dialogField(_pages, 'Páginas / Volúmenes',
+                'Ej. 832 páginas / 3 tomos (opcional)'),
           ],
         ),
       LibraryItemType.movieSeries => Column(
           children: [
-            _dialogField(_title, 'TÃ­tulo *', 'Ej. El Padrino'),
+            _dialogField(_title, 'Título *', 'Ej. El Padrino'),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -3247,7 +3247,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _releaseYear, 'AÃ±o de estreno', 'Ej. 1972',
+                        _releaseYear, 'Año de estreno', 'Ej. 1972',
                         keyboardType: TextInputType.number)),
               ],
             ),
@@ -3257,7 +3257,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 Expanded(child: _dateField('Fecha completado / Visto *')),
                 const SizedBox(width: 14),
                 Expanded(
-                    child: _dialogField(_duration, 'DuraciÃ³n', 'Ej. 2h 55m')),
+                    child: _dialogField(_duration, 'Duración', 'Ej. 2h 55m')),
               ],
             ),
             const SizedBox(height: 16),
@@ -3269,12 +3269,12 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 const SizedBox(width: 14),
                 Expanded(
                     child: _dialogField(
-                        _genre, 'GÃ©nero', 'Ej. Drama, AcciÃ³n...')),
+                        _genre, 'Género', 'Ej. Drama, Acción...')),
               ],
             ),
             const SizedBox(height: 16),
             _dialogField(
-                _country, 'PaÃ­s de origen', 'Ej. Estados Unidos (opcional)'),
+                _country, 'País de origen', 'Ej. Estados Unidos (opcional)'),
           ],
         ),
     };
@@ -3335,7 +3335,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           decoration: const InputDecoration(),
           items: const [
             DropdownMenuItem(
-                value: LibraryMediaType.movie, child: Text('PelÃ­cula')),
+                value: LibraryMediaType.movie, child: Text('Película')),
             DropdownMenuItem(
                 value: LibraryMediaType.series, child: Text('Serie')),
           ],
@@ -3354,7 +3354,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       label: 'Tipo *',
       controller: _creator,
       fallback: 'Libro',
-      options: const ['Libro', 'Manga', 'CÃ³mic'],
+      options: const ['Libro', 'Manga', 'Cómic'],
     );
   }
 
@@ -3363,7 +3363,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       label: 'Formato *',
       controller: _format,
       fallback: 'Digital',
-      options: const ['FÃ­sico', 'Digital'],
+      options: const ['Físico', 'Digital'],
     );
   }
 
@@ -3372,7 +3372,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       label: 'Formato *',
       controller: _format,
       fallback: 'eBook',
-      options: const ['FÃ­sico', 'eBook'],
+      options: const ['Físico', 'eBook'],
     );
   }
 
@@ -3408,16 +3408,16 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   }
 
   String _dialogInfoTitle() => switch (_type) {
-        LibraryItemType.game => 'InformaciÃ³n del juego',
-        LibraryItemType.book => 'InformaciÃ³n del libro / manga',
+        LibraryItemType.game => 'Información del juego',
+        LibraryItemType.book => 'Información del libro / manga',
         LibraryItemType.movieSeries =>
-          'InformaciÃ³n de la pelÃ­cula / serie / anime',
+          'Información de la película / serie / anime',
       };
 
   String _imageLabel() => switch (_type) {
-        LibraryItemType.game => 'CarÃ¡tula',
+        LibraryItemType.game => 'Carátula',
         LibraryItemType.book => 'Portada',
-        LibraryItemType.movieSeries => 'PÃ³ster',
+        LibraryItemType.movieSeries => 'Póster',
       };
 
   Future<void> _pickDate() async {
@@ -3637,7 +3637,7 @@ class _LibraryImageDropField extends StatelessWidget {
 
   Future<void> _pickCoverFile(BuildContext context) async {
     const typeGroup = XTypeGroup(
-      label: 'ImÃ¡genes',
+      label: 'Imágenes',
       extensions: <String>['jpg', 'jpeg', 'png', 'webp'],
       mimeTypes: <String>['image/jpeg', 'image/png', 'image/webp'],
     );
@@ -3685,7 +3685,7 @@ class _LibraryImagePlaceholder extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'JPG, PNG Â· MÃ¡x. 5MB',
+          'JPG, PNG · Máx. 5MB',
           style: TextStyle(color: context.visuals.textMuted, fontSize: 12),
         ),
       ],
@@ -3708,14 +3708,14 @@ Color _libraryColor(LibraryItemType type) => switch (type) {
 String _libraryTypePluralLabel(LibraryItemType type) => switch (type) {
       LibraryItemType.game => 'Juegos',
       LibraryItemType.book => 'Libros',
-      LibraryItemType.movieSeries => 'PelÃ­culas y series',
+      LibraryItemType.movieSeries => 'Películas y series',
     };
 
 String _libraryTypeSingularLabel(LibraryItem item) => switch (item.type) {
       LibraryItemType.game => 'Juego',
       LibraryItemType.book => 'Libro',
       LibraryItemType.movieSeries =>
-        item.mediaType == LibraryMediaType.series ? 'Serie' : 'PelÃ­cula',
+        item.mediaType == LibraryMediaType.series ? 'Serie' : 'Película',
     };
 
 String _libraryItemSubtitle(LibraryItem item) => switch (item.type) {
@@ -3731,7 +3731,7 @@ String _libraryGameSubtitle(LibraryItem item) {
     if (item.platform?.trim().isNotEmpty ?? false) item.platform!.trim(),
     if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
   ];
-  return parts.isEmpty ? 'Sin plataforma' : parts.join(' Â· ');
+  return parts.isEmpty ? 'Sin plataforma' : parts.join(' · ');
 }
 
 String _libraryExtraInfo(LibraryItem item) => switch (item.type) {
@@ -3748,27 +3748,27 @@ String _libraryBookExtraInfo(LibraryItem item) {
     if (item.pages?.trim().isNotEmpty ?? false) item.pages!.trim(),
     if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
   ];
-  return parts.isEmpty ? 'Sin tipo' : parts.join(' Â· ');
+  return parts.isEmpty ? 'Sin tipo' : parts.join(' · ');
 }
 
 String _librarySeeAllLabel(LibraryItemType type, int count) => switch (type) {
       LibraryItemType.game => 'Ver los $count juegos completados',
       LibraryItemType.book => 'Ver los $count libros completados',
       LibraryItemType.movieSeries =>
-        'Ver las $count pelÃ­culas y series completadas',
+        'Ver las $count películas y series completadas',
     };
 
 String _addGoalLabel(LibraryItemType type) => switch (type) {
-      LibraryItemType.game => 'AÃ±adir juego',
-      LibraryItemType.book => 'AÃ±adir libro',
-      LibraryItemType.movieSeries => 'AÃ±adir pelÃ­cula o serie',
+      LibraryItemType.game => 'Añadir juego',
+      LibraryItemType.book => 'Añadir libro',
+      LibraryItemType.movieSeries => 'Añadir película o serie',
     };
 
 String _emptyGoalText(LibraryItemType type) => switch (type) {
-      LibraryItemType.game => 'No hay juegos en tus propÃ³sitos de este aÃ±o.',
-      LibraryItemType.book => 'No hay libros en tus propÃ³sitos de este aÃ±o.',
+      LibraryItemType.game => 'No hay juegos en tus propósitos de este año.',
+      LibraryItemType.book => 'No hay libros en tus propósitos de este año.',
       LibraryItemType.movieSeries =>
-        'No hay pelÃ­culas ni series en tus propÃ³sitos de este aÃ±o.',
+        'No hay películas ni series en tus propósitos de este año.',
     };
 
 String? _goalMetadata(LibraryGoal goal) {
@@ -3793,7 +3793,7 @@ String? _goalMetadata(LibraryGoal goal) {
     case LibraryItemType.movieSeries:
       if (goal.mediaType != null) {
         parts.add(
-            goal.mediaType == LibraryMediaType.series ? 'Serie' : 'PelÃ­cula');
+            goal.mediaType == LibraryMediaType.series ? 'Serie' : 'Película');
       }
       if (goal.creatorOrDirector?.trim().isNotEmpty ?? false) {
         parts.add(goal.creatorOrDirector!.trim());
@@ -3809,7 +3809,7 @@ String? _goalMetadata(LibraryGoal goal) {
   if (goal.genre?.trim().isNotEmpty ?? false) {
     parts.add(goal.genre!.trim());
   }
-  return parts.isEmpty ? null : parts.join(' Â· ');
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 String _libraryDate(DateTime date) =>
@@ -3832,37 +3832,37 @@ String _monthShortLibrary(int month) => const [
     ][month];
 
 String _sortLabel(LibrarySortOrder order) => switch (order) {
-      LibrarySortOrder.newestFirst => 'MÃ¡s reciente',
-      LibrarySortOrder.oldestFirst => 'MÃ¡s antiguo',
+      LibrarySortOrder.newestFirst => 'Más reciente',
+      LibrarySortOrder.oldestFirst => 'Más antiguo',
       LibrarySortOrder.titleAsc => 'A-Z',
       LibrarySortOrder.titleDesc => 'Z-A',
-      LibrarySortOrder.highestRating => 'Mejor valoraciÃ³n',
-      LibrarySortOrder.releaseYearDesc => 'AÃ±o de salida',
-      LibrarySortOrder.releaseYearAsc => 'AÃ±o de salida antiguo',
+      LibrarySortOrder.highestRating => 'Mejor valoración',
+      LibrarySortOrder.releaseYearDesc => 'Año de salida',
+      LibrarySortOrder.releaseYearAsc => 'Año de salida antiguo',
       LibrarySortOrder.creatorAsc => 'Creador / autor',
-      LibrarySortOrder.genreAsc => 'GÃ©nero',
+      LibrarySortOrder.genreAsc => 'Género',
       LibrarySortOrder.platformAsc => 'Plataforma',
       LibrarySortOrder.formatAsc => 'Formato',
-      LibrarySortOrder.pagesDesc => 'MÃ¡s pÃ¡ginas',
-      LibrarySortOrder.pagesAsc => 'Menos pÃ¡ginas',
-      LibrarySortOrder.durationDesc => 'MÃ¡s duraciÃ³n',
-      LibrarySortOrder.durationAsc => 'Menos duraciÃ³n',
-      LibrarySortOrder.countryAsc => 'PaÃ­s',
+      LibrarySortOrder.pagesDesc => 'Más páginas',
+      LibrarySortOrder.pagesAsc => 'Menos páginas',
+      LibrarySortOrder.durationDesc => 'Más duración',
+      LibrarySortOrder.durationAsc => 'Menos duración',
+      LibrarySortOrder.countryAsc => 'País',
     };
 
 String _sortLabelForType(LibrarySortOrder order, LibraryItemType type) {
   if (order == LibrarySortOrder.releaseYearDesc) {
     return switch (type) {
-      LibraryItemType.game => 'AÃ±o de salida',
-      LibraryItemType.book => 'AÃ±o de publicaciÃ³n',
-      LibraryItemType.movieSeries => 'AÃ±o de estreno',
+      LibraryItemType.game => 'Año de salida',
+      LibraryItemType.book => 'Año de publicación',
+      LibraryItemType.movieSeries => 'Año de estreno',
     };
   }
   if (order == LibrarySortOrder.releaseYearAsc) {
     return switch (type) {
-      LibraryItemType.game => 'Salida mÃ¡s antigua',
-      LibraryItemType.book => 'PublicaciÃ³n mÃ¡s antigua',
-      LibraryItemType.movieSeries => 'Estreno mÃ¡s antiguo',
+      LibraryItemType.game => 'Salida más antigua',
+      LibraryItemType.book => 'Publicación más antigua',
+      LibraryItemType.movieSeries => 'Estreno más antiguo',
     };
   }
   if (order == LibrarySortOrder.creatorAsc) {

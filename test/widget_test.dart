@@ -28,7 +28,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Hoy'), findsWidgets);
-    expect(find.textContaining('Inbox'), findsWidgets);
+    expect(find.textContaining('Entrada'), findsWidgets);
   });
 
   testWidgets('loads persisted snapshot', (WidgetTester tester) async {
@@ -64,7 +64,7 @@ void main() {
   for (final entry in <AppSection, String>{
     AppSection.today: 'Hoy',
     AppSection.projects: 'Proyectos',
-    AppSection.categories: 'Categorias',
+    AppSection.categories: 'Categorías',
     AppSection.calendar: 'Calendario',
     AppSection.completed: 'Completadas',
     AppSection.settings: 'Ajustes',
@@ -101,13 +101,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Se reproduce en bucle automaticamente.'), findsOneWidget);
+    expect(find.text('Se reproduce en bucle automáticamente.'), findsOneWidget);
 
     await tester.tapAt(const Offset(80, 80));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Se reproduce en bucle automaticamente.'), findsNothing);
+    expect(find.text('Se reproduce en bucle automáticamente.'), findsNothing);
   });
 
   test('controller imports json and can reset to empty state', () async {

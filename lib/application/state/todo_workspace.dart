@@ -1901,47 +1901,22 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   String _cleanSpanishText(String value) {
-    const replacements = <String, String>{
-      'ÃƒÂ¡': 'á',
-      'ÃƒÂ©': 'é',
-      'ÃƒÂ­': 'í',
-      'ÃƒÂ³': 'ó',
-      'ÃƒÂº': 'ú',
-      'ÃƒÂ±': 'ñ',
-      'ÃƒÂ¼': 'ü',
-      'ÃƒÂÁ': 'Á',
-      'ÃƒÂ‰': 'É',
-      'ÃƒÂÍ': 'Í',
-      'ÃƒÂ“': 'Ó',
-      'ÃƒÂš': 'Ú',
-      'ÃƒÂ‘': 'Ñ',
-      'ÃƒÂœ': 'Ü',
-      'Ã‚Â¿': '¿',
-      'Ã‚Â¡': '¡',
-      'Ã¡': 'á',
-      'Ã©': 'é',
-      'Ã­': 'í',
-      'Ã³': 'ó',
-      'Ãº': 'ú',
-      'Ã±': 'ñ',
-      'Ã¼': 'ü',
-      'ÃÁ': 'Á',
-      'Ã‰': 'É',
-      'ÃÍ': 'Í',
-      'Ã“': 'Ó',
-      'Ãš': 'Ú',
-      'Ã‘': 'Ñ',
-      'Ãœ': 'Ü',
-      'Â¿': '¿',
-      'Â¡': '¡',
-    };
     var result = value;
     for (var pass = 0; pass < 2; pass++) {
-      replacements.forEach((from, to) {
-        result = result.replaceAll(from, to);
-      });
+      result = _decodeMojibakeOnce(result);
     }
     return result;
+  }
+
+  String _decodeMojibakeOnce(String value) {
+    if (value.codeUnits.any((unit) => unit > 255)) {
+      return value;
+    }
+    try {
+      return utf8.decode(latin1.encode(value));
+    } on FormatException {
+      return value;
+    }
   }
 
   bool _sameStringList(List<String> left, List<String> right) {

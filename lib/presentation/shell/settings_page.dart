@@ -762,7 +762,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Export JSON'),
+        title: const Text('Exportar JSON'),
         content: SizedBox(
           width: 720,
           child: SingleChildScrollView(child: SelectableText(snapshot)),
@@ -782,7 +782,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Import JSON'),
+        title: const Text('Importar JSON'),
         content: SizedBox(
           width: 720,
           child: TextField(

@@ -26,13 +26,13 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - crear tareas
 - actualizar tareas
 - completar tareas
-- mover tareas de dia
+- mover tareas de día
 - listar proyectos
 - crear proyectos
 - exportar e importar el estado JSON
 - reiniciar a un estado vacio
 
-## Arranque rapido
+## Arranque rápido
 
 Manual en PowerShell:
 
@@ -83,7 +83,7 @@ La forma portable recomendada es apuntar al script del repo:
 
 Hay un ejemplo listo en [client.example.json](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/client.example.json>).
 
-Si quieres generar la configuracion con la ruta real del repo actual:
+Si quieres generar la configuración con la ruta real del repo actual:
 
 ```powershell
 .\mcp_server\print_client_config.ps1

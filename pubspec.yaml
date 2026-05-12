@@ -1,5 +1,5 @@
 name: todo
-description: Personal todo app for Windows, web and Android.
+description: Aplicación personal de tareas para Windows.
 publish_to: none
 
 version: 0.1.0+1

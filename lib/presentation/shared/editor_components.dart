@@ -415,7 +415,7 @@ String _recurrenceLabelFor(
       RecurrenceType.daily => 'Diaria',
       RecurrenceType.weekly =>
         'Semanal · ${_weekdayLong(date)} a las ${_formatTime24(time)}',
-      RecurrenceType.everyXDays => 'Cada $interval dias',
+      RecurrenceType.everyXDays => 'Cada $interval días',
       RecurrenceType.yearly => 'Anual',
     };
 

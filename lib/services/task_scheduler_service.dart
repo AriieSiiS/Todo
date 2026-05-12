@@ -43,7 +43,7 @@ class TaskSchedulerService {
       plans.add(
         NotificationPlan(
           id: 910001,
-          title: 'Comienza tu dia real',
+          title: 'Comienza tu día real',
           body:
               'Tienes ${tasks.where((task) => task.status == TaskStatus.active).length} tareas activas para revisar.',
           when: nextStart,
@@ -57,7 +57,7 @@ class TaskSchedulerService {
       plans.add(
         NotificationPlan(
           id: 910002,
-          title: 'Notas pendientes antes del cierre del dia',
+          title: 'Notas pendientes antes del cierre del día',
           body:
               'Todavía tienes ${notes.where((note) => note.status == NoteStatus.inbox).length} notas sin procesar.',
           when: nextEndWarning,

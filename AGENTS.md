@@ -4,11 +4,13 @@ Guía corta para que cualquier chat o agente entienda este proyecto sin reexplor
 
 ## Regla de idioma
 
-Todo texto visible de la app debe estar en castellano correcto, con tildes, `ñ` y signos adecuados. Antes de entregar cambios de UI hay que buscar y corregir textos sin acentos (`Categoria`, `Mas`, `rapido`, `sesion`, etc.) y cualquier mojibake (`Ã¡`, `Ã±`, `Â¿`, etc.). No se deben introducir textos en inglés salvo nombres técnicos inevitables, marcas o claves internas no visibles.
+Todo texto visible de la app y de la documentación propia del proyecto debe estar en castellano correcto, con tildes, `ñ` y signos adecuados. Antes de entregar cambios de UI hay que buscar y corregir textos sin acentos como `Categoria`, `Mas`, `rapido` o `sesion`, además de cualquier mojibake. No se deben introducir textos en inglés salvo nombres técnicos inevitables, marcas, APIs, claves internas o comandos no visibles.
+
+A partir de ahora, todo cambio nuevo en este proyecto debe escribirse en castellano: textos visibles, mensajes de error propios, documentación, comentarios nuevos y nombres descriptivos de datos de ejemplo. Si un término técnico queda en inglés por convención del framework, debe estar justificado por ser identificador, API o nombre de herramienta.
 
 ## Objetivo del repo
 
-App personal de tareas hecha con Flutter, priorizando `Windows` como plataforma principal. Web y Android siguen soportadas, pero las decisiones de persistencia local, validación manual y experiencia de escritorio se revisan primero en Windows.
+App personal de tareas hecha con Flutter, priorizando `Windows` como plataforma principal. Las decisiones de persistencia local, validación manual y experiencia de escritorio se revisan primero en Windows.
 
 La app tiene:
 
@@ -24,7 +26,7 @@ La app tiene:
 3. `lib/application/state/todo_workspace.dart`
 4. `lib/application/providers/todo_providers.dart`
 5. `lib/presentation/shell/app_shell.dart`
-6. `mcp_server/README.md` si la tarea toca automatizacion o agentes externos
+6. `mcp_server/README.md` si la tarea toca automatización o agentes externos
 
 ## Mapa rápido
 
