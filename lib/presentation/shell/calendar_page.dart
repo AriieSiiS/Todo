@@ -386,97 +386,95 @@ class _CalendarMonthView extends StatelessWidget {
         .toList();
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
-                  child: Row(
-                    children: [
-                      _CalendarMonthArrows(
-                        onPrevious: onPreviousMonth,
-                        onNext: onNextMonth,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+                child: Row(
+                  children: [
+                    _CalendarMonthArrows(
+                      onPrevious: onPreviousMonth,
+                      onNext: onNextMonth,
+                    ),
+                    const SizedBox(width: 18),
+                    Text(
+                      '${_monthLong(visibleMonth.month)} ${visibleMonth.year}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 18),
-                      Text(
-                        '${_monthLong(visibleMonth.month)} ${visibleMonth.year}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
+                    ),
+                    const Spacer(),
+                    _CalendarGhostButton(
+                      label: 'Hoy',
+                      icon: Icons.calendar_today_outlined,
+                      onPressed: () => onSelectDay(today),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _SurfaceCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Color(0xFFF0E6D8)),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            _MonthWeekdayHeader('Lun'),
+                            _MonthWeekdayHeader('Mar'),
+                            _MonthWeekdayHeader('Mié'),
+                            _MonthWeekdayHeader('Jue'),
+                            _MonthWeekdayHeader('Vie'),
+                            _MonthWeekdayHeader('Sáb'),
+                            _MonthWeekdayHeader('Dom'),
+                          ],
                         ),
                       ),
-                      const Spacer(),
-                      _CalendarGhostButton(
-                        label: 'Hoy',
-                        icon: Icons.calendar_today_outlined,
-                        onPressed: () => onSelectDay(today),
+                      Expanded(
+                        child: Column(
+                          children: List<Widget>.generate(6, (weekIndex) {
+                            final weekDays =
+                                gridDays.skip(weekIndex * 7).take(7).toList();
+                            return Expanded(
+                              child: Row(
+                                children: weekDays.map((day) {
+                                  final dayEntries = monthEntries
+                                      .where(
+                                          (entry) => _sameDay(entry.start, day))
+                                      .toList()
+                                    ..sort(
+                                        (a, b) => a.start.compareTo(b.start));
+                                  return Expanded(
+                                    child: _CalendarMonthCell(
+                                      day: day,
+                                      visibleMonth: visibleMonth,
+                                      isSelected: _sameDay(day, selectedDay),
+                                      isToday: _sameDay(day, today),
+                                      entries: dayEntries,
+                                      onTap: () => onSelectDay(day),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          }),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: _SurfaceCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        Container(
-                          height: 52,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: Color(0xFFF0E6D8)),
-                            ),
-                          ),
-                          child: const Row(
-                            children: [
-                              _MonthWeekdayHeader('Lun'),
-                              _MonthWeekdayHeader('Mar'),
-                              _MonthWeekdayHeader('Mié'),
-                              _MonthWeekdayHeader('Jue'),
-                              _MonthWeekdayHeader('Vie'),
-                              _MonthWeekdayHeader('Sáb'),
-                              _MonthWeekdayHeader('Dom'),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: List<Widget>.generate(6, (weekIndex) {
-                              final weekDays =
-                                  gridDays.skip(weekIndex * 7).take(7).toList();
-                              return Expanded(
-                                child: Row(
-                                  children: weekDays.map((day) {
-                                    final dayEntries = monthEntries
-                                        .where((entry) =>
-                                            _sameDay(entry.start, day))
-                                        .toList()
-                                      ..sort(
-                                          (a, b) => a.start.compareTo(b.start));
-                                    return Expanded(
-                                      child: _CalendarMonthCell(
-                                        day: day,
-                                        visibleMonth: visibleMonth,
-                                        isSelected: _sameDay(day, selectedDay),
-                                        isToday: _sameDay(day, today),
-                                        entries: dayEntries,
-                                        onTap: () => onSelectDay(day),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 18),
@@ -1078,7 +1076,7 @@ class _CalendarWeekView extends StatelessWidget {
     );
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: _SurfaceCard(
@@ -1276,7 +1274,7 @@ class _CalendarAgendaView extends StatelessWidget {
     }
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: SingleChildScrollView(
@@ -1286,35 +1284,37 @@ class _CalendarAgendaView extends StatelessWidget {
         const SizedBox(width: 18),
         SizedBox(
           width: 330,
-          child: Column(
-            children: [
-              _CalendarMiniMonthPanel(
-                visibleMonth: visibleMonth,
-                selectedDay: selectedDay,
-                entries: entries,
-                onPreviousMonth: onPreviousMonth,
-                onNextMonth: onNextMonth,
-                onSelectDay: onSelectDay,
-              ),
-              const SizedBox(height: 14),
-              _CalendarAgendaSummaryPanel(
-                controller: controller,
-                anchor: today,
-                entries: upcoming,
-              ),
-              const SizedBox(height: 14),
-              _CalendarAgendaSidebarList(
-                title: 'Próximos vencimientos',
-                items: dueItems,
-                emptyLabel: 'No hay vencimientos próximos.',
-              ),
-              const SizedBox(height: 14),
-              _CalendarAgendaSidebarList(
-                title: 'Próximos eventos',
-                items: eventItems,
-                emptyLabel: 'No hay eventos próximos.',
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _CalendarMiniMonthPanel(
+                  visibleMonth: visibleMonth,
+                  selectedDay: selectedDay,
+                  entries: entries,
+                  onPreviousMonth: onPreviousMonth,
+                  onNextMonth: onNextMonth,
+                  onSelectDay: onSelectDay,
+                ),
+                const SizedBox(height: 14),
+                _CalendarAgendaSummaryPanel(
+                  controller: controller,
+                  anchor: today,
+                  entries: upcoming,
+                ),
+                const SizedBox(height: 14),
+                _CalendarAgendaSidebarList(
+                  title: 'Próximos vencimientos',
+                  items: dueItems,
+                  emptyLabel: 'No hay vencimientos próximos.',
+                ),
+                const SizedBox(height: 14),
+                _CalendarAgendaSidebarList(
+                  title: 'Próximos eventos',
+                  items: eventItems,
+                  emptyLabel: 'No hay eventos próximos.',
+                ),
+              ],
+            ),
           ),
         ),
       ],
