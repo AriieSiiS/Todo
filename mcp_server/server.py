@@ -3,6 +3,7 @@ import datetime as dt
 import json
 import os
 import random
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -1769,6 +1770,10 @@ def ensure_library_goal_lists(state: dict[str, Any]) -> None:
     state.setdefault("libraryGoals", [])
 
 
+def library_title_key(value: str | None) -> str:
+    return re.sub(r"[^a-z0-9áéíóúüñ]+", "", (value or "").strip().lower())
+
+
 def normalize_library_type(value: str) -> str:
     aliases = {
         "game": "game",
@@ -1854,6 +1859,7 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
         "duration": (arguments.get("duration") or "").strip() or None,
         "pages": (arguments.get("pages") or "").strip() or None,
         "country": (arguments.get("country") or "").strip() or None,
+        "linkedGoalId": arguments.get("linked_goal_id") or None,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -1861,6 +1867,10 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
     updated = dict(item)
+    if "type" in arguments:
+        updated["type"] = normalize_library_type(arguments["type"])
+    if "title" in arguments:
+        updated["title"] = arguments["title"].strip()
     if "completed_date" in arguments:
         updated["completedDate"] = parse_completed_date(arguments.get("completed_date"))
     if "cover_url" in arguments:
@@ -1921,6 +1931,10 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["country"] = (arguments.get("country") or "").strip() or None
     if arguments.get("clear_country"):
         updated["country"] = None
+    if "linked_goal_id" in arguments:
+        updated["linkedGoalId"] = arguments.get("linked_goal_id") or None
+    if arguments.get("clear_linked_goal_id"):
+        updated["linkedGoalId"] = None
     updated["updatedAt"] = now_iso()
     return updated
 
@@ -1947,22 +1961,24 @@ def bulk_upsert_library_items_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     updated = []
     for raw_item in arguments["items"]:
         item_type = normalize_library_type(raw_item["type"])
-        title = raw_item["title"].strip().lower()
+        title = library_title_key(raw_item["title"])
         match_index = None
         for index, existing in enumerate(state["libraryItems"]):
             if existing.get("type") != item_type:
                 continue
-            if str(existing.get("title", "")).strip().lower() != title:
+            if library_title_key(existing.get("title")) != title:
                 continue
             match_index = index
             break
         if match_index is None:
             item = library_item_from_args(raw_item)
             state["libraryItems"].append(item)
+            sync_goal_from_library_item(state, item)
             created.append(item)
             continue
         item = apply_library_item_updates(state["libraryItems"][match_index], raw_item)
         state["libraryItems"][match_index] = item
+        sync_goal_from_library_item(state, item)
         updated.append(item)
     save_state(state)
     return {
@@ -1996,6 +2012,7 @@ def library_goal_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
         "duration": (arguments.get("duration") or "").strip() or None,
         "pages": (arguments.get("pages") or "").strip() or None,
         "country": (arguments.get("country") or "").strip() or None,
+        "linkedLibraryItemId": arguments.get("linked_library_item_id") or None,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -2017,7 +2034,7 @@ def list_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def find_library_goal_index(state: dict[str, Any], arguments: dict[str, Any]) -> int:
     ensure_library_goal_lists(state)
     goal_id = (arguments.get("goal_id") or "").strip()
-    title = (arguments.get("title") or "").strip().lower()
+    title = library_title_key(arguments.get("title"))
     target_year = arguments.get("target_year")
     goal_type = normalize_library_type(arguments["type"]) if arguments.get("type") else None
 
@@ -2025,7 +2042,7 @@ def find_library_goal_index(state: dict[str, Any], arguments: dict[str, Any]) ->
     for index, goal in enumerate(state["libraryGoals"]):
         if goal_id and goal.get("id") != goal_id:
             continue
-        if title and str(goal.get("title", "")).strip().lower() != title:
+        if title and library_title_key(goal.get("title")) != title:
             continue
         if target_year is not None and int(goal.get("targetYear", 0)) != int(target_year):
             continue
@@ -2117,6 +2134,10 @@ def apply_library_goal_updates(goal: dict[str, Any], arguments: dict[str, Any]) 
         updated["country"] = (arguments.get("country") or "").strip() or None
     if arguments.get("clear_country"):
         updated["country"] = None
+    if "linked_library_item_id" in arguments:
+        updated["linkedLibraryItemId"] = arguments.get("linked_library_item_id") or None
+    if arguments.get("clear_linked_library_item_id"):
+        updated["linkedLibraryItemId"] = None
 
     updated["updatedAt"] = now_iso()
     return updated
@@ -2157,13 +2178,13 @@ def bulk_upsert_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 
     for raw_goal in arguments["goals"]:
         goal_type = normalize_library_type(raw_goal["type"])
-        title = raw_goal["title"].strip().lower()
+        title = library_title_key(raw_goal["title"])
         target_year = int(raw_goal["target_year"])
         match_index = None
         for index, existing in enumerate(state["libraryGoals"]):
             if existing.get("type") != goal_type:
                 continue
-            if str(existing.get("title", "")).strip().lower() != title:
+            if library_title_key(existing.get("title")) != title:
                 continue
             if int(existing.get("targetYear", 0)) != target_year:
                 continue
@@ -2196,15 +2217,34 @@ def clear_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_library_goal_lists(state)
     before = len(state["libraryGoals"])
+    removed_goal_ids: set[str] = set()
+    removed_item_ids: set[str] = set()
     if "target_year" in arguments:
         target_year = int(arguments["target_year"])
+        for goal in state["libraryGoals"]:
+            if int(goal.get("targetYear", 0)) == target_year:
+                removed_goal_ids.add(goal.get("id"))
+                if goal.get("linkedLibraryItemId"):
+                    removed_item_ids.add(goal.get("linkedLibraryItemId"))
         state["libraryGoals"] = [
             goal
             for goal in state["libraryGoals"]
             if int(goal.get("targetYear", 0)) != target_year
         ]
     else:
+        removed_goal_ids = {goal.get("id") for goal in state["libraryGoals"]}
+        removed_item_ids = {
+            goal.get("linkedLibraryItemId")
+            for goal in state["libraryGoals"]
+            if goal.get("linkedLibraryItemId")
+        }
         state["libraryGoals"] = []
+    state["libraryItems"] = [
+        item
+        for item in state["libraryItems"]
+        if item.get("linkedGoalId") not in removed_goal_ids
+        and item.get("id") not in removed_item_ids
+    ]
     save_state(state)
     return {"deleted": before - len(state["libraryGoals"])}
 
@@ -2880,9 +2920,26 @@ def create_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_library_goal_lists(state)
     item = library_item_from_args(arguments)
+    item_year = parse_datetime(item.get("completedDate", now_iso())).year
+    for index, existing in enumerate(state["libraryItems"]):
+        existing_year = parse_datetime(
+            existing.get("completedDate", now_iso())
+        ).year
+        if (
+            existing.get("type") == item.get("type")
+            and existing_year == item_year
+            and library_title_key(existing.get("title"))
+            == library_title_key(item.get("title"))
+        ):
+            merged = merge_library_items(existing, item)
+            state["libraryItems"][index] = merged
+            synced_goal = sync_goal_from_library_item(state, merged)
+            save_state(state)
+            return {"created": merged, "synced_goal": synced_goal, "merged": True}
     state["libraryItems"].append(item)
+    synced_goal = sync_goal_from_library_item(state, item)
     save_state(state)
-    return {"created": item}
+    return {"created": item, "synced_goal": synced_goal}
 
 
 def find_library_item(state: dict[str, Any], item_id: str) -> tuple[int, dict[str, Any]]:
@@ -2895,8 +2952,9 @@ def update_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     index, item = find_library_item(state, arguments["item_id"])
     updated = apply_library_item_updates(item, arguments)
     state["libraryItems"][index] = updated
+    synced_goal = sync_goal_from_library_item(state, updated)
     save_state(state)
-    return {"updated": updated}
+    return {"updated": updated, "synced_goal": synced_goal}
 
 
 def delete_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -2905,6 +2963,11 @@ def delete_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     ensure_library_goal_lists(state)
     index, item = find_library_item(state, arguments["item_id"])
     deleted = state["libraryItems"].pop(index)
+    for goal in state["libraryGoals"]:
+        if goal.get("linkedLibraryItemId") == deleted.get("id"):
+            goal["linkedLibraryItemId"] = None
+            goal["status"] = "pending"
+            goal["updatedAt"] = now_iso()
     save_state(state)
     return {"deleted": deleted}
 
@@ -2929,20 +2992,139 @@ def library_item_from_goal(goal: dict[str, Any]) -> dict[str, Any]:
         "duration": goal.get("duration"),
         "pages": goal.get("pages"),
         "country": goal.get("country"),
+        "linkedGoalId": goal.get("id"),
         "createdAt": now_iso(),
         "updatedAt": now_iso(),
     }
 
 
+def update_library_item_from_goal(item: dict[str, Any], goal: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(item)
+    for key in (
+        "type",
+        "title",
+        "coverUrl",
+        "note",
+        "platform",
+        "developer",
+        "author",
+        "mediaType",
+        "releaseYear",
+        "creatorOrDirector",
+        "genre",
+        "format",
+        "duration",
+        "pages",
+        "country",
+    ):
+        updated[key] = goal.get(key)
+    updated["linkedGoalId"] = goal.get("id")
+    updated["updatedAt"] = now_iso()
+    return updated
+
+
+def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    primary = incoming if incoming.get("linkedGoalId") else keeper
+    secondary = keeper if primary is incoming else incoming
+    merged = dict(primary)
+    merged["id"] = keeper.get("id")
+    for key in (
+        "coverUrl",
+        "rating",
+        "note",
+        "platform",
+        "developer",
+        "author",
+        "mediaType",
+        "releaseYear",
+        "creatorOrDirector",
+        "genre",
+        "format",
+        "duration",
+        "pages",
+        "country",
+        "linkedGoalId",
+    ):
+        merged[key] = primary.get(key) or secondary.get(key)
+    merged["createdAt"] = min(
+        keeper.get("createdAt", now_iso()),
+        incoming.get("createdAt", now_iso()),
+    )
+    merged["updatedAt"] = now_iso()
+    return merged
+
+
 def sync_completed_goal_to_item(state: dict[str, Any], goal: dict[str, Any]) -> dict[str, Any] | None:
     if goal.get("status") != "completed":
         return None
-    for item in state["libraryItems"]:
-        if item.get("type") == goal.get("type") and item.get("title", "").strip().lower() == goal.get("title", "").strip().lower():
-            return item
+    linked_item_id = goal.get("linkedLibraryItemId")
+    for index, item in enumerate(state["libraryItems"]):
+        if linked_item_id and item.get("id") == linked_item_id:
+            updated = update_library_item_from_goal(item, goal)
+            state["libraryItems"][index] = updated
+            return updated
+    for index, item in enumerate(state["libraryItems"]):
+        if (
+            item.get("type") == goal.get("type")
+            and library_title_key(item.get("title"))
+            == library_title_key(goal.get("title"))
+            and parse_datetime(item.get("completedDate", now_iso())).year
+            == int(goal.get("targetYear", dt.datetime.now().year))
+        ):
+            updated = update_library_item_from_goal(item, goal)
+            state["libraryItems"][index] = updated
+            goal["linkedLibraryItemId"] = updated["id"]
+            return updated
     item = library_item_from_goal(goal)
     state["libraryItems"].append(item)
+    goal["linkedLibraryItemId"] = item["id"]
     return item
+
+
+def sync_goal_from_library_item(state: dict[str, Any], item: dict[str, Any]) -> dict[str, Any] | None:
+    linked_goal_id = item.get("linkedGoalId")
+    item_year = parse_datetime(item.get("completedDate", now_iso())).year
+    for index, goal in enumerate(state["libraryGoals"]):
+        if linked_goal_id and goal.get("id") == linked_goal_id:
+            return update_goal_from_library_item(state, index, item)
+    for index, goal in enumerate(state["libraryGoals"]):
+        if (
+            goal.get("type") == item.get("type")
+            and library_title_key(goal.get("title"))
+            == library_title_key(item.get("title"))
+            and int(goal.get("targetYear", item_year)) == item_year
+        ):
+            return update_goal_from_library_item(state, index, item)
+    return None
+
+
+def update_goal_from_library_item(state: dict[str, Any], index: int, item: dict[str, Any]) -> dict[str, Any]:
+    goal = dict(state["libraryGoals"][index])
+    for key in (
+        "type",
+        "title",
+        "coverUrl",
+        "note",
+        "platform",
+        "developer",
+        "author",
+        "mediaType",
+        "releaseYear",
+        "creatorOrDirector",
+        "genre",
+        "format",
+        "duration",
+        "pages",
+        "country",
+    ):
+        goal[key] = item.get(key)
+    goal["status"] = "completed"
+    goal["targetYear"] = parse_datetime(item.get("completedDate", now_iso())).year
+    goal["linkedLibraryItemId"] = item.get("id")
+    goal["updatedAt"] = now_iso()
+    state["libraryGoals"][index] = goal
+    item["linkedGoalId"] = goal.get("id")
+    return goal
 
 
 def delete_library_goal_impl(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -2951,6 +3133,13 @@ def delete_library_goal_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     ensure_library_goal_lists(state)
     index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el propósito")
     deleted = state["libraryGoals"].pop(index)
+    linked_item_id = deleted.get("linkedLibraryItemId")
+    state["libraryItems"] = [
+        item
+        for item in state["libraryItems"]
+        if item.get("linkedGoalId") != deleted.get("id")
+        and item.get("id") != linked_item_id
+    ]
     save_state(state)
     return {"deleted": deleted}
 
@@ -2964,6 +3153,16 @@ def toggle_library_goal_completed_impl(arguments: dict[str, Any]) -> dict[str, A
     updated["updatedAt"] = now_iso()
     state["libraryGoals"][index] = updated
     item = sync_completed_goal_to_item(state, updated)
+    if updated.get("status") == "pending":
+        linked_item_id = updated.get("linkedLibraryItemId")
+        state["libraryItems"] = [
+            item
+            for item in state["libraryItems"]
+            if item.get("linkedGoalId") != updated.get("id")
+            and item.get("id") != linked_item_id
+        ]
+        updated["linkedLibraryItemId"] = None
+        state["libraryGoals"][index] = updated
     save_state(state)
     return {"updated": updated, "synced_item": item}
 

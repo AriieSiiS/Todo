@@ -33,71 +33,54 @@ class _ExpensesPageState extends State<ExpensesPage> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: const Color(0xFFE7D9C8)),
-          boxShadow: const [
-            BoxShadow(
-              blurRadius: 26,
-              color: Color(0x12000000),
-              offset: Offset(0, 10),
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ExpensesHeader(
+            controls: _ExpensesTopControls(
+              year: _year,
+              month: _month,
+              onPrevious: _movePreviousMonth,
+              onNext: _moveNextMonth,
+              onYearChanged: (value) => setState(() => _year = value),
+              onMonthChanged: (value) => setState(() => _month = value),
+              onNewExpense: () => _showExpenseDialog(),
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ExpensesHeader(
-                controls: _ExpensesTopControls(
-                  year: _year,
-                  month: _month,
-                  onPrevious: _movePreviousMonth,
-                  onNext: _moveNextMonth,
-                  onYearChanged: (value) => setState(() => _year = value),
-                  onMonthChanged: (value) => setState(() => _month = value),
-                  onNewExpense: () => _showExpenseDialog(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _ExpenseTabs(
-                selected: _tab,
-                onChanged: (value) => setState(() => _tab = value),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 1160;
-                    if (!wide || _tab != _ExpenseTab.monthly) {
-                      return ListView(
-                        children: [
-                          _mainContent(shrinkWrap: true),
-                          if (_tab == _ExpenseTab.monthly) ...[
-                            const SizedBox(height: 16),
-                            _sidePanel(shrinkWrap: true),
-                          ],
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 7, child: _mainContent()),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 340, child: _sidePanel()),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
           ),
-        ),
+          const SizedBox(height: 16),
+          _ExpenseTabs(
+            selected: _tab,
+            onChanged: (value) => setState(() => _tab = value),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 1160;
+                if (!wide || _tab != _ExpenseTab.monthly) {
+                  return ListView(
+                    children: [
+                      _mainContent(shrinkWrap: true),
+                      if (_tab == _ExpenseTab.monthly) ...[
+                        const SizedBox(height: 16),
+                        _sidePanel(shrinkWrap: true),
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 7, child: _mainContent()),
+                    const SizedBox(width: 16),
+                    SizedBox(width: 340, child: _sidePanel()),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

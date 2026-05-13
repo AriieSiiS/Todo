@@ -22,6 +22,7 @@ class LibraryGoal {
     this.duration,
     this.pages,
     this.country,
+    this.linkedLibraryItemId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -45,6 +46,7 @@ class LibraryGoal {
   final String? duration;
   final String? pages;
   final String? country;
+  final String? linkedLibraryItemId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -83,6 +85,8 @@ class LibraryGoal {
     bool clearPages = false,
     String? country,
     bool clearCountry = false,
+    String? linkedLibraryItemId,
+    bool clearLinkedLibraryItemId = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -108,6 +112,9 @@ class LibraryGoal {
       duration: clearDuration ? null : duration ?? this.duration,
       pages: clearPages ? null : pages ?? this.pages,
       country: clearCountry ? null : country ?? this.country,
+      linkedLibraryItemId: clearLinkedLibraryItemId
+          ? null
+          : linkedLibraryItemId ?? this.linkedLibraryItemId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -134,6 +141,7 @@ class LibraryGoal {
       'duration': duration,
       'pages': pages,
       'country': country,
+      'linkedLibraryItemId': linkedLibraryItemId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -175,6 +183,7 @@ class LibraryGoal {
       duration: json['duration'] as String?,
       pages: json['pages'] as String?,
       country: json['country'] as String?,
+      linkedLibraryItemId: json['linkedLibraryItemId'] as String?,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? now,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? now,
     );

@@ -21,6 +21,7 @@ class LibraryItem {
     this.duration,
     this.pages,
     this.country,
+    this.linkedGoalId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -43,6 +44,7 @@ class LibraryItem {
   final String? duration;
   final String? pages;
   final String? country;
+  final String? linkedGoalId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -81,6 +83,8 @@ class LibraryItem {
     bool clearPages = false,
     String? country,
     bool clearCountry = false,
+    String? linkedGoalId,
+    bool clearLinkedGoalId = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -105,6 +109,8 @@ class LibraryItem {
       duration: clearDuration ? null : duration ?? this.duration,
       pages: clearPages ? null : pages ?? this.pages,
       country: clearCountry ? null : country ?? this.country,
+      linkedGoalId:
+          clearLinkedGoalId ? null : linkedGoalId ?? this.linkedGoalId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -131,6 +137,7 @@ class LibraryItem {
       'duration': duration,
       'pages': pages,
       'country': country,
+      'linkedGoalId': linkedGoalId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -170,6 +177,7 @@ class LibraryItem {
       duration: json['duration'] as String?,
       pages: json['pages'] as String?,
       country: json['country'] as String?,
+      linkedGoalId: json['linkedGoalId'] as String?,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ?? completed,
       updatedAt:

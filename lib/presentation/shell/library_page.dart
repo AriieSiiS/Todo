@@ -522,7 +522,8 @@ class _LibraryTypeCard extends StatelessWidget {
                             children: [
                               _LibraryItemRow(
                                 item: item,
-                                onTap: () => _showEditDialog(context, item),
+                                onTap: () => _showDetailDialog(context, item),
+                                onEdit: () => _showEditDialog(context, item),
                                 onDelete: () => _deleteItem(context, item),
                               ),
                               if (item != items.take(5).last)
@@ -555,8 +556,11 @@ class _LibraryTypeCard extends StatelessWidget {
     );
   }
 
-  Future<void> _showEditDialog(BuildContext context, LibraryItem item) async {
-    await showDialog<void>(
+  Future<void> _showDetailDialog(BuildContext context, LibraryItem item) =>
+      _showLibraryItemDetails(context, controller, allItems, item);
+
+  Future<void> _showEditDialog(BuildContext context, LibraryItem item) {
+    return showDialog<void>(
       context: context,
       builder: (context) => _LibraryItemDialog(
         controller: controller,
@@ -694,7 +698,13 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                       final item = sorted[index];
                       return _LibraryDetailedItemRow(
                         item: item,
-                        onTap: () => showDialog<void>(
+                        onTap: () => _showLibraryItemDetails(
+                          context,
+                          widget.controller,
+                          sorted,
+                          item,
+                        ),
+                        onEdit: () => showDialog<void>(
                           context: context,
                           builder: (context) => _LibraryItemDialog(
                             controller: widget.controller,
@@ -813,11 +823,13 @@ class _LibraryDetailedItemRow extends StatelessWidget {
   const _LibraryDetailedItemRow({
     required this.item,
     required this.onTap,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final LibraryItem item;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -826,7 +838,7 @@ class _LibraryDetailedItemRow extends StatelessWidget {
       onSecondaryTapDown: (details) => _showLibraryContextMenu(
         context: context,
         position: details.globalPosition,
-        onEdit: onTap,
+        onEdit: onEdit,
         onDelete: onDelete,
       ),
       child: InkWell(
@@ -902,11 +914,13 @@ class _LibraryItemRow extends StatelessWidget {
   const _LibraryItemRow({
     required this.item,
     required this.onTap,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final LibraryItem item;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -915,7 +929,7 @@ class _LibraryItemRow extends StatelessWidget {
       onSecondaryTapDown: (details) => _showLibraryContextMenu(
         context: context,
         position: details.globalPosition,
-        onEdit: onTap,
+        onEdit: onEdit,
         onDelete: onDelete,
       ),
       child: InkWell(
@@ -1050,17 +1064,20 @@ class _LibraryTypeListDialog extends StatelessWidget {
                         return _LibraryItemRow(
                           item: item,
                           onTap: () async {
-                            await showDialog<void>(
-                              context: context,
-                              builder: (context) => _LibraryItemDialog(
-                                controller: controller,
-                                item: item,
-                              ),
+                            await _showLibraryItemDetails(
+                              context,
+                              controller,
+                              items,
+                              item,
                             );
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                            }
                           },
+                          onEdit: () => showDialog<void>(
+                            context: context,
+                            builder: (context) => _LibraryItemDialog(
+                              controller: controller,
+                              item: item,
+                            ),
+                          ),
                           onDelete: () => _deleteItem(context, item),
                         );
                       },
@@ -1135,7 +1152,12 @@ class _LibrarySidePanel extends StatelessWidget {
                       onDelete: () => _deleteItem(context, item),
                     ),
                     child: InkWell(
-                      onTap: () => _editItem(context, item),
+                      onTap: () => _showLibraryItemDetails(
+                        context,
+                        controller,
+                        items,
+                        item,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 14),
@@ -1446,6 +1468,573 @@ Future<bool> _confirmLibraryDelete(
       false;
 }
 
+Future<void> _showLibraryItemDetails(
+  BuildContext context,
+  TodoWorkspace controller,
+  List<LibraryItem> items,
+  LibraryItem item,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _LibraryItemDetailsDialog(
+      controller: controller,
+      items: items,
+      item: item,
+    ),
+  );
+}
+
+class _LibraryItemDetailsDialog extends StatefulWidget {
+  const _LibraryItemDetailsDialog({
+    required this.controller,
+    required this.items,
+    required this.item,
+  });
+
+  final TodoWorkspace controller;
+  final List<LibraryItem> items;
+  final LibraryItem item;
+
+  @override
+  State<_LibraryItemDetailsDialog> createState() =>
+      _LibraryItemDetailsDialogState();
+}
+
+class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.items.indexWhere((item) => item.id == widget.item.id);
+    if (_index < 0) {
+      _index = 0;
+    }
+  }
+
+  LibraryItem get item {
+    if (widget.items.isEmpty) {
+      return widget.item;
+    }
+    return widget.items[_index.clamp(0, widget.items.length - 1)];
+  }
+
+  bool get _hasPrevious => widget.items.isNotEmpty && _index > 0;
+  bool get _hasNext =>
+      widget.items.isNotEmpty && _index < widget.items.length - 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final item = this.item;
+    final fields = _detailFields(item);
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 880),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 22, 24, 18),
+                child: Row(
+                  children: [
+                    Icon(_libraryIcon(item.type),
+                        color: _libraryColor(item.type), size: 30),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 23, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(_libraryTypeSingularLabel(item),
+                              style: TextStyle(color: visuals.textMuted)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: 'Cerrar',
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _LibraryDetailCover(item: item),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_detailTitle(item.type),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 14),
+                            for (final field in fields) ...[
+                              _LibraryDetailLine(
+                                  label: field.$1, value: field.$2),
+                              const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
+                child: Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(100, 48),
+                        backgroundColor: const Color(0xFFFFFCF8),
+                        foregroundColor: visuals.textStrong,
+                        side: const BorderSide(color: Color(0xFFE3D8CB)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Cerrar'),
+                    ),
+                    const Spacer(),
+                    if (_hasPrevious) ...[
+                      _LibraryNavigationButton(
+                        label: 'Anterior',
+                        icon: Icons.chevron_left_rounded,
+                        onPressed: () => setState(() => _index--),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    if (_hasNext) ...[
+                      _LibraryNavigationButton(
+                        label: 'Siguiente',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onPressed: () => setState(() => _index++),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    FilledButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        await showDialog<void>(
+                          context: context,
+                          builder: (context) => _LibraryItemDialog(
+                            controller: widget.controller,
+                            item: item,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Editar'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(124, 48),
+                        backgroundColor: const Color(0xFF607A4D),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryDetailCover extends StatelessWidget {
+  const _LibraryDetailCover({required this.item});
+
+  final LibraryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final source = item.coverUrl?.trim();
+    return SizedBox(
+      width: 176,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFCF8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE3D8CB)),
+          ),
+          child: _LibraryCoverImage(
+            source: source,
+            type: item.type,
+            iconSize: 34,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryNavigationButton extends StatelessWidget {
+  const _LibraryNavigationButton({
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.trailingIcon,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final IconData? icon;
+  final IconData? trailingIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[
+      if (icon != null) ...[
+        Icon(icon, size: 20),
+        const SizedBox(width: 6),
+      ],
+      Text(label),
+      if (trailingIcon != null) ...[
+        const SizedBox(width: 6),
+        Icon(trailingIcon, size: 20),
+      ],
+    ];
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(112, 48),
+        backgroundColor: const Color(0xFFF5F8EF),
+        foregroundColor: const Color(0xFF51693E),
+        side: const BorderSide(color: Color(0xFFD7E4CC)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
+}
+
+class _LibraryDetailLine extends StatelessWidget {
+  const _LibraryDetailLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFCF8),
+        border: Border.all(color: const Color(0xFFE3D8CB)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(_detailIcon(label), size: 17, color: const Color(0xFF607A4D)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: context.visuals.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 2,
+            child: Text(
+              value.isEmpty ? '-' : value,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _detailIcon(String label) {
+  if (label.contains('Autor')) return Icons.person_outline_rounded;
+  if (label.contains('Fecha')) return Icons.calendar_today_outlined;
+  if (label.contains('Año')) return Icons.event_outlined;
+  if (label.contains('Formato')) return Icons.menu_book_outlined;
+  if (label.contains('Género')) return Icons.local_offer_outlined;
+  if (label.contains('Páginas')) return Icons.article_outlined;
+  if (label.contains('Plataforma')) return Icons.sports_esports_outlined;
+  if (label.contains('Desarrollador')) return Icons.code_outlined;
+  if (label.contains('Director') || label.contains('creador')) {
+    return Icons.movie_filter_outlined;
+  }
+  if (label.contains('Duración') || label.contains('Horas')) {
+    return Icons.schedule_outlined;
+  }
+  if (label.contains('País')) return Icons.public_outlined;
+  if (label.contains('Notas')) return Icons.notes_outlined;
+  return Icons.info_outline_rounded;
+}
+
+Future<void> _showLibraryGoalDetails(
+  BuildContext context,
+  TodoWorkspace controller,
+  int year,
+  List<LibraryGoal> goals,
+  LibraryGoal goal,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _LibraryGoalDetailsDialog(
+      controller: controller,
+      year: year,
+      goals: goals,
+      goal: goal,
+    ),
+  );
+}
+
+class _LibraryGoalDetailsDialog extends StatefulWidget {
+  const _LibraryGoalDetailsDialog({
+    required this.controller,
+    required this.year,
+    required this.goals,
+    required this.goal,
+  });
+
+  final TodoWorkspace controller;
+  final int year;
+  final List<LibraryGoal> goals;
+  final LibraryGoal goal;
+
+  @override
+  State<_LibraryGoalDetailsDialog> createState() =>
+      _LibraryGoalDetailsDialogState();
+}
+
+class _LibraryGoalDetailsDialogState extends State<_LibraryGoalDetailsDialog> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.goals.indexWhere((goal) => goal.id == widget.goal.id);
+    if (_index < 0) {
+      _index = 0;
+    }
+  }
+
+  LibraryGoal get goal {
+    if (widget.goals.isEmpty) {
+      return widget.goal;
+    }
+    return widget.goals[_index.clamp(0, widget.goals.length - 1)];
+  }
+
+  bool get _hasPrevious => widget.goals.isNotEmpty && _index > 0;
+  bool get _hasNext =>
+      widget.goals.isNotEmpty && _index < widget.goals.length - 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final goal = this.goal;
+    final fields = _goalDetailFields(goal);
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 880),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 22, 24, 18),
+                child: Row(
+                  children: [
+                    Icon(_libraryIcon(goal.type),
+                        color: _libraryColor(goal.type), size: 30),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            goal.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 23, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            goal.isCompleted ? 'Completado' : 'Propósito',
+                            style: TextStyle(color: visuals.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: 'Cerrar',
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _LibraryGoalDetailCover(goal: goal),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_goalDetailTitle(goal.type),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 14),
+                            for (final field in fields) ...[
+                              _LibraryDetailLine(
+                                  label: field.$1, value: field.$2),
+                              const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
+                child: Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(100, 48),
+                        backgroundColor: const Color(0xFFFFFCF8),
+                        foregroundColor: visuals.textStrong,
+                        side: const BorderSide(color: Color(0xFFE3D8CB)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Cerrar'),
+                    ),
+                    const Spacer(),
+                    if (_hasPrevious) ...[
+                      _LibraryNavigationButton(
+                        label: 'Anterior',
+                        icon: Icons.chevron_left_rounded,
+                        onPressed: () => setState(() => _index--),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    if (_hasNext) ...[
+                      _LibraryNavigationButton(
+                        label: 'Siguiente',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onPressed: () => setState(() => _index++),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    FilledButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        await showDialog<void>(
+                          context: context,
+                          builder: (context) => _LibraryGoalDialog(
+                            controller: widget.controller,
+                            year: widget.year,
+                            initialType: goal.type,
+                            goal: goal,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Editar'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(124, 48),
+                        backgroundColor: const Color(0xFF607A4D),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryGoalDetailCover extends StatelessWidget {
+  const _LibraryGoalDetailCover({required this.goal});
+
+  final LibraryGoal goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final source = goal.coverUrl?.trim();
+    return SizedBox(
+      width: 176,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFCF8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE3D8CB)),
+          ),
+          child: _LibraryCoverImage(
+            source: source,
+            type: goal.type,
+            iconSize: 34,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LibraryGoalsView extends StatefulWidget {
   const _LibraryGoalsView({
     required this.controller,
@@ -1536,6 +2125,13 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                         .toList(),
                     onAdd: () =>
                         _showGoalDialogFor(context, LibraryItemType.game),
+                    onOpen: (goal) => _showGoalDetails(
+                      context,
+                      goals
+                          .where((goal) => goal.type == LibraryItemType.game)
+                          .toList(),
+                      goal,
+                    ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: widget.controller.toggleLibraryGoalCompleted,
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
@@ -1551,6 +2147,13 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                         .toList(),
                     onAdd: () =>
                         _showGoalDialogFor(context, LibraryItemType.book),
+                    onOpen: (goal) => _showGoalDetails(
+                      context,
+                      goals
+                          .where((goal) => goal.type == LibraryItemType.book)
+                          .toList(),
+                      goal,
+                    ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: widget.controller.toggleLibraryGoalCompleted,
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
@@ -1567,6 +2170,14 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                         .toList(),
                     onAdd: () => _showGoalDialogFor(
                         context, LibraryItemType.movieSeries),
+                    onOpen: (goal) => _showGoalDetails(
+                      context,
+                      goals
+                          .where((goal) =>
+                              goal.type == LibraryItemType.movieSeries)
+                          .toList(),
+                      goal,
+                    ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: widget.controller.toggleLibraryGoalCompleted,
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
@@ -1584,6 +2195,11 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                   type: type,
                   goals: goals.where((goal) => goal.type == type).toList(),
                   onAdd: () => _showGoalDialogFor(context, type),
+                  onOpen: (goal) => _showGoalDetails(
+                    context,
+                    goals.where((goal) => goal.type == type).toList(),
+                    goal,
+                  ),
                   onEdit: (goal) => _showGoalEditDialog(context, goal),
                   onToggle: widget.controller.toggleLibraryGoalCompleted,
                   onFavorite: widget.controller.toggleLibraryGoalFavorite,
@@ -1629,10 +2245,29 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
       type: selectedType,
       goals: goals.where((goal) => goal.type == selectedType).toList(),
       onAdd: () => _showGoalDialogFor(context, selectedType),
+      onOpen: (goal) => _showGoalDetails(
+        context,
+        goals.where((goal) => goal.type == selectedType).toList(),
+        goal,
+      ),
       onEdit: (goal) => _showGoalEditDialog(context, goal),
       onToggle: widget.controller.toggleLibraryGoalCompleted,
       onFavorite: widget.controller.toggleLibraryGoalFavorite,
       onDelete: (goal) => _deleteGoal(context, goal),
+    );
+  }
+
+  Future<void> _showGoalDetails(
+    BuildContext context,
+    List<LibraryGoal> goals,
+    LibraryGoal goal,
+  ) {
+    return _showLibraryGoalDetails(
+      context,
+      widget.controller,
+      widget.year,
+      goals,
+      goal,
     );
   }
 
@@ -1653,6 +2288,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
     required this.type,
     required this.goals,
     required this.onAdd,
+    required this.onOpen,
     required this.onEdit,
     required this.onToggle,
     required this.onFavorite,
@@ -1662,6 +2298,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
   final LibraryItemType type;
   final List<LibraryGoal> goals;
   final VoidCallback onAdd;
+  final ValueChanged<LibraryGoal> onOpen;
   final ValueChanged<LibraryGoal> onEdit;
   final ValueChanged<String> onToggle;
   final ValueChanged<String> onFavorite;
@@ -1743,6 +2380,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
                           final goal = goals[index];
                           return _LibraryGoalLargeCard(
                             goal: goal,
+                            onOpen: () => onOpen(goal),
                             onEdit: () => onEdit(goal),
                             onToggle: () => onToggle(goal.id),
                             onFavorite: () => onFavorite(goal.id),
@@ -1762,6 +2400,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
 class _LibraryGoalLargeCard extends StatelessWidget {
   const _LibraryGoalLargeCard({
     required this.goal,
+    required this.onOpen,
     required this.onEdit,
     required this.onToggle,
     required this.onFavorite,
@@ -1769,6 +2408,7 @@ class _LibraryGoalLargeCard extends StatelessWidget {
   });
 
   final LibraryGoal goal;
+  final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onToggle;
   final VoidCallback onFavorite;
@@ -1785,7 +2425,7 @@ class _LibraryGoalLargeCard extends StatelessWidget {
         onDelete: onDelete,
       ),
       child: InkWell(
-        onTap: onEdit,
+        onTap: onOpen,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           decoration: BoxDecoration(
@@ -1917,6 +2557,7 @@ class _LibraryGoalTypeCard extends StatelessWidget {
     required this.type,
     required this.goals,
     required this.onAdd,
+    required this.onOpen,
     required this.onEdit,
     required this.onToggle,
     required this.onFavorite,
@@ -1926,6 +2567,7 @@ class _LibraryGoalTypeCard extends StatelessWidget {
   final LibraryItemType type;
   final List<LibraryGoal> goals;
   final VoidCallback onAdd;
+  final ValueChanged<LibraryGoal> onOpen;
   final ValueChanged<LibraryGoal> onEdit;
   final ValueChanged<String> onToggle;
   final ValueChanged<String> onFavorite;
@@ -1982,6 +2624,7 @@ class _LibraryGoalTypeCard extends StatelessWidget {
                         for (final goal in goals)
                           _LibraryGoalRow(
                             goal: goal,
+                            onOpen: () => onOpen(goal),
                             onEdit: () => onEdit(goal),
                             onToggle: () => onToggle(goal.id),
                             onFavorite: () => onFavorite(goal.id),
@@ -2014,6 +2657,7 @@ class _LibraryGoalTypeCard extends StatelessWidget {
 class _LibraryGoalRow extends StatelessWidget {
   const _LibraryGoalRow({
     required this.goal,
+    required this.onOpen,
     required this.onEdit,
     required this.onToggle,
     required this.onFavorite,
@@ -2021,6 +2665,7 @@ class _LibraryGoalRow extends StatelessWidget {
   });
 
   final LibraryGoal goal;
+  final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onToggle;
   final VoidCallback onFavorite;
@@ -2038,7 +2683,7 @@ class _LibraryGoalRow extends StatelessWidget {
             onDelete: onDelete,
           ),
           child: InkWell(
-            onTap: onEdit,
+            onTap: onOpen,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               child: Row(
@@ -2060,19 +2705,36 @@ class _LibraryGoalRow extends StatelessWidget {
                   _LibraryGoalThumbnail(goal: goal),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      goal.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        decoration: goal.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: goal.isCompleted
-                            ? context.visuals.textMuted
-                            : context.visuals.textStrong,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          goal.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            decoration: goal.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: goal.isCompleted
+                                ? context.visuals.textMuted
+                                : context.visuals.textStrong,
+                          ),
+                        ),
+                        if (_goalMetadata(goal) != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            _goalMetadata(goal)!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.visuals.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   IconButton(
@@ -2142,18 +2804,52 @@ class _LibraryCoverImage extends StatelessWidget {
       return _LibraryCoverFallback(type: type, iconSize: iconSize);
     }
     if (_isLocalCoverPath(value)) {
-      return Image.file(
-        File(value),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            _LibraryCoverFallback(type: type, iconSize: iconSize),
+      return _LocalLibraryCoverImage(
+        path: value,
+        type: type,
+        iconSize: iconSize,
       );
     }
     return Image.network(
       value,
       fit: BoxFit.cover,
+      cacheWidth: 600,
       errorBuilder: (context, error, stackTrace) =>
           _LibraryCoverFallback(type: type, iconSize: iconSize),
+    );
+  }
+}
+
+class _LocalLibraryCoverImage extends StatelessWidget {
+  const _LocalLibraryCoverImage({
+    required this.path,
+    required this.type,
+    required this.iconSize,
+  });
+
+  final String path;
+  final LibraryItemType type;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _detectCoverExtensionFromPath(path),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _LibraryCoverFallback(type: type, iconSize: iconSize);
+        }
+        if (snapshot.data == null) {
+          return _LibraryCoverFallback(type: type, iconSize: iconSize);
+        }
+        return Image.file(
+          File(path),
+          fit: BoxFit.cover,
+          cacheWidth: 600,
+          errorBuilder: (context, error, stackTrace) =>
+              _LibraryCoverFallback(type: type, iconSize: iconSize),
+        );
+      },
     );
   }
 }
@@ -2264,15 +2960,13 @@ class _LibraryFilterDialogState extends State<_LibraryFilterDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _query,
-              decoration:
-                  const InputDecoration(labelText: 'Buscar por título'),
+              decoration: const InputDecoration(labelText: 'Buscar por título'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _rating,
               keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Valoración mínima'),
+              decoration: const InputDecoration(labelText: 'Valoración mínima'),
             ),
           ],
         ),
@@ -2573,8 +3267,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child:
-                    _goalDialogField(_genre, 'Género', 'Ej. Inmersivo, RPG'),
+                child: _goalDialogField(_genre, 'Género', 'Ej. Inmersivo, RPG'),
               ),
             ],
           ),
@@ -3274,8 +3967,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                         'Ej. Francis Ford Coppola (opcional)')),
                 const SizedBox(width: 14),
                 Expanded(
-                    child: _dialogField(
-                        _genre, 'Género', 'Ej. Drama, Acción...')),
+                    child:
+                        _dialogField(_genre, 'Género', 'Ej. Drama, Acción...')),
               ],
             ),
             const SizedBox(height: 16),
@@ -3647,22 +4340,31 @@ class _LibraryImageDropField extends StatelessWidget {
       extensions: <String>['jpg', 'jpeg', 'png', 'webp'],
       mimeTypes: <String>['image/jpeg', 'image/png', 'image/webp'],
     );
-    final file = await openFile(acceptedTypeGroups: const [typeGroup]);
-    if (file == null) {
-      return;
-    }
-    final savedPath = await _copyLibraryCover(file);
-    if (savedPath == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo guardar la imagen seleccionada.'),
-          ),
-        );
+    try {
+      final file = await openFile(acceptedTypeGroups: const [typeGroup]);
+      if (file == null) {
+        return;
       }
-      return;
+      final savedPath = await _copyLibraryCover(file);
+      if (!context.mounted) {
+        return;
+      }
+      if (savedPath == null) {
+        _showCoverError(context, 'No se pudo guardar la imagen seleccionada.');
+        return;
+      }
+      controller.text = savedPath;
+    } catch (error) {
+      if (context.mounted) {
+        _showCoverError(context, 'No se pudo cambiar la portada: $error');
+      }
     }
-    controller.text = savedPath;
+  }
+
+  void _showCoverError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 
@@ -3727,9 +4429,7 @@ String _libraryTypeSingularLabel(LibraryItem item) => switch (item.type) {
 String _libraryItemSubtitle(LibraryItem item) => switch (item.type) {
       LibraryItemType.game => _libraryGameSubtitle(item),
       LibraryItemType.book => item.author ?? 'Sin autor',
-      LibraryItemType.movieSeries => item.releaseYear == null
-          ? _libraryTypeSingularLabel(item)
-          : '${item.releaseYear}',
+      LibraryItemType.movieSeries => _libraryMovieSubtitle(item),
     };
 
 String _libraryGameSubtitle(LibraryItem item) {
@@ -3745,6 +4445,14 @@ String _libraryExtraInfo(LibraryItem item) => switch (item.type) {
       LibraryItemType.book => _libraryBookExtraInfo(item),
       LibraryItemType.movieSeries => item.creatorOrDirector ?? 'Sin creador',
     };
+
+String _libraryMovieSubtitle(LibraryItem item) {
+  final parts = <String>[
+    _libraryTypeSingularLabel(item),
+    if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
+  ];
+  return parts.join(' · ');
+}
 
 String _libraryBookExtraInfo(LibraryItem item) {
   final parts = <String>[
@@ -3821,6 +4529,96 @@ String? _goalMetadata(LibraryGoal goal) {
 String _libraryDate(DateTime date) =>
     '${date.day} ${_monthShortLibrary(date.month)} ${date.year}';
 
+String _detailTitle(LibraryItemType type) => switch (type) {
+      LibraryItemType.game => 'Información del juego',
+      LibraryItemType.book => 'Información del libro / manga',
+      LibraryItemType.movieSeries => 'Información de la película / serie',
+    };
+
+String _goalDetailTitle(LibraryItemType type) => _detailTitle(type);
+
+List<(String, String)> _detailFields(LibraryItem item) {
+  final common = <(String, String)>[
+    ('Fecha completado', _libraryDate(item.completedDate)),
+    if (item.releaseYear != null) ('Año', item.releaseYear.toString()),
+    if (item.format?.isNotEmpty == true) ('Formato', item.format!),
+    if (item.genre?.isNotEmpty == true) ('Género', item.genre!),
+    if (item.note?.isNotEmpty == true) ('Notas', item.note!),
+  ];
+  return switch (item.type) {
+    LibraryItemType.game => [
+        if (item.platform?.isNotEmpty == true) ('Plataforma', item.platform!),
+        ...common,
+        if (item.developer?.isNotEmpty == true)
+          ('Desarrollador', item.developer!),
+        if (item.duration?.isNotEmpty == true)
+          ('Horas jugadas', item.duration!),
+        if (item.rating != null) ('Valoración', item.rating!.toString()),
+      ],
+    LibraryItemType.book => [
+        if (item.author?.isNotEmpty == true) ('Autor', item.author!),
+        ...common,
+        if (item.creatorOrDirector?.isNotEmpty == true)
+          ('Tipo', item.creatorOrDirector!),
+        if (item.pages?.isNotEmpty == true)
+          ('Páginas / volúmenes', item.pages!),
+        if (item.rating != null) ('Valoración', item.rating!.toString()),
+      ],
+    LibraryItemType.movieSeries => [
+        (
+          'Tipo',
+          item.mediaType == LibraryMediaType.series ? 'Serie' : 'Película'
+        ),
+        ...common,
+        if (item.creatorOrDirector?.isNotEmpty == true)
+          ('Director / creador', item.creatorOrDirector!),
+        if (item.duration?.isNotEmpty == true) ('Duración', item.duration!),
+        if (item.country?.isNotEmpty == true) ('País de origen', item.country!),
+        if (item.rating != null) ('Valoración', item.rating!.toString()),
+      ],
+  };
+}
+
+List<(String, String)> _goalDetailFields(LibraryGoal goal) {
+  final common = <(String, String)>[
+    ('Estado', goal.isCompleted ? 'Completado' : 'Pendiente'),
+    ('Año objetivo', goal.targetYear.toString()),
+    if (goal.releaseYear != null) ('Año', goal.releaseYear.toString()),
+    if (goal.format?.isNotEmpty == true) ('Formato', goal.format!),
+    if (goal.genre?.isNotEmpty == true) ('Género', goal.genre!),
+    if (goal.note?.isNotEmpty == true) ('Notas', goal.note!),
+  ];
+  return switch (goal.type) {
+    LibraryItemType.game => [
+        if (goal.platform?.isNotEmpty == true) ('Plataforma', goal.platform!),
+        ...common,
+        if (goal.developer?.isNotEmpty == true)
+          ('Desarrollador', goal.developer!),
+        if (goal.duration?.isNotEmpty == true)
+          ('Horas previstas', goal.duration!),
+      ],
+    LibraryItemType.book => [
+        if (goal.author?.isNotEmpty == true) ('Autor', goal.author!),
+        ...common,
+        if (goal.creatorOrDirector?.isNotEmpty == true)
+          ('Tipo', goal.creatorOrDirector!),
+        if (goal.pages?.isNotEmpty == true)
+          ('Páginas / volúmenes', goal.pages!),
+      ],
+    LibraryItemType.movieSeries => [
+        (
+          'Tipo',
+          goal.mediaType == LibraryMediaType.series ? 'Serie' : 'Película'
+        ),
+        ...common,
+        if (goal.creatorOrDirector?.isNotEmpty == true)
+          ('Director / creador', goal.creatorOrDirector!),
+        if (goal.duration?.isNotEmpty == true) ('Duración', goal.duration!),
+        if (goal.country?.isNotEmpty == true) ('País de origen', goal.country!),
+      ],
+  };
+}
+
 String _monthShortLibrary(int month) => const [
       '',
       'ene',
@@ -3891,7 +4689,6 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
     LibrarySortOrder.releaseYearAsc,
     LibrarySortOrder.creatorAsc,
     LibrarySortOrder.genreAsc,
-    LibrarySortOrder.highestRating,
   ];
   return switch (type) {
     LibraryItemType.game => [
@@ -4012,32 +4809,76 @@ bool _isLocalCoverPath(String value) {
 }
 
 Future<String?> _copyLibraryCover(XFile file) async {
-  final extension = _coverExtension(file.name);
+  final extension = await _detectCoverExtension(file);
   if (extension == null) {
-    return null;
-  }
-  final bytes = await file.readAsBytes();
-  const maxBytes = 5 * 1024 * 1024;
-  if (bytes.length > maxBytes) {
     return null;
   }
   final directory = await _libraryCoversDirectory();
   final stamp = DateTime.now().microsecondsSinceEpoch;
   final target =
       File('${directory.path}${Platform.pathSeparator}cover_$stamp$extension');
-  await target.writeAsBytes(bytes, flush: true);
+  await file.saveTo(target.path);
   return target.path;
 }
 
-String? _coverExtension(String name) {
-  final lower = name.toLowerCase();
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+Future<String?> _detectCoverExtension(XFile file) async {
+  final signature = await _readCoverSignature(file.openRead);
+  return _coverExtensionFromSignature(signature);
+}
+
+Future<String?> _detectCoverExtensionFromPath(String path) async {
+  try {
+    final file = File(path);
+    if (!await file.exists()) {
+      return null;
+    }
+    final signature = await _readCoverSignature(file.openRead);
+    return _coverExtensionFromSignature(signature);
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<List<int>> _readCoverSignature(
+  Stream<List<int>> Function([int? start, int? end]) openRead,
+) async {
+  final bytes = <int>[];
+  await for (final chunk in openRead(0, 16)) {
+    bytes.addAll(chunk);
+    if (bytes.length >= 16) {
+      break;
+    }
+  }
+  return bytes.length > 16 ? bytes.sublist(0, 16) : bytes;
+}
+
+String? _coverExtensionFromSignature(List<int> bytes) {
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xFF &&
+      bytes[1] == 0xD8 &&
+      bytes[2] == 0xFF) {
     return '.jpg';
   }
-  if (lower.endsWith('.png')) {
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47 &&
+      bytes[4] == 0x0D &&
+      bytes[5] == 0x0A &&
+      bytes[6] == 0x1A &&
+      bytes[7] == 0x0A) {
     return '.png';
   }
-  if (lower.endsWith('.webp')) {
+  if (bytes.length >= 12 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50) {
     return '.webp';
   }
   return null;

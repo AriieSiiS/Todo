@@ -11,6 +11,7 @@ dependencies:
   file_selector: ^1.1.0
   flutter:
     sdk: flutter
+  flutter_local_notifications: ^21.0.0
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.6.1
@@ -20,6 +21,7 @@ dependencies:
   just_audio_windows: ^0.2.2
   material_design_icons_flutter: ^7.0.7296
   oauth2: ^2.0.5
+  path_provider: ^2.1.5
   shared_preferences: ^2.5.5
   supabase_flutter: ^2.10.3
   url_launcher: ^6.3.2

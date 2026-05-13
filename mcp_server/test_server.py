@@ -147,6 +147,17 @@ class McpServerTest(unittest.TestCase):
         )["created"]
         toggled = self.call("toggle_library_goal_completed", {"goal_id": goal["id"]})
         self.assertIsNotNone(toggled["synced_item"])
+        item_from_goal = toggled["synced_item"]
+        updated_item = self.call(
+            "update_library_item",
+            {"item_id": item_from_goal["id"], "title": "Circe editado", "author": "M. Miller"},
+        )
+        self.assertEqual(updated_item["synced_goal"]["title"], "Circe editado")
+        updated_goal = self.call(
+            "update_library_goal",
+            {"goal_id": goal["id"], "new_title": "Circe final", "author": "Madeline Miller"},
+        )
+        self.assertEqual(updated_goal["synced_item"]["title"], "Circe final")
         item = self.call("create_library_item", {"type": "game", "title": "Prey", "platform": "PC"})["created"]
         self.call("update_library_item", {"item_id": item["id"], "rating": 9})
 

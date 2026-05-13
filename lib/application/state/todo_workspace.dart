@@ -1444,9 +1444,28 @@ class TodoWorkspace extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
     );
+    final existingIndex = _libraryItems.indexWhere(
+      (existing) => _isSameLibraryEntry(existing, item),
+    );
+    if (existingIndex != -1) {
+      final existing = _libraryItems[existingIndex];
+      final merged = _mergeLibraryItems(existing, item).copyWith(
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: now,
+      );
+      _libraryItems[existingIndex] = merged;
+      _syncLibraryGoalFromItem(merged, now);
+      _commit();
+      return _libraryItems[existingIndex];
+    }
     _libraryItems.add(item);
+    _syncLibraryGoalFromItem(item, now);
     _commit();
-    return item;
+    return _libraryItems.firstWhere(
+      (value) => value.id == item.id,
+      orElse: () => item,
+    );
   }
 
   void updateLibraryItem(LibraryItem updated) {
@@ -1454,7 +1473,10 @@ class TodoWorkspace extends ChangeNotifier {
     if (index == -1) {
       return;
     }
-    _libraryItems[index] = updated.copyWith(updatedAt: DateTime.now());
+    final now = DateTime.now();
+    final next = updated.copyWith(updatedAt: now);
+    _libraryItems[index] = next;
+    _syncLibraryGoalFromItem(next, now);
     _commit();
   }
 
@@ -1462,6 +1484,7 @@ class TodoWorkspace extends ChangeNotifier {
     final before = _libraryItems.length;
     _libraryItems.removeWhere((item) => item.id == itemId);
     if (_libraryItems.length != before) {
+      _unlinkLibraryGoalsFromItem(itemId);
       _commit();
     }
   }
@@ -1520,14 +1543,27 @@ class TodoWorkspace extends ChangeNotifier {
     if (index == -1) {
       return;
     }
-    _libraryGoals[index] = updated.copyWith(updatedAt: DateTime.now());
+    final now = DateTime.now();
+    final next = updated.copyWith(updatedAt: now);
+    _libraryGoals[index] = next;
+    _syncLibraryItemFromGoal(next, now);
     _commit();
   }
 
   void deleteLibraryGoal(String goalId) {
+    String? linkedItemId;
+    for (final goal in _libraryGoals) {
+      if (goal.id == goalId) {
+        linkedItemId = goal.linkedLibraryItemId;
+        break;
+      }
+    }
     final before = _libraryGoals.length;
     _libraryGoals.removeWhere((goal) => goal.id == goalId);
     if (_libraryGoals.length != before) {
+      _libraryItems.removeWhere(
+        (item) => item.linkedGoalId == goalId || item.id == linkedItemId,
+      );
       _commit();
     }
   }
@@ -1539,52 +1575,72 @@ class TodoWorkspace extends ChangeNotifier {
     }
     final goal = _libraryGoals[index];
     final willComplete = !goal.isCompleted;
+    final now = DateTime.now();
     _libraryGoals[index] = goal.copyWith(
       status: willComplete
           ? LibraryGoalStatus.completed
           : LibraryGoalStatus.pending,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
     );
     if (willComplete) {
-      _createLibraryItemFromCompletedGoal(_libraryGoals[index]);
+      _syncLibraryItemFromGoal(_libraryGoals[index], now);
+    } else {
+      _removeLibraryItemLinkedToGoal(goal.id);
     }
     _commit();
   }
 
-  bool _createLibraryItemFromCompletedGoal(LibraryGoal goal) {
-    final completedDate = logicalDate();
-    final normalizedTitle = goal.title.trim().toLowerCase();
-    final alreadyExists = _libraryItems.any((item) =>
-        item.type == goal.type &&
-        item.title.trim().toLowerCase() == normalizedTitle &&
-        item.completedDate.year == completedDate.year);
-    if (alreadyExists) {
+  bool _syncLibraryItemFromGoal(LibraryGoal goal, DateTime now) {
+    if (!goal.isCompleted) {
       return false;
     }
-    final now = DateTime.now();
-    _libraryItems.add(
-      LibraryItem(
-        id: _id('library'),
-        type: goal.type,
-        title: goal.title.trim(),
-        completedDate: completedDate,
-        coverUrl: goal.coverUrl,
-        note: goal.note?.trim().isEmpty == true ? null : goal.note?.trim(),
-        platform: goal.platform,
-        developer: goal.developer,
-        author: goal.author,
-        mediaType: goal.mediaType,
-        releaseYear: goal.releaseYear,
-        creatorOrDirector: goal.creatorOrDirector,
-        genre: goal.genre,
-        format: goal.format,
-        duration: goal.duration,
-        pages: goal.pages,
-        country: goal.country,
-        createdAt: now,
-        updatedAt: now,
-      ),
+    final completedDate = logicalDate();
+    final linkedIndex = goal.linkedLibraryItemId == null
+        ? -1
+        : _libraryItems
+            .indexWhere((item) => item.id == goal.linkedLibraryItemId);
+    final normalizedTitle = _libraryTitleKey(goal.title);
+    final matchIndex = linkedIndex != -1
+        ? linkedIndex
+        : _libraryItems.indexWhere((item) =>
+            item.type == goal.type &&
+            _libraryTitleKey(item.title) == normalizedTitle &&
+            item.completedDate.year == goal.targetYear);
+    if (matchIndex != -1) {
+      final item = _libraryItems[matchIndex];
+      final synced = _libraryItemFromGoal(
+        goal,
+        item.id,
+        item.completedDate,
+        item.rating,
+        item.createdAt,
+        now,
+      );
+      _libraryItems[matchIndex] = synced;
+      if (goal.linkedLibraryItemId != synced.id) {
+        final goalIndex =
+            _libraryGoals.indexWhere((item) => item.id == goal.id);
+        if (goalIndex != -1) {
+          _libraryGoals[goalIndex] =
+              _libraryGoals[goalIndex].copyWith(linkedLibraryItemId: synced.id);
+        }
+      }
+      return true;
+    }
+    final item = _libraryItemFromGoal(
+      goal,
+      _id('library'),
+      completedDate,
+      null,
+      now,
+      now,
     );
+    _libraryItems.add(item);
+    final goalIndex = _libraryGoals.indexWhere((item) => item.id == goal.id);
+    if (goalIndex != -1) {
+      _libraryGoals[goalIndex] =
+          _libraryGoals[goalIndex].copyWith(linkedLibraryItemId: item.id);
+    }
     return true;
   }
 
@@ -1592,10 +1648,203 @@ class TodoWorkspace extends ChangeNotifier {
     var changed = false;
     for (final goal in _libraryGoals) {
       if (goal.isCompleted) {
-        changed = _createLibraryItemFromCompletedGoal(goal) || changed;
+        changed = _syncLibraryItemFromGoal(goal, DateTime.now()) || changed;
+      }
+    }
+    changed = _deduplicateLibraryItems() || changed;
+    return changed;
+  }
+
+  LibraryItem _libraryItemFromGoal(
+    LibraryGoal goal,
+    String itemId,
+    DateTime completedDate,
+    double? rating,
+    DateTime createdAt,
+    DateTime updatedAt,
+  ) {
+    return LibraryItem(
+      id: itemId,
+      type: goal.type,
+      title: goal.title.trim(),
+      completedDate: completedDate,
+      coverUrl: goal.coverUrl,
+      rating: rating,
+      note: goal.note?.trim().isEmpty == true ? null : goal.note?.trim(),
+      platform: goal.platform,
+      developer: goal.developer,
+      author: goal.author,
+      mediaType: goal.mediaType,
+      releaseYear: goal.releaseYear,
+      creatorOrDirector: goal.creatorOrDirector,
+      genre: goal.genre,
+      format: goal.format,
+      duration: goal.duration,
+      pages: goal.pages,
+      country: goal.country,
+      linkedGoalId: goal.id,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  void _syncLibraryGoalFromItem(LibraryItem item, DateTime now) {
+    final goalIndex = _libraryGoals.indexWhere(
+      (goal) =>
+          goal.id == item.linkedGoalId ||
+          (goal.type == item.type &&
+              _libraryTitleKey(goal.title) == _libraryTitleKey(item.title) &&
+              goal.targetYear == item.completedDate.year),
+    );
+    if (goalIndex == -1) {
+      return;
+    }
+    final goal = _libraryGoals[goalIndex];
+    _libraryGoals[goalIndex] = goal.copyWith(
+      type: item.type,
+      title: item.title,
+      status: LibraryGoalStatus.completed,
+      linkedLibraryItemId: item.id,
+      coverUrl: item.coverUrl,
+      clearCoverUrl: item.coverUrl == null,
+      note: item.note,
+      clearNote: item.note == null,
+      platform: item.platform,
+      clearPlatform: item.platform == null,
+      developer: item.developer,
+      clearDeveloper: item.developer == null,
+      author: item.author,
+      clearAuthor: item.author == null,
+      mediaType: item.mediaType,
+      clearMediaType: item.mediaType == null,
+      releaseYear: item.releaseYear,
+      clearReleaseYear: item.releaseYear == null,
+      creatorOrDirector: item.creatorOrDirector,
+      clearCreatorOrDirector: item.creatorOrDirector == null,
+      genre: item.genre,
+      clearGenre: item.genre == null,
+      format: item.format,
+      clearFormat: item.format == null,
+      duration: item.duration,
+      clearDuration: item.duration == null,
+      pages: item.pages,
+      clearPages: item.pages == null,
+      country: item.country,
+      clearCountry: item.country == null,
+      updatedAt: now,
+    );
+    final itemIndex = _libraryItems.indexWhere((value) => value.id == item.id);
+    if (itemIndex != -1 && _libraryItems[itemIndex].linkedGoalId != goal.id) {
+      _libraryItems[itemIndex] = _libraryItems[itemIndex].copyWith(
+        linkedGoalId: goal.id,
+        updatedAt: now,
+      );
+    }
+  }
+
+  void _unlinkLibraryGoalsFromItem(String itemId) {
+    for (var i = 0; i < _libraryGoals.length; i++) {
+      final goal = _libraryGoals[i];
+      if (goal.linkedLibraryItemId == itemId) {
+        _libraryGoals[i] = goal.copyWith(
+          status: LibraryGoalStatus.pending,
+          clearLinkedLibraryItemId: true,
+          updatedAt: DateTime.now(),
+        );
+      }
+    }
+  }
+
+  bool _deduplicateLibraryItems() {
+    var changed = false;
+    for (var i = 0; i < _libraryItems.length; i++) {
+      var base = _libraryItems[i];
+      for (var j = _libraryItems.length - 1; j > i; j--) {
+        final candidate = _libraryItems[j];
+        if (!_isSameLibraryEntry(base, candidate)) {
+          continue;
+        }
+        final merged = _mergeLibraryItems(base, candidate);
+        _libraryItems[i] = merged;
+        base = merged;
+        for (var goalIndex = 0; goalIndex < _libraryGoals.length; goalIndex++) {
+          final goal = _libraryGoals[goalIndex];
+          if (goal.linkedLibraryItemId == candidate.id ||
+              goal.linkedLibraryItemId == merged.id) {
+            _libraryGoals[goalIndex] =
+                goal.copyWith(linkedLibraryItemId: merged.id);
+          }
+        }
+        _libraryItems.removeAt(j);
+        changed = true;
       }
     }
     return changed;
+  }
+
+  bool _isSameLibraryEntry(LibraryItem left, LibraryItem right) {
+    return left.type == right.type &&
+        left.completedDate.year == right.completedDate.year &&
+        _libraryTitleKey(left.title) == _libraryTitleKey(right.title);
+  }
+
+  LibraryItem _mergeLibraryItems(LibraryItem keeper, LibraryItem incoming) {
+    final preferIncoming = incoming.linkedGoalId != null;
+    final primary = preferIncoming ? incoming : keeper;
+    final secondary = preferIncoming ? keeper : incoming;
+    return primary.copyWith(
+      id: keeper.id,
+      title: primary.title.trim().isEmpty ? secondary.title : primary.title,
+      completedDate: primary.completedDate.isBefore(secondary.completedDate)
+          ? primary.completedDate
+          : secondary.completedDate,
+      coverUrl: primary.coverUrl ?? secondary.coverUrl,
+      rating: primary.rating ?? secondary.rating,
+      note: primary.note ?? secondary.note,
+      platform: primary.platform ?? secondary.platform,
+      developer: primary.developer ?? secondary.developer,
+      author: primary.author ?? secondary.author,
+      mediaType: primary.mediaType ?? secondary.mediaType,
+      releaseYear: primary.releaseYear ?? secondary.releaseYear,
+      creatorOrDirector:
+          primary.creatorOrDirector ?? secondary.creatorOrDirector,
+      genre: primary.genre ?? secondary.genre,
+      format: primary.format ?? secondary.format,
+      duration: primary.duration ?? secondary.duration,
+      pages: primary.pages ?? secondary.pages,
+      country: primary.country ?? secondary.country,
+      linkedGoalId: primary.linkedGoalId ?? secondary.linkedGoalId,
+      createdAt: keeper.createdAt.isBefore(incoming.createdAt)
+          ? keeper.createdAt
+          : incoming.createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  String _libraryTitleKey(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9áéíóúüñ]+', unicode: true), '');
+  }
+
+  void _removeLibraryItemLinkedToGoal(String goalId) {
+    String? linkedItemId;
+    for (final goal in _libraryGoals) {
+      if (goal.id == goalId) {
+        linkedItemId = goal.linkedLibraryItemId;
+        break;
+      }
+    }
+    _libraryItems.removeWhere(
+      (item) => item.linkedGoalId == goalId || item.id == linkedItemId,
+    );
+    for (var i = 0; i < _libraryGoals.length; i++) {
+      if (_libraryGoals[i].id == goalId) {
+        _libraryGoals[i] =
+            _libraryGoals[i].copyWith(clearLinkedLibraryItemId: true);
+        break;
+      }
+    }
   }
 
   void toggleLibraryGoalFavorite(String goalId) {
