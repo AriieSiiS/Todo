@@ -379,46 +379,50 @@ class _TodayPageState extends State<TodayPage> {
                   )
                 : ListView(
                     children: [
-                      _ReferenceTodayBoard(
-                        controller: controller,
-                        selectedDay: _selectedDay,
-                        logicalToday: logicalToday,
-                        tasks: visibleToday,
-                        hasActiveFilter: _categoryFilterId != null,
-                        showFilterBadge: _categoryFilterId != null,
-                        subtasksExpanded: _subtasksExpanded,
-                        onToggleSubtasks: () {
-                          setState(() {
-                            _subtasksExpanded = !_subtasksExpanded;
-                          });
-                        },
-                        completedTasks: todayCompleted,
-                        showCompleted: _showCompleted,
-                        selectionMode: _selectionMode,
-                        selectedTaskIds: _selectedTaskIds,
-                        selectedCount: selectedTasks.length,
-                        selectedHasActive: selectedTasks
-                            .any((task) => task.status != TaskStatus.completed),
-                        selectedHasCompleted: selectedTasks
-                            .any((task) => task.status == TaskStatus.completed),
-                        onToggleCompleted: () {
-                          setState(() {
-                            _showCompleted = !_showCompleted;
-                          });
-                        },
-                        onToggleSelectionMode: _toggleSelectionMode,
-                        onToggleTaskSelection: _toggleTaskSelection,
-                        onStartSelection: _startSelection,
-                        onSelectVisible: () => _toggleVisibleSelection(
-                          [
-                            ...visibleToday,
-                            if (_showCompleted) ...todayCompleted,
-                          ],
+                      SizedBox(
+                        height:
+                            max(520, MediaQuery.sizeOf(context).height * 0.68),
+                        child: _ReferenceTodayBoard(
+                          controller: controller,
+                          selectedDay: _selectedDay,
+                          logicalToday: logicalToday,
+                          tasks: visibleToday,
+                          hasActiveFilter: _categoryFilterId != null,
+                          showFilterBadge: _categoryFilterId != null,
+                          subtasksExpanded: _subtasksExpanded,
+                          onToggleSubtasks: () {
+                            setState(() {
+                              _subtasksExpanded = !_subtasksExpanded;
+                            });
+                          },
+                          completedTasks: todayCompleted,
+                          showCompleted: _showCompleted,
+                          selectionMode: _selectionMode,
+                          selectedTaskIds: _selectedTaskIds,
+                          selectedCount: selectedTasks.length,
+                          selectedHasActive: selectedTasks.any(
+                              (task) => task.status != TaskStatus.completed),
+                          selectedHasCompleted: selectedTasks.any(
+                              (task) => task.status == TaskStatus.completed),
+                          onToggleCompleted: () {
+                            setState(() {
+                              _showCompleted = !_showCompleted;
+                            });
+                          },
+                          onToggleSelectionMode: _toggleSelectionMode,
+                          onToggleTaskSelection: _toggleTaskSelection,
+                          onStartSelection: _startSelection,
+                          onSelectVisible: () => _toggleVisibleSelection(
+                            [
+                              ...visibleToday,
+                              if (_showCompleted) ...todayCompleted,
+                            ],
+                          ),
+                          onMoveSelectedToTomorrow: _moveSelectedToTomorrow,
+                          onCompleteSelected: _completeSelectedTasks,
+                          onReopenSelected: _reopenSelectedTasks,
+                          onDeleteSelected: _deleteSelectedTasks,
                         ),
-                        onMoveSelectedToTomorrow: _moveSelectedToTomorrow,
-                        onCompleteSelected: _completeSelectedTasks,
-                        onReopenSelected: _reopenSelectedTasks,
-                        onDeleteSelected: _deleteSelectedTasks,
                       ),
                       const SizedBox(height: 16),
                       _ReferenceWeekPanel(

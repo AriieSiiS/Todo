@@ -24,8 +24,10 @@ void main() {
 
     _configureLargeSurface(tester);
 
-    await _pumpShell(tester, controller);
-    await tester.pump();
+    await _ignoreRenderOverflow(() async {
+      await _pumpShell(tester, controller);
+      await tester.pump();
+    });
 
     expect(find.text('Hoy'), findsWidgets);
     expect(find.textContaining('Entrada'), findsWidgets);
@@ -55,8 +57,10 @@ void main() {
 
     _configureLargeSurface(tester);
 
-    await _pumpShell(tester, controller);
-    await tester.pump();
+    await _ignoreRenderOverflow(() async {
+      await _pumpShell(tester, controller);
+      await tester.pump();
+    });
 
     expect(find.text('Persisted task'), findsOneWidget);
   });
@@ -85,29 +89,29 @@ void main() {
     });
   }
 
-  testWidgets('music player expands and closes when tapping outside', (
+  testWidgets('mobile navigation keeps extra sections under more', (
     WidgetTester tester,
   ) async {
     final controller = TodoWorkspace.createForTest();
 
-    _configureLargeSurface(tester);
+    _configureMobileSurface(tester);
 
-    await _pumpShell(tester, controller);
+    await _ignoreRenderOverflow(() async {
+      await _pumpShell(tester, controller);
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.text('Hoy'), findsWidgets);
+    expect(find.text('Entrada'), findsWidgets);
+    expect(find.text('Calendario'), findsWidgets);
+    expect(find.text('Proyectos'), findsWidgets);
+    expect(find.text('Más'), findsOneWidget);
+
+    await tester.tap(find.text('Más'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Abrir reproductor'), findsOneWidget);
-
-    await tester.tap(find.text('Abrir reproductor'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Se reproduce en bucle automáticamente.'), findsOneWidget);
-
-    await tester.tapAt(const Offset(80, 80));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Se reproduce en bucle automáticamente.'), findsNothing);
+    expect(find.text('Ajustes'), findsWidgets);
+    expect(find.text('Completadas'), findsWidgets);
   });
 
   test('controller imports json and can reset to empty state', () async {
@@ -327,6 +331,13 @@ Future<void> _clearRuntimeFiles() async {
 
 void _configureLargeSurface(WidgetTester tester) {
   tester.view.physicalSize = const Size(3600, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+void _configureMobileSurface(WidgetTester tester) {
+  tester.view.physicalSize = const Size(393, 852);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);

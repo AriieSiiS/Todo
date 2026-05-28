@@ -66,4 +66,5 @@ class SupabaseConfig {
 
   static bool get isConfigured => url.isNotEmpty && anonKey.isNotEmpty;
   static bool get hasAllowedEmail => allowedEmail.isNotEmpty;
+  static bool get hasExplicitRedirectUrl => _redirectUrl.isNotEmpty;
 }

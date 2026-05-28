@@ -20,17 +20,21 @@ Future<void> showTaskEditor(
   String? initialTitle,
   String? initialDescription,
 }) {
+  final child = _TaskEditorDialog(
+    controller: controller,
+    initialTask: initialTask,
+    parentTaskId: parentTaskId,
+    initialDateOverride: initialDateOverride,
+    initialTitle: initialTitle,
+    initialDescription: initialDescription,
+  );
+  if (_useMobileEditor(context)) {
+    return _showMobileEditor(context, child);
+  }
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.28),
-    builder: (context) => _TaskEditorDialog(
-      controller: controller,
-      initialTask: initialTask,
-      parentTaskId: parentTaskId,
-      initialDateOverride: initialDateOverride,
-      initialTitle: initialTitle,
-      initialDescription: initialDescription,
-    ),
+    builder: (context) => child,
   );
 }
 
@@ -41,15 +45,19 @@ Future<void> showProjectEditor(
   String? initialName,
   String? initialDescription,
 }) {
+  final child = _ProjectEditorDialog(
+    controller: controller,
+    initialProject: initialProject,
+    initialName: initialName,
+    initialDescription: initialDescription,
+  );
+  if (_useMobileEditor(context)) {
+    return _showMobileEditor(context, child);
+  }
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.28),
-    builder: (context) => _ProjectEditorDialog(
-      controller: controller,
-      initialProject: initialProject,
-      initialName: initialName,
-      initialDescription: initialDescription,
-    ),
+    builder: (context) => child,
   );
 }
 
@@ -58,11 +66,32 @@ Future<void> showCategoryEditor(
   TodoWorkspace controller, {
   CategoryModel? initialCategory,
 }) {
+  final child = _CategoryEditorDialog(
+    controller: controller,
+    initialCategory: initialCategory,
+  );
+  if (_useMobileEditor(context)) {
+    return _showMobileEditor(context, child);
+  }
   return showDialog<void>(
     context: context,
-    builder: (context) => _CategoryEditorDialog(
-      controller: controller,
-      initialCategory: initialCategory,
+    builder: (context) => child,
+  );
+}
+
+bool _useMobileEditor(BuildContext context) {
+  return MediaQuery.sizeOf(context).width < 700;
+}
+
+Future<void> _showMobileEditor(BuildContext context, Widget child) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => FractionallySizedBox(
+      heightFactor: 0.96,
+      child: child,
     ),
   );
 }

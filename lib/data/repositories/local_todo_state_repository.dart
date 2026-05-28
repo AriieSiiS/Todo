@@ -22,4 +22,11 @@ class LocalTodoStateRepository implements TodoStateRepository {
 
   @override
   Future<void> clearCalendarSession() => _store.clearCalendarSession();
+
+  @override
+  Future<LocalSyncMetadata> loadSyncMetadata() => _store.loadSyncMetadata();
+
+  @override
+  Future<void> saveSyncMetadata(LocalSyncMetadata metadata) =>
+      _store.saveSyncMetadata(metadata);
 }

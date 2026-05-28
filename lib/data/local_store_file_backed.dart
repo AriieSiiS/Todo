@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../domain/models.dart';
 import 'local_store.dart';
@@ -10,6 +11,7 @@ import 'runtime_state_paths.dart';
 class FileBackedLocalStore implements LocalStore {
   static const String _snapshotKey = 'todo.snapshot.v1';
   static const String _calendarSessionKey = 'todo.calendar.session.v1';
+  static const String _syncMetadataKey = 'todo.sync.metadata.v1';
 
   @override
   Future<AppStateSnapshot?> load() async {
@@ -69,8 +71,39 @@ class FileBackedLocalStore implements LocalStore {
     }
   }
 
+  @override
+  Future<LocalSyncMetadata> loadSyncMetadata() async {
+    final file = await _syncMetadataFile();
+    if (await file.exists()) {
+      final raw = await file.readAsString();
+      if (raw.trim().isNotEmpty) {
+        return LocalSyncMetadata.fromJson(
+          (jsonDecode(raw) as Map<dynamic, dynamic>).cast<String, dynamic>(),
+        );
+      }
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    final raw = preferences.getString(_syncMetadataKey);
+    if (raw == null || raw.isEmpty) {
+      return const LocalSyncMetadata();
+    }
+    await _writeAtomically(file, raw);
+    return LocalSyncMetadata.fromJson(
+      (jsonDecode(raw) as Map<dynamic, dynamic>).cast<String, dynamic>(),
+    );
+  }
+
+  @override
+  Future<void> saveSyncMetadata(LocalSyncMetadata metadata) async {
+    final encoded = jsonEncode(metadata.toJson());
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_syncMetadataKey, encoded);
+    await _writeAtomically(await _syncMetadataFile(), encoded);
+  }
+
   Future<Directory> _runtimeDirectory() async {
-    final base = _documentsTodoDirectory();
+    final base = await _baseTodoDirectory();
     final directory = Directory(
       '${base.path}${Platform.pathSeparator}${RuntimeStatePaths.runtimeDirectoryName}',
     );
@@ -78,6 +111,14 @@ class FileBackedLocalStore implements LocalStore {
       await directory.create(recursive: true);
     }
     return directory;
+  }
+
+  Future<Directory> _baseTodoDirectory() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final support = await getApplicationSupportDirectory();
+      return Directory('${support.path}${Platform.pathSeparator}Todo');
+    }
+    return _documentsTodoDirectory();
   }
 
   Directory _documentsTodoDirectory() {
@@ -104,6 +145,13 @@ class FileBackedLocalStore implements LocalStore {
     final runtimeDirectory = await _runtimeDirectory();
     return File(
       '${runtimeDirectory.path}${Platform.pathSeparator}${RuntimeStatePaths.calendarSessionFileName}',
+    );
+  }
+
+  Future<File> _syncMetadataFile() async {
+    final runtimeDirectory = await _runtimeDirectory();
+    return File(
+      '${runtimeDirectory.path}${Platform.pathSeparator}${RuntimeStatePaths.syncMetadataFileName}',
     );
   }
 

@@ -59,6 +59,23 @@ Scripts útiles:
 
 Para completar el login real de la app, todavía hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
 
+### Android y sincronización por revisión
+
+La versión Android usa el mismo snapshot de Supabase que Windows, pero con una capa de revisión para evitar sobrescrituras silenciosas entre dispositivos. Antes de usar la sincronización Android, aplica también [supabase/002_snapshot_revision_sync.sql](</C:/Users/AlejandroAfonso/Documents/Todo/supabase/002_snapshot_revision_sync.sql>).
+
+Redirects recomendados en Supabase Auth:
+
+- Windows: `http://localhost:3000/`
+- Android: `todo://login-callback`
+
+APK privada:
+
+```text
+.\tooling\android_private_apk.ps1
+```
+
+Si existe `android/key.properties`, el build release usa esa keystore. Puedes partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/Todo/android/key.properties.example>).
+
 ## MCP local
 
 La app ya trae una base para control externo por IA mediante un servidor MCP local en [mcp_server/README.md](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/README.md>).

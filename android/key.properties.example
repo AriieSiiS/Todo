@@ -1,0 +1,4 @@
+storePassword=tu-password
+keyPassword=tu-password
+keyAlias=todo
+storeFile=C:\\ruta\\a\\todo-release-key.jks

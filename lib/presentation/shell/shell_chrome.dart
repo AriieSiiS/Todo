@@ -12,7 +12,8 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell>
+    with WidgetsBindingObserver {
   late final AmbientMusicController _musicController;
   late final bool _shouldInitializeMusic;
   bool _launchIntentHandled = false;
@@ -24,6 +25,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     super.initState();
     _shouldInitializeMusic = !_isWidgetTest();
     _musicController = AmbientMusicController(enabled: _shouldInitializeMusic);
+    WidgetsBinding.instance.addObserver(this);
     if (_shouldInitializeMusic) {
       _musicController.initialize();
     }
@@ -32,8 +34,16 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _musicController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && controller.cloudConnected) {
+      unawaited(controller.syncWithCloud());
+    }
   }
 
   @override
@@ -82,6 +92,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
         ),
       ),
+      floatingActionButton: !wide && controller.section == AppSection.today
+          ? FloatingActionButton(
+              onPressed: () => showTaskEditor(context, controller),
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       bottomNavigationBar: wide ? null : _MobileNav(controller: controller),
     );
   }
@@ -522,17 +538,67 @@ class _MobileNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sections = controller.navOrder;
-    final destinations = sections.map(_sidebarDestinationFor).toList();
+    const primarySections = <AppSection>[
+      AppSection.today,
+      AppSection.inbox,
+      AppSection.calendar,
+      AppSection.projects,
+    ];
+    final selectedIndex = primarySections.contains(controller.section)
+        ? primarySections.indexOf(controller.section)
+        : 4;
     return NavigationBar(
-      selectedIndex: sections.contains(controller.section)
-          ? sections.indexOf(controller.section)
-          : 0,
-      onDestinationSelected: (index) => controller.setSection(sections[index]),
+      selectedIndex: selectedIndex,
+      onDestinationSelected: (index) {
+        if (index == 4) {
+          _showMoreSections(context);
+          return;
+        }
+        controller.setSection(primarySections[index]);
+      },
       destinations: [
-        for (final item in destinations)
+        for (final item in primarySections.map(_sidebarDestinationFor))
           NavigationDestination(icon: Icon(item.icon), label: item.label),
+        const NavigationDestination(
+          icon: Icon(Icons.more_horiz_rounded),
+          label: 'Más',
+        ),
       ],
+    );
+  }
+
+  Future<void> _showMoreSections(BuildContext context) async {
+    final moreSections = controller.navOrder
+        .where((section) => !const <AppSection>{
+              AppSection.today,
+              AppSection.inbox,
+              AppSection.calendar,
+              AppSection.projects,
+            }.contains(section))
+        .toList();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            children: [
+              for (final section in moreSections)
+                ListTile(
+                  leading: Icon(_sidebarDestinationFor(section).icon),
+                  title: Text(_sidebarDestinationFor(section).label),
+                  selected: controller.section == section,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    controller.setSection(section);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

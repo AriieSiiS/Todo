@@ -32,6 +32,9 @@ class SupabaseCloudSyncRepository implements CloudSyncRepository {
   String get redirectUrl => _service.redirectUrl;
 
   @override
+  String get currentDeviceId => _service.currentDeviceId;
+
+  @override
   Future<void> initialize() => _service.initialize();
 
   @override
@@ -41,9 +44,15 @@ class SupabaseCloudSyncRepository implements CloudSyncRepository {
   Future<void> signOut() => _service.signOut();
 
   @override
-  Future<AppStateSnapshot?> fetchSnapshot() => _service.fetchSnapshot();
+  Future<CloudSnapshotEnvelope?> fetchEnvelope() => _service.fetchEnvelope();
 
   @override
-  Future<void> pushSnapshot(AppStateSnapshot snapshot) =>
-      _service.pushSnapshot(snapshot);
+  Future<CloudPushResult> pushEnvelope({
+    required AppStateSnapshot snapshot,
+    required int expectedRevision,
+  }) =>
+      _service.pushEnvelope(
+        snapshot: snapshot,
+        expectedRevision: expectedRevision,
+      );
 }

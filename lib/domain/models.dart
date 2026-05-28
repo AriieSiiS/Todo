@@ -13,4 +13,5 @@ export 'entities/reminder_rule.dart';
 export 'entities/settings.dart';
 export 'entities/task.dart';
 export 'snapshots/app_state_snapshot.dart';
+export 'snapshots/cloud_sync_models.dart';
 export 'snapshots/export_snapshot.dart';

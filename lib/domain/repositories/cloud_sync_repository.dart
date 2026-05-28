@@ -9,10 +9,14 @@ abstract class CloudSyncRepository {
   String get url;
   String get allowedEmail;
   String get redirectUrl;
+  String get currentDeviceId;
 
   Future<void> initialize();
   Future<bool> signInWithGoogle();
   Future<void> signOut();
-  Future<AppStateSnapshot?> fetchSnapshot();
-  Future<void> pushSnapshot(AppStateSnapshot snapshot);
+  Future<CloudSnapshotEnvelope?> fetchEnvelope();
+  Future<CloudPushResult> pushEnvelope({
+    required AppStateSnapshot snapshot,
+    required int expectedRevision,
+  });
 }

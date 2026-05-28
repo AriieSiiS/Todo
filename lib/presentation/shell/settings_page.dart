@@ -109,12 +109,40 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           const Divider(height: 26),
                           _settingsStatusLine(
-                            icon: Icons.cloud_done_outlined,
+                            icon: controller.hasSyncConflict
+                                ? Icons.sync_problem_rounded
+                                : Icons.cloud_done_outlined,
                             text: controller.cloudConnected
                                 ? 'Todas tus notas y ajustes están sincronizados'
                                 : 'La nube está lista para conectarse',
-                            active: controller.cloudConnected,
+                            active: controller.cloudConnected &&
+                                !controller.hasSyncConflict,
                           ),
+                          if (controller.lastSeenCloudRevision > 0) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Revisión de nube: ${controller.lastSeenCloudRevision}',
+                                style: TextStyle(color: visuals.textMuted),
+                              ),
+                            ),
+                          ],
+                          if (controller.pendingLocalCloudChanges &&
+                              !controller.hasSyncConflict) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Hay cambios locales pendientes de subir.',
+                                style: TextStyle(color: visuals.textMuted),
+                              ),
+                            ),
+                          ],
+                          if (controller.hasSyncConflict) ...[
+                            const SizedBox(height: 12),
+                            _CloudConflictBox(controller: controller),
+                          ],
                           if (controller.cloudError.isNotEmpty) ...[
                             const SizedBox(height: 10),
                             Align(
@@ -830,6 +858,83 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
             child: const Text('Reiniciar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CloudConflictBox extends StatelessWidget {
+  const _CloudConflictBox({required this.controller});
+
+  final TodoWorkspace controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final conflict = controller.syncConflict;
+    if (conflict == null) {
+      return const SizedBox.shrink();
+    }
+    return _settingsOutlineShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFF9D6A2C)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Conflicto de sincronización',
+                  style: TextStyle(
+                    color: visuals.textStrong,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'La nube está en la revisión ${conflict.remote.revision}, pero este dispositivo intentaba subir desde la revisión ${conflict.expectedRevision}.',
+            style: TextStyle(color: visuals.textMuted, height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.tonal(
+                onPressed: controller.cloudBusy
+                    ? null
+                    : () async {
+                        await controller.resolveSyncConflictWithRemote();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Se ha usado la versión de la nube.'),
+                          ),
+                        );
+                      },
+                child: const Text('Usar nube'),
+              ),
+              FilledButton(
+                onPressed: controller.cloudBusy
+                    ? null
+                    : () async {
+                        await controller.resolveSyncConflictKeepingLocal();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Se ha mantenido este dispositivo.'),
+                          ),
+                        );
+                      },
+                child: const Text('Mantener este dispositivo'),
+              ),
+            ],
           ),
         ],
       ),

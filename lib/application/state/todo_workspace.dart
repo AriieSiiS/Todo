@@ -112,6 +112,8 @@ class TodoWorkspace extends ChangeNotifier {
   bool _notificationBusy = false;
   bool _cloudBusy = false;
   DateTime? _lastCloudSyncAt;
+  LocalSyncMetadata _syncMetadata = const LocalSyncMetadata();
+  SyncConflict? _syncConflict;
   Timer? _saveDebounce;
 
   bool get _isFlutterTest {
@@ -163,6 +165,10 @@ class TodoWorkspace extends ChangeNotifier {
   String get cloudAllowedEmail => _cloudService.allowedEmail;
   String get cloudRedirectUrl => _cloudService.redirectUrl;
   DateTime? get lastCloudSyncAt => _lastCloudSyncAt;
+  int get lastSeenCloudRevision => _syncMetadata.lastSeenCloudRevision;
+  bool get pendingLocalCloudChanges => _syncMetadata.pendingLocalChanges;
+  SyncConflict? get syncConflict => _syncConflict;
+  bool get hasSyncConflict => _syncConflict != null;
   String get calendarError => _calendarSettings.lastError;
   bool get isCalendarConnected => _calendarSettings.connected;
 
@@ -926,13 +932,27 @@ class TodoWorkspace extends ChangeNotifier {
     notifyListeners();
     try {
       final local = _buildSnapshot();
-      final remote = await _cloudService.fetchSnapshot();
-      if (_shouldPullRemoteSnapshot(local: local, remote: remote)) {
-        _applySnapshot(remote!);
-        await _store.save(remote);
+      final remote = await _cloudService.fetchEnvelope();
+      if (_shouldCreateSyncConflict(remote)) {
+        _syncConflict = SyncConflict(
+          local: local,
+          remote: remote!,
+          expectedRevision: _syncMetadata.lastSeenCloudRevision,
+        );
+      } else if (_shouldPullRemoteEnvelope(local: local, remote: remote)) {
+        _applySnapshot(remote!.snapshot);
+        await _store.save(remote.snapshot);
+        await _markCloudEnvelopeSeen(remote, pendingLocalChanges: false);
         _loadedFromPersistence = true;
       } else {
-        await _cloudService.pushSnapshot(local);
+        final result = await _cloudService.pushEnvelope(
+          snapshot: local,
+          expectedRevision: _syncMetadata.lastSeenCloudRevision,
+        );
+        await _handleCloudPushResult(result);
+        if (result.hasConflict) {
+          return;
+        }
       }
       _lastCloudSyncAt = DateTime.now();
     } catch (_) {
@@ -941,6 +961,37 @@ class TodoWorkspace extends ChangeNotifier {
       _cloudBusy = false;
       notifyListeners();
     }
+  }
+
+  bool _shouldCreateSyncConflict(CloudSnapshotEnvelope? remote) {
+    if (remote == null) {
+      return false;
+    }
+    if (!_syncMetadata.pendingLocalChanges) {
+      return false;
+    }
+    if (remote.revision <= _syncMetadata.lastSeenCloudRevision) {
+      return false;
+    }
+    if (remote.updatedByDevice == _syncMetadata.deviceId &&
+        _syncMetadata.deviceId.isNotEmpty) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _shouldPullRemoteEnvelope({
+    required AppStateSnapshot local,
+    required CloudSnapshotEnvelope? remote,
+  }) {
+    if (remote == null) {
+      return false;
+    }
+    if (!_syncMetadata.pendingLocalChanges &&
+        remote.revision > _syncMetadata.lastSeenCloudRevision) {
+      return true;
+    }
+    return _shouldPullRemoteSnapshot(local: local, remote: remote.snapshot);
   }
 
   bool _shouldPullRemoteSnapshot({
@@ -978,6 +1029,82 @@ class TodoWorkspace extends ChangeNotifier {
     }
 
     return false;
+  }
+
+  Future<void> resolveSyncConflictWithRemote() async {
+    final conflict = _syncConflict;
+    if (conflict == null) {
+      return;
+    }
+    _applySnapshot(conflict.remote.snapshot);
+    await _store.save(conflict.remote.snapshot);
+    await _markCloudEnvelopeSeen(conflict.remote, pendingLocalChanges: false);
+    _syncConflict = null;
+    _lastCloudSyncAt = DateTime.now();
+    notifyListeners();
+  }
+
+  Future<void> resolveSyncConflictKeepingLocal() async {
+    final conflict = _syncConflict;
+    if (conflict == null) {
+      return;
+    }
+    _cloudBusy = true;
+    notifyListeners();
+    try {
+      final result = await _cloudService.pushEnvelope(
+        snapshot: conflict.local,
+        expectedRevision: conflict.remote.revision,
+      );
+      await _handleCloudPushResult(result);
+      if (!result.hasConflict) {
+        _syncConflict = null;
+        _lastCloudSyncAt = DateTime.now();
+      }
+    } finally {
+      _cloudBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _handleCloudPushResult(
+    CloudPushResult result,
+  ) async {
+    if (result.hasConflict && result.conflict != null) {
+      _syncConflict = result.conflict;
+      await _store.saveSyncMetadata(
+        _syncMetadata.copyWith(pendingLocalChanges: true),
+      );
+      return;
+    }
+    _syncConflict = null;
+    if (result.envelope != null) {
+      await _markCloudEnvelopeSeen(
+        result.envelope!,
+        pendingLocalChanges: false,
+      );
+      return;
+    }
+    if (result.pushed) {
+      await _store.saveSyncMetadata(
+        _syncMetadata.copyWith(pendingLocalChanges: false),
+      );
+    }
+  }
+
+  Future<void> _markCloudEnvelopeSeen(
+    CloudSnapshotEnvelope envelope, {
+    required bool pendingLocalChanges,
+  }) async {
+    _syncMetadata = _syncMetadata.copyWith(
+      deviceId: _syncMetadata.deviceId.isNotEmpty
+          ? _syncMetadata.deviceId
+          : _cloudService.currentDeviceId,
+      lastSeenCloudRevision: envelope.revision,
+      pendingLocalChanges: pendingLocalChanges,
+      lastCloudHash: envelope.stateHash,
+    );
+    await _store.saveSyncMetadata(_syncMetadata);
   }
 
   void toggleTaskCollapse(String taskId) {
@@ -1945,6 +2072,7 @@ class TodoWorkspace extends ChangeNotifier {
 
   Future<void> _load() async {
     await SupabaseConfig.load();
+    _syncMetadata = await _store.loadSyncMetadata();
     final persisted = await _store.load();
     if (persisted != null) {
       _applySnapshot(persisted);
@@ -1965,15 +2093,45 @@ class TodoWorkspace extends ChangeNotifier {
         connected: true,
         connectedEmail: _calendarAccount!.email,
       );
-      await refreshCalendarEvents();
-    }
-    await _cloudService.initialize();
-    if (_cloudService.isAuthenticated) {
-      await syncWithCloud();
     }
     if (!_isFlutterTest) {
+      unawaited(_initializeStartupIntegrations());
+    }
+  }
+
+  Future<void> _initializeStartupIntegrations() async {
+    if (_calendarAccount != null) {
+      unawaited(refreshCalendarEvents());
+    }
+    try {
+      _cloudBusy = true;
+      notifyListeners();
+      await _cloudService.initialize().timeout(const Duration(seconds: 12));
+      if (_syncMetadata.deviceId.isEmpty &&
+          _cloudService.currentDeviceId.isNotEmpty) {
+        _syncMetadata = _syncMetadata.copyWith(
+          deviceId: _cloudService.currentDeviceId,
+        );
+        await _store.saveSyncMetadata(_syncMetadata);
+      }
+      if (_cloudService.isAuthenticated) {
+        await syncWithCloud().timeout(const Duration(seconds: 12));
+      }
+    } catch (_) {
+      // La app debe abrirse aunque la red o Supabase fallen durante el arranque.
+    } finally {
+      _cloudBusy = false;
+      notifyListeners();
+    }
+    await _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    try {
       await _notificationService.initialize();
       await rescheduleTaskReminders();
+    } catch (_) {
+      // Las notificaciones no deben bloquear la apertura de la app.
     }
   }
 
@@ -2193,10 +2351,23 @@ class TodoWorkspace extends ChangeNotifier {
   Future<void> _persist() async {
     final snapshot = _buildSnapshot();
     await _store.save(snapshot);
-    if (_cloudService.isAuthenticated) {
+    _syncMetadata = _syncMetadata.copyWith(
+      deviceId: _syncMetadata.deviceId.isNotEmpty
+          ? _syncMetadata.deviceId
+          : _cloudService.currentDeviceId,
+      pendingLocalChanges: true,
+    );
+    await _store.saveSyncMetadata(_syncMetadata);
+    if (_cloudService.isAuthenticated && _syncConflict == null) {
       try {
-        await _cloudService.pushSnapshot(snapshot);
-        _lastCloudSyncAt = DateTime.now();
+        final result = await _cloudService.pushEnvelope(
+          snapshot: snapshot,
+          expectedRevision: _syncMetadata.lastSeenCloudRevision,
+        );
+        await _handleCloudPushResult(result);
+        if (!result.hasConflict) {
+          _lastCloudSyncAt = DateTime.now();
+        }
       } catch (_) {
         // Local persistence remains the primary safety net on Windows.
       }

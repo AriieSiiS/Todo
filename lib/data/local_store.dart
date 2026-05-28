@@ -9,4 +9,6 @@ abstract class LocalStore {
   Future<String?> loadCalendarSession();
   Future<void> saveCalendarSession(String encodedSession);
   Future<void> clearCalendarSession();
+  Future<LocalSyncMetadata> loadSyncMetadata();
+  Future<void> saveSyncMetadata(LocalSyncMetadata metadata);
 }
