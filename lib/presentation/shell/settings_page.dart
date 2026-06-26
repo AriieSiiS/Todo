@@ -159,7 +159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Última sincronización: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
+                                'Ãšltima sincronización: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
                                 style: TextStyle(color: visuals.textMuted),
                               ),
                             ),
@@ -432,6 +432,32 @@ class _SettingsPageState extends State<SettingsPage> {
                                   nextDayVisibleAtHour: value.round()),
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          _settingsActionRow(
+                            title: controller.hasManualLogicalDate
+                                ? 'Día adelantado manualmente'
+                                : 'Pasar al día siguiente ahora',
+                            subtitle: controller.hasManualLogicalDate
+                                ? 'La app ya está usando un día lógico adelantado sin cambiar tus reglas.'
+                                : 'Empieza el siguiente día lógico solo por hoy. Tus horas de cierre se mantienen.',
+                            buttonLabel: controller.hasManualLogicalDate
+                                ? 'Pasar otro día'
+                                : 'Pasar día',
+                            icon: Icons.skip_next_rounded,
+                            onPressed: controller.advanceToNextLogicalDay,
+                            previousButtonLabel: 'Día anterior',
+                            previousIcon: Icons.skip_previous_rounded,
+                            onPreviousPressed:
+                                controller.moveToPreviousLogicalDay,
+                            secondaryButtonLabel:
+                                controller.hasManualLogicalDate
+                                    ? 'Volver a reglas'
+                                    : null,
+                            secondaryIcon: Icons.undo_rounded,
+                            onSecondaryPressed: controller.hasManualLogicalDate
+                                ? controller.clearManualLogicalDate
+                                : null,
+                          ),
                         ],
                       ),
                     ),
@@ -501,7 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Text('–'),
+                              const Text('Ã¢â‚¬â€œ'),
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: 120,
@@ -590,22 +616,44 @@ class _SettingsPageState extends State<SettingsPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          SegmentedButton<AppVisualMode>(
-                            segments: const [
-                              ButtonSegment<AppVisualMode>(
-                                value: AppVisualMode.classic,
-                                label: Text('Clásico'),
-                                icon: Icon(Icons.layers_rounded),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: controller.visualMode ==
+                                        AppVisualMode.classic
+                                    ? FilledButton.icon(
+                                        onPressed: () {},
+                                        icon: const Icon(Icons.layers_rounded),
+                                        label: const Text('Clásico'),
+                                      )
+                                    : OutlinedButton.icon(
+                                        onPressed: () =>
+                                            controller.setVisualMode(
+                                          AppVisualMode.classic,
+                                        ),
+                                        icon: const Icon(Icons.layers_rounded),
+                                        label: const Text('Clásico'),
+                                      ),
                               ),
-                              ButtonSegment<AppVisualMode>(
-                                value: AppVisualMode.phantom,
-                                label: Text('Phantom'),
-                                icon: Icon(Icons.bolt_rounded),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: controller.visualMode ==
+                                        AppVisualMode.phantom
+                                    ? FilledButton.icon(
+                                        onPressed: () {},
+                                        icon: const Icon(Icons.bolt_rounded),
+                                        label: const Text('Phantom'),
+                                      )
+                                    : OutlinedButton.icon(
+                                        onPressed: () =>
+                                            controller.setVisualMode(
+                                          AppVisualMode.phantom,
+                                        ),
+                                        icon: const Icon(Icons.bolt_rounded),
+                                        label: const Text('Phantom'),
+                                      ),
                               ),
                             ],
-                            selected: <AppVisualMode>{controller.visualMode},
-                            onSelectionChanged: (selection) =>
-                                controller.setVisualMode(selection.first),
                           ),
                         ],
                       ),
@@ -695,7 +743,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           title: 'Copias de seguridad',
                           subtitle: controller.lastSavedAt == null
                               ? 'Sin guardar'
-                              : 'Última: hoy, ${_timeLabel(controller.lastSavedAt!)}',
+                              : 'Ãšltima: hoy, ${_timeLabel(controller.lastSavedAt!)}',
                           active: controller.lastSavedAt != null,
                         ),
                         _SettingsStatusItem(
@@ -1371,6 +1419,63 @@ Widget _settingsToggleRow({
       ),
       const SizedBox(width: 18),
       Switch(value: value, onChanged: onChanged),
+    ],
+  );
+}
+
+Widget _settingsActionRow({
+  required String title,
+  required String subtitle,
+  required String buttonLabel,
+  required IconData icon,
+  required VoidCallback onPressed,
+  String? previousButtonLabel,
+  IconData? previousIcon,
+  VoidCallback? onPreviousPressed,
+  String? secondaryButtonLabel,
+  IconData? secondaryIcon,
+  VoidCallback? onSecondaryPressed,
+}) {
+  return Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style: const TextStyle(color: Color(0xFF7E7568), height: 1.35)),
+          ],
+        ),
+      ),
+      const SizedBox(width: 18),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.end,
+        children: [
+          if (previousButtonLabel != null && onPreviousPressed != null)
+            OutlinedButton.icon(
+              onPressed: onPreviousPressed,
+              icon: Icon(previousIcon ?? Icons.skip_previous_rounded, size: 18),
+              label: Text(previousButtonLabel),
+            ),
+          if (secondaryButtonLabel != null && onSecondaryPressed != null)
+            OutlinedButton.icon(
+              onPressed: onSecondaryPressed,
+              icon: Icon(secondaryIcon ?? Icons.undo_rounded, size: 18),
+              label: Text(secondaryButtonLabel),
+            ),
+          FilledButton.icon(
+            onPressed: onPressed,
+            icon: Icon(icon, size: 18),
+            label: Text(buttonLabel),
+          ),
+        ],
+      ),
     ],
   );
 }

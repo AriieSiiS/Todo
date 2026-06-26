@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 
 class TaskFeedbackService {
-  static const String _taskCompleteAsset = 'resources/task-complete.wav';
+  static const String _taskCompleteAsset =
+      'resources/task-complete-pencil-check.mp3';
 
   AudioPlayer? _taskCompletePlayer;
   bool _taskCompleteReady = false;

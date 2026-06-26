@@ -24,6 +24,10 @@ namespace {
   }
 
 constexpr wchar_t kTodoAppId[] = L"AlejandroAfonso.Todo.App";
+constexpr wchar_t kTodoSingleInstanceMutex[] =
+    L"Local\\AlejandroAfonso.Todo.SingleInstance";
+constexpr wchar_t kTodoWindowClass[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+constexpr wchar_t kTodoWindowTitle[] = L"todo";
 
 struct JumpTaskDefinition {
   const wchar_t* title;
@@ -101,10 +105,33 @@ HRESULT ConfigureJumpList() {
   return S_OK;
 }
 
+bool FocusExistingInstance() {
+  HWND window = ::FindWindowW(kTodoWindowClass, kTodoWindowTitle);
+  if (window == nullptr) {
+    return false;
+  }
+  if (::IsIconic(window)) {
+    ::ShowWindow(window, SW_RESTORE);
+  } else {
+    ::ShowWindow(window, SW_SHOWNORMAL);
+  }
+  ::SetForegroundWindow(window);
+  return true;
+}
+
 }  // namespace
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  HANDLE single_instance_mutex =
+      ::CreateMutexW(nullptr, TRUE, kTodoSingleInstanceMutex);
+  if (single_instance_mutex != nullptr &&
+      ::GetLastError() == ERROR_ALREADY_EXISTS) {
+    FocusExistingInstance();
+    ::CloseHandle(single_instance_mutex);
+    return EXIT_SUCCESS;
+  }
+
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
   }
@@ -134,5 +161,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoUninitialize();
+  if (single_instance_mutex != nullptr) {
+    ::ReleaseMutex(single_instance_mutex);
+    ::CloseHandle(single_instance_mutex);
+  }
   return EXIT_SUCCESS;
 }

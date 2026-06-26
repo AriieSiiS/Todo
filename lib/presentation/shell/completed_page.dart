@@ -23,8 +23,8 @@ class CompletedPage extends StatelessWidget {
     final olderTasks = <TaskModel>[];
 
     for (final task in completed) {
-      final stamp = task.scheduledAt ?? today;
-      final day = DateTime(stamp.year, stamp.month, stamp.day);
+      final stamp = task.completedAt ?? task.scheduledAt ?? today;
+      final day = controller.logicalDate(stamp);
       if (_sameDay(day, today)) {
         todayTasks.add(task);
       } else if (_sameDay(day, yesterday)) {
@@ -66,8 +66,8 @@ class CompletedPage extends StatelessWidget {
 
     final completedToday = todayTasks.length;
     final completedThisWeek = completed.where((task) {
-      final stamp = task.scheduledAt ?? today;
-      final day = DateTime(stamp.year, stamp.month, stamp.day);
+      final stamp = task.completedAt ?? task.scheduledAt ?? today;
+      final day = controller.logicalDate(stamp);
       return !day.isBefore(weekStart);
     }).length;
     final totalActive = controller.tasks

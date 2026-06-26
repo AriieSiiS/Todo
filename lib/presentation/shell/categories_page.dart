@@ -258,12 +258,18 @@ class _ReferenceCategoryGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final category = categories[index];
         final tasks = controller.tasksByCategory(category.id);
+        final rootTasks = tasks.where((task) => !task.isSubtask).toList();
         final metrics = (
-          active:
-              tasks.where((task) => task.status == TaskStatus.active).length,
-          recurring: tasks.where((task) => task.recurrence.isRecurring).length,
-          completed:
-              tasks.where((task) => task.status == TaskStatus.completed).length,
+          active: rootTasks
+              .where((task) => task.status == TaskStatus.active)
+              .length,
+          recurring: rootTasks
+              .where((task) => task.status == TaskStatus.active)
+              .where((task) => task.recurrence.isRecurring)
+              .length,
+          completed: rootTasks
+              .where((task) => task.status == TaskStatus.completed)
+              .length,
         );
         final selected = category.id == selectedCategoryId;
 
@@ -400,8 +406,12 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
     final tasks = controller.tasksByCategory(category.id);
     final sampleTasks =
         tasks.where((task) => task.parentTaskId == null).take(4).toList();
-    final recurringTasks =
-        tasks.where((task) => task.recurrence.isRecurring).take(2).toList();
+    final recurringTasks = tasks
+        .where((task) => task.parentTaskId == null)
+        .where((task) => task.status == TaskStatus.active)
+        .where((task) => task.recurrence.isRecurring)
+        .take(2)
+        .toList();
     final relatedProjects = controller.projects
         .where((project) => project.categoryIds.contains(category.id))
         .take(3)
@@ -534,7 +544,7 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                                 ),
                               _ReferenceTagChip(
                                 label: task.recurrence.isRecurring
-                                    ? 'Semanal'
+                                    ? _categoryRecurrenceLabel(task)
                                     : 'Tarea única',
                                 color: const Color(0xFFF4F1EC),
                                 textColor: const Color(0xFF7D7A73),
@@ -586,8 +596,8 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 task.scheduledAt == null
-                                    ? 'Semanal'
-                                    : 'Semanal · ${_weekdayLabel(task.scheduledAt!)} ${_timeLabel(task.scheduledAt!)}',
+                                    ? _categoryRecurrenceLabel(task)
+                                    : '${_categoryRecurrenceLabel(task)} · ${_weekdayLabel(task.scheduledAt!)}',
                                 style:
                                     TextStyle(color: context.visuals.textMuted),
                               ),
@@ -709,5 +719,15 @@ String _categoryDescription(String name) => switch (name.toLowerCase()) {
       'otros' => 'Tareas varias que no encajan en otras categorías.',
       _ => 'Área estable para organizar tareas y rutinas.',
     };
+
+String _categoryRecurrenceLabel(TaskModel task) {
+  return switch (task.recurrence.type) {
+    RecurrenceType.daily => 'Diaria',
+    RecurrenceType.everyXDays => 'Cada ${task.recurrence.interval} días',
+    RecurrenceType.weekly => 'Semanal',
+    RecurrenceType.yearly => 'Anual',
+    RecurrenceType.none => 'Tarea única',
+  };
+}
 
 enum _CalendarViewMode { month, week, agenda }

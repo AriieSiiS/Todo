@@ -1135,9 +1135,16 @@ def ensure_financial_lists(state: dict[str, Any]) -> None:
     state.setdefault("fixedPayments", [])
 
 
-def task_matches_date(task: dict[str, Any], target: dt.date) -> bool:
+def task_matches_date(
+    task: dict[str, Any],
+    target: dt.date,
+    *,
+    include_overdue: bool = False,
+) -> bool:
     scheduled = parse_datetime(task.get("scheduledAt"))
     if scheduled is None:
+        return True
+    if include_overdue and scheduled.date() < target:
         return True
     return scheduled.date() == target
 
@@ -1322,8 +1329,13 @@ def move_task_to_day_impl(arguments: dict[str, Any]) -> dict[str, Any]:
 def list_tasks_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     target_date = None
+    include_overdue = False
     if "date" in arguments:
-        target_date = logical_today(state) if arguments["date"] == "today" else dt.date.fromisoformat(arguments["date"])
+        if arguments["date"] == "today":
+            target_date = logical_today(state)
+            include_overdue = True
+        else:
+            target_date = dt.date.fromisoformat(arguments["date"])
 
     tasks = []
     for task in state["tasks"]:
@@ -1333,7 +1345,11 @@ def list_tasks_impl(arguments: dict[str, Any]) -> dict[str, Any]:
             continue
         if "category_id" in arguments and arguments["category_id"] not in task.get("categoryIds", []):
             continue
-        if target_date is not None and not task_matches_date(task, target_date):
+        if target_date is not None and not task_matches_date(
+            task,
+            target_date,
+            include_overdue=include_overdue and task.get("status") == "active",
+        ):
             continue
         tasks.append(task)
     return {"tasks": tasks, "count": len(tasks), "mode": "supabase" if remote_enabled() else "local"}
@@ -1345,7 +1361,8 @@ def get_today_impl() -> dict[str, Any]:
     tasks = [
         task
         for task in state["tasks"]
-        if task.get("status") == "active" and task_matches_date(task, today)
+        if task.get("status") == "active"
+        and task_matches_date(task, today, include_overdue=True)
     ]
     return {
         "logical_date": today.isoformat(),

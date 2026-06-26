@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Todo app icon v3 - taskbar optimized</title>
+  <rect x="0" y="0" width="512" height="512" rx="96" fill="#3F6F45"/>
+  <rect x="54" y="54" width="404" height="404" rx="76" fill="#4F8055"/>
+  <path d="M157 263 L229 334 L361 181" fill="none" stroke="#FFF9EC" stroke-width="62" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -32,6 +32,8 @@ class AppStateSnapshot {
     this.navOrder = const <AppSection>[],
     this.calendarEvents = const <CalendarEventModel>[],
     this.visualMode = AppVisualMode.classic,
+    this.manualLogicalDate,
+    this.manualLogicalDateStartedAt,
     this.updatedAt,
     this.schemaVersion = 1,
     this.lastModifiedBy = '',
@@ -55,6 +57,8 @@ class AppStateSnapshot {
   final TodaySort todaySort;
   final List<AppSection> navOrder;
   final AppVisualMode visualMode;
+  final DateTime? manualLogicalDate;
+  final DateTime? manualLogicalDateStartedAt;
   final DateTime? updatedAt;
   final int schemaVersion;
   final String lastModifiedBy;
@@ -85,6 +89,9 @@ class AppStateSnapshot {
       'todaySort': todaySort.name,
       'navOrder': navOrder.map((section) => section.name).toList(),
       'visualMode': visualMode.name,
+      'manualLogicalDate': manualLogicalDate?.toIso8601String(),
+      'manualLogicalDateStartedAt':
+          manualLogicalDateStartedAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'schemaVersion': schemaVersion,
       'lastModifiedBy': lastModifiedBy,
@@ -169,6 +176,12 @@ class AppStateSnapshot {
           .toList(),
       visualMode: enumByName(AppVisualMode.values,
           json['visualMode'] as String?, AppVisualMode.classic),
+      manualLogicalDate: json['manualLogicalDate'] == null
+          ? null
+          : DateTime.tryParse(json['manualLogicalDate'] as String),
+      manualLogicalDateStartedAt: json['manualLogicalDateStartedAt'] == null
+          ? null
+          : DateTime.tryParse(json['manualLogicalDateStartedAt'] as String),
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.tryParse(json['updatedAt'] as String),

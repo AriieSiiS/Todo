@@ -252,6 +252,9 @@ class _TodayPageState extends State<TodayPage> {
   bool _selectionMode = false;
   late DateTime _selectedDay;
   final Set<String> _selectedTaskIds = <String>{};
+  final Map<String, TaskModel> _completionGhosts = <String, TaskModel>{};
+  final Set<String> _completionMarkedTaskIds = <String>{};
+  final Set<String> _completionFadingTaskIds = <String>{};
 
   TodoWorkspace get controller => widget.controller;
 
@@ -265,13 +268,13 @@ class _TodayPageState extends State<TodayPage> {
   Widget build(BuildContext context) {
     final logicalToday = controller.logicalDate();
     final allDayTasks = controller.tasksForDate(_selectedDay);
-    final visibleToday = _applyTodayFilter(allDayTasks);
+    final visibleToday = _withCompletionGhosts(_applyTodayFilter(allDayTasks));
     final notes = controller.inboxNotes();
     final todayCompleted = controller.completedTasks().where((task) {
-      final scheduled = task.scheduledAt;
+      final scheduled = task.completedAt ?? task.scheduledAt;
       return !task.isSubtask &&
           scheduled != null &&
-          _sameDay(scheduled, _selectedDay);
+          _sameDay(controller.logicalDate(scheduled), _selectedDay);
     }).toList();
     final selectedTasks = _selectedTasks();
     final wide = MediaQuery.sizeOf(context).width >= 1240;
@@ -294,6 +297,8 @@ class _TodayPageState extends State<TodayPage> {
             onSortChanged: controller.setTodaySort,
             onFilterChanged: _setCategoryFilter,
             onReorder: controller.reorganizeDay,
+            onMovePreviousDay: _moveToPreviousLogicalDay,
+            onAdvanceDay: _advanceToNextLogicalDay,
           ),
           const SizedBox(height: 14),
           Expanded(
@@ -343,6 +348,10 @@ class _TodayPageState extends State<TodayPage> {
                           onCompleteSelected: _completeSelectedTasks,
                           onReopenSelected: _reopenSelectedTasks,
                           onDeleteSelected: _deleteSelectedTasks,
+                          onToggleCompletion: _toggleTaskCompletion,
+                          onToggleTaskCollapse: _toggleTaskCollapse,
+                          completionMarkedTaskIds: _completionMarkedTaskIds,
+                          completionFadingTaskIds: _completionFadingTaskIds,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -422,6 +431,10 @@ class _TodayPageState extends State<TodayPage> {
                           onCompleteSelected: _completeSelectedTasks,
                           onReopenSelected: _reopenSelectedTasks,
                           onDeleteSelected: _deleteSelectedTasks,
+                          onToggleCompletion: _toggleTaskCompletion,
+                          onToggleTaskCollapse: _toggleTaskCollapse,
+                          completionMarkedTaskIds: _completionMarkedTaskIds,
+                          completionFadingTaskIds: _completionFadingTaskIds,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -457,6 +470,26 @@ class _TodayPageState extends State<TodayPage> {
         .toList();
   }
 
+  List<TaskModel> _withCompletionGhosts(List<TaskModel> source) {
+    if (_completionGhosts.isEmpty) {
+      return source;
+    }
+    final result = List<TaskModel>.from(source);
+    final ids = result.map((task) => task.id).toSet();
+    for (final ghost in _completionGhosts.values) {
+      if (ids.contains(ghost.id)) {
+        continue;
+      }
+      if (_categoryFilterId != null &&
+          !ghost.categoryIds.contains(_categoryFilterId)) {
+        continue;
+      }
+      result.add(ghost);
+    }
+    result.sort((left, right) => left.manualOrder.compareTo(right.manualOrder));
+    return result;
+  }
+
   String _activeFilterLabel() {
     if (_categoryFilterId == null) {
       return 'Todas';
@@ -472,6 +505,7 @@ class _TodayPageState extends State<TodayPage> {
       _categoryFilterId = selected;
       _selectionMode = false;
       _selectedTaskIds.clear();
+      _clearCompletionAnimation();
     });
   }
 
@@ -484,6 +518,35 @@ class _TodayPageState extends State<TodayPage> {
       _showCompleted = false;
       _selectionMode = false;
       _selectedTaskIds.clear();
+      _clearCompletionAnimation();
+    });
+  }
+
+  void _moveToPreviousLogicalDay() {
+    controller.moveToPreviousLogicalDay();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectedDay = controller.logicalDate();
+      _showCompleted = false;
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+      _clearCompletionAnimation();
+    });
+  }
+
+  void _advanceToNextLogicalDay() {
+    controller.advanceToNextLogicalDay();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectedDay = controller.logicalDate();
+      _showCompleted = false;
+      _selectionMode = false;
+      _selectedTaskIds.clear();
+      _clearCompletionAnimation();
     });
   }
 
@@ -522,6 +585,61 @@ class _TodayPageState extends State<TodayPage> {
         _selectionMode = false;
       }
     });
+  }
+
+  void _toggleTaskCompletion(String taskId) {
+    if (_completionMarkedTaskIds.contains(taskId)) {
+      return;
+    }
+    final task = controller.taskById(taskId);
+    final alreadyCompleted =
+        task != null && controller.isTaskCompletedOnDay(task, _selectedDay);
+    if (task != null && !task.isSubtask && !alreadyCompleted) {
+      setState(() {
+        _completionGhosts[taskId] = task;
+        _completionMarkedTaskIds.add(taskId);
+      });
+      Timer(const Duration(milliseconds: 900), () {
+        if (!mounted) {
+          return;
+        }
+        unawaited(controller.completeTask(taskId));
+        setState(() {
+          _completionFadingTaskIds.add(taskId);
+        });
+      });
+      Timer(const Duration(milliseconds: 1550), () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _completionGhosts.remove(taskId);
+          _completionMarkedTaskIds.remove(taskId);
+          _completionFadingTaskIds.remove(taskId);
+        });
+      });
+      return;
+    }
+    controller.completeTask(taskId).then((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    });
+  }
+
+  void _clearCompletionAnimation() {
+    _completionGhosts.clear();
+    _completionMarkedTaskIds.clear();
+    _completionFadingTaskIds.clear();
+  }
+
+  void _toggleTaskCollapse(String taskId) {
+    controller.toggleTaskCollapse(taskId);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
   }
 
   void _toggleVisibleSelection(List<TaskModel> tasks) {
@@ -619,6 +737,8 @@ class _ReferenceTodayHeader extends StatelessWidget {
     required this.onSortChanged,
     required this.onFilterChanged,
     required this.onReorder,
+    required this.onMovePreviousDay,
+    required this.onAdvanceDay,
   });
   final TodoWorkspace controller;
   final DateTime selectedDay;
@@ -629,11 +749,14 @@ class _ReferenceTodayHeader extends StatelessWidget {
   final ValueChanged<TodaySort> onSortChanged;
   final ValueChanged<String?> onFilterChanged;
   final VoidCallback onReorder;
+  final VoidCallback onMovePreviousDay;
+  final VoidCallback onAdvanceDay;
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     final narrow = MediaQuery.sizeOf(context).width < 1080;
-    final heading = 'Hoy';
+    final heading =
+        _sameDay(selectedDay, logicalToday) ? 'Hoy' : _weekdayLong(selectedDay);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -664,6 +787,8 @@ class _ReferenceTodayHeader extends StatelessWidget {
                 onSortChanged: onSortChanged,
                 onFilterChanged: onFilterChanged,
                 onReorder: onReorder,
+                onMovePreviousDay: onMovePreviousDay,
+                onAdvanceDay: onAdvanceDay,
               ),
           ],
         ),
@@ -677,6 +802,8 @@ class _ReferenceTodayHeader extends StatelessWidget {
             onSortChanged: onSortChanged,
             onFilterChanged: onFilterChanged,
             onReorder: onReorder,
+            onMovePreviousDay: onMovePreviousDay,
+            onAdvanceDay: onAdvanceDay,
           ),
         ],
       ],
@@ -693,6 +820,8 @@ class _ReferenceHeaderControls extends StatelessWidget {
     required this.onSortChanged,
     required this.onFilterChanged,
     required this.onReorder,
+    required this.onMovePreviousDay,
+    required this.onAdvanceDay,
   });
   final TodoWorkspace controller;
   final String? activeFilterId;
@@ -701,6 +830,8 @@ class _ReferenceHeaderControls extends StatelessWidget {
   final ValueChanged<TodaySort> onSortChanged;
   final ValueChanged<String?> onFilterChanged;
   final VoidCallback onReorder;
+  final VoidCallback onMovePreviousDay;
+  final VoidCallback onAdvanceDay;
   @override
   Widget build(BuildContext context) {
     final activeCategories =
@@ -714,6 +845,16 @@ class _ReferenceHeaderControls extends StatelessWidget {
           label: 'Nueva tarea',
           primary: true,
           onTap: onCreateTask,
+        ),
+        _TodayShiftDayButton(
+          icon: Icons.skip_previous_rounded,
+          tooltip: 'Volver al día anterior',
+          active: controller.hasManualLogicalDate,
+          onTap: onMovePreviousDay,
+        ),
+        _TodayAdvanceDayButton(
+          controller: controller,
+          onTap: onAdvanceDay,
         ),
         PopupMenuButton<String?>(
           tooltip: 'Filtrar tareas',
@@ -852,6 +993,78 @@ class _TodayHeaderButton extends StatelessWidget {
   }
 }
 
+class _TodayAdvanceDayButton extends StatelessWidget {
+  const _TodayAdvanceDayButton({
+    required this.controller,
+    required this.onTap,
+  });
+
+  final TodoWorkspace controller;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = controller.hasManualLogicalDate;
+    return _TodayShiftDayButton(
+      icon: active ? Icons.check_rounded : Icons.skip_next_rounded,
+      tooltip: active ? 'Pasar otro día' : 'Pasar al día siguiente ahora',
+      active: active,
+      onTap: onTap,
+    );
+  }
+}
+
+class _TodayShiftDayButton extends StatelessWidget {
+  const _TodayShiftDayButton({
+    required this.icon,
+    required this.tooltip,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final background =
+        active ? const Color(0xFFE8F0DF) : const Color(0xFFFFFCF8);
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Ink(
+            width: 48,
+            height: 48,
+            decoration: ShapeDecoration(
+              color: background,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  color: active
+                      ? const Color(0xFF9BAF81)
+                      : const Color(0xFFE3D4C2),
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: active ? const Color(0xFF263625) : visuals.textMuted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ReferenceTodayBoard extends StatelessWidget {
   const _ReferenceTodayBoard({
     required this.controller,
@@ -878,6 +1091,10 @@ class _ReferenceTodayBoard extends StatelessWidget {
     required this.onCompleteSelected,
     required this.onReopenSelected,
     required this.onDeleteSelected,
+    required this.onToggleCompletion,
+    required this.onToggleTaskCollapse,
+    required this.completionMarkedTaskIds,
+    required this.completionFadingTaskIds,
   });
 
   final TodoWorkspace controller;
@@ -904,6 +1121,10 @@ class _ReferenceTodayBoard extends StatelessWidget {
   final Future<void> Function() onCompleteSelected;
   final VoidCallback onReopenSelected;
   final VoidCallback onDeleteSelected;
+  final ValueChanged<String> onToggleCompletion;
+  final ValueChanged<String> onToggleTaskCollapse;
+  final Set<String> completionMarkedTaskIds;
+  final Set<String> completionFadingTaskIds;
 
   @override
   Widget build(BuildContext context) {
@@ -1056,6 +1277,13 @@ class _ReferenceTodayBoard extends StatelessWidget {
                                   selectedTaskIds: selectedTaskIds,
                                   onToggleSelection: onToggleTaskSelection,
                                   onStartSelection: onStartSelection,
+                                  selectedDay: selectedDay,
+                                  onToggleCompletion: onToggleCompletion,
+                                  onToggleCollapse: onToggleTaskCollapse,
+                                  forceCompleted:
+                                      completionMarkedTaskIds.contains(task.id),
+                                  fadeOut:
+                                      completionFadingTaskIds.contains(task.id),
                                 ),
                                 if (index != tasks.length - 1)
                                   const Divider(height: 1),
@@ -1140,6 +1368,11 @@ class _ReferenceTaskRow extends StatelessWidget {
     required this.selectedTaskIds,
     required this.onToggleSelection,
     required this.onStartSelection,
+    required this.selectedDay,
+    required this.onToggleCompletion,
+    required this.onToggleCollapse,
+    required this.forceCompleted,
+    required this.fadeOut,
   });
 
   final TodoWorkspace controller;
@@ -1151,6 +1384,11 @@ class _ReferenceTaskRow extends StatelessWidget {
   final Set<String> selectedTaskIds;
   final ValueChanged<String> onToggleSelection;
   final ValueChanged<String> onStartSelection;
+  final DateTime selectedDay;
+  final ValueChanged<String> onToggleCompletion;
+  final ValueChanged<String> onToggleCollapse;
+  final bool forceCompleted;
+  final bool fadeOut;
 
   @override
   Widget build(BuildContext context) {
@@ -1162,9 +1400,14 @@ class _ReferenceTaskRow extends StatelessWidget {
         ? controller.projectById(task.projectIds.first)
         : null;
     final subtasks = controller.subtasksOf(task);
-    final hasSubtasks = subtasks.isNotEmpty && subtasksExpanded;
+    final hasSubtasks = subtasks.isNotEmpty;
+    final showsSubtasks =
+        hasSubtasks && subtasksExpanded && !task.collapsed && !fadeOut;
+    final overdue = _isOverdueTask(task, controller.logicalDate());
+    final completed =
+        forceCompleted || controller.isTaskCompletedOnDay(task, selectedDay);
 
-    return Column(
+    final content = Column(
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -1177,7 +1420,10 @@ class _ReferenceTaskRow extends StatelessWidget {
           child: InkWell(
             onTap: selectionMode
                 ? () => onToggleSelection(task.id)
-                : () => showTaskEditor(context, controller, initialTask: task),
+                : hasSubtasks
+                    ? () => onToggleCollapse(task.id)
+                    : () =>
+                        showTaskEditor(context, controller, initialTask: task),
             onLongPress: selectionMode
                 ? () => onToggleSelection(task.id)
                 : () => onStartSelection(task.id),
@@ -1195,15 +1441,29 @@ class _ReferenceTaskRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                   ],
-                  Checkbox(
-                    value: selectionMode
-                        ? selected
-                        : task.status == TaskStatus.completed,
-                    onChanged: (_) => selectionMode
-                        ? onToggleSelection(task.id)
-                        : controller.completeTask(task.id),
-                  ),
+                  if (forceCompleted && !selectionMode)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: _CompletionCheckPulse(),
+                    )
+                  else
+                    Checkbox(
+                      value: selectionMode ? selected : completed,
+                      activeColor: const Color(0xFF70835D),
+                      onChanged: (_) => selectionMode
+                          ? onToggleSelection(task.id)
+                          : onToggleCompletion(task.id),
+                    ),
                   const SizedBox(width: 8),
+                  if (hasSubtasks && !selectionMode) ...[
+                    Icon(
+                      task.collapsed
+                          ? Icons.keyboard_arrow_right_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: visuals.textMuted,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Expanded(
                     child: Wrap(
                       spacing: 10,
@@ -1215,7 +1475,12 @@ class _ReferenceTaskRow extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontSize: 18,
-                                    color: visuals.textStrong,
+                                    color: completed
+                                        ? const Color(0xFF70835D)
+                                        : visuals.textStrong,
+                                    decoration: completed
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                         ),
                         if (category != null)
@@ -1229,6 +1494,13 @@ class _ReferenceTaskRow extends StatelessWidget {
                             label: project.name,
                             color: const Color(0xFFF0ECE4),
                             textColor: const Color(0xFF5D5A54),
+                          ),
+                        if (overdue)
+                          const _ReferenceTagChip(
+                            label: 'Tarde',
+                            icon: Icons.warning_amber_rounded,
+                            color: Color(0xFFFFECE6),
+                            textColor: Color(0xFFC04B37),
                           ),
                       ],
                     ),
@@ -1264,18 +1536,96 @@ class _ReferenceTaskRow extends StatelessWidget {
             ),
           ),
         ),
-        if (hasSubtasks)
-          ...subtasks.map(
-            (subtask) => _ReferenceSubtaskRow(
-              controller: controller,
-              task: subtask,
-              selectionMode: selectionMode,
-              selected: selectedTaskIds.contains(subtask.id),
-              onToggleSelection: onToggleSelection,
-              onStartSelection: onStartSelection,
-            ),
-          ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 160),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: showsSubtasks
+              ? Column(
+                  key: ValueKey('${task.id}-subtasks-open'),
+                  children: subtasks
+                      .map(
+                        (subtask) => _ReferenceSubtaskRow(
+                          controller: controller,
+                          task: subtask,
+                          selectedDay: selectedDay,
+                          selectionMode: selectionMode,
+                          selected: selectedTaskIds.contains(subtask.id),
+                          onToggleSelection: onToggleSelection,
+                          onStartSelection: onStartSelection,
+                          onToggleCompletion: onToggleCompletion,
+                        ),
+                      )
+                      .toList(),
+                )
+              : const SizedBox.shrink(
+                  key: ValueKey('subtasks-closed'),
+                ),
+        ),
       ],
+    );
+
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      opacity: fadeOut ? 0 : 1,
+      child: ClipRect(
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 460),
+          curve: Curves.easeInOutCubic,
+          alignment: Alignment.topCenter,
+          heightFactor: fadeOut ? 0 : 1,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color:
+                  forceCompleted ? const Color(0xFFEAF3E2) : Colors.transparent,
+              border: Border(
+                left: BorderSide(
+                  color: forceCompleted
+                      ? const Color(0xFF70835D)
+                      : Colors.transparent,
+                  width: forceCompleted ? 4 : 0,
+                ),
+              ),
+            ),
+            child: content,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompletionCheckPulse extends StatelessWidget {
+  const _CompletionCheckPulse();
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.72, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: child,
+        );
+      },
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFF70835D),
+        ),
+        child: const Icon(
+          Icons.check_rounded,
+          size: 20,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }
@@ -1284,22 +1634,27 @@ class _ReferenceSubtaskRow extends StatelessWidget {
   const _ReferenceSubtaskRow({
     required this.controller,
     required this.task,
+    required this.selectedDay,
     required this.selectionMode,
     required this.selected,
     required this.onToggleSelection,
     required this.onStartSelection,
+    required this.onToggleCompletion,
   });
 
   final TodoWorkspace controller;
   final TaskModel task;
+  final DateTime selectedDay;
   final bool selectionMode;
   final bool selected;
   final ValueChanged<String> onToggleSelection;
   final ValueChanged<String> onStartSelection;
+  final ValueChanged<String> onToggleCompletion;
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
+    final completed = controller.isTaskCompletedOnDay(task, selectedDay);
     return Container(
       decoration: const BoxDecoration(
         border: Border(
@@ -1338,19 +1693,21 @@ class _ReferenceSubtaskRow extends StatelessWidget {
                   ),
                 ),
                 Checkbox(
-                  value: selectionMode
-                      ? selected
-                      : task.status == TaskStatus.completed,
+                  value: selectionMode ? selected : completed,
                   onChanged: (_) => selectionMode
                       ? onToggleSelection(task.id)
-                      : controller.completeTask(task.id),
+                      : onToggleCompletion(task.id),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     task.title,
                     style: TextStyle(
-                        color: visuals.textStrong.withValues(alpha: 0.88)),
+                      color: completed
+                          ? const Color(0xFF70835D)
+                          : visuals.textStrong.withValues(alpha: 0.88),
+                      decoration: completed ? TextDecoration.lineThrough : null,
+                    ),
                   ),
                 ),
                 SizedBox(
@@ -1956,11 +2313,13 @@ class _ReferenceTagChip extends StatelessWidget {
     required this.label,
     required this.color,
     required this.textColor,
+    this.icon,
   });
 
   final String label;
   final Color color;
   final Color textColor;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -1970,14 +2329,34 @@ class _ReferenceTagChip extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+bool _isOverdueTask(TaskModel task, DateTime logicalToday) {
+  final scheduled = task.scheduledAt;
+  if (scheduled == null ||
+      task.status == TaskStatus.completed ||
+      task.recurrence.isRecurring) {
+    return false;
+  }
+  return DateTime(scheduled.year, scheduled.month, scheduled.day).isBefore(
+      DateTime(logicalToday.year, logicalToday.month, logicalToday.day));
 }

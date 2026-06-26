@@ -1830,8 +1830,19 @@ class _CalendarEntry {
 }
 
 List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
-  final taskEntries =
-      controller.tasks.where((task) => task.scheduledAt != null).map((task) {
+  final taskEntries = controller.tasks
+      .where((task) => !task.isSubtask)
+      .where((task) => task.scheduledAt != null)
+      .where((task) {
+    if (!task.recurrence.isRecurring) {
+      return true;
+    }
+    final logicalDay = controller.logicalDate(task.scheduledAt!);
+    final month = logicalDay.month.toString().padLeft(2, '0');
+    final day = logicalDay.day.toString().padLeft(2, '0');
+    return !task.recurrenceCompletions
+        .containsKey('${logicalDay.year}-$month-$day');
+  }).map((task) {
     final category = task.categoryIds.isNotEmpty
         ? controller.categoryById(task.categoryIds.first)
         : null;

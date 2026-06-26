@@ -106,6 +106,8 @@ class TodoWorkspace extends ChangeNotifier {
   TodaySort _todaySort = TodaySort.manual;
   AppVisualMode _visualMode = AppVisualMode.classic;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
+  DateTime? _manualLogicalDate;
+  DateTime? _manualLogicalDateStartedAt;
   DateTime? _lastSavedAt;
   bool _loadedFromPersistence = false;
   bool _calendarBusy = false;
@@ -151,6 +153,8 @@ class TodoWorkspace extends ChangeNotifier {
   TodaySort get todaySort => _todaySort;
   AppVisualMode get visualMode => _visualMode;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
+  DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
+  bool get hasManualLogicalDate => manualLogicalDate != null;
   DateTime? get lastSavedAt => _lastSavedAt;
   bool get loadedFromPersistence => _loadedFromPersistence;
   bool get calendarBusy => _calendarBusy;
@@ -211,6 +215,14 @@ class TodoWorkspace extends ChangeNotifier {
 
   DateTime logicalDate([DateTime? instant]) {
     final value = instant ?? now;
+    final manual = _activeManualLogicalDate(value);
+    if (manual != null) {
+      return manual;
+    }
+    return _ruleBasedLogicalDate(value);
+  }
+
+  DateTime _ruleBasedLogicalDate(DateTime value) {
     if (value.hour < _daySettings.dayEndsAtHour) {
       final previous = value.subtract(const Duration(days: 1));
       return DateTime(previous.year, previous.month, previous.day);
@@ -218,8 +230,54 @@ class TodoWorkspace extends ChangeNotifier {
     return DateTime(value.year, value.month, value.day);
   }
 
+  DateTime? _activeManualLogicalDate(DateTime value) {
+    final manual = _manualLogicalDate;
+    final startedAt = _manualLogicalDateStartedAt;
+    if (manual == null || startedAt == null || value.isBefore(startedAt)) {
+      return null;
+    }
+    final natural = _ruleBasedLogicalDate(value);
+    if (!_sameDay(natural, manual)) {
+      return manual;
+    }
+    return null;
+  }
+
+  void advanceToNextLogicalDay() {
+    final value = now;
+    final currentManual = _activeManualLogicalDate(value);
+    if (currentManual != null) {
+      _manualLogicalDate = currentManual.add(const Duration(days: 1));
+    } else if (value.hour < _daySettings.nextDayVisibleAtHour) {
+      _manualLogicalDate = DateTime(value.year, value.month, value.day);
+    } else {
+      _manualLogicalDate = _ruleBasedLogicalDate(value).add(
+        const Duration(days: 1),
+      );
+    }
+    _manualLogicalDateStartedAt = value;
+    _commit();
+  }
+
+  void moveToPreviousLogicalDay() {
+    final value = now;
+    final current = _activeManualLogicalDate(value) ?? logicalDate(value);
+    _manualLogicalDate = current.subtract(const Duration(days: 1));
+    _manualLogicalDateStartedAt = value;
+    _commit();
+  }
+
+  void clearManualLogicalDate() {
+    _manualLogicalDate = null;
+    _manualLogicalDateStartedAt = null;
+    _commit();
+  }
+
   bool isNextDayVisible([DateTime? instant]) {
     final value = instant ?? now;
+    if (_activeManualLogicalDate(value) != null) {
+      return true;
+    }
     return value.hour >= _daySettings.nextDayVisibleAtHour;
   }
 
@@ -227,14 +285,21 @@ class TodoWorkspace extends ChangeNotifier {
 
   List<TaskModel> tasksForDate(DateTime day) => _sortTasks(_tasksForDay(day));
 
+  bool isTaskCompletedOnDay(TaskModel task, DateTime day) {
+    if (task.recurrence.isRecurring || _recurringParentOf(task) != null) {
+      return task.recurrenceCompletions.containsKey(_occurrenceKey(day));
+    }
+    return task.status == TaskStatus.completed;
+  }
+
   List<TaskModel> tasksForWeek([DateTime? anchor]) {
     final start = logicalDate(anchor);
     final dates =
         List<DateTime>.generate(7, (index) => start.add(Duration(days: index)));
-    return _tasks
-        .where((task) =>
-            task.status == TaskStatus.active && task.scheduledAt != null)
-        .where((task) => dates.any((day) => _sameDay(task.scheduledAt!, day)))
+    final seen = <String>{};
+    return dates
+        .expand(_tasksForDay)
+        .where((task) => seen.add(task.id))
         .toList()
       ..sort((left, right) =>
           (left.scheduledAt ?? start).compareTo(right.scheduledAt ?? start));
@@ -253,14 +318,20 @@ class TodoWorkspace extends ChangeNotifier {
   List<TaskModel> tasksByCategory(String categoryId) {
     return _tasks
         .where((task) => task.categoryIds.contains(categoryId))
+        .where((task) => task.status != TaskStatus.archived)
         .toList()
       ..sort((left, right) => left.manualOrder.compareTo(right.manualOrder));
   }
 
   List<TaskModel> completedTasks() {
-    return _tasks
-        .where((task) => task.status == TaskStatus.completed && !task.isSubtask)
-        .toList()
+    final completed = <TaskModel>[
+      ..._tasks.where(
+          (task) => task.status == TaskStatus.completed && !task.isSubtask),
+      ..._tasks
+          .where((task) => task.recurrence.isRecurring && !task.isSubtask)
+          .expand(_completedRecurringOccurrences),
+    ];
+    return completed
       ..sort(
         (left, right) => (right.completedAt ??
                 right.scheduledAt ??
@@ -422,11 +493,37 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   Future<void> completeTask(String taskId) async {
+    final occurrence = _parseRecurringOccurrenceId(taskId);
+    if (occurrence != null) {
+      _setRecurringOccurrenceCompleted(
+        occurrence.taskId,
+        occurrence.key,
+        completed: false,
+      );
+      _commit();
+      return;
+    }
     final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
       return;
     }
     final task = _tasks[index];
+    final recurringParent = _recurringParentOf(task);
+    if (task.recurrence.isRecurring || recurringParent != null) {
+      final key = _occurrenceKey(logicalDate());
+      final targetId = task.id;
+      final isCompleted = task.recurrenceCompletions.containsKey(key);
+      _setRecurringOccurrenceCompleted(
+        targetId,
+        key,
+        completed: !isCompleted,
+      );
+      if (!isCompleted) {
+        unawaited(_feedback.playTaskCompleted());
+      }
+      _commit();
+      return;
+    }
     final willComplete = task.status != TaskStatus.completed;
     final completedAt = willComplete ? DateTime.now() : null;
     _tasks[index] = task.copyWith(
@@ -434,18 +531,7 @@ class TodoWorkspace extends ChangeNotifier {
       completedAt: completedAt,
       clearCompletedAt: !willComplete,
     );
-    if (willComplete && task.recurrence.isRecurring) {
-      _tasks.add(
-        task.copyWith(
-          id: _id('task'),
-          status: TaskStatus.active,
-          scheduledAt: _nextRecurrence(task),
-          manualOrder: _nextManualOrder(),
-          collapsed: false,
-          clearCompletedAt: true,
-        ),
-      );
-    }
+    _setSubtasksCompletion(task.id, willComplete, completedAt);
     if (task.calendarLink != null && _calendarSettings.connected) {
       await syncTaskToCalendar(taskId, silent: true);
     }
@@ -456,6 +542,16 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void reopenTask(String taskId) {
+    final occurrence = _parseRecurringOccurrenceId(taskId);
+    if (occurrence != null) {
+      _setRecurringOccurrenceCompleted(
+        occurrence.taskId,
+        occurrence.key,
+        completed: false,
+      );
+      _commit();
+      return;
+    }
     final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
       return;
@@ -464,6 +560,7 @@ class TodoWorkspace extends ChangeNotifier {
       status: TaskStatus.active,
       clearCompletedAt: true,
     );
+    _setSubtasksCompletion(taskId, false, null);
     _commit();
   }
 
@@ -473,6 +570,17 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     var changed = false;
+    for (final id in ids) {
+      final occurrence = _parseRecurringOccurrenceId(id);
+      if (occurrence != null) {
+        _setRecurringOccurrenceCompleted(
+          occurrence.taskId,
+          occurrence.key,
+          completed: false,
+        );
+        changed = true;
+      }
+    }
     for (var i = 0; i < _tasks.length; i++) {
       final task = _tasks[i];
       if (!ids.contains(task.id) || task.status != TaskStatus.completed) {
@@ -482,6 +590,7 @@ class TodoWorkspace extends ChangeNotifier {
         status: TaskStatus.active,
         clearCompletedAt: true,
       );
+      _setSubtasksCompletion(task.id, false, null);
       changed = true;
     }
     if (changed) {
@@ -496,6 +605,24 @@ class TodoWorkspace extends ChangeNotifier {
       origin: TaskOrigin.manual,
       scheduledAt: taskById(parentTaskId)?.scheduledAt,
     );
+  }
+
+  void _setSubtasksCompletion(
+    String parentTaskId,
+    bool completed,
+    DateTime? completedAt,
+  ) {
+    for (var i = 0; i < _tasks.length; i++) {
+      final subtask = _tasks[i];
+      if (subtask.parentTaskId != parentTaskId) {
+        continue;
+      }
+      _tasks[i] = subtask.copyWith(
+        status: completed ? TaskStatus.completed : TaskStatus.active,
+        completedAt: completedAt,
+        clearCompletedAt: !completed,
+      );
+    }
   }
 
   Future<void> moveTaskToDay(String taskId, DateTime date) async {
@@ -558,23 +685,23 @@ class TodoWorkspace extends ChangeNotifier {
       if (!ids.contains(task.id) || task.status == TaskStatus.completed) {
         continue;
       }
+      final recurringParent = _recurringParentOf(task);
+      if (task.recurrence.isRecurring || recurringParent != null) {
+        final key = _occurrenceKey(logicalDate());
+        _setRecurringOccurrenceCompleted(
+          task.id,
+          key,
+          completed: true,
+        );
+        changed = true;
+        continue;
+      }
       _tasks[i] = task.copyWith(
         status: TaskStatus.completed,
         completedAt: DateTime.now(),
       );
+      _setSubtasksCompletion(task.id, true, _tasks[i].completedAt);
       changed = true;
-      if (task.recurrence.isRecurring) {
-        spawnedTasks.add(
-          task.copyWith(
-            id: _id('task'),
-            status: TaskStatus.active,
-            scheduledAt: _nextRecurrence(task),
-            manualOrder: _nextManualOrder(),
-            collapsed: false,
-            clearCompletedAt: true,
-          ),
-        );
-      }
       if (task.calendarLink != null && _calendarSettings.connected) {
         tasksToSync.add(task.id);
       }
@@ -2177,6 +2304,8 @@ class TodoWorkspace extends ChangeNotifier {
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
     _visualMode = snapshot.visualMode;
+    _manualLogicalDate = snapshot.manualLogicalDate;
+    _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
   }
 
@@ -2401,6 +2530,8 @@ class TodoWorkspace extends ChangeNotifier {
       section: section,
       todaySort: todaySort,
       visualMode: visualMode,
+      manualLogicalDate: _manualLogicalDate,
+      manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
       schemaVersion: 1,
@@ -2411,16 +2542,121 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   List<TaskModel> _tasksForDay(DateTime day) {
+    final logicalToday = logicalDate();
     return _tasks
         .where((task) => task.status == TaskStatus.active)
         .where((task) => !task.isSubtask)
         .where((task) {
+      if (task.recurrence.isRecurring &&
+          task.recurrenceCompletions.containsKey(_occurrenceKey(day))) {
+        return false;
+      }
+      if (task.recurrence.isRecurring) {
+        if (!_sameDay(day, logicalToday) &&
+            task.recurrence.type == RecurrenceType.daily) {
+          return false;
+        }
+        return _recursOnDay(task, day);
+      }
       final scheduled = task.scheduledAt;
       if (scheduled == null) {
         return true;
       }
+      if (_sameDay(day, logicalToday) && scheduled.isBefore(logicalToday)) {
+        return true;
+      }
       return _sameDay(scheduled, day);
     }).toList();
+  }
+
+  bool _recursOnDay(TaskModel task, DateTime day) {
+    final start = task.scheduledAt == null
+        ? day
+        : DateTime(
+            task.scheduledAt!.year,
+            task.scheduledAt!.month,
+            task.scheduledAt!.day,
+          );
+    final target = DateTime(day.year, day.month, day.day);
+    if (target.isBefore(start)) {
+      return false;
+    }
+    final days = target.difference(start).inDays;
+    switch (task.recurrence.type) {
+      case RecurrenceType.none:
+        return false;
+      case RecurrenceType.daily:
+      case RecurrenceType.everyXDays:
+        return days % task.recurrence.interval == 0;
+      case RecurrenceType.weekly:
+        return days % (7 * task.recurrence.interval) == 0;
+      case RecurrenceType.yearly:
+        return target.month == start.month &&
+            target.day == start.day &&
+            (target.year - start.year) % task.recurrence.interval == 0;
+    }
+  }
+
+  Iterable<TaskModel> _completedRecurringOccurrences(TaskModel task) {
+    return task.recurrenceCompletions.entries.map((entry) {
+      final day = DateTime.tryParse(entry.key) ?? entry.value;
+      return task.copyWith(
+        id: _recurringOccurrenceId(task.id, entry.key),
+        status: TaskStatus.completed,
+        scheduledAt: day,
+        completedAt: entry.value,
+      );
+    });
+  }
+
+  String _recurringOccurrenceId(String taskId, String key) => '$taskId::$key';
+
+  ({String taskId, String key})? _parseRecurringOccurrenceId(String id) {
+    final separator = id.indexOf('::');
+    if (separator == -1) {
+      return null;
+    }
+    return (
+      taskId: id.substring(0, separator),
+      key: id.substring(separator + 2),
+    );
+  }
+
+  String _occurrenceKey(DateTime day) {
+    final month = day.month.toString().padLeft(2, '0');
+    final date = day.day.toString().padLeft(2, '0');
+    return '${day.year}-$month-$date';
+  }
+
+  TaskModel? _recurringParentOf(TaskModel task) {
+    final parentId = task.parentTaskId;
+    if (parentId == null) {
+      return null;
+    }
+    final parent = taskById(parentId);
+    if (parent == null || !parent.recurrence.isRecurring) {
+      return null;
+    }
+    return parent;
+  }
+
+  void _setRecurringOccurrenceCompleted(
+    String taskId,
+    String key, {
+    required bool completed,
+  }) {
+    final index = _tasks.indexWhere((task) => task.id == taskId);
+    if (index == -1) {
+      return;
+    }
+    final task = _tasks[index];
+    final completions = Map<String, DateTime>.from(task.recurrenceCompletions);
+    if (completed) {
+      completions[key] = DateTime.now();
+    } else {
+      completions.remove(key);
+    }
+    _tasks[index] = task.copyWith(recurrenceCompletions: completions);
   }
 
   List<TaskModel> _sortTasks(List<TaskModel> list) {
@@ -2498,6 +2734,61 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
+  DateTime _nextRecurringScheduledAt(TaskModel task) {
+    if (task.scheduledAt != null) {
+      return _nextRecurrence(task);
+    }
+    final today = logicalDate();
+    final next = today.add(Duration(days: task.recurrence.interval));
+    return DateTime(next.year, next.month, next.day);
+  }
+
+  bool _hasActiveRecurringInstance(TaskModel source, DateTime scheduledAt) {
+    return _tasks.any((task) =>
+        task.id != source.id &&
+        !task.isSubtask &&
+        task.status == TaskStatus.active &&
+        task.title == source.title &&
+        task.recurrence.type == source.recurrence.type &&
+        task.scheduledAt != null &&
+        _sameDay(task.scheduledAt!, scheduledAt));
+  }
+
+  void _spawnRecurringTask(
+    TaskModel source, {
+    required DateTime scheduledAt,
+  }) {
+    _tasks.addAll(
+      _buildRecurringTaskInstance(source, scheduledAt: scheduledAt),
+    );
+  }
+
+  List<TaskModel> _buildRecurringTaskInstance(
+    TaskModel source, {
+    required DateTime scheduledAt,
+  }) {
+    final nextId = _id('task');
+    final nextSubtasks = subtasksOf(source).map((subtask) {
+      return subtask.copyWith(
+        id: _id('task'),
+        status: TaskStatus.active,
+        scheduledAt: scheduledAt,
+        parentTaskId: nextId,
+        clearCompletedAt: true,
+      );
+    }).toList();
+    final nextTask = source.copyWith(
+      id: nextId,
+      status: TaskStatus.active,
+      scheduledAt: scheduledAt,
+      subtaskIds: nextSubtasks.map((subtask) => subtask.id).toList(),
+      manualOrder: _nextManualOrder(),
+      collapsed: false,
+      clearCompletedAt: true,
+    );
+    return <TaskModel>[nextTask, ...nextSubtasks];
+  }
+
   bool _sameDay(DateTime left, DateTime right) {
     return isSameCalendarDay(left, right);
   }
@@ -2566,6 +2857,8 @@ class TodoWorkspace extends ChangeNotifier {
     _section = AppSection.today;
     _todaySort = TodaySort.manual;
     _visualMode = AppVisualMode.classic;
+    _manualLogicalDate = null;
+    _manualLogicalDateStartedAt = null;
     _navOrder = List<AppSection>.of(defaultNavOrder);
     _lastSavedAt = null;
     _lastCloudSyncAt = null;

@@ -514,24 +514,20 @@ class _LibraryTypeCard extends StatelessWidget {
                       ),
                     ),
                   )
-                : SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        for (final item in items.take(5))
-                          Column(
-                            children: [
-                              _LibraryItemRow(
-                                item: item,
-                                onTap: () => _showDetailDialog(context, item),
-                                onEdit: () => _showEditDialog(context, item),
-                                onDelete: () => _deleteItem(context, item),
-                              ),
-                              if (item != items.take(5).last)
-                                const Divider(height: 1),
-                            ],
-                          ),
-                      ],
-                    ),
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return _LibraryItemRow(
+                        item: item,
+                        onTap: () => _showDetailDialog(context, item),
+                        onEdit: () => _showEditDialog(context, item),
+                        onDelete: () => _deleteItem(context, item),
+                      );
+                    },
                   ),
           ),
           InkWell(
@@ -690,28 +686,42 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                       style: TextStyle(color: context.visuals.textMuted),
                     ),
                   )
-                : ListView.separated(
-                    itemCount: sorted.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = sorted[index];
-                      return _LibraryDetailedItemRow(
-                        item: item,
-                        onTap: () => _showLibraryItemDetails(
-                          context,
-                          widget.controller,
-                          sorted,
-                          item,
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxExtent = constraints.maxWidth >= 980
+                          ? 194.0
+                          : constraints.maxWidth >= 720
+                              ? 176.0
+                              : 154.0;
+                      return GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: maxExtent,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 20,
+                          childAspectRatio: 0.66,
                         ),
-                        onEdit: () => showDialog<void>(
-                          context: context,
-                          builder: (context) => _LibraryItemDialog(
-                            controller: widget.controller,
+                        itemCount: sorted.length,
+                        itemBuilder: (context, index) {
+                          final item = sorted[index];
+                          return _LibraryCoverGridCard(
                             item: item,
-                          ),
-                        ),
-                        onDelete: () => _deleteItem(context, item),
+                            onTap: () => _showLibraryItemDetails(
+                              context,
+                              widget.controller,
+                              sorted,
+                              item,
+                            ),
+                            onEdit: () => showDialog<void>(
+                              context: context,
+                              builder: (context) => _LibraryItemDialog(
+                                controller: widget.controller,
+                                item: item,
+                              ),
+                            ),
+                            onDelete: () => _deleteItem(context, item),
+                          );
+                        },
                       );
                     },
                   ),
@@ -819,8 +829,8 @@ class _LibrarySortButton extends StatelessWidget {
   }
 }
 
-class _LibraryDetailedItemRow extends StatelessWidget {
-  const _LibraryDetailedItemRow({
+class _LibraryCoverGridCard extends StatefulWidget {
+  const _LibraryCoverGridCard({
     required this.item,
     required this.onTap,
     required this.onEdit,
@@ -833,77 +843,317 @@ class _LibraryDetailedItemRow extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_LibraryCoverGridCard> createState() => _LibraryCoverGridCardState();
+}
+
+class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onSecondaryTapDown: (details) => _showLibraryContextMenu(
-        context: context,
-        position: details.globalPosition,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-          child: Row(
-            children: [
-              _LibraryThumbnail(item: item),
-              const SizedBox(width: 14),
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(_libraryItemSubtitle(item),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: context.visuals.textMuted)),
-                  ],
+    final item = widget.item;
+    final rewatchCount = _libraryRewatchCount(item);
+    return Tooltip(
+      message:
+          '${item.title}\n${_libraryItemSubtitle(item)}\n${_libraryExtraInfo(item)}',
+      waitDuration: const Duration(milliseconds: 450),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onSecondaryTapDown: (details) => _showLibraryContextMenu(
+            context: context,
+            position: details.globalPosition,
+            onEdit: widget.onEdit,
+            onDelete: widget.onDelete,
+          ),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(7),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              transform: Matrix4.identity()
+                ..scaleByDouble(
+                  _hovered ? 1.025 : 1.0,
+                  _hovered ? 1.025 : 1.0,
+                  1,
+                  1,
                 ),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF18202A),
+                borderRadius: BorderRadius.circular(7),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: _hovered ? 0.26 : 0.18),
+                    blurRadius: _hovered ? 22 : 16,
+                    offset: Offset(0, _hovered ? 11 : 8),
+                  ),
+                ],
               ),
-              const SizedBox(width: 18),
-              Expanded(
-                flex: 2,
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Completado el\n',
-                    style: TextStyle(
-                        color: context.visuals.textMuted, fontSize: 12),
-                    children: [
-                      TextSpan(
-                        text: _libraryDate(item.completedDate),
-                        style: TextStyle(
-                          color: context.visuals.textStrong,
-                          fontWeight: FontWeight.w700,
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _LibraryCoverImage(
+                    source: item.coverUrl,
+                    type: item.type,
+                    iconSize: 44,
+                  ),
+                  AnimatedOpacity(
+                    opacity: _hovered ? 1 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x00000000),
+                            Color(0x1A000000),
+                            Color(0xB8000000),
+                          ],
+                          stops: [0.42, 0.72, 1],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  if (item.rating != null)
+                    Positioned(
+                      left: 10,
+                      bottom: _hovered ? 64 : 48,
+                      child: _LibraryPosterBadge(
+                        icon: Icons.star_rounded,
+                        label: _formatRating(item.rating!),
+                      ),
+                    ),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    left: 12,
+                    right: 12,
+                    bottom: _hovered ? 50 : 38,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _hovered ? 1 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        child: Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            shadows: [
+                              Shadow(
+                                color: Color(0xAA000000),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 8,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xE63B4654),
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.26),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          _libraryDate(item.completedDate),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _LibraryCoverMenuButton(
+                      onEdit: widget.onEdit,
+                      onDelete: widget.onDelete,
+                    ),
+                  ),
+                  if (rewatchCount > 1)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _LibraryRewatchBadge(count: rewatchCount),
+                    ),
+                ],
               ),
-              Expanded(
-                child: Text(
-                  item.releaseYear?.toString() ?? '-',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.visuals.textMuted),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  _libraryExtraInfo(item),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.visuals.textMuted),
-                ),
-              ),
-            ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryPosterBadge extends StatelessWidget {
+  const _LibraryPosterBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xD9202732),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: const Color(0xFFF7D36B)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryRewatchBadge extends StatelessWidget {
+  const _LibraryRewatchBadge({required this.count, this.compact = false});
+
+  final int count;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Vista $count veces',
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 7 : 8,
+          vertical: compact ? 4 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: compact ? const Color(0xFFEFF4E7) : const Color(0xDDEFF4E7),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: compact
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.replay_rounded,
+              size: compact ? 13 : 15,
+              color: const Color(0xFF607A4D),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              'x$count',
+              style: const TextStyle(
+                color: Color(0xFF607A4D),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryCoverMenuButton extends StatelessWidget {
+  const _LibraryCoverMenuButton({
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_LibraryContextAction>(
+      tooltip: 'Opciones',
+      position: PopupMenuPosition.under,
+      onSelected: (action) {
+        if (action == _LibraryContextAction.edit) {
+          onEdit();
+        } else if (action == _LibraryContextAction.delete) {
+          onDelete();
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _LibraryContextAction.edit,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.edit_outlined),
+            title: Text('Editar'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _LibraryContextAction.delete,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.delete_outline_rounded),
+            title: Text('Borrar'),
+          ),
+        ),
+      ],
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: const Color(0xC2202732),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        ),
+        child: const Icon(
+          Icons.more_horiz_rounded,
+          color: Colors.white,
+          size: 18,
         ),
       ),
     );
@@ -925,6 +1175,7 @@ class _LibraryItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rewatchCount = _libraryRewatchCount(item);
     return GestureDetector(
       onSecondaryTapDown: (details) => _showLibraryContextMenu(
         context: context,
@@ -941,11 +1192,24 @@ class _LibraryItemRow extends StatelessWidget {
               _LibraryThumbnail(item: item),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    if (rewatchCount > 1) ...[
+                      const SizedBox(width: 8),
+                      _LibraryRewatchBadge(
+                        count: rewatchCount,
+                        compact: true,
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
@@ -2358,22 +2622,18 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) {
-                      final columns = constraints.maxWidth >= 1180
-                          ? 3
-                          : constraints.maxWidth >= 760
-                              ? 2
-                              : 1;
+                      final maxExtent = constraints.maxWidth >= 980
+                          ? 194.0
+                          : constraints.maxWidth >= 720
+                              ? 176.0
+                              : 154.0;
                       return GridView.builder(
-                        padding: const EdgeInsets.all(20),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          crossAxisSpacing: 18,
-                          mainAxisSpacing: 18,
-                          childAspectRatio: columns == 1
-                              ? 1.9
-                              : columns == 2
-                                  ? 1.22
-                                  : 1.14,
+                        padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: maxExtent,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 20,
+                          childAspectRatio: 0.66,
                         ),
                         itemCount: goals.length,
                         itemBuilder: (context, index) {
@@ -2397,7 +2657,7 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
   }
 }
 
-class _LibraryGoalLargeCard extends StatelessWidget {
+class _LibraryGoalLargeCard extends StatefulWidget {
   const _LibraryGoalLargeCard({
     required this.goal,
     required this.onOpen,
@@ -2415,137 +2675,234 @@ class _LibraryGoalLargeCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_LibraryGoalLargeCard> createState() => _LibraryGoalLargeCardState();
+}
+
+class _LibraryGoalLargeCardState extends State<_LibraryGoalLargeCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final goal = widget.goal;
     final metadata = _goalMetadata(goal);
-    return GestureDetector(
-      onSecondaryTapDown: (details) => _showLibraryContextMenu(
-        context: context,
-        position: details.globalPosition,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      ),
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE7DCCF)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 12),
-              ),
-            ],
+    return Tooltip(
+      message: metadata == null ? goal.title : '${goal.title}\n$metadata',
+      waitDuration: const Duration(milliseconds: 450),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onSecondaryTapDown: (details) => _showLibraryContextMenu(
+            context: context,
+            position: details.globalPosition,
+            onEdit: widget.onEdit,
+            onDelete: widget.onDelete,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 7,
-                child: Container(
-                  color: _libraryColor(goal.type).withValues(alpha: 0.13),
-                  child: _LibraryCoverImage(
+          child: InkWell(
+            onTap: widget.onOpen,
+            borderRadius: BorderRadius.circular(7),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              transform: Matrix4.identity()
+                ..scaleByDouble(
+                  _hovered ? 1.025 : 1.0,
+                  _hovered ? 1.025 : 1.0,
+                  1,
+                  1,
+                ),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF18202A),
+                borderRadius: BorderRadius.circular(7),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: _hovered ? 0.26 : 0.18),
+                    blurRadius: _hovered ? 22 : 16,
+                    offset: Offset(0, _hovered ? 11 : 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _LibraryCoverImage(
                     source: goal.coverUrl?.trim(),
                     type: goal.type,
-                    iconSize: 64,
+                    iconSize: 44,
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 15, 14, 15),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    InkWell(
-                      onTap: onToggle,
-                      borderRadius: BorderRadius.circular(999),
-                      child: Icon(
-                        goal.isCompleted
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        size: 28,
-                        color: goal.isCompleted
-                            ? const Color(0xFF70835D)
-                            : context.visuals.textMuted,
+                  AnimatedOpacity(
+                    opacity: _hovered ? 1 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x00000000),
+                            Color(0x1A000000),
+                            Color(0xB8000000),
+                          ],
+                          stops: [0.42, 0.72, 1],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            goal.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              decoration: goal.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _LibraryCoverMenuButton(
+                      onEdit: widget.onEdit,
+                      onDelete: widget.onDelete,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Row(
+                      children: [
+                        if (goal.isFavorite) ...[
+                          _LibraryGoalTopIconButton(
+                            tooltip: 'Quitar prioridad',
+                            icon: Icons.star_rounded,
+                            color: const Color(0xFFF1A340),
+                            onPressed: widget.onFavorite,
                           ),
-                          const SizedBox(height: 5),
-                          Row(
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: goal.isCompleted
-                                      ? const Color(0xFF607A4D)
-                                      : const Color(0xFF70835D),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                goal.isCompleted ? 'Completado' : 'Pendiente',
-                                style: TextStyle(
-                                  color: context.visuals.textMuted,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
+                          const SizedBox(width: 8),
+                        ],
+                        _LibraryGoalTopIconButton(
+                          tooltip: goal.isCompleted
+                              ? 'Marcar como pendiente'
+                              : 'Marcar como completado',
+                          icon: goal.isCompleted
+                              ? Icons.check_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: goal.isCompleted
+                              ? const Color(0xFF7EA35F)
+                              : Colors.white,
+                          onPressed: widget.onToggle,
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    left: 12,
+                    right: 12,
+                    bottom: _hovered ? 50 : 38,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _hovered ? 1 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        child: Text(
+                          goal.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            decoration: goal.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            decorationColor: Colors.white,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0xAA000000),
+                                blurRadius: 8,
                               ),
                             ],
                           ),
-                          if (metadata != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              metadata,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: context.visuals.textMuted,
-                                fontSize: 13,
-                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 8,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: goal.isCompleted
+                              ? const Color(0xE6506844)
+                              : const Color(0xE63B4654),
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.26),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                           ],
-                        ],
+                        ),
+                        child: Text(
+                          goal.isCompleted ? 'Completado' : 'Pendiente',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: onFavorite,
-                      icon: Icon(
-                        goal.isFavorite
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: goal.isFavorite
-                            ? const Color(0xFFF1A340)
-                            : context.visuals.textMuted,
-                      ),
-                      tooltip: 'Marcar como prioritario',
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryGoalTopIconButton extends StatelessWidget {
+  const _LibraryGoalTopIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: const Color(0xDDEFF4E7),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
+          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );
@@ -4528,6 +4885,24 @@ String? _goalMetadata(LibraryGoal goal) {
 
 String _libraryDate(DateTime date) =>
     '${date.day} ${_monthShortLibrary(date.month)} ${date.year}';
+
+String _formatRating(double rating) {
+  final rounded = rating.roundToDouble();
+  if ((rating - rounded).abs() < 0.05) {
+    return rounded.toInt().toString();
+  }
+  return rating.toStringAsFixed(1);
+}
+
+int _libraryRewatchCount(LibraryItem item) {
+  final note = item.note ?? '';
+  final match =
+      RegExp(r'\[rewatch:x(\d+)\]', caseSensitive: false).firstMatch(note);
+  if (match == null) {
+    return 1;
+  }
+  return int.tryParse(match.group(1) ?? '') ?? 1;
+}
 
 String _detailTitle(LibraryItemType type) => switch (type) {
       LibraryItemType.game => 'Información del juego',

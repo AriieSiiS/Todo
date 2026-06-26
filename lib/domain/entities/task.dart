@@ -25,6 +25,7 @@ class TaskModel {
     this.calendarLink,
     this.reminderRule,
     this.completedAt,
+    this.recurrenceCompletions = const <String, DateTime>{},
   });
 
   final String id;
@@ -46,6 +47,7 @@ class TaskModel {
   final CalendarLink? calendarLink;
   final ReminderRule? reminderRule;
   final DateTime? completedAt;
+  final Map<String, DateTime> recurrenceCompletions;
 
   bool get isSubtask => parentTaskId != null;
 
@@ -75,6 +77,7 @@ class TaskModel {
     bool clearReminderRule = false,
     DateTime? completedAt,
     bool clearCompletedAt = false,
+    Map<String, DateTime>? recurrenceCompletions,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -99,6 +102,8 @@ class TaskModel {
       reminderRule:
           clearReminderRule ? null : reminderRule ?? this.reminderRule,
       completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
+      recurrenceCompletions:
+          recurrenceCompletions ?? this.recurrenceCompletions,
     );
   }
 
@@ -123,6 +128,9 @@ class TaskModel {
       'calendarLink': calendarLink?.toJson(),
       'reminderRule': reminderRule?.toJson(),
       'completedAt': completedAt?.toIso8601String(),
+      'recurrenceCompletions': recurrenceCompletions.map(
+        (key, value) => MapEntry(key, value.toIso8601String()),
+      ),
     };
   }
 
@@ -165,6 +173,21 @@ class TaskModel {
       completedAt: json['completedAt'] == null
           ? null
           : DateTime.tryParse(json['completedAt'] as String),
+      recurrenceCompletions:
+          _recurrenceCompletionsFromJson(json['recurrenceCompletions']),
     );
   }
+}
+
+Map<String, DateTime> _recurrenceCompletionsFromJson(Object? value) {
+  final source =
+      (value as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{});
+  final result = <String, DateTime>{};
+  for (final entry in source.entries) {
+    final parsed = DateTime.tryParse(entry.value as String? ?? '');
+    if (parsed != null) {
+      result[entry.key as String] = parsed;
+    }
+  }
+  return result;
 }
