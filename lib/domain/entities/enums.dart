@@ -5,10 +5,17 @@ enum AppSection {
   expenses,
   calendar,
   library,
+  wardrobe,
   inbox,
   completed,
   settings,
 }
+
+enum WardrobeLaundryStatus { available, toWash, washing, drying }
+
+enum WardrobeWeather { hot, mild, cold, rain }
+
+enum WardrobeImportStatus { pending, approved, discarded, error }
 
 enum TaskStatus { active, completed, archived }
 

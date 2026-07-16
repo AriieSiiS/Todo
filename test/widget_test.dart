@@ -89,6 +89,89 @@ void main() {
     });
   }
 
+  testWidgets('monthly calendar keeps crowded days inside their row', (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now();
+    final crowdedDay = DateTime(now.year, now.month, 14, 10);
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: List<TaskModel>.generate(
+          3,
+          (index) => TaskModel(
+            id: 'calendar-task-$index',
+            title: 'Tarea de calendario $index',
+            scheduledAt: crowdedDay.add(Duration(hours: index)),
+            manualOrder: index.toDouble(),
+          ),
+        ),
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.calendar,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    tester.view.physicalSize = const Size(2200, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTodoTheme(),
+        home: Scaffold(body: CalendarPage(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('+1 más'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('weekly calendar opens today and navigates between weeks', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: _snapshotForSection(AppSection.calendar),
+    );
+    final today = controller.logicalDate();
+    final currentWeek = _weekLabelForTest(today);
+    final nextWeek = _weekLabelForTest(today.add(const Duration(days: 7)));
+
+    tester.view.physicalSize = const Size(2200, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTodoTheme(),
+        home: Scaffold(body: CalendarPage(controller: controller)),
+      ),
+    );
+
+    await tester.tap(find.text('14').first);
+    await tester.pump();
+    await tester.tap(find.text('Semana'));
+    await tester.pump();
+
+    expect(find.text(currentWeek), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Semana siguiente'));
+    await tester.pump();
+    expect(find.text(nextWeek), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Semana anterior'));
+    await tester.pump();
+    expect(find.text(currentWeek), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mobile navigation keeps extra sections under more', (
     WidgetTester tester,
   ) async {
@@ -232,8 +315,7 @@ void main() {
     );
   });
 
-  test(
-      'controller creates next recurring instance and stores reminder settings',
+  test('controller records recurring completion and keeps reminder settings',
       () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final controller = TodoWorkspace.createForTest();
@@ -247,14 +329,17 @@ void main() {
 
     await controller.completeTask(task.id);
 
-    final recurrenceTasks = controller.tasks
-        .where((item) => item.title == 'Recurring sample')
-        .toList();
-    expect(recurrenceTasks.length, 2);
-    expect(recurrenceTasks.any((item) => item.status == TaskStatus.active),
-        isTrue);
+    final recurringTask = controller.taskById(task.id)!;
+    final today = controller.logicalDate();
+
     expect(
-      recurrenceTasks.any((item) => item.reminderRule?.enabled ?? false),
+      controller.tasks.where((item) => item.title == 'Recurring sample'),
+      hasLength(1),
+    );
+    expect(recurringTask.status, TaskStatus.active);
+    expect(controller.isTaskCompletedOnDay(recurringTask, today), isTrue);
+    expect(
+      recurringTask.reminderRule?.enabled,
       isTrue,
     );
   });
@@ -341,4 +426,26 @@ void _configureMobileSurface(WidgetTester tester) {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+String _weekLabelForTest(DateTime anchor) {
+  final start = DateTime(anchor.year, anchor.month, anchor.day)
+      .subtract(Duration(days: anchor.weekday - 1));
+  final end = start.add(const Duration(days: 6));
+  const months = <int, String>{
+    1: 'enero',
+    2: 'febrero',
+    3: 'marzo',
+    4: 'abril',
+    5: 'mayo',
+    6: 'junio',
+    7: 'julio',
+    8: 'agosto',
+    9: 'septiembre',
+    10: 'octubre',
+    11: 'noviembre',
+    12: 'diciembre',
+  };
+  return 'Semana del ${start.day} de ${months[start.month]} al '
+      '${end.day} de ${months[end.month]}';
 }

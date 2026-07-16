@@ -10,6 +10,7 @@ import '../entities/project.dart';
 import '../entities/quick_note.dart';
 import '../entities/settings.dart';
 import '../entities/task.dart';
+import '../entities/wardrobe.dart';
 
 class ExportSnapshot {
   const ExportSnapshot({
@@ -23,6 +24,11 @@ class ExportSnapshot {
     required this.fixedPayments,
     required this.libraryItems,
     required this.libraryGoals,
+    this.wardrobeItems = const <WardrobeItem>[],
+    this.wardrobeOutfits = const <WardrobeOutfit>[],
+    this.wardrobeWearLogs = const <WardrobeWearLog>[],
+    this.wardrobePlanEntries = const <WardrobePlanEntry>[],
+    this.wardrobePackingLists = const <WardrobePackingList>[],
     required this.calendarEvents,
     required this.daySettings,
     required this.notificationSettings,
@@ -41,6 +47,11 @@ class ExportSnapshot {
   final List<FixedPayment> fixedPayments;
   final List<LibraryItem> libraryItems;
   final List<LibraryGoal> libraryGoals;
+  final List<WardrobeItem> wardrobeItems;
+  final List<WardrobeOutfit> wardrobeOutfits;
+  final List<WardrobeWearLog> wardrobeWearLogs;
+  final List<WardrobePlanEntry> wardrobePlanEntries;
+  final List<WardrobePackingList> wardrobePackingLists;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -63,6 +74,14 @@ class ExportSnapshot {
           fixedPayments.map((payment) => payment.toJson()).toList(),
       'libraryItems': libraryItems.map((item) => item.toJson()).toList(),
       'libraryGoals': libraryGoals.map((goal) => goal.toJson()).toList(),
+      'wardrobeItems': wardrobeItems.map((item) => item.toJson()).toList(),
+      'wardrobeOutfits': wardrobeOutfits.map((item) => item.toJson()).toList(),
+      'wardrobeWearLogs':
+          wardrobeWearLogs.map((item) => item.toJson()).toList(),
+      'wardrobePlanEntries':
+          wardrobePlanEntries.map((item) => item.toJson()).toList(),
+      'wardrobePackingLists':
+          wardrobePackingLists.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),

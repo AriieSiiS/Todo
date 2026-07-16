@@ -25,6 +25,16 @@ Este repositorio contiene:
 - persistencia local automática para Windows
 - sincronización opcional con Supabase para compartir el mismo estado entre app, Windows y MCP
 - documentación inicial de arranque, diseño y plan
+- un módulo de Ropa para catálogo, conjuntos, planificación, lavandería,
+  maletas, estadísticas e importaciones preparadas por Codex
+
+## Ropa
+
+La sección `Ropa` es local y prioritaria para Windows. Los PNG se guardan en
+`Documents/Todo/wardrobe`; el snapshot y Supabase conservan solamente sus
+metadatos. La skill `skills/extract-clothing-to-todo` guía a Codex para convertir
+un lote de fotografías en prendas transparentes y enviarlas al área de revisión
+mediante el MCP local, sin claves de IA dentro de la aplicación.
 
 ## Supabase compartido
 

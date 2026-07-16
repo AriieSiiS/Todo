@@ -176,6 +176,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
             for (final icon in const <IconData>[
               Icons.spa_outlined,
               Icons.favorite_border_rounded,
+              Icons.bathtub_rounded,
               Icons.auto_awesome_outlined,
               Icons.local_florist_outlined,
               Icons.water_drop_outlined,

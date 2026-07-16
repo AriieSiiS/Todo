@@ -21,6 +21,7 @@ import '../../services/notification_service.dart';
 import '../../services/supabase_cloud_service.dart';
 import '../../services/task_feedback_service.dart';
 import '../../services/task_scheduler_service.dart';
+import '../../services/wardrobe_asset_service.dart';
 
 class TodoWorkspace extends ChangeNotifier {
   TodoWorkspace._(
@@ -53,6 +54,7 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.expenses,
     AppSection.calendar,
     AppSection.library,
+    AppSection.wardrobe,
     AppSection.completed,
     AppSection.settings,
   ];
@@ -65,7 +67,7 @@ class TodoWorkspace extends ChangeNotifier {
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
       TaskSchedulerService(),
-      TaskFeedbackService(),
+      TaskFeedbackService(enabled: false),
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
@@ -94,7 +96,16 @@ class TodoWorkspace extends ChangeNotifier {
   final List<FixedPayment> _fixedPayments = <FixedPayment>[];
   final List<LibraryItem> _libraryItems = <LibraryItem>[];
   final List<LibraryGoal> _libraryGoals = <LibraryGoal>[];
+  final List<WardrobeItem> _wardrobeItems = <WardrobeItem>[];
+  final List<WardrobeOutfit> _wardrobeOutfits = <WardrobeOutfit>[];
+  final List<WardrobeWearLog> _wardrobeWearLogs = <WardrobeWearLog>[];
+  final List<WardrobePlanEntry> _wardrobePlanEntries = <WardrobePlanEntry>[];
+  final List<WardrobePackingList> _wardrobePackingLists =
+      <WardrobePackingList>[];
+  final List<WardrobeImportBatch> _wardrobeImportBatches =
+      <WardrobeImportBatch>[];
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
+  final WardrobeAssetService _wardrobeAssets = WardrobeAssetService();
 
   DaySettings _daySettings = const DaySettings();
   DeviceNotificationSettings _notificationSettings =
@@ -142,6 +153,18 @@ class TodoWorkspace extends ChangeNotifier {
       List<LibraryItem>.unmodifiable(_libraryItems);
   List<LibraryGoal> get libraryGoals =>
       List<LibraryGoal>.unmodifiable(_libraryGoals);
+  List<WardrobeItem> get wardrobeItems =>
+      List<WardrobeItem>.unmodifiable(_wardrobeItems);
+  List<WardrobeOutfit> get wardrobeOutfits =>
+      List<WardrobeOutfit>.unmodifiable(_wardrobeOutfits);
+  List<WardrobeWearLog> get wardrobeWearLogs =>
+      List<WardrobeWearLog>.unmodifiable(_wardrobeWearLogs);
+  List<WardrobePlanEntry> get wardrobePlanEntries =>
+      List<WardrobePlanEntry>.unmodifiable(_wardrobePlanEntries);
+  List<WardrobePackingList> get wardrobePackingLists =>
+      List<WardrobePackingList>.unmodifiable(_wardrobePackingLists);
+  List<WardrobeImportBatch> get wardrobeImportBatches =>
+      List<WardrobeImportBatch>.unmodifiable(_wardrobeImportBatches);
   List<CalendarEventModel> get calendarEvents =>
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
@@ -173,6 +196,36 @@ class TodoWorkspace extends ChangeNotifier {
   bool get pendingLocalCloudChanges => _syncMetadata.pendingLocalChanges;
   SyncConflict? get syncConflict => _syncConflict;
   bool get hasSyncConflict => _syncConflict != null;
+
+  @visibleForTesting
+  bool shouldCreateSyncConflictForTest({
+    required CloudSnapshotEnvelope remote,
+    required LocalSyncMetadata metadata,
+  }) {
+    final previous = _syncMetadata;
+    _syncMetadata = metadata;
+    try {
+      return _shouldCreateSyncConflict(remote);
+    } finally {
+      _syncMetadata = previous;
+    }
+  }
+
+  @visibleForTesting
+  bool shouldPullRemoteEnvelopeForTest({
+    required AppStateSnapshot local,
+    required CloudSnapshotEnvelope remote,
+    required LocalSyncMetadata metadata,
+  }) {
+    final previous = _syncMetadata;
+    _syncMetadata = metadata;
+    try {
+      return _shouldPullRemoteEnvelope(local: local, remote: remote);
+    } finally {
+      _syncMetadata = previous;
+    }
+  }
+
   String get calendarError => _calendarSettings.lastError;
   bool get isCalendarConnected => _calendarSettings.connected;
 
@@ -398,6 +451,11 @@ class TodoWorkspace extends ChangeNotifier {
       fixedPayments: fixedPayments,
       libraryItems: libraryItems,
       libraryGoals: libraryGoals,
+      wardrobeItems: wardrobeItems,
+      wardrobeOutfits: wardrobeOutfits,
+      wardrobeWearLogs: wardrobeWearLogs,
+      wardrobePlanEntries: wardrobePlanEntries,
+      wardrobePackingLists: wardrobePackingLists,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -405,6 +463,466 @@ class TodoWorkspace extends ChangeNotifier {
       visualMode: visualMode,
       navOrder: navOrder,
     );
+  }
+
+  WardrobeItem? wardrobeItemById(String id) {
+    for (final item in _wardrobeItems) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
+  Future<String> wardrobeImageAbsolutePath(WardrobeItem item,
+      {bool thumbnail = true}) {
+    final path = thumbnail && item.thumbnailPath.isNotEmpty
+        ? item.thumbnailPath
+        : item.imagePath;
+    return _wardrobeAssets.absolutePath(path);
+  }
+
+  Future<String> wardrobeOutfitRenderAbsolutePath(WardrobeOutfit outfit) =>
+      _wardrobeAssets.absolutePath(outfit.renderImagePath);
+
+  WardrobeItem createWardrobeItem({
+    required String name,
+    required String category,
+    String imagePath = '',
+    String thumbnailPath = '',
+    String imageSha256 = '',
+    List<String> colors = const <String>[],
+    String material = '',
+    List<String> seasons = const <String>[],
+    List<String> occasions = const <String>[],
+    List<String> tags = const <String>[],
+    double? price,
+  }) {
+    final instant = DateTime.now();
+    final item = WardrobeItem(
+      id: _id('wardrobe-item'),
+      name: name.trim().isEmpty ? 'Prenda sin nombre' : name.trim(),
+      category: category.trim().isEmpty ? 'Sin categoría' : category.trim(),
+      imagePath: imagePath,
+      thumbnailPath: thumbnailPath,
+      imageSha256: imageSha256,
+      colors: colors,
+      material: material.trim(),
+      seasons: seasons,
+      occasions: occasions,
+      tags: tags,
+      price: price,
+      createdAt: instant,
+      updatedAt: instant,
+    );
+    _wardrobeItems.add(item);
+    _commit();
+    return item;
+  }
+
+  void updateWardrobeItem(
+    String id, {
+    String? name,
+    String? category,
+    List<String>? colors,
+    String? material,
+    List<String>? seasons,
+    List<String>? occasions,
+    List<String>? tags,
+    double? price,
+    bool clearPrice = false,
+  }) {
+    final index = _wardrobeItems.indexWhere((item) => item.id == id);
+    if (index == -1) return;
+    _wardrobeItems[index] = _wardrobeItems[index].copyWith(
+      name: name?.trim(),
+      category: category?.trim(),
+      colors: colors,
+      material: material?.trim(),
+      seasons: seasons,
+      occasions: occasions,
+      tags: tags,
+      price: price,
+      clearPrice: clearPrice,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void toggleWardrobeFavorite(String id) {
+    final index = _wardrobeItems.indexWhere((item) => item.id == id);
+    if (index == -1) return;
+    final item = _wardrobeItems[index];
+    _wardrobeItems[index] = item.copyWith(
+      favorite: !item.favorite,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void setWardrobeLaundryStatus(
+    Iterable<String> ids,
+    WardrobeLaundryStatus status,
+  ) {
+    final selected = ids.toSet();
+    for (var index = 0; index < _wardrobeItems.length; index++) {
+      if (selected.contains(_wardrobeItems[index].id)) {
+        _wardrobeItems[index] = _wardrobeItems[index].copyWith(
+          laundryStatus: status,
+          updatedAt: DateTime.now(),
+        );
+      }
+    }
+    _commit();
+  }
+
+  void archiveWardrobeItem(String id) {
+    final index = _wardrobeItems.indexWhere((item) => item.id == id);
+    if (index == -1) return;
+    _wardrobeItems[index] = _wardrobeItems[index].copyWith(
+      archived: true,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void deleteWardrobeItem(String id) {
+    _wardrobeItems.removeWhere((item) => item.id == id);
+    for (var index = 0; index < _wardrobeOutfits.length; index++) {
+      final outfit = _wardrobeOutfits[index];
+      _wardrobeOutfits[index] = WardrobeOutfit(
+        id: outfit.id,
+        name: outfit.name,
+        itemIds: outfit.itemIds.where((itemId) => itemId != id).toList(),
+        occasion: outfit.occasion,
+        tags: outfit.tags,
+        renderImagePath: outfit.renderImagePath,
+        createdAt: outfit.createdAt,
+      );
+    }
+    _wardrobePlanEntries.removeWhere(
+        (entry) => entry.itemIds.length == 1 && entry.itemIds.single == id);
+    for (var index = 0; index < _wardrobePackingLists.length; index++) {
+      final list = _wardrobePackingLists[index];
+      _wardrobePackingLists[index] = list.copyWith(
+        entries: list.entries.where((entry) => entry.itemId != id).toList(),
+      );
+    }
+    _commit();
+  }
+
+  WardrobeOutfit createWardrobeOutfit({
+    required String name,
+    required List<String> itemIds,
+    String occasion = '',
+    List<String> tags = const <String>[],
+  }) {
+    final outfit = WardrobeOutfit(
+      id: _id('wardrobe-outfit'),
+      name: name.trim().isEmpty ? 'Conjunto sin nombre' : name.trim(),
+      itemIds:
+          itemIds.where((id) => wardrobeItemById(id) != null).toSet().toList(),
+      occasion: occasion.trim(),
+      tags: tags,
+      createdAt: DateTime.now(),
+    );
+    _wardrobeOutfits.add(outfit);
+    _commit();
+    return outfit;
+  }
+
+  WardrobeOutfit updateWardrobeOutfit({
+    required String id,
+    required String name,
+    required List<String> itemIds,
+    String occasion = '',
+    List<String> tags = const <String>[],
+  }) {
+    final index = _wardrobeOutfits.indexWhere((outfit) => outfit.id == id);
+    if (index == -1) throw StateError('No se encuentra el conjunto.');
+    final updated = _wardrobeOutfits[index].copyWith(
+      name: name.trim().isEmpty ? 'Conjunto sin nombre' : name.trim(),
+      itemIds: itemIds
+          .where((itemId) => wardrobeItemById(itemId) != null)
+          .toSet()
+          .toList(),
+      occasion: occasion.trim(),
+      tags: tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(),
+    );
+    _wardrobeOutfits[index] = updated;
+    _commit();
+    return updated;
+  }
+
+  void deleteWardrobeOutfit(String id) {
+    final outfit =
+        _wardrobeOutfits.where((value) => value.id == id).firstOrNull;
+    _wardrobeOutfits.removeWhere((outfit) => outfit.id == id);
+    _wardrobePlanEntries.removeWhere((entry) => entry.outfitId == id);
+    _commit();
+    if (outfit != null && outfit.renderImagePath.isNotEmpty) {
+      unawaited(_wardrobeAssets.deleteAsset(outfit.renderImagePath));
+    }
+  }
+
+  Future<void> importWardrobeOutfitRender(
+      String outfitId, String sourcePath) async {
+    final index =
+        _wardrobeOutfits.indexWhere((outfit) => outfit.id == outfitId);
+    if (index == -1) throw StateError('No se encuentra el conjunto.');
+    final previous = _wardrobeOutfits[index].renderImagePath;
+    final relativePath =
+        await _wardrobeAssets.importOutfitRender(outfitId, sourcePath);
+    _wardrobeOutfits[index] =
+        _wardrobeOutfits[index].copyWith(renderImagePath: relativePath);
+    _commit();
+    if (previous.isNotEmpty && previous != relativePath) {
+      await _wardrobeAssets.deleteAsset(previous);
+    }
+  }
+
+  Future<void> clearWardrobeOutfitRender(String outfitId) async {
+    final index =
+        _wardrobeOutfits.indexWhere((outfit) => outfit.id == outfitId);
+    if (index == -1) return;
+    final previous = _wardrobeOutfits[index].renderImagePath;
+    _wardrobeOutfits[index] =
+        _wardrobeOutfits[index].copyWith(renderImagePath: '');
+    _commit();
+    if (previous.isNotEmpty) await _wardrobeAssets.deleteAsset(previous);
+  }
+
+  WardrobeWearLog recordWardrobeWear({
+    required DateTime date,
+    required List<String> itemIds,
+    String? outfitId,
+    String label = '',
+  }) {
+    final ids =
+        itemIds.where((id) => wardrobeItemById(id) != null).toSet().toList();
+    final log = WardrobeWearLog(
+      id: _id('wardrobe-wear'),
+      date: date,
+      itemIds: ids,
+      outfitId: outfitId,
+      label: label.trim(),
+    );
+    _wardrobeWearLogs.add(log);
+    for (var index = 0; index < _wardrobeItems.length; index++) {
+      final item = _wardrobeItems[index];
+      if (ids.contains(item.id)) {
+        _wardrobeItems[index] = item.copyWith(
+          useCount: item.useCount + 1,
+          lastUsedAt: date,
+          updatedAt: DateTime.now(),
+        );
+      }
+    }
+    _commit();
+    return log;
+  }
+
+  WardrobePlanEntry setWardrobePlan({
+    required DateTime date,
+    required List<String> itemIds,
+    String? outfitId,
+    WardrobeWeather weather = WardrobeWeather.mild,
+    String occasion = '',
+  }) {
+    _wardrobePlanEntries.removeWhere((entry) => _sameDay(entry.date, date));
+    final entry = WardrobePlanEntry(
+      id: _id('wardrobe-plan'),
+      date: date,
+      itemIds: itemIds,
+      outfitId: outfitId,
+      weather: weather,
+      occasion: occasion.trim(),
+    );
+    _wardrobePlanEntries.add(entry);
+    _commit();
+    return entry;
+  }
+
+  WardrobePackingList createWardrobePackingList({
+    required String name,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    final list = WardrobePackingList(
+      id: _id('wardrobe-packing'),
+      name: name.trim().isEmpty ? 'Nuevo viaje' : name.trim(),
+      startDate: startDate,
+      endDate: endDate,
+    );
+    _wardrobePackingLists.add(list);
+    _commit();
+    return list;
+  }
+
+  void addWardrobePackingItem(String listId, String itemId,
+      {int quantity = 1}) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    if (index == -1 || wardrobeItemById(itemId) == null) return;
+    final list = _wardrobePackingLists[index];
+    final entries = List<WardrobePackingEntry>.from(list.entries)
+      ..removeWhere((entry) => entry.itemId == itemId)
+      ..add(WardrobePackingEntry(itemId: itemId, quantity: max(1, quantity)));
+    _wardrobePackingLists[index] = list.copyWith(entries: entries);
+    _commit();
+  }
+
+  void toggleWardrobePackingItem(String listId, String itemId) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    if (index == -1) return;
+    final list = _wardrobePackingLists[index];
+    _wardrobePackingLists[index] = list.copyWith(
+      entries: list.entries
+          .map((entry) => entry.itemId == itemId
+              ? entry.copyWith(packed: !entry.packed)
+              : entry)
+          .toList(),
+    );
+    _commit();
+  }
+
+  List<WardrobeItem> wardrobeSuggestions({
+    WardrobeWeather weather = WardrobeWeather.mild,
+    String occasion = '',
+    int limit = 8,
+  }) {
+    final candidates = _wardrobeItems
+        .where((item) => !item.archived)
+        .where((item) => item.laundryStatus == WardrobeLaundryStatus.available)
+        .where((item) =>
+            occasion.isEmpty ||
+            item.occasions.isEmpty ||
+            item.occasions
+                .any((value) => value.toLowerCase() == occasion.toLowerCase()))
+        .toList();
+    int score(WardrobeItem item) {
+      var value = item.favorite ? 12 : 0;
+      value += max(0, 10 - item.useCount);
+      final weatherTag = switch (weather) {
+        WardrobeWeather.hot => 'calor',
+        WardrobeWeather.mild => 'templado',
+        WardrobeWeather.cold => 'frío',
+        WardrobeWeather.rain => 'lluvia',
+      };
+      if (item.tags.map((tag) => tag.toLowerCase()).contains(weatherTag)) {
+        value += 15;
+      }
+      if (item.lastUsedAt == null ||
+          DateTime.now().difference(item.lastUsedAt!).inDays > 14) {
+        value += 8;
+      }
+      return value;
+    }
+
+    candidates.sort((left, right) => score(right).compareTo(score(left)));
+    return candidates.take(limit).toList();
+  }
+
+  Future<WardrobeImportBatch> stageWardrobeImportDirectory(String path) async {
+    final batch =
+        await _wardrobeAssets.stageManifestDirectory(path, wardrobeItems);
+    _wardrobeImportBatches.add(batch);
+    await _persist();
+    return batch;
+  }
+
+  void updateWardrobeImportItem(
+    String batchId,
+    String itemId, {
+    String? name,
+    String? category,
+    List<String>? colors,
+    String? material,
+    List<String>? seasons,
+    List<String>? occasions,
+    List<String>? tags,
+  }) {
+    final batchIndex =
+        _wardrobeImportBatches.indexWhere((batch) => batch.id == batchId);
+    if (batchIndex == -1) return;
+    final batch = _wardrobeImportBatches[batchIndex];
+    _wardrobeImportBatches[batchIndex] = batch.copyWith(
+      items: batch.items
+          .map((item) => item.id == itemId
+              ? item.copyWith(
+                  name: name,
+                  category: category,
+                  colors: colors,
+                  material: material,
+                  seasons: seasons,
+                  occasions: occasions,
+                  tags: tags)
+              : item)
+          .toList(),
+    );
+    _commit();
+  }
+
+  Future<int> approveWardrobeImport(String batchId) async {
+    final batchIndex =
+        _wardrobeImportBatches.indexWhere((batch) => batch.id == batchId);
+    if (batchIndex == -1) return 0;
+    final batch = _wardrobeImportBatches[batchIndex];
+    final assets = await _wardrobeAssets.approveBatch(batch);
+    final instant = DateTime.now();
+    final createdIds = <String>[];
+    try {
+      for (final asset in assets) {
+        final item = asset.importItem;
+        final id = _id('wardrobe-item');
+        createdIds.add(id);
+        _wardrobeItems.add(WardrobeItem(
+          id: id,
+          name: item.name,
+          category: item.category,
+          imagePath: asset.imagePath,
+          thumbnailPath: asset.thumbnailPath,
+          imageSha256: asset.sha256,
+          colors: item.colors,
+          material: item.material,
+          seasons: item.seasons,
+          occasions: item.occasions,
+          tags: item.tags,
+          createdAt: instant,
+          updatedAt: instant,
+        ));
+      }
+      _wardrobeImportBatches[batchIndex] = batch.copyWith(
+        status: WardrobeImportStatus.approved,
+      );
+      await _persist();
+      await _wardrobeAssets.deleteImportBatch(batch.id);
+      return assets.length;
+    } catch (_) {
+      _wardrobeItems.removeWhere((item) => createdIds.contains(item.id));
+      _wardrobeImportBatches[batchIndex] = batch;
+      await _wardrobeAssets.rollbackApprovedAssets(assets);
+      rethrow;
+    }
+  }
+
+  Future<void> discardWardrobeImport(String batchId) async {
+    final index =
+        _wardrobeImportBatches.indexWhere((batch) => batch.id == batchId);
+    if (index == -1) return;
+    final batch = _wardrobeImportBatches[index];
+    _wardrobeImportBatches[index] =
+        batch.copyWith(status: WardrobeImportStatus.discarded);
+    await _persist();
+    await _wardrobeAssets.deleteImportBatch(batch.id);
+  }
+
+  Future<void> reloadWardrobeImports() async {
+    final persisted = await _store.load();
+    if (persisted == null) return;
+    _applySnapshot(persisted);
+    notifyListeners();
   }
 
   TaskModel createTask({
@@ -1100,10 +1618,6 @@ class TodoWorkspace extends ChangeNotifier {
     if (remote.revision <= _syncMetadata.lastSeenCloudRevision) {
       return false;
     }
-    if (remote.updatedByDevice == _syncMetadata.deviceId &&
-        _syncMetadata.deviceId.isNotEmpty) {
-      return false;
-    }
     return true;
   }
 
@@ -1114,8 +1628,13 @@ class TodoWorkspace extends ChangeNotifier {
     if (remote == null) {
       return false;
     }
-    if (!_syncMetadata.pendingLocalChanges &&
-        remote.revision > _syncMetadata.lastSeenCloudRevision) {
+    // Un snapshot local pendiente nunca debe sustituirse automáticamente.
+    // Si la nube avanzó, el push generará un conflicto revisable y conservará
+    // los datos de este dispositivo hasta que el usuario decida.
+    if (_syncMetadata.pendingLocalChanges) {
+      return false;
+    }
+    if (remote.revision > _syncMetadata.lastSeenCloudRevision) {
       return true;
     }
     return _shouldPullRemoteSnapshot(local: local, remote: remote.snapshot);
@@ -2295,6 +2814,24 @@ class TodoWorkspace extends ChangeNotifier {
     _libraryGoals
       ..clear()
       ..addAll(snapshot.libraryGoals);
+    _wardrobeItems
+      ..clear()
+      ..addAll(snapshot.wardrobeItems);
+    _wardrobeOutfits
+      ..clear()
+      ..addAll(snapshot.wardrobeOutfits);
+    _wardrobeWearLogs
+      ..clear()
+      ..addAll(snapshot.wardrobeWearLogs);
+    _wardrobePlanEntries
+      ..clear()
+      ..addAll(snapshot.wardrobePlanEntries);
+    _wardrobePackingLists
+      ..clear()
+      ..addAll(snapshot.wardrobePackingLists);
+    _wardrobeImportBatches
+      ..clear()
+      ..addAll(snapshot.wardrobeImportBatches);
     _calendarEvents
       ..clear()
       ..addAll(snapshot.calendarEvents);
@@ -2523,6 +3060,12 @@ class TodoWorkspace extends ChangeNotifier {
       fixedPayments: fixedPayments,
       libraryItems: libraryItems,
       libraryGoals: libraryGoals,
+      wardrobeItems: wardrobeItems,
+      wardrobeOutfits: wardrobeOutfits,
+      wardrobeWearLogs: wardrobeWearLogs,
+      wardrobePlanEntries: wardrobePlanEntries,
+      wardrobePackingLists: wardrobePackingLists,
+      wardrobeImportBatches: wardrobeImportBatches,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -2534,7 +3077,7 @@ class TodoWorkspace extends ChangeNotifier {
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 1,
+      schemaVersion: 2,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -2710,85 +3253,6 @@ class TodoWorkspace extends ChangeNotifier {
     return pool.map((task) => task.manualOrder).reduce(max) + 1;
   }
 
-  DateTime _nextRecurrence(TaskModel task) {
-    final source = task.scheduledAt ?? logicalDate();
-    final reference = logicalDate(now);
-    final base = source.isBefore(reference) ? reference : source;
-    switch (task.recurrence.type) {
-      case RecurrenceType.none:
-        return base;
-      case RecurrenceType.daily:
-        return base.add(Duration(days: task.recurrence.interval));
-      case RecurrenceType.everyXDays:
-        return base.add(Duration(days: task.recurrence.interval));
-      case RecurrenceType.weekly:
-        return base.add(Duration(days: 7 * task.recurrence.interval));
-      case RecurrenceType.yearly:
-        return DateTime(
-          base.year + task.recurrence.interval,
-          base.month,
-          base.day,
-          base.hour,
-          base.minute,
-        );
-    }
-  }
-
-  DateTime _nextRecurringScheduledAt(TaskModel task) {
-    if (task.scheduledAt != null) {
-      return _nextRecurrence(task);
-    }
-    final today = logicalDate();
-    final next = today.add(Duration(days: task.recurrence.interval));
-    return DateTime(next.year, next.month, next.day);
-  }
-
-  bool _hasActiveRecurringInstance(TaskModel source, DateTime scheduledAt) {
-    return _tasks.any((task) =>
-        task.id != source.id &&
-        !task.isSubtask &&
-        task.status == TaskStatus.active &&
-        task.title == source.title &&
-        task.recurrence.type == source.recurrence.type &&
-        task.scheduledAt != null &&
-        _sameDay(task.scheduledAt!, scheduledAt));
-  }
-
-  void _spawnRecurringTask(
-    TaskModel source, {
-    required DateTime scheduledAt,
-  }) {
-    _tasks.addAll(
-      _buildRecurringTaskInstance(source, scheduledAt: scheduledAt),
-    );
-  }
-
-  List<TaskModel> _buildRecurringTaskInstance(
-    TaskModel source, {
-    required DateTime scheduledAt,
-  }) {
-    final nextId = _id('task');
-    final nextSubtasks = subtasksOf(source).map((subtask) {
-      return subtask.copyWith(
-        id: _id('task'),
-        status: TaskStatus.active,
-        scheduledAt: scheduledAt,
-        parentTaskId: nextId,
-        clearCompletedAt: true,
-      );
-    }).toList();
-    final nextTask = source.copyWith(
-      id: nextId,
-      status: TaskStatus.active,
-      scheduledAt: scheduledAt,
-      subtaskIds: nextSubtasks.map((subtask) => subtask.id).toList(),
-      manualOrder: _nextManualOrder(),
-      collapsed: false,
-      clearCompletedAt: true,
-    );
-    return <TaskModel>[nextTask, ...nextSubtasks];
-  }
-
   bool _sameDay(DateTime left, DateTime right) {
     return isSameCalendarDay(left, right);
   }
@@ -2849,6 +3313,12 @@ class TodoWorkspace extends ChangeNotifier {
     _ensureFinancialSeed();
     _libraryItems.clear();
     _libraryGoals.clear();
+    _wardrobeItems.clear();
+    _wardrobeOutfits.clear();
+    _wardrobeWearLogs.clear();
+    _wardrobePlanEntries.clear();
+    _wardrobePackingLists.clear();
+    _wardrobeImportBatches.clear();
     _calendarEvents.clear();
     _daySettings = const DaySettings();
     _notificationSettings = const DeviceNotificationSettings();

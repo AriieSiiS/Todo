@@ -388,7 +388,7 @@ class _CategoryMetric extends StatelessWidget {
   }
 }
 
-class _ReferenceCategoryDetailPanel extends StatelessWidget {
+class _ReferenceCategoryDetailPanel extends StatefulWidget {
   const _ReferenceCategoryDetailPanel({
     required this.controller,
     required this.category,
@@ -402,6 +402,26 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
   final VoidCallback onDeleteCategory;
 
   @override
+  State<_ReferenceCategoryDetailPanel> createState() =>
+      _ReferenceCategoryDetailPanelState();
+}
+
+class _ReferenceCategoryDetailPanelState
+    extends State<_ReferenceCategoryDetailPanel> {
+  bool _showAllRoutines = false;
+
+  TodoWorkspace get controller => widget.controller;
+  CategoryModel get category => widget.category;
+
+  @override
+  void didUpdateWidget(covariant _ReferenceCategoryDetailPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.category.id != widget.category.id) {
+      _showAllRoutines = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tasks = controller.tasksByCategory(category.id);
     final sampleTasks =
@@ -410,8 +430,9 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
         .where((task) => task.parentTaskId == null)
         .where((task) => task.status == TaskStatus.active)
         .where((task) => task.recurrence.isRecurring)
-        .take(2)
         .toList();
+    final visibleRecurringTasks =
+        _showAllRoutines ? recurringTasks : recurringTasks.take(2).toList();
     final relatedProjects = controller.projects
         .where((project) => project.categoryIds.contains(category.id))
         .take(3)
@@ -452,7 +473,7 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                                   Theme.of(context).textTheme.headlineMedium),
                           const Spacer(),
                           OutlinedButton.icon(
-                            onPressed: onEditCategory,
+                            onPressed: widget.onEditCategory,
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             label: const Text('Editar'),
                           ),
@@ -461,7 +482,7 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                             icon: const Icon(Icons.more_horiz_rounded),
                             onSelected: (value) {
                               if (value == 'delete') {
-                                onDeleteCategory();
+                                widget.onDeleteCategory();
                               } else if (value == 'toggle') {
                                 controller.toggleCategory(category.id);
                               }
@@ -568,7 +589,7 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...recurringTasks.map(
+                ...visibleRecurringTasks.map(
                   (task) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
@@ -608,10 +629,32 @@ class _ReferenceCategoryDetailPanel extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  'Ver todas las rutinas (${recurringTasks.length})',
-                  style: TextStyle(color: context.visuals.textMuted),
-                ),
+                if (recurringTasks.length > 2)
+                  TextButton.icon(
+                    onPressed: () =>
+                        setState(() => _showAllRoutines = !_showAllRoutines),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 34),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: Icon(
+                      _showAllRoutines
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _showAllRoutines
+                          ? 'Ver menos rutinas'
+                          : 'Ver todas las rutinas (${recurringTasks.length})',
+                    ),
+                  )
+                else
+                  Text(
+                    'Rutinas (${recurringTasks.length})',
+                    style: TextStyle(color: context.visuals.textMuted),
+                  ),
               ],
             ),
           ),

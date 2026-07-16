@@ -110,11 +110,7 @@ bool FocusExistingInstance() {
   if (window == nullptr) {
     return false;
   }
-  if (::IsIconic(window)) {
-    ::ShowWindow(window, SW_RESTORE);
-  } else {
-    ::ShowWindow(window, SW_SHOWNORMAL);
-  }
+  ::ShowWindow(window, SW_MAXIMIZE);
   ::SetForegroundWindow(window);
   return true;
 }

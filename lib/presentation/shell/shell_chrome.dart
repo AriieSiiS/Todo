@@ -110,6 +110,7 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.expenses => ExpensesPage(controller: controller),
       AppSection.calendar => CalendarPage(controller: controller),
       AppSection.library => LibraryPage(controller: controller),
+      AppSection.wardrobe => WardrobePage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
       AppSection.settings => SettingsPage(controller: controller),
@@ -486,6 +487,11 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         section: AppSection.library,
         icon: Icons.local_library_rounded,
         label: 'Biblioteca',
+      ),
+    AppSection.wardrobe => const _SidebarDestination(
+        section: AppSection.wardrobe,
+        icon: Icons.checkroom_rounded,
+        label: 'Ropa',
       ),
     AppSection.completed => const _SidebarDestination(
         section: AppSection.completed,

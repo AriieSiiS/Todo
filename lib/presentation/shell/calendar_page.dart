@@ -46,6 +46,11 @@ class _CalendarPageState extends State<CalendarPage> {
             today: today,
             onModeSelected: (mode) {
               setState(() {
+                if (mode == _CalendarViewMode.week &&
+                    _mode != _CalendarViewMode.week) {
+                  _selectedDay = today;
+                  _visibleMonth = DateTime(today.year, today.month);
+                }
                 _mode = mode;
                 if (mode == _CalendarViewMode.month) {
                   _visibleMonth =
@@ -120,6 +125,21 @@ class _CalendarPageState extends State<CalendarPage> {
                     setState(() {
                       _selectedDay = day;
                       _visibleMonth = DateTime(day.year, day.month);
+                    });
+                  },
+                  onPreviousWeek: () {
+                    setState(() {
+                      _selectedDay =
+                          _selectedDay.subtract(const Duration(days: 7));
+                      _visibleMonth =
+                          DateTime(_selectedDay.year, _selectedDay.month);
+                    });
+                  },
+                  onNextWeek: () {
+                    setState(() {
+                      _selectedDay = _selectedDay.add(const Duration(days: 7));
+                      _visibleMonth =
+                          DateTime(_selectedDay.year, _selectedDay.month);
                     });
                   },
                 ),
@@ -565,98 +585,130 @@ class _CalendarMonthCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inMonth = day.month == visibleMonth.month;
-    final visibleEntries = entries.take(2).toList();
-    final overflowCount = entries.length - visibleEntries.length;
+    const verticalPadding = 18.0;
+    const dayHeaderHeight = 32.0;
+    const headerSpacing = 6.0;
+    const entryHeight = 32.0;
+    const entrySpacing = 4.0;
+    const overflowHeight = 20.0;
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF5F7ED) : Colors.transparent,
-          border: const Border(
-            right: BorderSide(color: Color(0xFFF0E6D8)),
-            bottom: BorderSide(color: Color(0xFFF0E6D8)),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: isSelected
-                  ? Row(
-                      children: [
-                        Text(
-                          '${day.day}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: inMonth
-                                ? const Color(0xFF2D2A25)
-                                : const Color(0xFFB9AD9D),
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF70835D),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '${entries.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bodyHeight = max(
+          0.0,
+          constraints.maxHeight -
+              verticalPadding -
+              dayHeaderHeight -
+              headerSpacing,
+        );
+        var visibleCount = min(2, entries.length);
+        while (visibleCount > 0) {
+          final hiddenCount = entries.length - visibleCount;
+          final requiredHeight = visibleCount * (entryHeight + entrySpacing) +
+              (hiddenCount > 0 ? overflowHeight : 0);
+          if (requiredHeight <= bodyHeight) break;
+          visibleCount -= 1;
+        }
+        final visibleEntries = entries.take(visibleCount).toList();
+        final overflowCount = entries.length - visibleEntries.length;
+
+        return InkWell(
+          onTap: onTap,
+          child: ClipRect(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+              decoration: BoxDecoration(
+                color:
+                    isSelected ? const Color(0xFFF5F7ED) : Colors.transparent,
+                border: const Border(
+                  right: BorderSide(color: Color(0xFFF0E6D8)),
+                  bottom: BorderSide(color: Color(0xFFF0E6D8)),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: isSelected
+                        ? Row(
+                            children: [
+                              Text(
+                                '${day.day}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: inMonth
+                                      ? const Color(0xFF2D2A25)
+                                      : const Color(0xFFB9AD9D),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                width: 32,
+                                height: 32,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF70835D),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${entries.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Container(
+                            width: 32,
+                            height: 32,
+                            alignment: Alignment.centerLeft,
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? const Color(0xFFEAF0DE)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 2),
+                              child: Text(
+                                '${day.day}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: inMonth
+                                      ? const Color(0xFF2D2A25)
+                                      : const Color(0xFFC3B8A8),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.centerLeft,
-                      decoration: BoxDecoration(
-                        color: isToday
-                            ? const Color(0xFFEAF0DE)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 2),
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: inMonth
-                                ? const Color(0xFF2D2A25)
-                                : const Color(0xFFC3B8A8),
-                          ),
+                  ),
+                  const SizedBox(height: headerSpacing),
+                  for (final entry in visibleEntries) ...[
+                    _CalendarMonthEntryChip(entry: entry),
+                    const SizedBox(height: entrySpacing),
+                  ],
+                  if (overflowCount > 0)
+                    SizedBox(
+                      height: overflowHeight,
+                      child: Text(
+                        '+$overflowCount más',
+                        style: const TextStyle(
+                          color: Color(0xFF6E665D),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
-            ),
-            const SizedBox(height: 10),
-            for (final entry in visibleEntries) ...[
-              _CalendarMonthEntryChip(entry: entry),
-              const SizedBox(height: 6),
-            ],
-            if (overflowCount > 0)
-              Text(
-                '+ $overflowCount más',
-                style: const TextStyle(
-                  color: Color(0xFF6E665D),
-                  fontWeight: FontWeight.w500,
-                ),
+                ],
               ),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -668,32 +720,36 @@ class _CalendarMonthEntryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: entry.background,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: entry.dot, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              entry.title,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: entry.foreground,
-                fontWeight: FontWeight.w500,
+    return SizedBox(
+      height: 32,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: entry.background,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration:
+                  BoxDecoration(color: entry.dot, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                entry.title,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: entry.foreground,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1060,12 +1116,16 @@ class _CalendarWeekView extends StatelessWidget {
     required this.anchor,
     required this.entries,
     required this.onSelectDay,
+    required this.onPreviousWeek,
+    required this.onNextWeek,
   });
 
   final TodoWorkspace controller;
   final DateTime anchor;
   final List<_CalendarEntry> entries;
   final ValueChanged<DateTime> onSelectDay;
+  final VoidCallback onPreviousWeek;
+  final VoidCallback onNextWeek;
 
   @override
   Widget build(BuildContext context) {
@@ -1092,17 +1152,43 @@ class _CalendarWeekView extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Text(
-                        'Semana del ${start.day} de ${_monthLong(start.month)} al ${start.add(const Duration(days: 6)).day} de ${_monthLong(start.add(const Duration(days: 6)).month)}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.78),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE8DCCB)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: 'Semana anterior',
+                              onPressed: onPreviousWeek,
+                              icon: const Icon(Icons.chevron_left_rounded),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 28,
+                              color: const Color(0xFFF0E6D8),
+                            ),
+                            IconButton(
+                              tooltip: 'Semana siguiente',
+                              onPressed: onNextWeek,
+                              icon: const Icon(Icons.chevron_right_rounded),
+                            ),
+                          ],
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        'Sin placeholders',
-                        style: TextStyle(color: context.visuals.textMuted),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Text(
+                          'Semana del ${start.day} de ${_monthLong(start.month)} al ${start.add(const Duration(days: 6)).day} de ${_monthLong(start.add(const Duration(days: 6)).month)}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),

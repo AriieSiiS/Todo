@@ -1,10 +1,45 @@
 import importlib
 import json
 import os
+import struct
 import sys
 import tempfile
 import unittest
+import zlib
+import binascii
 from pathlib import Path
+
+
+def transparent_png() -> bytes:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(
+            ">I", binascii.crc32(kind + data) & 0xFFFFFFFF
+        )
+
+    header = struct.pack(">IIBBBBB", 2, 1, 8, 6, 0, 0, 0)
+    pixels = bytes([0, 255, 0, 0, 255, 0, 0, 255, 0])
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(pixels))
+        + chunk(b"IEND", b"")
+    )
+
+
+def opaque_png(width: int = 600, height: int = 700) -> bytes:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(
+            ">I", binascii.crc32(kind + data) & 0xFFFFFFFF
+        )
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    row = bytes([0]) + bytes([40, 50, 60, 255]) * width
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(row * height))
+        + chunk(b"IEND", b"")
+    )
 
 
 class McpServerTest(unittest.TestCase):
@@ -14,6 +49,7 @@ class McpServerTest(unittest.TestCase):
         os.environ["TODO_MCP_STATE_PATH"] = str(root / "state.json")
         os.environ["TODO_MCP_PREFS_PATH"] = str(root / "prefs.json")
         os.environ["TODO_MCP_DISABLE_REMOTE"] = "1"
+        os.environ["TODO_MCP_WARDROBE_PATH"] = str(root / "wardrobe")
         sys.path.insert(0, str(Path(__file__).resolve().parent))
 
         import server
@@ -81,6 +117,23 @@ class McpServerTest(unittest.TestCase):
             "delete_library_goal",
             "toggle_library_goal_completed",
             "toggle_library_goal_favorite",
+            "get_wardrobe_import_contract",
+            "stage_wardrobe_batch",
+            "list_wardrobe_batches",
+            "get_wardrobe_batch",
+            "list_wardrobe_items",
+            "create_wardrobe_item",
+            "update_wardrobe_item",
+            "delete_wardrobe_item",
+            "list_wardrobe_outfits",
+            "create_wardrobe_outfit",
+            "update_wardrobe_outfit",
+            "set_wardrobe_outfit_render",
+            "record_wardrobe_wear",
+            "set_wardrobe_laundry_status",
+            "set_wardrobe_plan",
+            "create_wardrobe_packing_list",
+            "add_wardrobe_packing_item",
         }
         self.assertTrue(expected.issubset(names), expected - names)
 
@@ -177,6 +230,70 @@ class McpServerTest(unittest.TestCase):
         self.call("sync_task_to_calendar", {"task_id": task["id"]})
         self.call("link_task_to_calendar_event", {"task_id": task["id"], "calendar_id": "primary", "event_id": event["id"]})
         self.call("unlink_task_from_calendar_event", {"task_id": task["id"]})
+
+    def test_wardrobe_crud_and_management_flow(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        shirt = self.call("create_wardrobe_item", {"name": "Camisa", "category": "Camisas"})
+        trousers = self.call("create_wardrobe_item", {"name": "Pantalón", "category": "Pantalones"})
+        outfit = self.call("create_wardrobe_outfit", {
+            "name": "Oficina", "item_ids": [shirt["id"], trousers["id"]], "occasion": "trabajo"
+        })
+        render = Path(self.temp_dir.name) / "outfit.png"
+        render.write_bytes(opaque_png())
+        outfit = self.call("set_wardrobe_outfit_render", {
+            "outfit_id": outfit["id"], "source_file": str(render)
+        })
+        render_path = outfit["renderImagePath"]
+        outfit = self.call("update_wardrobe_outfit", {
+            "outfit_id": outfit["id"], "name": "Oficina informal",
+            "occasion": "oficina", "tags": ["cómodo"]
+        })
+        self.call("record_wardrobe_wear", {
+            "date": "2026-07-15", "item_ids": outfit["itemIds"], "outfit_id": outfit["id"]
+        })
+        self.call("set_wardrobe_laundry_status", {"item_ids": [shirt["id"]], "status": "toWash"})
+        self.call("set_wardrobe_plan", {"date": "2026-07-16", "item_ids": outfit["itemIds"], "weather": "mild"})
+        packing = self.call("create_wardrobe_packing_list", {
+            "name": "Viaje", "start_date": "2026-07-18", "end_date": "2026-07-20"
+        })
+        packing = self.call("add_wardrobe_packing_item", {
+            "packing_list_id": packing["id"], "item_id": trousers["id"], "quantity": 2
+        })
+
+        items = self.call("list_wardrobe_items")
+        outfits = self.call("list_wardrobe_outfits")
+        self.assertEqual(len(items), 2)
+        self.assertEqual(outfit["name"], "Oficina informal")
+        self.assertEqual(outfit["renderImagePath"], render_path)
+        self.assertEqual(outfits[0]["renderImagePath"], outfit["renderImagePath"])
+        self.assertTrue((Path(self.temp_dir.name) / "wardrobe" / outfit["renderImagePath"]).is_file())
+        self.assertEqual(next(item for item in items if item["id"] == shirt["id"])["useCount"], 1)
+        self.assertEqual(packing["entries"][0]["quantity"], 2)
+
+    def test_stage_wardrobe_batch_validates_transparency_and_paths(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        source = Path(self.temp_dir.name) / "batch"
+        source.mkdir()
+        (source / "camisa.png").write_bytes(transparent_png())
+        (source / "manifest.json").write_text(json.dumps({
+            "version": 1,
+            "batchId": "lote-test",
+            "name": "Lote de prueba",
+            "items": [{
+                "id": "camisa", "file": "camisa.png", "name": "Camisa azul", "category": "Camisas"
+            }],
+        }), encoding="utf-8")
+
+        batch = self.call("stage_wardrobe_batch", {"source_directory": str(source)})
+
+        self.assertEqual(batch["status"], "pending")
+        self.assertEqual(batch["items"][0]["errors"], [])
+        self.assertEqual(len(self.call("list_wardrobe_batches", {"status": "pending"})), 1)
+        with self.assertRaises(ValueError):
+            self.call("stage_wardrobe_batch", {
+                "source_directory": str(source),
+                "manifest_path": str(Path(self.temp_dir.name) / "outside.json"),
+            })
 
 
 if __name__ == "__main__":

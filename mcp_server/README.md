@@ -31,6 +31,20 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - crear proyectos
 - exportar e importar el estado JSON
 - reiniciar a un estado vacio
+- preparar lotes de prendas PNG para revisarlos en la sección Ropa
+- gestionar prendas, conjuntos, usos, lavandería, planificación y maletas
+
+## Ropa y Codex
+
+La herramienta `get_wardrobe_import_contract` devuelve el formato vigente del
+`manifest.json`. Codex debe crear una carpeta temporal con ese manifiesto y los
+PNG transparentes finales y llamar a `stage_wardrobe_batch`. El MCP copia el
+lote a `Documents/Todo/wardrobe/imports` y lo registra como pendiente.
+
+La aprobación se realiza dentro de Todo. La app mueve los recursos aceptados a
+`wardrobe/items`, genera miniaturas en `wardrobe/thumbnails` y conserva en el
+snapshot únicamente rutas relativas y metadatos. Las fotografías originales no
+se copian al armario.
 
 ## Arranque rápido
 

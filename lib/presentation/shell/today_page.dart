@@ -278,9 +278,10 @@ class _TodayPageState extends State<TodayPage> {
     }).toList();
     final selectedTasks = _selectedTasks();
     final wide = MediaQuery.sizeOf(context).width >= 1240;
-    final progress = allDayTasks.isEmpty
+    final progressDenominator = allDayTasks.length + todayCompleted.length;
+    final progress = progressDenominator == 0
         ? 0.0
-        : todayCompleted.length / (allDayTasks.length + todayCompleted.length);
+        : todayCompleted.length / progressDenominator;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),

@@ -11,6 +11,7 @@ import '../entities/project.dart';
 import '../entities/quick_note.dart';
 import '../entities/settings.dart';
 import '../entities/task.dart';
+import '../entities/wardrobe.dart';
 
 class AppStateSnapshot {
   const AppStateSnapshot({
@@ -24,6 +25,12 @@ class AppStateSnapshot {
     this.fixedPayments = const <FixedPayment>[],
     this.libraryItems = const <LibraryItem>[],
     this.libraryGoals = const <LibraryGoal>[],
+    this.wardrobeItems = const <WardrobeItem>[],
+    this.wardrobeOutfits = const <WardrobeOutfit>[],
+    this.wardrobeWearLogs = const <WardrobeWearLog>[],
+    this.wardrobePlanEntries = const <WardrobePlanEntry>[],
+    this.wardrobePackingLists = const <WardrobePackingList>[],
+    this.wardrobeImportBatches = const <WardrobeImportBatch>[],
     required this.daySettings,
     required this.notificationSettings,
     required this.calendarSettings,
@@ -49,6 +56,12 @@ class AppStateSnapshot {
   final List<FixedPayment> fixedPayments;
   final List<LibraryItem> libraryItems;
   final List<LibraryGoal> libraryGoals;
+  final List<WardrobeItem> wardrobeItems;
+  final List<WardrobeOutfit> wardrobeOutfits;
+  final List<WardrobeWearLog> wardrobeWearLogs;
+  final List<WardrobePlanEntry> wardrobePlanEntries;
+  final List<WardrobePackingList> wardrobePackingLists;
+  final List<WardrobeImportBatch> wardrobeImportBatches;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -81,6 +94,16 @@ class AppStateSnapshot {
           fixedPayments.map((payment) => payment.toJson()).toList(),
       'libraryItems': libraryItems.map((item) => item.toJson()).toList(),
       'libraryGoals': libraryGoals.map((goal) => goal.toJson()).toList(),
+      'wardrobeItems': wardrobeItems.map((item) => item.toJson()).toList(),
+      'wardrobeOutfits': wardrobeOutfits.map((item) => item.toJson()).toList(),
+      'wardrobeWearLogs':
+          wardrobeWearLogs.map((item) => item.toJson()).toList(),
+      'wardrobePlanEntries':
+          wardrobePlanEntries.map((item) => item.toJson()).toList(),
+      'wardrobePackingLists':
+          wardrobePackingLists.map((item) => item.toJson()).toList(),
+      'wardrobeImportBatches':
+          wardrobeImportBatches.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
@@ -145,6 +168,36 @@ class AppStateSnapshot {
       libraryGoals:
           (json['libraryGoals'] as List<dynamic>? ?? const <dynamic>[])
               .map((item) => LibraryGoal.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobeItems:
+          (json['wardrobeItems'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobeItem.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobeOutfits:
+          (json['wardrobeOutfits'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobeOutfit.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobeWearLogs:
+          (json['wardrobeWearLogs'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobeWearLog.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobePlanEntries:
+          (json['wardrobePlanEntries'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobePlanEntry.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobePackingLists:
+          (json['wardrobePackingLists'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobePackingList.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      wardrobeImportBatches:
+          (json['wardrobeImportBatches'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WardrobeImportBatch.fromJson(
                   (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
               .toList(),
       calendarEvents:

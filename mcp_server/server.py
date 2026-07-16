@@ -1,10 +1,14 @@
 import copy
 import datetime as dt
+import hashlib
 import json
 import os
 import random
 import re
+import shutil
+import struct
 import sys
+import zlib
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -126,6 +130,12 @@ def default_state() -> dict[str, Any]:
         "fixedPayments": [],
         "libraryItems": [],
         "libraryGoals": [],
+        "wardrobeItems": [],
+        "wardrobeOutfits": [],
+        "wardrobeWearLogs": [],
+        "wardrobePlanEntries": [],
+        "wardrobePackingLists": [],
+        "wardrobeImportBatches": [],
         "calendarEvents": [],
         "daySettings": {
             "dayEndsAtHour": 5,
@@ -159,11 +169,12 @@ def default_state() -> dict[str, Any]:
             "expenses",
             "calendar",
             "library",
+            "wardrobe",
             "completed",
             "settings",
         ],
         "updatedAt": now_iso(),
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "lastModifiedBy": "mcp",
     }
 
@@ -295,7 +306,7 @@ def save_state(state: dict[str, Any]) -> None:
 
 def touch_state(state: dict[str, Any]) -> None:
     state["updatedAt"] = now_iso()
-    state["schemaVersion"] = int(state.get("schemaVersion", 1) or 1)
+    state["schemaVersion"] = max(2, int(state.get("schemaVersion", 1) or 1))
     credentials = remote_credentials() if remote_enabled() else None
     state["lastModifiedBy"] = credentials[2] if credentials is not None else "mcp"
 
@@ -1018,6 +1029,20 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "country": string,
         "confirm": boolean,
     }
+    wardrobe_fields = {
+        "item_id": string,
+        "name": string,
+        "category": string,
+        "colors": strings,
+        "material": string,
+        "seasons": strings,
+        "occasions": strings,
+        "tags": strings,
+        "price": number,
+        "favorite": boolean,
+        "archived": boolean,
+        "laundry_status": string,
+    }
 
     return [
         tool("delete_task", "Borra una tarea y limpia referencias de subtareas.", {"task_id": string}, ["task_id"]),
@@ -1071,6 +1096,23 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("delete_library_goal", "Borra un propósito de Biblioteca.", {"goal_id": string, "confirm": boolean}, ["goal_id", "confirm"]),
         tool("toggle_library_goal_completed", "Alterna pendiente/completado y sincroniza con Biblioteca.", {"goal_id": string}, ["goal_id"]),
         tool("toggle_library_goal_favorite", "Alterna favorito en un propósito.", {"goal_id": string}, ["goal_id"]),
+        tool("get_wardrobe_import_contract", "Devuelve el contrato de lotes de Ropa para Codex.", {}, []),
+        tool("stage_wardrobe_batch", "Valida y prepara un lote local de PNG transparentes para revisarlo en Todo.", {"source_directory": string, "manifest_path": string}, ["source_directory"]),
+        tool("list_wardrobe_batches", "Lista las importaciones de Ropa.", {"status": string}, []),
+        tool("get_wardrobe_batch", "Devuelve una importación de Ropa.", {"batch_id": string}, ["batch_id"]),
+        tool("list_wardrobe_items", "Lista las prendas del armario.", {"include_archived": boolean}, []),
+        tool("create_wardrobe_item", "Crea una prenda manual.", wardrobe_fields, ["name", "category"]),
+        tool("update_wardrobe_item", "Actualiza los metadatos de una prenda.", wardrobe_fields, ["item_id"]),
+        tool("delete_wardrobe_item", "Elimina una prenda y limpia sus referencias activas.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
+        tool("list_wardrobe_outfits", "Lista los conjuntos y sus renders disponibles.", {}, []),
+        tool("create_wardrobe_outfit", "Crea un conjunto de prendas.", {"name": string, "item_ids": strings, "occasion": string, "tags": strings}, ["name", "item_ids"]),
+        tool("update_wardrobe_outfit", "Edita el nombre, la ocasión, las etiquetas o las prendas de un conjunto.", {"outfit_id": string, "name": string, "item_ids": strings, "occasion": string, "tags": strings}, ["outfit_id"]),
+        tool("set_wardrobe_outfit_render", "Asocia a un conjunto un render PNG generado por Codex.", {"outfit_id": string, "source_file": string}, ["outfit_id", "source_file"]),
+        tool("record_wardrobe_wear", "Registra el uso de prendas o de un conjunto.", {"date": string, "item_ids": strings, "outfit_id": string, "label": string}, ["date", "item_ids"]),
+        tool("set_wardrobe_laundry_status", "Cambia el estado de lavandería de varias prendas.", {"item_ids": strings, "status": string}, ["item_ids", "status"]),
+        tool("set_wardrobe_plan", "Planifica prendas para un día.", {"date": string, "item_ids": strings, "outfit_id": string, "weather": string, "occasion": string}, ["date", "item_ids"]),
+        tool("create_wardrobe_packing_list", "Crea una maleta de viaje.", {"name": string, "start_date": string, "end_date": string}, ["name", "start_date", "end_date"]),
+        tool("add_wardrobe_packing_item", "Añade una prenda a una maleta.", {"packing_list_id": string, "item_id": string, "quantity": integer}, ["packing_list_id", "item_id"]),
     ]
 
 
@@ -3196,6 +3238,386 @@ def toggle_library_goal_favorite_impl(arguments: dict[str, Any]) -> dict[str, An
     return {"updated": updated}
 
 
+def wardrobe_directory() -> Path:
+    override = os.environ.get("TODO_MCP_WARDROBE_PATH")
+    directory = Path(override) if override else documents_todo_dir() / "wardrobe"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def wardrobe_import_contract_impl() -> dict[str, Any]:
+    return {
+        "version": 1,
+        "manifest": "manifest.json",
+        "image_format": "PNG RGBA con al menos un píxel transparente",
+        "shape": {
+            "version": 1,
+            "batchId": "identificador-opcional",
+            "name": "Nombre del lote",
+            "items": [{
+                "id": "identificador-estable",
+                "file": "prenda.png",
+                "name": "Nombre visible",
+                "category": "Categoría",
+                "colors": ["color"],
+                "material": "material",
+                "seasons": ["temporada"],
+                "occasions": ["ocasión"],
+                "tags": ["etiqueta"],
+                "confidence": "alta|media|baja",
+                "sourceReferences": ["foto-origen.jpg"],
+            }],
+        },
+    }
+
+
+def _png_has_transparency(path: Path) -> bool:
+    data = path.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return False
+    offset = 8
+    width = height = bit_depth = color_type = interlace = 0
+    compressed = bytearray()
+    while offset + 12 <= len(data):
+        length = struct.unpack(">I", data[offset:offset + 4])[0]
+        kind = data[offset + 4:offset + 8]
+        chunk = data[offset + 8:offset + 8 + length]
+        offset += 12 + length
+        if kind == b"IHDR":
+            width, height, bit_depth, color_type, _compression, _filter, interlace = struct.unpack(">IIBBBBB", chunk)
+        elif kind == b"IDAT":
+            compressed.extend(chunk)
+        elif kind == b"IEND":
+            break
+    if bit_depth != 8 or color_type not in (4, 6) or interlace != 0 or not compressed:
+        return False
+    channels = 2 if color_type == 4 else 4
+    stride = width * channels
+    raw = zlib.decompress(bytes(compressed))
+    previous = bytearray(stride)
+    cursor = 0
+    for _row in range(height):
+        filter_type = raw[cursor]
+        cursor += 1
+        encoded = raw[cursor:cursor + stride]
+        cursor += stride
+        decoded = bytearray(stride)
+        for index, value in enumerate(encoded):
+            left = decoded[index - channels] if index >= channels else 0
+            up = previous[index]
+            upper_left = previous[index - channels] if index >= channels else 0
+            if filter_type == 0:
+                result = value
+            elif filter_type == 1:
+                result = value + left
+            elif filter_type == 2:
+                result = value + up
+            elif filter_type == 3:
+                result = value + ((left + up) // 2)
+            elif filter_type == 4:
+                estimate = left + up - upper_left
+                distances = (abs(estimate - left), abs(estimate - up), abs(estimate - upper_left))
+                predictor = left if distances[0] <= distances[1] and distances[0] <= distances[2] else up if distances[1] <= distances[2] else upper_left
+                result = value + predictor
+            else:
+                return False
+            decoded[index] = result & 0xFF
+        if any(decoded[index] < 255 for index in range(channels - 1, stride, channels)):
+            return True
+        previous = decoded
+    return False
+
+
+def stage_wardrobe_batch_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_directory"])).expanduser().resolve()
+    if not source.is_dir():
+        raise ValueError("La carpeta de origen no existe.")
+    manifest = Path(str(arguments.get("manifest_path") or source / "manifest.json")).expanduser().resolve()
+    if manifest.parent != source or not manifest.is_file():
+        raise ValueError("manifest_path debe ser manifest.json dentro de la carpeta de origen.")
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    if int(payload.get("version", 0)) != 1:
+        raise ValueError("La versión del manifiesto no es compatible.")
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ValueError("El manifiesto no contiene prendas.")
+    batch_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(payload.get("batchId") or make_id("ropa")))
+    destination = wardrobe_directory() / "imports" / batch_id
+    if destination.exists():
+        raise ValueError("Ya existe un lote con ese identificador.")
+    destination.mkdir(parents=True)
+    state = load_state()
+    existing = {item.get("imageSha256"): item.get("id") for item in state.get("wardrobeItems", []) if item.get("imageSha256")}
+    staged: list[dict[str, Any]] = []
+    try:
+        for index, raw in enumerate(raw_items):
+            if not isinstance(raw, dict):
+                raise ValueError("Todos los elementos del manifiesto deben ser objetos.")
+            file_name = str(raw.get("file") or "")
+            if not file_name or Path(file_name).name != file_name or not file_name.lower().endswith(".png"):
+                raise ValueError("Cada prenda debe usar un nombre PNG simple, sin rutas.")
+            source_file = source / file_name
+            errors: list[str] = []
+            digest = ""
+            if not source_file.is_file():
+                errors.append("No se encuentra el archivo PNG.")
+            else:
+                digest = hashlib.sha256(source_file.read_bytes()).hexdigest()
+                if not _png_has_transparency(source_file):
+                    errors.append("El PNG no contiene transparencia válida.")
+                else:
+                    shutil.copy2(source_file, destination / file_name)
+            staged.append({
+                "id": str(raw.get("id") or f"import-{index}"),
+                "fileName": file_name,
+                "name": str(raw.get("name") or f"Prenda {index + 1}"),
+                "category": str(raw.get("category") or "Sin categoría"),
+                "imageSha256": digest,
+                "colors": [str(value) for value in raw.get("colors", [])],
+                "material": str(raw.get("material") or ""),
+                "seasons": [str(value) for value in raw.get("seasons", [])],
+                "occasions": [str(value) for value in raw.get("occasions", [])],
+                "tags": [str(value) for value in raw.get("tags", [])],
+                "confidence": str(raw.get("confidence") or "media"),
+                "sourceReferences": [str(value) for value in raw.get("sourceReferences", [])],
+                "errors": errors,
+                "duplicateItemId": existing.get(digest),
+            })
+        shutil.copy2(manifest, destination / "manifest.json")
+        batch = {
+            "id": batch_id,
+            "name": str(payload.get("name") or "Importación de ropa"),
+            "createdAt": now_iso(),
+            "status": "pending",
+            "items": staged,
+            "errorMessage": "",
+        }
+        state.setdefault("wardrobeImportBatches", []).append(batch)
+        save_state(state)
+        return batch
+    except Exception:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
+
+
+def list_wardrobe_batches_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    batches = load_state().get("wardrobeImportBatches", [])
+    status = str(arguments.get("status") or "")
+    return [batch for batch in batches if not status or batch.get("status") == status]
+
+
+def get_wardrobe_batch_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    _index, batch = find_by_id(load_state().get("wardrobeImportBatches", []), arguments["batch_id"], "lote")
+    return batch
+
+
+def list_wardrobe_items_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    items = load_state().get("wardrobeItems", [])
+    return items if arguments.get("include_archived") else [item for item in items if not item.get("archived", False)]
+
+
+def create_wardrobe_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    instant = now_iso()
+    item = {
+        "id": make_id("wardrobe-item"), "name": str(arguments["name"]).strip(),
+        "category": str(arguments["category"]).strip(), "imagePath": "", "thumbnailPath": "",
+        "imageSha256": "", "colors": arguments.get("colors", []), "material": arguments.get("material", ""),
+        "seasons": arguments.get("seasons", []), "occasions": arguments.get("occasions", []), "tags": arguments.get("tags", []),
+        "favorite": bool(arguments.get("favorite", False)), "archived": bool(arguments.get("archived", False)),
+        "laundryStatus": arguments.get("laundry_status", "available"), "useCount": 0, "lastUsedAt": None,
+        "price": arguments.get("price"), "createdAt": instant, "updatedAt": instant,
+    }
+    state.setdefault("wardrobeItems", []).append(item)
+    save_state(state)
+    return item
+
+
+def update_wardrobe_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, item = find_by_id(state.setdefault("wardrobeItems", []), arguments["item_id"], "prenda")
+    mapping = {"name": "name", "category": "category", "colors": "colors", "material": "material", "seasons": "seasons",
+               "occasions": "occasions", "tags": "tags", "price": "price", "favorite": "favorite", "archived": "archived",
+               "laundry_status": "laundryStatus"}
+    for source, target in mapping.items():
+        if source in arguments:
+            item[target] = arguments[source]
+    item["updatedAt"] = now_iso()
+    state["wardrobeItems"][index] = item
+    save_state(state)
+    return item
+
+
+def delete_wardrobe_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    require_confirm(arguments, "delete_wardrobe_item")
+    state = load_state()
+    item_id = arguments["item_id"]
+    index, item = find_by_id(state.setdefault("wardrobeItems", []), item_id, "prenda")
+    state["wardrobeItems"].pop(index)
+    for outfit in state.setdefault("wardrobeOutfits", []):
+        outfit["itemIds"] = [value for value in outfit.get("itemIds", []) if value != item_id]
+    state["wardrobePlanEntries"] = [entry for entry in state.setdefault("wardrobePlanEntries", []) if entry.get("itemIds") != [item_id]]
+    for packing in state.setdefault("wardrobePackingLists", []):
+        packing["entries"] = [entry for entry in packing.get("entries", []) if entry.get("itemId") != item_id]
+    save_state(state)
+    return item
+
+
+def create_wardrobe_outfit_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    valid = {item.get("id") for item in state.setdefault("wardrobeItems", [])}
+    outfit = {"id": make_id("wardrobe-outfit"), "name": str(arguments["name"]).strip(),
+              "itemIds": list(dict.fromkeys(value for value in arguments["item_ids"] if value in valid)),
+              "occasion": arguments.get("occasion", ""), "tags": arguments.get("tags", []),
+              "renderImagePath": "", "createdAt": now_iso()}
+    state.setdefault("wardrobeOutfits", []).append(outfit)
+    save_state(state)
+    return outfit
+
+
+def list_wardrobe_outfits_impl(_arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    return load_state().setdefault("wardrobeOutfits", [])
+
+
+def update_wardrobe_outfit_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, outfit = find_by_id(
+        state.setdefault("wardrobeOutfits", []), arguments["outfit_id"], "conjunto"
+    )
+    if "name" in arguments:
+        outfit["name"] = str(arguments["name"]).strip() or "Conjunto sin nombre"
+    if "occasion" in arguments:
+        outfit["occasion"] = str(arguments["occasion"]).strip()
+    if "tags" in arguments:
+        outfit["tags"] = list(dict.fromkeys(str(value).strip() for value in arguments["tags"] if str(value).strip()))
+    previous_render = ""
+    if "item_ids" in arguments:
+        valid = {item.get("id") for item in state.setdefault("wardrobeItems", [])}
+        item_ids = list(dict.fromkeys(value for value in arguments["item_ids"] if value in valid))
+        if not item_ids:
+            raise ValueError("Un conjunto debe contener al menos una prenda.")
+        if set(item_ids) != set(outfit.get("itemIds", [])):
+            previous_render = str(outfit.get("renderImagePath") or "")
+            outfit["renderImagePath"] = ""
+        outfit["itemIds"] = item_ids
+    state["wardrobeOutfits"][index] = outfit
+    save_state(state)
+    if previous_render:
+        directory = (wardrobe_directory() / "outfits").resolve()
+        old_path = (wardrobe_directory() / previous_render).resolve()
+        if old_path.parent == directory:
+            old_path.unlink(missing_ok=True)
+    return outfit
+
+
+def set_wardrobe_outfit_render_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    if not source.is_file() or source.suffix.lower() != ".png":
+        raise ValueError("El render debe ser un archivo PNG local.")
+    data = source.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) < 33:
+        raise ValueError("El render no es un PNG válido.")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 600 or height < 600:
+        raise ValueError("El render debe medir al menos 600 × 600 píxeles.")
+    state = load_state()
+    index, outfit = find_by_id(
+        state.setdefault("wardrobeOutfits", []), arguments["outfit_id"], "conjunto"
+    )
+    digest = hashlib.sha256(data).hexdigest()
+    directory = wardrobe_directory() / "outfits"
+    directory.mkdir(parents=True, exist_ok=True)
+    file_name = f"{re.sub(r'[^a-zA-Z0-9_-]', '-', str(outfit['id']))}-{digest[:12]}.png"
+    destination = directory / file_name
+    if not destination.exists():
+        temporary = destination.with_suffix(".tmp")
+        try:
+            temporary.write_bytes(data)
+            temporary.replace(destination)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+    previous = str(outfit.get("renderImagePath") or "")
+    outfit["renderImagePath"] = f"outfits/{file_name}"
+    state["wardrobeOutfits"][index] = outfit
+    try:
+        save_state(state)
+    except Exception:
+        if previous != outfit["renderImagePath"]:
+            destination.unlink(missing_ok=True)
+        raise
+    if previous and previous != outfit["renderImagePath"]:
+        old_path = (wardrobe_directory() / previous).resolve()
+        if old_path.parent == directory.resolve():
+            old_path.unlink(missing_ok=True)
+    return outfit
+
+
+def record_wardrobe_wear_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    item_ids = list(dict.fromkeys(arguments["item_ids"]))
+    log = {"id": make_id("wardrobe-wear"), "date": parse_datetime(arguments["date"]).isoformat(),
+           "itemIds": item_ids, "outfitId": arguments.get("outfit_id"), "label": arguments.get("label", "")}
+    state.setdefault("wardrobeWearLogs", []).append(log)
+    for item in state.setdefault("wardrobeItems", []):
+        if item.get("id") in item_ids:
+            item["useCount"] = int(item.get("useCount", 0)) + 1
+            item["lastUsedAt"] = log["date"]
+            item["updatedAt"] = now_iso()
+    save_state(state)
+    return log
+
+
+def set_wardrobe_laundry_status_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    status = arguments["status"]
+    if status not in {"available", "toWash", "washing", "drying"}:
+        raise ValueError("Estado de lavandería no válido.")
+    state = load_state()
+    ids = set(arguments["item_ids"])
+    changed = 0
+    for item in state.setdefault("wardrobeItems", []):
+        if item.get("id") in ids:
+            item["laundryStatus"] = status
+            item["updatedAt"] = now_iso()
+            changed += 1
+    save_state(state)
+    return {"updated": changed, "status": status}
+
+
+def set_wardrobe_plan_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    date = parse_datetime(arguments["date"])
+    date_key = date.date().isoformat()
+    state["wardrobePlanEntries"] = [entry for entry in state.setdefault("wardrobePlanEntries", []) if not str(entry.get("date", "")).startswith(date_key)]
+    entry = {"id": make_id("wardrobe-plan"), "date": date.isoformat(), "itemIds": arguments["item_ids"],
+             "outfitId": arguments.get("outfit_id"), "weather": arguments.get("weather", "mild"), "occasion": arguments.get("occasion", "")}
+    state["wardrobePlanEntries"].append(entry)
+    save_state(state)
+    return entry
+
+
+def create_wardrobe_packing_list_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    packing = {"id": make_id("wardrobe-packing"), "name": arguments["name"],
+               "startDate": parse_datetime(arguments["start_date"]).isoformat(),
+               "endDate": parse_datetime(arguments["end_date"]).isoformat(), "entries": []}
+    state.setdefault("wardrobePackingLists", []).append(packing)
+    save_state(state)
+    return packing
+
+
+def add_wardrobe_packing_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, packing = find_by_id(state.setdefault("wardrobePackingLists", []), arguments["packing_list_id"], "maleta")
+    item_id = arguments["item_id"]
+    find_by_id(state.setdefault("wardrobeItems", []), item_id, "prenda")
+    packing["entries"] = [entry for entry in packing.get("entries", []) if entry.get("itemId") != item_id]
+    packing["entries"].append({"itemId": item_id, "quantity": max(1, int(arguments.get("quantity", 1))), "packed": False})
+    state["wardrobePackingLists"][index] = packing
+    save_state(state)
+    return packing
+
+
 def import_state_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     require_confirm(arguments, "import_state")
     state = json.loads(arguments["raw_json"])
@@ -3382,6 +3804,40 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(toggle_library_goal_completed_impl(arguments))
     if name == "toggle_library_goal_favorite":
         return json_result(toggle_library_goal_favorite_impl(arguments))
+    if name == "get_wardrobe_import_contract":
+        return json_result(wardrobe_import_contract_impl())
+    if name == "stage_wardrobe_batch":
+        return json_result(stage_wardrobe_batch_impl(arguments))
+    if name == "list_wardrobe_batches":
+        return json_result(list_wardrobe_batches_impl(arguments))
+    if name == "get_wardrobe_batch":
+        return json_result(get_wardrobe_batch_impl(arguments))
+    if name == "list_wardrobe_items":
+        return json_result(list_wardrobe_items_impl(arguments))
+    if name == "create_wardrobe_item":
+        return json_result(create_wardrobe_item_impl(arguments))
+    if name == "update_wardrobe_item":
+        return json_result(update_wardrobe_item_impl(arguments))
+    if name == "delete_wardrobe_item":
+        return json_result(delete_wardrobe_item_impl(arguments))
+    if name == "list_wardrobe_outfits":
+        return json_result(list_wardrobe_outfits_impl(arguments))
+    if name == "create_wardrobe_outfit":
+        return json_result(create_wardrobe_outfit_impl(arguments))
+    if name == "update_wardrobe_outfit":
+        return json_result(update_wardrobe_outfit_impl(arguments))
+    if name == "set_wardrobe_outfit_render":
+        return json_result(set_wardrobe_outfit_render_impl(arguments))
+    if name == "record_wardrobe_wear":
+        return json_result(record_wardrobe_wear_impl(arguments))
+    if name == "set_wardrobe_laundry_status":
+        return json_result(set_wardrobe_laundry_status_impl(arguments))
+    if name == "set_wardrobe_plan":
+        return json_result(set_wardrobe_plan_impl(arguments))
+    if name == "create_wardrobe_packing_list":
+        return json_result(create_wardrobe_packing_list_impl(arguments))
+    if name == "add_wardrobe_packing_item":
+        return json_result(add_wardrobe_packing_item_impl(arguments))
     if name == "create_category":
         return json_result(create_category_impl(arguments))
     if name == "create_project":

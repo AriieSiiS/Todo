@@ -32,6 +32,8 @@ class AppLaunchIntent {
         section = AppSection.completed;
       } else if (arg == '--section=settings') {
         section = AppSection.settings;
+      } else if (arg == '--section=wardrobe') {
+        section = AppSection.wardrobe;
       } else if (arg == '--new-task') {
         section = AppSection.today;
         editorTarget = LaunchEditorTarget.task;

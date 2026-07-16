@@ -22,6 +22,7 @@ part 'categories_page.dart';
 part 'expenses_page.dart';
 part 'calendar_page.dart';
 part 'library_page.dart';
+part 'wardrobe_page.dart';
 part 'inbox_page.dart';
 part 'completed_page.dart';
 part 'settings_page.dart';

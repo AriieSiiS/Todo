@@ -66,6 +66,8 @@ La app tiene:
 - `lib/presentation/shell/projects_page.dart`: vista Proyectos
 - `lib/presentation/shell/categories_page.dart`: vista Categorías
 - `lib/presentation/shell/calendar_page.dart`: vista Calendario
+- `lib/presentation/shell/wardrobe_page.dart`: armario, conjuntos,
+  planificación, lavandería, maletas, estadísticas e importaciones de Ropa
 - `lib/presentation/shell/completed_page.dart`: vista Completadas
 - `lib/presentation/shell/settings_page.dart`: vista Ajustes
 - `lib/presentation/shell/shared_widgets.dart`: widgets compartidos del shell
@@ -83,6 +85,7 @@ Secciones:
 - `--section=calendar`
 - `--section=completed`
 - `--section=settings`
+- `--section=wardrobe`
 
 Editores:
 
@@ -136,3 +139,16 @@ flutter build windows --debug
 ```
 
 Para cambios visuales importantes, arrancar Windows con la sección exacta que se haya tocado.
+
+## Actualización de la instalación de Windows
+
+Siempre que se actualice la aplicación, también hay que compilar y actualizar la
+instalación de Windows que usa el acceso de la barra de tareas. El ejecutable de
+referencia está en:
+
+```text
+C:\Users\aries\AppData\Local\Programs\Todo\todo.exe
+```
+
+No se debe dar por terminada una actualización sin comprobar que esa instalación
+incluye los cambios nuevos.
