@@ -16,6 +16,7 @@ class FileBackedLocalStore implements LocalStore {
   @override
   Future<AppStateSnapshot?> load() async {
     final file = await _stateFile();
+    await _recoverInterruptedWrite(file);
     if (await file.exists()) {
       final raw = await file.readAsString();
       if (raw.trim().isNotEmpty) {
@@ -43,6 +44,7 @@ class FileBackedLocalStore implements LocalStore {
   @override
   Future<String?> loadCalendarSession() async {
     final file = await _sessionFile();
+    await _recoverInterruptedWrite(file);
     if (await file.exists()) {
       final raw = await file.readAsString();
       if (raw.trim().isNotEmpty) {
@@ -74,6 +76,7 @@ class FileBackedLocalStore implements LocalStore {
   @override
   Future<LocalSyncMetadata> loadSyncMetadata() async {
     final file = await _syncMetadataFile();
+    await _recoverInterruptedWrite(file);
     if (await file.exists()) {
       final raw = await file.readAsString();
       if (raw.trim().isNotEmpty) {
@@ -157,13 +160,53 @@ class FileBackedLocalStore implements LocalStore {
 
   Future<void> _writeAtomically(File file, String contents) async {
     final temp = File('${file.path}.tmp');
+    final previous = File('${file.path}.previous');
     if (!await temp.parent.exists()) {
       await temp.parent.create(recursive: true);
     }
     await temp.writeAsString(
       const JsonEncoder.withIndent('  ').convert(jsonDecode(contents)),
+      flush: true,
     );
-    await temp.rename(file.path);
+    if (await file.exists()) {
+      await file.copy(previous.path);
+    }
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+      await temp.rename(file.path);
+      if (await previous.exists()) {
+        await previous.delete();
+      }
+    } catch (_) {
+      if (!await file.exists() && await previous.exists()) {
+        await previous.copy(file.path);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _recoverInterruptedWrite(File file) async {
+    if (await file.exists()) return;
+    final temp = File('${file.path}.tmp');
+    final previous = File('${file.path}.previous');
+    if (await temp.exists() && await _containsValidJson(temp)) {
+      await temp.rename(file.path);
+      return;
+    }
+    if (await previous.exists() && await _containsValidJson(previous)) {
+      await previous.copy(file.path);
+    }
+  }
+
+  Future<bool> _containsValidJson(File file) async {
+    try {
+      jsonDecode(await file.readAsString());
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }
 

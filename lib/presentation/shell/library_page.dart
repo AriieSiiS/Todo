@@ -2,7 +2,7 @@ part of 'app_shell.dart';
 
 enum _LibraryTab { library, goals }
 
-enum _LibraryContextAction { edit, delete }
+enum _LibraryContextAction { pages, edit, delete }
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({required this.controller, super.key});
@@ -16,17 +16,30 @@ class LibraryPage extends StatefulWidget {
 class _LibraryPageState extends State<LibraryPage> {
   _LibraryTab _tab = _LibraryTab.library;
   LibraryItemType? _typeFilter;
-  int _year = 2026;
+  late int _year = DateTime.now().year;
   double? _minRating;
 
   TodoWorkspace get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
+    final status = controller.libraryStatusView;
     final items = _sortedItems(_filteredItems(controller.libraryItems));
-    final yearItems = controller.libraryItems
-        .where((item) => item.yearGroup == _year)
-        .toList();
+    final statusItems =
+        controller.libraryItems.where((item) => item.status == status).toList();
+    final yearItems = status == LibraryItemStatus.completed
+        ? statusItems.where((item) => item.yearGroup == _year).toList()
+        : statusItems;
+    final currentYear = DateTime.now().year;
+    final availableYears = <int>{
+      currentYear,
+      if (_tab == _LibraryTab.goals)
+        for (final goal in controller.libraryGoals) goal.targetYear
+      else
+        for (final item in controller.libraryItems)
+          if (item.completedDate != null) item.completedDate!.year,
+    }.toList()
+      ..sort((left, right) => right.compareTo(left));
     final wide = MediaQuery.sizeOf(context).width >= 1320;
 
     return Padding(
@@ -36,8 +49,11 @@ class _LibraryPageState extends State<LibraryPage> {
         children: [
           _LibraryHeader(
             year: _year,
+            currentYear: currentYear,
+            availableYears: availableYears,
             isGoals: _tab == _LibraryTab.goals,
-            onYearChanged: _selectYear,
+            libraryStatus: status,
+            onYearChanged: (year) => setState(() => _year = year),
             onAdd:
                 _tab == _LibraryTab.goals ? _showAddGoalDialog : _showAddDialog,
           ),
@@ -47,6 +63,20 @@ class _LibraryPageState extends State<LibraryPage> {
             onChanged: (tab) => setState(() => _tab = tab),
           ),
           if (_tab == _LibraryTab.library) ...[
+            const SizedBox(height: 12),
+            _LibraryStatusTabs(
+              status: status,
+              onChanged: (value) {
+                controller.setLibraryStatusView(value);
+                setState(() {
+                  _typeFilter = null;
+                  if (value == LibraryItemStatus.completed &&
+                      !availableYears.contains(_year)) {
+                    _year = currentYear;
+                  }
+                });
+              },
+            ),
             const SizedBox(height: 14),
             _LibraryTypeFilters(
               selected: _typeFilter,
@@ -59,42 +89,50 @@ class _LibraryPageState extends State<LibraryPage> {
                 ? _LibraryGoalsView(
                     controller: controller,
                     year: _year,
-                    onPreviousYear: () => setState(() => _year--),
-                    onNextYear: () => setState(() => _year++),
-                    onSelectYear: _selectYear,
                     onAdd: _showAddGoalDialog,
                   )
                 : wide
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _LibraryMainContent(
-                              controller: controller,
-                              items: items,
-                              yearItems: yearItems,
-                              year: _year,
-                              selectedType: _typeFilter,
-                              fillAvailableHeight: true,
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          SizedBox(
-                            width: 330,
-                            child: ScrollConfiguration(
-                              behavior: const MaterialScrollBehavior()
-                                  .copyWith(scrollbars: false),
-                              child: SingleChildScrollView(
-                                child: _LibrarySidePanel(
+                    ? status == LibraryItemStatus.completed
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _LibraryMainContent(
                                   controller: controller,
-                                  items: controller.libraryItems,
+                                  items: items,
+                                  yearItems: yearItems,
                                   year: _year,
+                                  selectedType: _typeFilter,
+                                  status: status,
+                                  fillAvailableHeight: true,
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
-                      )
+                              const SizedBox(width: 18),
+                              SizedBox(
+                                width: 330,
+                                child: ScrollConfiguration(
+                                  behavior: const MaterialScrollBehavior()
+                                      .copyWith(scrollbars: false),
+                                  child: SingleChildScrollView(
+                                    child: _LibrarySidePanel(
+                                      controller: controller,
+                                      items: controller.libraryItems,
+                                      year: _year,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : _LibraryMainContent(
+                            controller: controller,
+                            items: items,
+                            yearItems: yearItems,
+                            year: _year,
+                            selectedType: _typeFilter,
+                            status: status,
+                            fillAvailableHeight: true,
+                          )
                     : ListView(
                         children: [
                           _LibraryMainContent(
@@ -103,14 +141,17 @@ class _LibraryPageState extends State<LibraryPage> {
                             yearItems: yearItems,
                             year: _year,
                             selectedType: _typeFilter,
+                            status: status,
                             scrollColumns: false,
                           ),
-                          const SizedBox(height: 16),
-                          _LibrarySidePanel(
-                            controller: controller,
-                            items: controller.libraryItems,
-                            year: _year,
-                          ),
+                          if (status == LibraryItemStatus.completed) ...[
+                            const SizedBox(height: 16),
+                            _LibrarySidePanel(
+                              controller: controller,
+                              items: statusItems,
+                              year: _year,
+                            ),
+                          ],
                         ],
                       ),
           ),
@@ -121,7 +162,10 @@ class _LibraryPageState extends State<LibraryPage> {
 
   List<LibraryItem> _filteredItems(List<LibraryItem> source) {
     return source
-        .where((item) => item.yearGroup == _year)
+        .where((item) => item.status == controller.libraryStatusView)
+        .where((item) =>
+            item.status != LibraryItemStatus.completed ||
+            item.yearGroup == _year)
         .where(
             (item) => _minRating == null || (item.rating ?? -1) >= _minRating!)
         .toList();
@@ -134,25 +178,13 @@ class _LibraryPageState extends State<LibraryPage> {
     return sorted;
   }
 
-  Future<void> _selectYear() async {
-    final selected = await showMenu<int>(
-      context: context,
-      position: const RelativeRect.fromLTRB(0, 110, 24, 0),
-      items: const [
-        PopupMenuItem(value: 2026, child: Text('2026')),
-        PopupMenuItem(value: 2025, child: Text('2025')),
-        PopupMenuItem(value: 2024, child: Text('2024')),
-      ],
-    );
-    if (selected != null && mounted) {
-      setState(() => _year = selected);
-    }
-  }
-
   Future<void> _showAddDialog() async {
     await showDialog<void>(
       context: context,
-      builder: (context) => _LibraryItemDialog(controller: controller),
+      builder: (context) => _LibraryItemDialog(
+        controller: controller,
+        initialStatus: controller.libraryStatusView,
+      ),
     );
     if (mounted) {
       setState(() {});
@@ -177,14 +209,20 @@ class _LibraryPageState extends State<LibraryPage> {
 class _LibraryHeader extends StatelessWidget {
   const _LibraryHeader({
     required this.year,
+    required this.currentYear,
+    required this.availableYears,
     required this.isGoals,
+    required this.libraryStatus,
     required this.onYearChanged,
     required this.onAdd,
   });
 
   final int year;
+  final int currentYear;
+  final List<int> availableYears;
   final bool isGoals;
-  final VoidCallback onYearChanged;
+  final LibraryItemStatus libraryStatus;
+  final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
 
   @override
@@ -200,7 +238,9 @@ class _LibraryHeader extends StatelessWidget {
                   style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 6),
               Text(
-                'Aquí se guardan los juegos, libros y películas/series que ya has completado.',
+                isGoals
+                    ? 'Organiza lo que quieres jugar, leer y ver cada año.'
+                    : 'Guarda en un mismo lugar todo lo que tienes pendiente, en curso o completado.',
                 style: TextStyle(
                   color: context.visuals.textMuted,
                   fontSize: 15,
@@ -215,20 +255,94 @@ class _LibraryHeader extends StatelessWidget {
           runSpacing: 10,
           alignment: WrapAlignment.end,
           children: [
-            if (isGoals)
-              _HeaderSecondaryButton(
-                label: '$year',
-                icon: Icons.calendar_today_outlined,
-                onPressed: onYearChanged,
+            if (isGoals || libraryStatus == LibraryItemStatus.completed)
+              _LibraryGoalYearButton(
+                year: year,
+                currentYear: currentYear,
+                availableYears: availableYears,
+                onSelected: onYearChanged,
               ),
             _HeaderActionButton(
-              label: isGoals ? 'Añadir propósito' : 'Añadir completado',
+              label: isGoals ? 'Añadir propósito' : 'Añadir a Biblioteca',
               icon: Icons.add_rounded,
               onPressed: onAdd,
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LibraryGoalYearButton extends StatelessWidget {
+  const _LibraryGoalYearButton({
+    required this.year,
+    required this.currentYear,
+    required this.availableYears,
+    required this.onSelected,
+  });
+
+  final int year;
+  final int currentYear;
+  final List<int> availableYears;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final historicalYears = availableYears
+        .where((candidate) => candidate < currentYear)
+        .toList(growable: false);
+    final label = year < currentYear ? 'Histórico · $year' : '$year';
+
+    if (historicalYears.isEmpty) {
+      return _HeaderSecondaryButton(
+        label: label,
+        icon: Icons.calendar_today_outlined,
+        onPressed: null,
+      );
+    }
+
+    return PopupMenuButton<int>(
+      tooltip: 'Cambiar año',
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      constraints: const BoxConstraints(minWidth: 180),
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        const PopupMenuItem<int>(
+          enabled: false,
+          height: 34,
+          child: Text(
+            'Año actual',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+        PopupMenuItem<int>(
+          value: currentYear,
+          child: Text('$currentYear'),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<int>(
+          enabled: false,
+          height: 34,
+          child: Text(
+            'Histórico',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+        for (final historicalYear in historicalYears)
+          PopupMenuItem<int>(
+            value: historicalYear,
+            child: Text('$historicalYear'),
+          ),
+      ],
+      child: IgnorePointer(
+        child: _HeaderSecondaryButton(
+          label: label,
+          icon: Icons.calendar_today_outlined,
+          onPressed: () {},
+        ),
+      ),
     );
   }
 }
@@ -292,6 +406,30 @@ class _LibraryTabButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LibraryStatusTabs extends StatelessWidget {
+  const _LibraryStatusTabs({required this.status, required this.onChanged});
+
+  final LibraryItemStatus status;
+  final ValueChanged<LibraryItemStatus> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final value in LibraryItemStatus.values)
+          _LibraryFilterChip(
+            label: _libraryStatusPluralLabel(value),
+            icon: _libraryStatusIcon(value),
+            active: status == value,
+            onTap: () => onChanged(value),
+          ),
+      ],
     );
   }
 }
@@ -372,6 +510,7 @@ class _LibraryMainContent extends StatelessWidget {
     required this.yearItems,
     required this.year,
     required this.selectedType,
+    required this.status,
     this.scrollColumns = true,
     this.fillAvailableHeight = false,
   });
@@ -381,6 +520,7 @@ class _LibraryMainContent extends StatelessWidget {
   final List<LibraryItem> yearItems;
   final int year;
   final LibraryItemType? selectedType;
+  final LibraryItemStatus status;
   final bool scrollColumns;
   final bool fillAvailableHeight;
 
@@ -396,6 +536,7 @@ class _LibraryMainContent extends StatelessWidget {
         type: selectedType!,
         items: selectedItems,
         totalCount: selectedYearItems.length,
+        status: status,
       );
       final content = fillAvailableHeight
           ? LayoutBuilder(
@@ -423,6 +564,7 @@ class _LibraryMainContent extends StatelessWidget {
               items: items.where((item) => item.type == type).toList(),
               allItems: yearItems.where((item) => item.type == type).toList(),
               totalCount: yearItems.where((item) => item.type == type).length,
+              status: status,
             ),
           ),
           if (type != LibraryItemType.values.last) const SizedBox(width: 14),
@@ -456,6 +598,7 @@ class _LibraryTypeCard extends StatelessWidget {
     required this.items,
     required this.allItems,
     required this.totalCount,
+    required this.status,
   });
 
   final TodoWorkspace controller;
@@ -463,6 +606,7 @@ class _LibraryTypeCard extends StatelessWidget {
   final List<LibraryItem> items;
   final List<LibraryItem> allItems;
   final int totalCount;
+  final LibraryItemStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -493,7 +637,7 @@ class _LibraryTypeCard extends StatelessWidget {
                   ),
                 ),
                 _miniBadge(
-                  '$totalCount completados',
+                  '$totalCount ${_libraryStatusCountLabel(status, totalCount)}',
                   _libraryColor(type).withValues(alpha: 0.12),
                   _libraryColor(type),
                 ),
@@ -508,7 +652,7 @@ class _LibraryTypeCard extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.topCenter,
                       child: Text(
-                        'No hay completados para este filtro.',
+                        _libraryEmptyStatusText(status),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: context.visuals.textMuted),
                       ),
@@ -523,6 +667,7 @@ class _LibraryTypeCard extends StatelessWidget {
                       final item = items[index];
                       return _LibraryItemRow(
                         item: item,
+                        controller: controller,
                         onTap: () => _showDetailDialog(context, item),
                         onEdit: () => _showEditDialog(context, item),
                         onDelete: () => _deleteItem(context, item),
@@ -538,7 +683,7 @@ class _LibraryTypeCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      _librarySeeAllLabel(type, totalCount),
+                      _librarySeeAllLabel(type, totalCount, status),
                       style: TextStyle(color: context.visuals.textMuted),
                     ),
                   ),
@@ -569,7 +714,7 @@ class _LibraryTypeCard extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: _libraryDeleteMessage(controller, item),
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -583,6 +728,7 @@ class _LibraryTypeCard extends StatelessWidget {
         controller: controller,
         type: type,
         items: allItems,
+        status: status,
       ),
     );
   }
@@ -594,12 +740,14 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
     required this.type,
     required this.items,
     required this.totalCount,
+    required this.status,
   });
 
   final TodoWorkspace controller;
   final LibraryItemType type;
   final List<LibraryItem> items;
   final int totalCount;
+  final LibraryItemStatus status;
 
   @override
   State<_LibraryFilteredTypePanel> createState() =>
@@ -656,7 +804,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   ),
                 ),
                 _miniBadge(
-                  '${widget.totalCount} completados',
+                  '${widget.totalCount} ${_libraryStatusCountLabel(widget.status, widget.totalCount)}',
                   _libraryColor(widget.type).withValues(alpha: 0.12),
                   _libraryColor(widget.type),
                 ),
@@ -682,7 +830,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
             child: sorted.isEmpty
                 ? Center(
                     child: Text(
-                      'No hay completados para este filtro.',
+                      _libraryEmptyStatusText(widget.status),
                       style: TextStyle(color: context.visuals.textMuted),
                     ),
                   )
@@ -706,6 +854,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                           final item = sorted[index];
                           return _LibraryCoverGridCard(
                             item: item,
+                            controller: widget.controller,
                             onTap: () => _showLibraryItemDetails(
                               context,
                               widget.controller,
@@ -751,7 +900,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: _libraryDeleteMessage(widget.controller, item),
     );
     if (confirmed) {
       widget.controller.deleteLibraryItem(item.id);
@@ -832,12 +981,14 @@ class _LibrarySortButton extends StatelessWidget {
 class _LibraryCoverGridCard extends StatefulWidget {
   const _LibraryCoverGridCard({
     required this.item,
+    required this.controller,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final LibraryItem item;
+  final TodoWorkspace controller;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -864,6 +1015,11 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
           onSecondaryTapDown: (details) => _showLibraryContextMenu(
             context: context,
             position: details.globalPosition,
+            onPages: () => _openKnowledgeWorkspace(
+              context,
+              widget.controller,
+              item,
+            ),
             onEdit: widget.onEdit,
             onDelete: widget.onDelete,
           ),
@@ -983,7 +1139,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                           ],
                         ),
                         child: Text(
-                          _libraryDate(item.completedDate),
+                          _libraryItemStatusMeta(item),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -997,6 +1153,11 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     top: 8,
                     left: 8,
                     child: _LibraryCoverMenuButton(
+                      onPages: () => _openKnowledgeWorkspace(
+                        context,
+                        widget.controller,
+                        item,
+                      ),
                       onEdit: widget.onEdit,
                       onDelete: widget.onDelete,
                     ),
@@ -1105,10 +1266,12 @@ class _LibraryRewatchBadge extends StatelessWidget {
 
 class _LibraryCoverMenuButton extends StatelessWidget {
   const _LibraryCoverMenuButton({
+    this.onPages,
     required this.onEdit,
     required this.onDelete,
   });
 
+  final VoidCallback? onPages;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -1118,14 +1281,25 @@ class _LibraryCoverMenuButton extends StatelessWidget {
       tooltip: 'Opciones',
       position: PopupMenuPosition.under,
       onSelected: (action) {
-        if (action == _LibraryContextAction.edit) {
+        if (action == _LibraryContextAction.pages) {
+          onPages?.call();
+        } else if (action == _LibraryContextAction.edit) {
           onEdit();
         } else if (action == _LibraryContextAction.delete) {
           onDelete();
         }
       },
-      itemBuilder: (context) => const [
-        PopupMenuItem(
+      itemBuilder: (context) => [
+        if (onPages != null)
+          const PopupMenuItem(
+            value: _LibraryContextAction.pages,
+            child: ListTile(
+              dense: true,
+              leading: Icon(Icons.description_outlined),
+              title: Text('Abrir páginas'),
+            ),
+          ),
+        const PopupMenuItem(
           value: _LibraryContextAction.edit,
           child: ListTile(
             dense: true,
@@ -1133,7 +1307,7 @@ class _LibraryCoverMenuButton extends StatelessWidget {
             title: Text('Editar'),
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: _LibraryContextAction.delete,
           child: ListTile(
             dense: true,
@@ -1163,12 +1337,14 @@ class _LibraryCoverMenuButton extends StatelessWidget {
 class _LibraryItemRow extends StatelessWidget {
   const _LibraryItemRow({
     required this.item,
+    required this.controller,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final LibraryItem item;
+  final TodoWorkspace controller;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -1180,6 +1356,7 @@ class _LibraryItemRow extends StatelessWidget {
       onSecondaryTapDown: (details) => _showLibraryContextMenu(
         context: context,
         position: details.globalPosition,
+        onPages: () => _openKnowledgeWorkspace(context, controller, item),
         onEdit: onEdit,
         onDelete: onDelete,
       ),
@@ -1214,7 +1391,7 @@ class _LibraryItemRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                _libraryDate(item.completedDate),
+                _libraryItemStatusMeta(item),
                 style:
                     TextStyle(color: context.visuals.textMuted, fontSize: 13),
               ),
@@ -1259,17 +1436,23 @@ class _LibraryTypeListDialog extends StatelessWidget {
     required this.controller,
     required this.type,
     required this.items,
+    required this.status,
   });
 
   final TodoWorkspace controller;
   final LibraryItemType type;
   final List<LibraryItem> items;
+  final LibraryItemStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [
-      ...items
-    ]..sort((left, right) => right.completedDate.compareTo(left.completedDate));
+    final sorted = [...items]..sort((left, right) => _compareLibraryItems(
+          left,
+          right,
+          status == LibraryItemStatus.completed
+              ? LibrarySortOrder.newestFirst
+              : LibrarySortOrder.titleAsc,
+        ));
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 44, vertical: 36),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1292,7 +1475,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
                     ),
                   ),
                   _miniBadge(
-                    '${sorted.length} completados',
+                    '${sorted.length} ${_libraryStatusCountLabel(status, sorted.length)}',
                     _libraryColor(type).withValues(alpha: 0.12),
                     _libraryColor(type),
                   ),
@@ -1312,7 +1495,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(30),
                         child: Text(
-                          'No hay completados en esta categoría.',
+                          _libraryEmptyStatusText(status),
                           style: TextStyle(color: context.visuals.textMuted),
                         ),
                       ),
@@ -1327,6 +1510,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
                         final item = sorted[index];
                         return _LibraryItemRow(
                           item: item,
+                          controller: controller,
                           onTap: () async {
                             await _showLibraryItemDetails(
                               context,
@@ -1357,7 +1541,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: _libraryDeleteMessage(controller, item),
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -1378,12 +1562,15 @@ class _LibrarySidePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recent = [
-      ...items
-    ]..sort((left, right) => right.completedDate.compareTo(left.completedDate));
+    final recent = [...items]..sort((left, right) =>
+        (right.completedDate ?? right.updatedAt)
+            .compareTo(left.completedDate ?? left.updatedAt));
     final yearCounts = <int, int>{};
     for (final item in items) {
-      yearCounts[item.yearGroup] = (yearCounts[item.yearGroup] ?? 0) + 1;
+      final itemYear = item.yearGroup;
+      if (itemYear != null) {
+        yearCounts[itemYear] = (yearCounts[itemYear] ?? 0) + 1;
+      }
     }
     final years = yearCounts.keys.toList()..sort((a, b) => b.compareTo(a));
     final yearItems = items.where((item) => item.yearGroup == year).toList();
@@ -1412,6 +1599,8 @@ class _LibrarySidePanel extends StatelessWidget {
                     onSecondaryTapDown: (details) => _showLibraryContextMenu(
                       context: context,
                       position: details.globalPosition,
+                      onPages: () =>
+                          _openKnowledgeWorkspace(context, controller, item),
                       onEdit: () => _editItem(context, item),
                       onDelete: () => _deleteItem(context, item),
                     ),
@@ -1456,7 +1645,7 @@ class _LibrarySidePanel extends StatelessWidget {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          _libraryDate(item.completedDate),
+                                          _libraryItemStatusMeta(item),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.right,
@@ -1540,7 +1729,7 @@ class _LibrarySidePanel extends StatelessWidget {
     final confirmed = await _confirmLibraryDelete(
       context,
       title: 'Borrar de la biblioteca',
-      message: '¿Quieres borrar "${item.title}" de la biblioteca?',
+      message: _libraryDeleteMessage(controller, item),
     );
     if (confirmed) {
       controller.deleteLibraryItem(item.id);
@@ -1660,9 +1849,19 @@ class _LibrarySideLink extends StatelessWidget {
   }
 }
 
+Future<void> _openKnowledgeWorkspace(
+  BuildContext context,
+  TodoWorkspace controller,
+  LibraryItem item,
+) {
+  controller.openKnowledgeWorkspace(item);
+  return Future<void>.value();
+}
+
 Future<void> _showLibraryContextMenu({
   required BuildContext context,
   required Offset position,
+  VoidCallback? onPages,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
 }) async {
@@ -1677,8 +1876,17 @@ Future<void> _showLibraryContextMenu({
       position & const Size(1, 1),
       Offset.zero & overlay.size,
     ),
-    items: const [
-      PopupMenuItem(
+    items: [
+      if (onPages != null)
+        const PopupMenuItem(
+          value: _LibraryContextAction.pages,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.description_outlined),
+            title: Text('Abrir páginas'),
+          ),
+        ),
+      const PopupMenuItem(
         value: _LibraryContextAction.edit,
         child: ListTile(
           dense: true,
@@ -1686,7 +1894,7 @@ Future<void> _showLibraryContextMenu({
           title: Text('Editar'),
         ),
       ),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: _LibraryContextAction.delete,
         child: ListTile(
           dense: true,
@@ -1696,7 +1904,9 @@ Future<void> _showLibraryContextMenu({
       ),
     ],
   );
-  if (action == _LibraryContextAction.edit) {
+  if (action == _LibraryContextAction.pages) {
+    onPages?.call();
+  } else if (action == _LibraryContextAction.edit) {
     onEdit();
   } else if (action == _LibraryContextAction.delete) {
     onDelete();
@@ -1780,7 +1990,11 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
     if (widget.items.isEmpty) {
       return widget.item;
     }
-    return widget.items[_index.clamp(0, widget.items.length - 1)];
+    final selected = widget.items[_index.clamp(0, widget.items.length - 1)];
+    return widget.controller.libraryItems.firstWhere(
+      (item) => item.id == selected.id,
+      orElse: () => selected,
+    );
   }
 
   bool get _hasPrevious => widget.items.isNotEmpty && _index > 0;
@@ -1879,6 +2093,27 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       child: const Text('Cerrar'),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        unawaited(_openKnowledgeWorkspace(
+                          context,
+                          widget.controller,
+                          item,
+                        ));
+                      },
+                      icon: const Icon(Icons.description_outlined, size: 18),
+                      label: const Text('Abrir páginas'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(142, 48),
+                        foregroundColor: visuals.textStrong,
+                        side: const BorderSide(color: Color(0xFFE3D8CB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
                     const Spacer(),
                     if (_hasPrevious) ...[
@@ -2303,17 +2538,11 @@ class _LibraryGoalsView extends StatefulWidget {
   const _LibraryGoalsView({
     required this.controller,
     required this.year,
-    required this.onPreviousYear,
-    required this.onNextYear,
-    required this.onSelectYear,
     required this.onAdd,
   });
 
   final TodoWorkspace controller;
   final int year;
-  final VoidCallback onPreviousYear;
-  final VoidCallback onNextYear;
-  final VoidCallback onSelectYear;
   final VoidCallback onAdd;
 
   @override
@@ -2333,42 +2562,11 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F1DD),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.track_changes_rounded,
-                  color: Color(0xFF70835D)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Propósitos',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Las cosas que quiero jugar, leer y ver este año sí o sí.',
-                    style: TextStyle(color: context.visuals.textMuted),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
         _LibraryTypeFilters(
           selected: _selectedType,
           onChanged: (value) => setState(() => _selectedType = value),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         if (_selectedType != null)
           wide
               ? Expanded(child: _filteredGoalsPanel(context, goals))
@@ -2515,7 +2713,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
         goal,
       ),
       onEdit: (goal) => _showGoalEditDialog(context, goal),
-      onToggle: widget.controller.toggleLibraryGoalCompleted,
       onFavorite: widget.controller.toggleLibraryGoalFavorite,
       onDelete: (goal) => _deleteGoal(context, goal),
     );
@@ -2554,7 +2751,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
     required this.onAdd,
     required this.onOpen,
     required this.onEdit,
-    required this.onToggle,
     required this.onFavorite,
     required this.onDelete,
   });
@@ -2564,7 +2760,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<LibraryGoal> onOpen;
   final ValueChanged<LibraryGoal> onEdit;
-  final ValueChanged<String> onToggle;
   final ValueChanged<String> onFavorite;
   final ValueChanged<LibraryGoal> onDelete;
 
@@ -2642,7 +2837,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
                             goal: goal,
                             onOpen: () => onOpen(goal),
                             onEdit: () => onEdit(goal),
-                            onToggle: () => onToggle(goal.id),
                             onFavorite: () => onFavorite(goal.id),
                             onDelete: () => onDelete(goal),
                           );
@@ -2662,7 +2856,6 @@ class _LibraryGoalLargeCard extends StatefulWidget {
     required this.goal,
     required this.onOpen,
     required this.onEdit,
-    required this.onToggle,
     required this.onFavorite,
     required this.onDelete,
   });
@@ -2670,7 +2863,6 @@ class _LibraryGoalLargeCard extends StatefulWidget {
   final LibraryGoal goal;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
-  final VoidCallback onToggle;
   final VoidCallback onFavorite;
   final VoidCallback onDelete;
 
@@ -2752,43 +2944,17 @@ class _LibraryGoalLargeCardState extends State<_LibraryGoalLargeCard> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _LibraryCoverMenuButton(
-                      onEdit: widget.onEdit,
-                      onDelete: widget.onDelete,
+                  if (goal.isFavorite)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _LibraryGoalTopIconButton(
+                        tooltip: 'Quitar prioridad',
+                        icon: Icons.star_rounded,
+                        color: const Color(0xFFF1A340),
+                        onPressed: widget.onFavorite,
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Row(
-                      children: [
-                        if (goal.isFavorite) ...[
-                          _LibraryGoalTopIconButton(
-                            tooltip: 'Quitar prioridad',
-                            icon: Icons.star_rounded,
-                            color: const Color(0xFFF1A340),
-                            onPressed: widget.onFavorite,
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        _LibraryGoalTopIconButton(
-                          tooltip: goal.isCompleted
-                              ? 'Marcar como pendiente'
-                              : 'Marcar como completado',
-                          icon: goal.isCompleted
-                              ? Icons.check_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: goal.isCompleted
-                              ? const Color(0xFF7EA35F)
-                              : Colors.white,
-                          onPressed: widget.onToggle,
-                        ),
-                      ],
-                    ),
-                  ),
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
@@ -3190,23 +3356,13 @@ class _LocalLibraryCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _detectCoverExtensionFromPath(path),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _LibraryCoverFallback(type: type, iconSize: iconSize);
-        }
-        if (snapshot.data == null) {
-          return _LibraryCoverFallback(type: type, iconSize: iconSize);
-        }
-        return Image.file(
-          File(path),
-          fit: BoxFit.cover,
-          cacheWidth: 600,
-          errorBuilder: (context, error, stackTrace) =>
-              _LibraryCoverFallback(type: type, iconSize: iconSize),
-        );
-      },
+    return Image.file(
+      File(path),
+      fit: BoxFit.cover,
+      cacheWidth: 600,
+      gaplessPlayback: true,
+      errorBuilder: (context, error, stackTrace) =>
+          _LibraryCoverFallback(type: type, iconSize: iconSize),
     );
   }
 }
@@ -3382,6 +3538,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
   LibraryMediaType _mediaType = LibraryMediaType.movie;
   late int _year = widget.year;
   bool _favorite = false;
+  bool _completed = false;
   final _title = TextEditingController();
   final _platform = TextEditingController();
   final _developer = TextEditingController();
@@ -3408,6 +3565,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
     _mediaType = goal.mediaType ?? LibraryMediaType.movie;
     _year = goal.targetYear;
     _favorite = goal.isFavorite;
+    _completed = goal.isCompleted;
     _title.text = goal.title;
     _platform.text = goal.platform ?? '';
     _developer.text = goal.developer ?? '';
@@ -3749,6 +3907,23 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
             ),
           ],
         ),
+        if (_isEditing) ...[
+          const SizedBox(height: 8),
+          SwitchListTile(
+            value: _completed,
+            onChanged: (value) => setState(() => _completed = value),
+            title: const Text('Completado'),
+            secondary: Icon(
+              _completed
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: _completed
+                  ? const Color(0xFF70835D)
+                  : context.visuals.textMuted,
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
         const SizedBox(height: 16),
         _goalDialogField(_note, 'Nota opcional', 'Añade contexto o motivo...'),
       ],
@@ -3955,6 +4130,9 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               _country.text.trim().isEmpty,
         ),
       );
+      if (_completed != goal.isCompleted) {
+        widget.controller.toggleLibraryGoalCompleted(goal.id);
+      }
       Navigator.of(context).pop();
       return;
     }
@@ -3985,10 +4163,15 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
 }
 
 class _LibraryItemDialog extends StatefulWidget {
-  const _LibraryItemDialog({required this.controller, this.item});
+  const _LibraryItemDialog({
+    required this.controller,
+    this.item,
+    this.initialStatus = LibraryItemStatus.pending,
+  });
 
   final TodoWorkspace controller;
   final LibraryItem? item;
+  final LibraryItemStatus initialStatus;
 
   @override
   State<_LibraryItemDialog> createState() => _LibraryItemDialogState();
@@ -3997,6 +4180,7 @@ class _LibraryItemDialog extends StatefulWidget {
 class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   LibraryItemType _type = LibraryItemType.game;
   LibraryMediaType _mediaType = LibraryMediaType.movie;
+  late LibraryItemStatus _status;
   late DateTime _completedDate;
   final _title = TextEditingController();
   final _platform = TextEditingController();
@@ -4018,13 +4202,14 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   void initState() {
     super.initState();
     final item = widget.item;
+    _status = item?.status ?? widget.initialStatus;
     if (item == null) {
       _completedDate = DateTime.now();
       return;
     }
     _type = item.type;
     _mediaType = item.mediaType ?? LibraryMediaType.movie;
-    _completedDate = item.completedDate;
+    _completedDate = item.completedDate ?? DateTime.now();
     _title.text = item.title;
     _platform.text = item.platform ?? '';
     _developer.text = item.developer ?? '';
@@ -4095,7 +4280,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                           Text(
                             _isEditing
                                 ? 'Actualiza los datos de este registro.'
-                                : 'Registra algo que ya has completado.',
+                                : 'Guarda algo pendiente, en curso o completado.',
                             style: TextStyle(color: visuals.textMuted),
                           ),
                         ],
@@ -4155,6 +4340,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                         ),
                         const SizedBox(height: 26),
                       ],
+                      _statusField(),
+                      const SizedBox(height: 22),
                       Text(_dialogInfoTitle(),
                           style: const TextStyle(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 14),
@@ -4233,8 +4420,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _dateField('Fecha completado *')),
-                const SizedBox(width: 14),
+                if (_status == LibraryItemStatus.completed) ...[
+                  Expanded(child: _dateField('Fecha completado *')),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(child: _gameFormatField()),
               ],
             ),
@@ -4273,8 +4462,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _dateField('Fecha completado *')),
-                const SizedBox(width: 14),
+                if (_status == LibraryItemStatus.completed) ...[
+                  Expanded(child: _dateField('Fecha completado *')),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(child: _bookFormatField()),
               ],
             ),
@@ -4310,8 +4501,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _dateField('Fecha completado / Visto *')),
-                const SizedBox(width: 14),
+                if (_status == LibraryItemStatus.completed) ...[
+                  Expanded(child: _dateField('Fecha completado / visto *')),
+                  const SizedBox(width: 14),
+                ],
                 Expanded(
                     child: _dialogField(_duration, 'Duración', 'Ej. 2h 55m')),
               ],
@@ -4348,6 +4541,38 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(hintText: hint),
+        ),
+      ],
+    );
+  }
+
+  Widget _statusField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Estado', style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<LibraryItemStatus>(
+          initialValue: _status,
+          decoration: const InputDecoration(),
+          items: [
+            for (final status in LibraryItemStatus.values)
+              DropdownMenuItem(
+                value: status,
+                child: Row(
+                  children: [
+                    Icon(_libraryStatusIcon(status), size: 18),
+                    const SizedBox(width: 10),
+                    Text(_libraryStatusSingularLabel(status)),
+                  ],
+                ),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _status = value);
+            }
+          },
         ),
       ],
     );
@@ -4498,7 +4723,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       widget.controller.updateLibraryItem(
         item.copyWith(
           title: _title.text.trim(),
-          completedDate: _completedDate,
+          status: _status,
+          completedDate:
+              _status == LibraryItemStatus.completed ? _completedDate : null,
+          clearCompletedDate: _status != LibraryItemStatus.completed,
           coverUrl: _cover.text.trim().isEmpty ? null : _cover.text.trim(),
           clearCoverUrl: _cover.text.trim().isEmpty,
           rating: double.tryParse(_rating.text.replaceAll(',', '.')),
@@ -4550,7 +4778,9 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     widget.controller.createLibraryItem(
       type: _type,
       title: _title.text,
-      completedDate: _completedDate,
+      status: _status,
+      completedDate:
+          _status == LibraryItemStatus.completed ? _completedDate : null,
       coverUrl: _cover.text,
       rating: double.tryParse(_rating.text.replaceAll(',', '.')),
       note: _note.text,
@@ -4822,12 +5052,72 @@ String _libraryBookExtraInfo(LibraryItem item) {
   return parts.isEmpty ? 'Sin tipo' : parts.join(' · ');
 }
 
-String _librarySeeAllLabel(LibraryItemType type, int count) => switch (type) {
-      LibraryItemType.game => 'Ver los $count juegos completados',
-      LibraryItemType.book => 'Ver los $count libros completados',
-      LibraryItemType.movieSeries =>
-        'Ver las $count películas y series completadas',
+String _librarySeeAllLabel(
+  LibraryItemType type,
+  int count,
+  LibraryItemStatus status,
+) {
+  final state = _libraryStatusCountLabel(status, count);
+  return switch (type) {
+    LibraryItemType.game => 'Ver los $count juegos $state',
+    LibraryItemType.book => 'Ver los $count libros $state',
+    LibraryItemType.movieSeries => 'Ver las $count películas y series $state',
+  };
+}
+
+String _libraryStatusPluralLabel(LibraryItemStatus status) => switch (status) {
+      LibraryItemStatus.pending => 'Pendientes',
+      LibraryItemStatus.inProgress => 'En curso',
+      LibraryItemStatus.completed => 'Completados',
     };
+
+String _libraryStatusSingularLabel(LibraryItemStatus status) =>
+    switch (status) {
+      LibraryItemStatus.pending => 'Pendiente',
+      LibraryItemStatus.inProgress => 'En curso',
+      LibraryItemStatus.completed => 'Completado',
+    };
+
+String _libraryStatusCountLabel(LibraryItemStatus status, int count) =>
+    switch (status) {
+      LibraryItemStatus.pending => count == 1 ? 'pendiente' : 'pendientes',
+      LibraryItemStatus.inProgress => 'en curso',
+      LibraryItemStatus.completed => count == 1 ? 'completado' : 'completados',
+    };
+
+String _libraryEmptyStatusText(LibraryItemStatus status) => switch (status) {
+      LibraryItemStatus.pending =>
+        'No hay contenido pendiente para este filtro.',
+      LibraryItemStatus.inProgress =>
+        'No hay contenido en curso para este filtro.',
+      LibraryItemStatus.completed =>
+        'No hay contenido completado para este filtro.',
+    };
+
+IconData _libraryStatusIcon(LibraryItemStatus status) => switch (status) {
+      LibraryItemStatus.pending => Icons.bookmark_border_rounded,
+      LibraryItemStatus.inProgress => Icons.play_circle_outline_rounded,
+      LibraryItemStatus.completed => Icons.check_circle_outline_rounded,
+    };
+
+String _libraryItemStatusMeta(LibraryItem item) {
+  final date = item.completedDate;
+  if (item.status == LibraryItemStatus.completed && date != null) {
+    return _libraryDate(date);
+  }
+  return _libraryStatusSingularLabel(item.status);
+}
+
+String _libraryDeleteMessage(TodoWorkspace controller, LibraryItem item) {
+  final linked = controller.libraryGoals.any(
+    (goal) =>
+        goal.id == item.linkedGoalId || goal.linkedLibraryItemId == item.id,
+  );
+  if (linked) {
+    return '¿Quieres borrar "${item.title}" de la biblioteca? El propósito vinculado se conservará y volverá a crear esta obra como pendiente.';
+  }
+  return '¿Quieres borrar "${item.title}" de la biblioteca?';
+}
 
 String _addGoalLabel(LibraryItemType type) => switch (type) {
       LibraryItemType.game => 'Añadir juego',
@@ -4914,7 +5204,9 @@ String _goalDetailTitle(LibraryItemType type) => _detailTitle(type);
 
 List<(String, String)> _detailFields(LibraryItem item) {
   final common = <(String, String)>[
-    ('Fecha completado', _libraryDate(item.completedDate)),
+    ('Estado', _libraryStatusSingularLabel(item.status)),
+    if (item.completedDate != null)
+      ('Fecha completado', _libraryDate(item.completedDate!)),
     if (item.releaseYear != null) ('Año', item.releaseYear.toString()),
     if (item.format?.isNotEmpty == true) ('Formato', item.format!),
     if (item.genre?.isNotEmpty == true) ('Género', item.genre!),
@@ -5091,11 +5383,11 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
 // ignore: unused_element
 String _searchHint(LibraryItemType type) => switch (type) {
       LibraryItemType.game =>
-        'Buscar por t?tulo, plataforma, desarrollador o g?nero',
+        'Buscar por título, plataforma, desarrollador o género',
       LibraryItemType.book =>
-        'Buscar por t?tulo, autor, g?nero, tipo o formato',
+        'Buscar por título, autor, género, tipo o formato',
       LibraryItemType.movieSeries =>
-        'Buscar por t?tulo, director, g?nero, pa?s o a?o',
+        'Buscar por título, director, género, país o año',
     };
 
 int _compareLibraryItems(
@@ -5104,10 +5396,10 @@ int _compareLibraryItems(
   LibrarySortOrder order,
 ) {
   final result = switch (order) {
-    LibrarySortOrder.newestFirst =>
-      right.completedDate.compareTo(left.completedDate),
-    LibrarySortOrder.oldestFirst =>
-      left.completedDate.compareTo(right.completedDate),
+    LibrarySortOrder.newestFirst => (right.completedDate ?? right.updatedAt)
+        .compareTo(left.completedDate ?? left.updatedAt),
+    LibrarySortOrder.oldestFirst => (left.completedDate ?? left.updatedAt)
+        .compareTo(right.completedDate ?? right.updatedAt),
     LibrarySortOrder.titleAsc =>
       _sortText(left.title).compareTo(_sortText(right.title)),
     LibrarySortOrder.titleDesc =>
@@ -5199,19 +5491,6 @@ Future<String?> _copyLibraryCover(XFile file) async {
 Future<String?> _detectCoverExtension(XFile file) async {
   final signature = await _readCoverSignature(file.openRead);
   return _coverExtensionFromSignature(signature);
-}
-
-Future<String?> _detectCoverExtensionFromPath(String path) async {
-  try {
-    final file = File(path);
-    if (!await file.exists()) {
-      return null;
-    }
-    final signature = await _readCoverSignature(file.openRead);
-    return _coverExtensionFromSignature(signature);
-  } catch (_) {
-    return null;
-  }
 }
 
 Future<List<int>> _readCoverSignature(

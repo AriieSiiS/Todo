@@ -145,7 +145,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                     children: [
                                       _AsideCard(
                                         title: 'Resumen',
-                                        subtitle: 'Asi se vera tu tarea.',
+                                        subtitle: 'Así se verá tu tarea.',
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -242,7 +242,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                       ),
                                       const SizedBox(height: 14),
                                       _AsideCard(
-                                        title: 'Donde aparecera',
+                                        title: 'Dónde aparecerá',
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -306,8 +306,8 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                                             Expanded(
                                               child: Text(
                                                 _syncToGoogle
-                                                    ? 'Se creara tambien en tu Google Calendar.'
-                                                    : 'Solo se guardara dentro de la app.',
+                                                    ? 'Se creará también en tu Google Calendar.'
+                                                    : 'Solo se guardará dentro de la app.',
                                                 style: TextStyle(
                                                     color: visuals.textMuted,
                                                     height: 1.35),
@@ -508,7 +508,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           ],
         ),
         const SizedBox(height: 18),
-        _sectionLabel('Repeticion'),
+        _sectionLabel('Repetición'),
         const SizedBox(height: 6),
         DropdownButtonFormField<RecurrenceType>(
           initialValue: _recurrenceType,
@@ -516,7 +516,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           items: const [
             DropdownMenuItem(
                 value: RecurrenceType.none,
-                child: Text('Sin repeticion', style: fieldTextStyle)),
+                child: Text('Sin repetición', style: fieldTextStyle)),
             DropdownMenuItem(
                 value: RecurrenceType.daily,
                 child: Text('Diaria', style: fieldTextStyle)),
@@ -543,7 +543,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
             TextButton.icon(
               onPressed: () => setState(() => _subtasks.add('')),
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Anadir subtarea'),
+              label: const Text('Añadir subtarea'),
             ),
           ],
         ),

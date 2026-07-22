@@ -3,6 +3,12 @@ import 'package:todo/application/state/todo_workspace.dart';
 import 'package:todo/domain/models.dart';
 
 void main() {
+  test('library defaults to completed when no view was saved', () {
+    final controller = TodoWorkspace.createForTest();
+
+    expect(controller.libraryStatusView, LibraryItemStatus.completed);
+  });
+
   test('completed library goals and library items stay linked', () {
     final controller = TodoWorkspace.createForTest();
     final year = DateTime.now().year;
@@ -69,14 +75,15 @@ void main() {
       (goal) => goal.id == goalAfterItemEdit.id,
     );
     expect(reopenedGoal.isCompleted, isFalse);
-    expect(reopenedGoal.linkedLibraryItemId, isNull);
-    expect(
-      controller.libraryItems.where((item) => item.linkedGoalId == goal.id),
-      isEmpty,
+    final reopenedItem = controller.libraryItems.singleWhere(
+      (item) => item.linkedGoalId == goal.id,
     );
+    expect(reopenedGoal.linkedLibraryItemId, reopenedItem.id);
+    expect(reopenedItem.status, LibraryItemStatus.pending);
+    expect(reopenedItem.completedDate, isNull);
   });
 
-  test('deleting a goal deletes its linked completed item', () {
+  test('deleting a goal keeps its linked library item', () {
     final controller = TodoWorkspace.createForTest();
     final year = DateTime.now().year;
 
@@ -93,7 +100,8 @@ void main() {
     controller.deleteLibraryGoal(goal.id);
 
     expect(controller.libraryGoals, isEmpty);
-    expect(controller.libraryItems, isEmpty);
+    expect(controller.libraryItems, hasLength(1));
+    expect(controller.libraryItems.single.linkedGoalId, isNull);
   });
 
   test('creating a completed item completes a matching pending goal', () {
@@ -127,4 +135,136 @@ void main() {
     expect(linkedGoal.genre, 'Shooter');
     expect(linkedItem.linkedGoalId, goal.id);
   });
+
+  test('library status transitions normalize the completed date', () {
+    final controller = TodoWorkspace.createForTest();
+    final item = controller.createLibraryItem(
+      type: LibraryItemType.book,
+      title: 'Piranesi',
+      status: LibraryItemStatus.pending,
+    );
+
+    expect(item.completedDate, isNull);
+    controller.updateLibraryItemStatus(
+      item.id,
+      LibraryItemStatus.inProgress,
+    );
+    expect(controller.libraryItems.single.status, LibraryItemStatus.inProgress);
+
+    controller.updateLibraryItemStatus(
+      item.id,
+      LibraryItemStatus.completed,
+      completedDate: DateTime(2026, 7, 22),
+    );
+    expect(controller.libraryItems.single.status, LibraryItemStatus.completed);
+    expect(controller.libraryItems.single.completedDate, DateTime(2026, 7, 22));
+
+    controller.updateLibraryItemStatus(item.id, LibraryItemStatus.pending);
+    expect(controller.libraryItems.single.completedDate, isNull);
+  });
+
+  test('deleting a linked item recreates it pending and preserves the goal',
+      () {
+    final controller = TodoWorkspace.createForTest();
+    final goal = controller.createLibraryGoal(
+      type: LibraryItemType.game,
+      title: 'Control',
+      targetYear: 2026,
+    );
+    final original = controller.libraryItems.single;
+
+    controller.deleteLibraryItem(original.id);
+
+    final keptGoal = controller.libraryGoals.single;
+    final replacement = controller.libraryItems.single;
+    expect(keptGoal.id, goal.id);
+    expect(keptGoal.isCompleted, isFalse);
+    expect(keptGoal.linkedLibraryItemId, replacement.id);
+    expect(replacement.id, isNot(original.id));
+    expect(replacement.status, LibraryItemStatus.pending);
+    expect(replacement.linkedGoalId, goal.id);
+  });
+
+  test('legacy library items default to completed', () {
+    final item = LibraryItem.fromJson(<String, dynamic>{
+      'id': 'legacy',
+      'type': 'book',
+      'title': 'Circe',
+      'completedDate': '2026-05-09T00:00:00.000',
+      'createdAt': '2026-05-09T00:00:00.000',
+      'updatedAt': '2026-05-09T00:00:00.000',
+    });
+
+    expect(item.status, LibraryItemStatus.completed);
+    expect(item.yearGroup, 2026);
+  });
+
+  test('schema 2 migration links pending goals once without losing history',
+      () {
+    final completed = LibraryItem.fromJson(<String, dynamic>{
+      'id': 'completed-circe',
+      'type': 'book',
+      'title': 'Circe',
+      'completedDate': '2026-05-09T00:00:00.000',
+      'createdAt': '2026-05-09T00:00:00.000',
+      'updatedAt': '2026-05-09T00:00:00.000',
+    });
+    final pendingGoal = LibraryGoal(
+      id: 'goal-piranesi',
+      type: LibraryItemType.book,
+      title: 'Piranesi',
+      targetYear: 2026,
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+    );
+    final migrated = TodoWorkspace.createForTest(
+      snapshot: _snapshot(
+        schemaVersion: 2,
+        items: [completed],
+        goals: [pendingGoal],
+      ),
+    );
+
+    expect(migrated.libraryItems, hasLength(2));
+    expect(
+      migrated.libraryItems
+          .where((item) => item.status == LibraryItemStatus.completed),
+      hasLength(1),
+    );
+    final pending = migrated.libraryItems.singleWhere(
+      (item) => item.status == LibraryItemStatus.pending,
+    );
+    expect(migrated.libraryGoals.single.linkedLibraryItemId, pending.id);
+
+    final reloaded = TodoWorkspace.createForTest(
+      snapshot: _snapshot(
+        schemaVersion: 3,
+        items: migrated.libraryItems,
+        goals: migrated.libraryGoals,
+      ),
+    );
+    expect(reloaded.libraryItems, hasLength(2));
+    expect(reloaded.libraryGoals.single.linkedLibraryItemId, pending.id);
+  });
+}
+
+AppStateSnapshot _snapshot({
+  required int schemaVersion,
+  required List<LibraryItem> items,
+  required List<LibraryGoal> goals,
+}) {
+  return AppStateSnapshot(
+    tasks: const [],
+    categories: const [],
+    projects: const [],
+    notes: const [],
+    libraryItems: items,
+    libraryGoals: goals,
+    daySettings: const DaySettings(),
+    notificationSettings: const DeviceNotificationSettings(),
+    calendarSettings: const CalendarIntegrationSettings(),
+    section: AppSection.library,
+    todaySort: TodaySort.manual,
+    schemaVersion: schemaVersion,
+  );
 }

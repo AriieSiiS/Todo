@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,14 +7,12 @@ import 'package:todo/application/providers/todo_providers.dart';
 import 'package:todo/app/app_launch_intent.dart';
 import 'package:todo/app/todo_theme.dart';
 import 'package:todo/application/state/todo_workspace.dart';
-import 'package:todo/data/runtime_state_paths.dart';
 import 'package:todo/domain/models.dart';
 import 'package:todo/presentation/shell/app_shell.dart';
 
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    await _clearRuntimeFiles();
   });
 
   testWidgets('renders today workspace', (WidgetTester tester) async {
@@ -130,6 +126,62 @@ void main() {
     await tester.pump();
 
     expect(find.text('+1 más'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('library shows and remembers consumption status tabs', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'in-progress-game',
+            type: LibraryItemType.game,
+            title: 'Control',
+            status: LibraryItemStatus.inProgress,
+            createdAt: DateTime(2026, 7, 20),
+            updatedAt: DateTime(2026, 7, 22),
+          ),
+        ],
+        libraryStatusView: LibraryItemStatus.inProgress,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+    });
+
+    expect(find.text('Pendientes'), findsOneWidget);
+    expect(find.text('En curso'), findsWidgets);
+    expect(find.text('Completados'), findsOneWidget);
+    expect(find.text('Control'), findsWidgets);
+
+    await tester.tap(find.text('Pendientes'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.libraryStatusView, LibraryItemStatus.pending);
+
+    await tester.tap(find.text('Añadir a Biblioteca'));
+    await tester.pump();
+    expect(find.text('Estado'), findsOneWidget);
+    expect(find.text('Pendiente'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -390,27 +442,6 @@ Future<void> _ignoreRenderOverflow(Future<void> Function() body) async {
     await body();
   } finally {
     FlutterError.onError = previous;
-  }
-}
-
-Future<void> _clearRuntimeFiles() async {
-  final home = Platform.environment['USERPROFILE'] ??
-      Platform.environment['HOME'] ??
-      Directory.current.path;
-  final runtimeDirectory = Directory(
-    '$home${Platform.pathSeparator}Documents${Platform.pathSeparator}Todo${Platform.pathSeparator}${RuntimeStatePaths.runtimeDirectoryName}',
-  );
-  final stateFile = File(
-    '${runtimeDirectory.path}${Platform.pathSeparator}${RuntimeStatePaths.stateFileName}',
-  );
-  final sessionFile = File(
-    '${runtimeDirectory.path}${Platform.pathSeparator}${RuntimeStatePaths.calendarSessionFileName}',
-  );
-  if (await stateFile.exists()) {
-    await stateFile.delete();
-  }
-  if (await sessionFile.exists()) {
-    await sessionFile.delete();
   }
 }
 

@@ -150,5 +150,7 @@ referencia está en:
 C:\Users\aries\AppData\Local\Programs\Todo\todo.exe
 ```
 
-No se debe dar por terminada una actualización sin comprobar que esa instalación
-incluye los cambios nuevos.
+Antes de dar por terminada una actualización, hay que verificar técnicamente que
+la instalación contiene la compilación nueva. Codex no debe abrir ni manejar la
+app instalada para hacer la prueba visual o funcional: el usuario se encarga de
+probarla después del despliegue.

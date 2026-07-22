@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:appflowy_editor/appflowy_editor.dart';
 
 import '../application/providers/todo_providers.dart';
 import '../application/state/todo_workspace.dart';
@@ -48,10 +49,10 @@ class _TodoAppState extends State<TodoApp> {
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
+              AppFlowyEditorLocalizations.delegate,
             ],
             supportedLocales: const [
               Locale('es', 'ES'),
-              Locale('en', 'US'),
             ],
             home: const _LoadingScreen(),
           );
@@ -84,10 +85,10 @@ class _TodoMaterialApp extends ConsumerWidget {
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        AppFlowyEditorLocalizations.delegate,
       ],
       supportedLocales: const [
         Locale('es', 'ES'),
-        Locale('en', 'US'),
       ],
       home: AppShell(launchIntent: launchIntent),
     );

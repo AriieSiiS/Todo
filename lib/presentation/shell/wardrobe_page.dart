@@ -109,7 +109,14 @@ class _WardrobePageState extends State<WardrobePage> {
         ...item.occasions,
       ].join(' ').toLowerCase();
       return searchable.contains(normalizedQuery);
-    }).toList();
+    }).toList()
+      ..sort((left, right) {
+        final categoryOrder = left.category.toLowerCase().compareTo(
+              right.category.toLowerCase(),
+            );
+        if (categoryOrder != 0) return categoryOrder;
+        return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+      });
     return Column(
       children: [
         TextField(
@@ -210,7 +217,7 @@ class _WardrobeItemCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _showEditWardrobeItem(context, controller, item),
+        onTap: () => _showWardrobeItemDetail(context, controller, item),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -961,6 +968,191 @@ Future<void> _showCreateWardrobeItem(
               ]));
   if (result == true) {
     controller.createWardrobeItem(name: name.text, category: category.text);
+  }
+}
+
+Future<void> _showWardrobeItemDetail(
+    BuildContext context, TodoWorkspace controller, WardrobeItem item) async {
+  final action = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 980, maxHeight: 760),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 720;
+            final image = ColoredBox(
+              color: const Color(0xFFF3EEE5),
+              child: FutureBuilder<String>(
+                future: controller.wardrobeImageAbsolutePath(
+                  item,
+                  thumbnail: false,
+                ),
+                builder: (context, snapshot) {
+                  final path = snapshot.data ?? '';
+                  if (path.isEmpty || !File(path).existsSync()) {
+                    return const _MissingWardrobeImage();
+                  }
+                  return InteractiveViewer(
+                    minScale: 1,
+                    maxScale: 4,
+                    child: Image.file(
+                      File(path),
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          const _MissingWardrobeImage(),
+                    ),
+                  );
+                },
+              ),
+            );
+            final details = _WardrobeItemDetailPanel(
+              controller: controller,
+              item: item,
+              onClose: () => Navigator.pop(dialogContext),
+              onEdit: () => Navigator.pop(dialogContext, 'edit'),
+            );
+            if (compact) {
+              return Column(
+                children: [
+                  SizedBox(height: 390, width: double.infinity, child: image),
+                  Expanded(child: details),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(flex: 3, child: image),
+                SizedBox(width: 350, child: details),
+              ],
+            );
+          },
+        ),
+      ),
+    ),
+  );
+  if (action == 'edit' && context.mounted) {
+    await _showEditWardrobeItem(context, controller, item);
+  }
+}
+
+class _WardrobeItemDetailPanel extends StatelessWidget {
+  const _WardrobeItemDetailPanel({
+    required this.controller,
+    required this.item,
+    required this.onClose,
+    required this.onEdit,
+  });
+
+  final TodoWorkspace controller;
+  final WardrobeItem item;
+  final VoidCallback onClose;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final metadata = <({String label, String value})>[
+      (label: 'Categoría', value: item.category),
+      (label: 'Lavandería', value: _laundryLabel(item.laundryStatus)),
+      if (item.material.trim().isNotEmpty)
+        (label: 'Material', value: item.material),
+      if (item.colors.isNotEmpty)
+        (label: 'Colores', value: item.colors.join(', ')),
+      if (item.seasons.isNotEmpty)
+        (label: 'Temporadas', value: item.seasons.join(', ')),
+      if (item.occasions.isNotEmpty)
+        (label: 'Ocasiones', value: item.occasions.join(', ')),
+      (label: 'Usos', value: '${item.useCount}'),
+      if (item.price != null)
+        (label: 'Precio', value: '${item.price!.toStringAsFixed(2)} €'),
+    ];
+    return Material(
+      color: context.visuals.panel,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Detalle de prenda',
+                    style: TextStyle(color: context.visuals.textMuted),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar',
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            Text(item.name, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                children: [
+                  ...metadata.map((entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(entry.label,
+                                style: TextStyle(
+                                    color: context.visuals.textMuted,
+                                    fontSize: 12)),
+                            const SizedBox(height: 2),
+                            Text(entry.value,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      )),
+                  if (item.tags.isNotEmpty) ...[
+                    Text('Etiquetas',
+                        style: TextStyle(
+                            color: context.visuals.textMuted, fontSize: 12)),
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 7,
+                      children: item.tags
+                          .map((tag) => Chip(label: Text(tag)))
+                          .toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                IconButton.filledTonal(
+                  tooltip: item.favorite
+                      ? 'Quitar de favoritos'
+                      : 'Añadir a favoritos',
+                  onPressed: () {
+                    controller.toggleWardrobeFavorite(item.id);
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(item.favorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Editar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

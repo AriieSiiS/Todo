@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import zlib
 import binascii
+from contextlib import closing
 from pathlib import Path
 
 
@@ -50,6 +51,7 @@ class McpServerTest(unittest.TestCase):
         os.environ["TODO_MCP_PREFS_PATH"] = str(root / "prefs.json")
         os.environ["TODO_MCP_DISABLE_REMOTE"] = "1"
         os.environ["TODO_MCP_WARDROBE_PATH"] = str(root / "wardrobe")
+        os.environ["TODO_MCP_KNOWLEDGE_PATH"] = str(root / "knowledge")
         sys.path.insert(0, str(Path(__file__).resolve().parent))
 
         import server
@@ -134,8 +136,118 @@ class McpServerTest(unittest.TestCase):
             "set_wardrobe_plan",
             "create_wardrobe_packing_list",
             "add_wardrobe_packing_item",
+            "get_knowledge_contract",
+            "list_knowledge_pages",
+            "get_knowledge_page",
+            "search_knowledge",
+            "create_knowledge_page",
+            "update_knowledge_page",
+            "move_knowledge_page",
+            "trash_knowledge_page",
+            "restore_knowledge_page",
+            "list_knowledge_backlinks",
+            "import_knowledge_asset",
+            "create_knowledge_collection",
+            "apply_knowledge_manifest",
+            "export_knowledge_repository",
         }
         self.assertTrue(expected.issubset(names), expected - names)
+
+    def test_local_knowledge_pages_search_links_collections_and_trash(self) -> None:
+        contract = self.call("get_knowledge_contract")
+        self.assertEqual(contract["schemaVersion"], 1)
+        self.assertIn("image", contract["imageBlock"]["types"])
+        self.assertIn(
+            "knowledgeImageCropAspectRatio",
+            contract["imageBlock"]["layoutAttributes"],
+        )
+        root = self.call(
+            "create_knowledge_page",
+            {"title": "Película", "externalKey": "film:1"},
+        )["page"]
+        child = self.call(
+            "create_knowledge_page",
+            {"title": "Actores", "parent_id": root["id"]},
+        )["page"]
+        self.call(
+            "update_knowledge_page",
+            {
+                "page_id": root["id"],
+                "document": {
+                    "document": {
+                        "type": "page",
+                        "children": [
+                            {
+                                "type": "paragraph",
+                                "data": {
+                                    "knowledgeBlockId": "block-link",
+                                    "targetPageId": child["id"],
+                                    "delta": [{"insert": "Reparto principal"}],
+                                },
+                            }
+                        ],
+                    }
+                },
+            },
+        )
+        search = self.call("search_knowledge", {"query": "Reparto"})
+        self.assertEqual(search["count"], 1)
+        links = self.call("list_knowledge_backlinks", {"page_id": child["id"]})
+        self.assertEqual(links["backlinks"][0]["pageId"], root["id"])
+        collection = self.call(
+            "create_knowledge_collection",
+            {
+                "page_id": child["id"],
+                "name": "Actores",
+                "schema": [{"key": "papel", "type": "text"}],
+                "views": [{"type": "gallery", "name": "Galería"}],
+            },
+        )["collection"]
+        self.assertEqual(collection["name"], "Actores")
+        with self.assertRaises(ValueError):
+            self.call(
+                "move_knowledge_page",
+                {"page_id": root["id"], "parent_id": child["id"]},
+            )
+        trashed = self.call("trash_knowledge_page", {"page_id": root["id"]})
+        self.assertEqual(len(trashed["affectedPageIds"]), 2)
+        self.call("restore_knowledge_page", {"page_id": root["id"]})
+        self.assertEqual(self.call("list_knowledge_pages")["count"], 2)
+
+    def test_knowledge_manifest_is_atomic_locked_and_idempotent(self) -> None:
+        root = self.call(
+            "create_knowledge_page",
+            {"title": "Juego", "externalKey": "game:root"},
+        )["page"]
+        repository = self.server.knowledge_repository()
+        with closing(repository.connect()) as db, db:
+            db.execute(
+                "INSERT INTO knowledge_leases(page_id,holder,process_id,expires_at) VALUES(?,?,?,?)",
+                (root["id"], "Flutter-test", 1, "2999-01-01T00:00:00+00:00"),
+            )
+        manifest = {
+            "operationId": "guide-1",
+            "pages": [
+                {"externalKey": "game:root", "title": "Guía de logros"},
+                {
+                    "externalKey": "achievement:one",
+                    "parentExternalKey": "game:root",
+                    "title": "Primer logro",
+                },
+            ],
+        }
+        with self.assertRaises(ValueError):
+            self.call("apply_knowledge_manifest", {"manifest": manifest})
+        self.assertEqual(self.call("list_knowledge_pages")["count"], 1)
+        with closing(repository.connect()) as db, db:
+            db.execute("DELETE FROM knowledge_leases")
+        first = self.call("apply_knowledge_manifest", {"manifest": manifest})
+        second = self.call("apply_knowledge_manifest", {"manifest": manifest})
+        self.assertFalse(first["idempotentReplay"])
+        self.assertTrue(second["idempotentReplay"])
+        self.assertEqual(self.call("list_knowledge_pages")["count"], 2)
+        exported = self.call("export_knowledge_repository")
+        self.assertTrue(Path(exported["path"]).is_file())
 
     def test_dangerous_operations_require_confirmation(self) -> None:
         with self.assertRaises(ValueError):
@@ -230,6 +342,68 @@ class McpServerTest(unittest.TestCase):
         self.call("sync_task_to_calendar", {"task_id": task["id"]})
         self.call("link_task_to_calendar_event", {"task_id": task["id"], "calendar_id": "primary", "event_id": event["id"]})
         self.call("unlink_task_from_calendar_event", {"task_id": task["id"]})
+
+    def test_library_statuses_and_goal_links(self) -> None:
+        self.call("reset_state", {"confirm": True})
+
+        pending = self.call(
+            "create_library_item",
+            {"type": "game", "title": "Control", "status": "pending"},
+        )["created"]
+        self.assertEqual(pending["status"], "pending")
+        self.assertIsNone(pending["completedDate"])
+        self.assertEqual(
+            self.call("list_library_items", {"status": "pending"})["count"],
+            1,
+        )
+
+        in_progress = self.call(
+            "update_library_item",
+            {"item_id": pending["id"], "status": "inProgress"},
+        )["updated"]
+        self.assertEqual(in_progress["status"], "inProgress")
+        self.assertIsNone(in_progress["completedDate"])
+
+        goal_result = self.call(
+            "create_library_goal",
+            {"type": "book", "title": "Piranesi", "target_year": 2026},
+        )
+        goal = goal_result["created"]
+        goal_item = goal_result["synced_item"]
+        self.assertEqual(goal_item["status"], "pending")
+        self.assertEqual(goal["linkedLibraryItemId"], goal_item["id"])
+
+        completed = self.call(
+            "toggle_library_goal_completed", {"goal_id": goal["id"]}
+        )["synced_item"]
+        self.assertEqual(completed["id"], goal_item["id"])
+        self.assertEqual(completed["status"], "completed")
+        self.assertIsNotNone(completed["completedDate"])
+
+        reopened = self.call(
+            "toggle_library_goal_completed", {"goal_id": goal["id"]}
+        )["synced_item"]
+        self.assertEqual(reopened["id"], goal_item["id"])
+        self.assertEqual(reopened["status"], "pending")
+        self.assertIsNone(reopened["completedDate"])
+
+        self.call("delete_library_goal", {"goal_id": goal["id"], "confirm": True})
+        kept = self.call("list_library_items", {"type": "book"})["items"]
+        self.assertEqual(len(kept), 1)
+        self.assertIsNone(kept[0]["linkedGoalId"])
+
+        linked = self.call(
+            "create_library_goal",
+            {"type": "book", "title": "Circe", "target_year": 2026},
+        )
+        deleted = self.call(
+            "delete_library_item",
+            {"item_id": linked["synced_item"]["id"], "confirm": True},
+        )
+        self.assertEqual(deleted["replacement"]["status"], "pending")
+        self.assertNotEqual(
+            deleted["replacement"]["id"], linked["synced_item"]["id"]
+        )
 
     def test_wardrobe_crud_and_management_flow(self) -> None:
         self.call("reset_state", {"confirm": True})

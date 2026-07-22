@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../domain/models.dart';
+import 'knowledge_service.dart';
 import 'desktop_oauth_bridge_stub.dart'
     if (dart.library.io) 'desktop_oauth_bridge_io.dart';
 
@@ -204,6 +205,171 @@ class SupabaseCloudService {
     }
   }
 
+  Future<void> syncKnowledgeBackup(KnowledgeService knowledge) async {
+    if (!isAuthenticated || currentEmail.isEmpty) return;
+    final client = Supabase.instance.client;
+    for (final operation in knowledge.pendingBackupOperations(limit: 50)) {
+      final operationId = operation['id'] as String;
+      try {
+        final entityType = operation['entityType'] as String;
+        final action = operation['operation'] as String;
+        final payload = (operation['payload'] as Map).cast<String, dynamic>();
+        if (entityType == 'page') {
+          await _backupKnowledgePage(client, payload);
+        } else if (entityType == 'collection') {
+          await _backupKnowledgeCollection(client, payload);
+        } else if (entityType == 'asset') {
+          await _backupKnowledgeAsset(client, knowledge, payload);
+        } else if (entityType == 'pageTree') {
+          final pageIds = (payload['pageIds'] as List? ?? const <dynamic>[])
+              .whereType<String>()
+              .toList();
+          if (pageIds.isNotEmpty) {
+            await client
+                .from('todo_knowledge_pages')
+                .update(<String, dynamic>{
+                  'deleted_at': action == 'trash' ? payload['deletedAt'] : null,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                })
+                .eq('owner_email', currentEmail)
+                .inFilter('page_id', pageIds);
+          }
+        }
+        knowledge.markBackupOperationSucceeded(operationId);
+      } catch (error) {
+        knowledge.markBackupOperationFailed(operationId, error);
+      }
+    }
+  }
+
+  Future<void> _backupKnowledgePage(
+    SupabaseClient client,
+    Map<String, dynamic> page,
+  ) async {
+    final pageId = page['id'] as String;
+    final encoded = jsonEncode(<String, dynamic>{
+      'title': page['title'],
+      'document': page['document'],
+      'properties': page['properties'],
+      'revision': page['revision'],
+      'deletedAt': page['deletedAt'],
+    });
+    final hash = sha256.convert(utf8.encode(encoded)).toString();
+    final remote = await client
+        .from('todo_knowledge_pages')
+        .select()
+        .eq('owner_email', currentEmail)
+        .eq('page_id', pageId)
+        .maybeSingle();
+    final localRevision = (page['revision'] as num?)?.toInt() ?? 1;
+    if (remote != null &&
+        remote['content_hash'] != hash &&
+        ((remote['local_revision'] as num?)?.toInt() ?? 0) >= localRevision) {
+      await client.from('todo_knowledge_revisions').upsert(
+        <String, dynamic>{
+          'owner_email': currentEmail,
+          'revision_id':
+              'conflict-$pageId-${DateTime.now().microsecondsSinceEpoch}',
+          'page_id': pageId,
+          'title': remote['title'] ?? '',
+          'document': remote['document'] ?? <String, dynamic>{},
+          'properties': remote['properties'] ?? <String, dynamic>{},
+          'reason': 'remote-conflict-preserved',
+          'source_device': 'remote',
+          'created_at':
+              remote['updated_at'] ?? DateTime.now().toUtc().toIso8601String(),
+        },
+        onConflict: 'owner_email,revision_id',
+      );
+      throw StateError(
+        'La página $pageId tiene una revisión remota distinta; se conservó para resolución manual.',
+      );
+    }
+    await client.from('todo_knowledge_pages').upsert(
+      <String, dynamic>{
+        'owner_email': currentEmail,
+        'page_id': pageId,
+        'parent_id': page['parentId'],
+        'title': page['title'],
+        'document': page['document'],
+        'properties': page['properties'],
+        'metadata': <String, dynamic>{
+          'icon': page['icon'],
+          'coverAssetId': page['coverAssetId'],
+          'collectionId': page['collectionId'],
+          'canonicalSource': page['canonicalSource'],
+          'canonicalId': page['canonicalId'],
+        },
+        'local_revision': localRevision,
+        'content_hash': hash,
+        'deleted_at': page['deletedAt'],
+        'updated_at': page['updatedAt'],
+      },
+      onConflict: 'owner_email,page_id',
+    );
+  }
+
+  Future<void> _backupKnowledgeCollection(
+    SupabaseClient client,
+    Map<String, dynamic> collection,
+  ) async {
+    final hash = sha256.convert(utf8.encode(jsonEncode(collection))).toString();
+    await client.from('todo_knowledge_collections').upsert(
+      <String, dynamic>{
+        'owner_email': currentEmail,
+        'collection_id': collection['id'],
+        'page_id': collection['pageId'],
+        'name': collection['name'],
+        'schema': collection['properties'],
+        'views': collection['views'],
+        'content_hash': hash,
+        'updated_at': collection['updatedAt'],
+      },
+      onConflict: 'owner_email,collection_id',
+    );
+  }
+
+  Future<void> _backupKnowledgeAsset(
+    SupabaseClient client,
+    KnowledgeService knowledge,
+    Map<String, dynamic> asset,
+  ) async {
+    final local = knowledge.assetById(asset['id'] as String);
+    if (local == null) return;
+    final file = File(knowledge.absoluteAssetPath(local));
+    if (!await file.exists()) return;
+    final storagePath = '$currentEmail/${local.relativePath}';
+    final bytes = await file.readAsBytes();
+    final assetHash = sha256.convert(bytes).toString();
+    await client.storage.from('todo-knowledge-assets').uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: local.mimeType,
+          ),
+        );
+    await client.from('todo_knowledge_assets').upsert(
+      <String, dynamic>{
+        'owner_email': currentEmail,
+        'asset_id': local.id,
+        'sha256': assetHash,
+        'mime_type': local.mimeType,
+        'relative_path': local.relativePath,
+        'size_bytes': local.size,
+        'provenance': <String, dynamic>{
+          'sourceUrl': local.sourceUrl,
+          'sourcePageUrl': local.sourcePageUrl,
+          'author': local.author,
+          'altText': local.altText,
+        },
+        'storage_path': storagePath,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'owner_email,asset_id',
+    );
+  }
+
   Future<CloudPushResult> _legacyCompareAndSwap(
     AppStateSnapshot snapshot,
     int expectedRevision,
@@ -362,7 +528,8 @@ class SupabaseCloudService {
       return;
     }
 
-    _lastError = 'La cuenta conectada no coincide con el email permitido.';
+    _lastError =
+        'La cuenta conectada no coincide con el correo electrónico permitido.';
     await Supabase.instance.client.auth.signOut();
   }
 }

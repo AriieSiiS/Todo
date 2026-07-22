@@ -34,6 +34,31 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - preparar lotes de prendas PNG para revisarlos en la sección Ropa
 - gestionar prendas, conjuntos, usos, lavandería, planificación y maletas
 
+## Páginas de conocimiento
+
+Las herramientas `get_knowledge_contract`, `list_knowledge_pages`,
+`get_knowledge_page` y `search_knowledge` permiten inspeccionar el repositorio
+local. Las operaciones de creación, edición, movimiento, papelera, recursos y
+colecciones escriben directamente en `Documents/Todo/knowledge`.
+
+Para generar árboles grandes se recomienda `apply_knowledge_manifest`. Requiere
+un `operationId`, valida toda la estructura, comprueba las concesiones de
+edición y aplica el lote en una única transacción SQLite. Repetir el mismo
+`operationId` devuelve el resultado anterior sin duplicar contenido. Los
+bloques con `manualOverride` o modificados desde su último `generationHash` se
+conservan.
+
+Las imágenes de bloques `image` y `knowledgeMedia` admiten tamaño, alineación y
+recorte no destructivo. `get_knowledge_contract` devuelve los atributos
+`knowledgeImageWidth`, `knowledgeImageAlignment`,
+`knowledgeImageCropAspectRatio`, `knowledgeImageCropZoom`,
+`knowledgeImageCropX` y `knowledgeImageCropY` para que Flutter y los manifiestos
+de IA utilicen exactamente el mismo formato.
+
+`export_knowledge_repository` crea una copia ZIP con JSON, Markdown y todos los
+recursos. Este repositorio funciona aunque Supabase esté desactivado o no sea
+accesible.
+
 ## Ropa y Codex
 
 La herramienta `get_wardrobe_import_contract` devuelve el formato vigente del

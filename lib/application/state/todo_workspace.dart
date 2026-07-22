@@ -18,6 +18,7 @@ import '../../domain/repositories/notification_repository.dart';
 import '../../domain/repositories/todo_state_repository.dart';
 import '../../services/calendar_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/knowledge_service.dart';
 import '../../services/supabase_cloud_service.dart';
 import '../../services/task_feedback_service.dart';
 import '../../services/task_scheduler_service.dart';
@@ -31,6 +32,7 @@ class TodoWorkspace extends ChangeNotifier {
     this._notificationService,
     this._scheduler,
     this._feedback,
+    this._knowledgeService,
   );
 
   static Future<TodoWorkspace> create() async {
@@ -41,6 +43,7 @@ class TodoWorkspace extends ChangeNotifier {
       NotificationServiceRepository(createNotificationService()),
       TaskSchedulerService(),
       TaskFeedbackService(),
+      KnowledgeService(),
     );
     await controller._load();
     return controller;
@@ -62,12 +65,13 @@ class TodoWorkspace extends ChangeNotifier {
   @visibleForTesting
   static TodoWorkspace createForTest({AppStateSnapshot? snapshot}) {
     final controller = TodoWorkspace._(
-      LocalTodoStateRepository(LocalStore()),
+      _InMemoryTodoStateRepository(snapshot),
       SupabaseCloudSyncRepository(SupabaseCloudService()),
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
       TaskSchedulerService(),
       TaskFeedbackService(enabled: false),
+      KnowledgeService.inMemory(),
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
@@ -75,6 +79,9 @@ class TodoWorkspace extends ChangeNotifier {
     } else {
       controller._clearStateToDefaults();
     }
+    unawaited(controller._knowledgeService.ensureLibraryRoots(
+      controller._libraryItems,
+    ));
     return controller;
   }
 
@@ -84,6 +91,7 @@ class TodoWorkspace extends ChangeNotifier {
   final NotificationRepository _notificationService;
   final TaskSchedulerService _scheduler;
   final TaskFeedbackService _feedback;
+  final KnowledgeService _knowledgeService;
   final Random _random = Random();
 
   final List<TaskModel> _tasks = <TaskModel>[];
@@ -114,7 +122,9 @@ class TodoWorkspace extends ChangeNotifier {
       const CalendarIntegrationSettings();
   CalendarAccount? _calendarAccount;
   AppSection _section = AppSection.today;
+  LibraryItem? _openKnowledgeLibraryItem;
   TodaySort _todaySort = TodaySort.manual;
+  LibraryItemStatus _libraryStatusView = LibraryItemStatus.completed;
   AppVisualMode _visualMode = AppVisualMode.classic;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   DateTime? _manualLogicalDate;
@@ -153,6 +163,7 @@ class TodoWorkspace extends ChangeNotifier {
       List<LibraryItem>.unmodifiable(_libraryItems);
   List<LibraryGoal> get libraryGoals =>
       List<LibraryGoal>.unmodifiable(_libraryGoals);
+  KnowledgeService get knowledge => _knowledgeService;
   List<WardrobeItem> get wardrobeItems =>
       List<WardrobeItem>.unmodifiable(_wardrobeItems);
   List<WardrobeOutfit> get wardrobeOutfits =>
@@ -173,7 +184,9 @@ class TodoWorkspace extends ChangeNotifier {
   CalendarIntegrationSettings get calendarSettings => _calendarSettings;
   CalendarAccount? get calendarAccount => _calendarAccount;
   AppSection get section => _section;
+  LibraryItem? get openKnowledgeLibraryItem => _openKnowledgeLibraryItem;
   TodaySort get todaySort => _todaySort;
+  LibraryItemStatus get libraryStatusView => _libraryStatusView;
   AppVisualMode get visualMode => _visualMode;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
@@ -232,8 +245,23 @@ class TodoWorkspace extends ChangeNotifier {
   DateTime get now => DateTime.now();
 
   void setSection(AppSection value) {
+    _openKnowledgeLibraryItem = null;
     _section = value;
     _commit();
+  }
+
+  void openKnowledgeWorkspace(LibraryItem item) {
+    _section = AppSection.library;
+    _openKnowledgeLibraryItem = item;
+    notifyListeners();
+  }
+
+  void closeKnowledgeWorkspace() {
+    if (_openKnowledgeLibraryItem == null) {
+      return;
+    }
+    _openKnowledgeLibraryItem = null;
+    notifyListeners();
   }
 
   void reorderNavigation(int oldIndex, int newIndex) {
@@ -255,6 +283,14 @@ class TodoWorkspace extends ChangeNotifier {
 
   void setTodaySort(TodaySort value) {
     _todaySort = value;
+    _commit();
+  }
+
+  void setLibraryStatusView(LibraryItemStatus value) {
+    if (_libraryStatusView == value) {
+      return;
+    }
+    _libraryStatusView = value;
     _commit();
   }
 
@@ -1599,6 +1635,10 @@ class TodoWorkspace extends ChangeNotifier {
           return;
         }
       }
+      await _knowledgeService.ensureLibraryRoots(_libraryItems);
+      if (_cloudService is SupabaseCloudSyncRepository) {
+        await _cloudService.syncKnowledgeBackup(_knowledgeService);
+      }
       _lastCloudSyncAt = DateTime.now();
     } catch (_) {
       // Keep local state intact when cloud sync fails.
@@ -2176,7 +2216,8 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem createLibraryItem({
     required LibraryItemType type,
     required String title,
-    required DateTime completedDate,
+    LibraryItemStatus status = LibraryItemStatus.completed,
+    DateTime? completedDate,
     String? coverUrl,
     double? rating,
     String? note,
@@ -2193,11 +2234,15 @@ class TodoWorkspace extends ChangeNotifier {
     String? country,
   }) {
     final now = DateTime.now();
+    final normalizedCompletedDate = status == LibraryItemStatus.completed
+        ? completedDate ?? logicalDate()
+        : null;
     final item = LibraryItem(
       id: _id('library'),
       type: type,
       title: title.trim(),
-      completedDate: completedDate,
+      status: status,
+      completedDate: normalizedCompletedDate,
       coverUrl: coverUrl?.trim().isEmpty == true ? null : coverUrl?.trim(),
       rating: rating,
       note: note?.trim().isEmpty == true ? null : note?.trim(),
@@ -2217,9 +2262,23 @@ class TodoWorkspace extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
     );
-    final existingIndex = _libraryItems.indexWhere(
+    var existingIndex = _libraryItems.indexWhere(
       (existing) => _isSameLibraryEntry(existing, item),
     );
+    if (existingIndex == -1 && status == LibraryItemStatus.completed) {
+      existingIndex = _libraryItems.indexWhere((existing) {
+        if (existing.status == LibraryItemStatus.completed ||
+            existing.type != item.type ||
+            _libraryTitleKey(existing.title) != _libraryTitleKey(item.title)) {
+          return false;
+        }
+        final goal = _libraryGoals.cast<LibraryGoal?>().firstWhere(
+              (candidate) => candidate?.id == existing.linkedGoalId,
+              orElse: () => null,
+            );
+        return goal != null && goal.targetYear == normalizedCompletedDate?.year;
+      });
+    }
     if (existingIndex != -1) {
       final existing = _libraryItems[existingIndex];
       final merged = _mergeLibraryItems(existing, item).copyWith(
@@ -2229,11 +2288,13 @@ class TodoWorkspace extends ChangeNotifier {
       );
       _libraryItems[existingIndex] = merged;
       _syncLibraryGoalFromItem(merged, now);
+      unawaited(_knowledgeService.syncLibraryItem(merged));
       _commit();
       return _libraryItems[existingIndex];
     }
     _libraryItems.add(item);
     _syncLibraryGoalFromItem(item, now);
+    unawaited(_knowledgeService.syncLibraryItem(item));
     _commit();
     return _libraryItems.firstWhere(
       (value) => value.id == item.id,
@@ -2247,19 +2308,82 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     final now = DateTime.now();
-    final next = updated.copyWith(updatedAt: now);
+    final next = updated.copyWith(
+      completedDate: updated.status == LibraryItemStatus.completed
+          ? updated.completedDate ?? logicalDate()
+          : null,
+      clearCompletedDate: updated.status != LibraryItemStatus.completed,
+      updatedAt: now,
+    );
+    _libraryItems[index] = next;
+    _syncLibraryGoalFromItem(next, now);
+    unawaited(_knowledgeService.syncLibraryItem(next));
+    _commit();
+  }
+
+  void updateLibraryItemStatus(
+    String itemId,
+    LibraryItemStatus status, {
+    DateTime? completedDate,
+  }) {
+    final index = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (index == -1 || _libraryItems[index].status == status) {
+      return;
+    }
+    final now = DateTime.now();
+    final item = _libraryItems[index];
+    final next = item.copyWith(
+      status: status,
+      completedDate: status == LibraryItemStatus.completed
+          ? completedDate ?? logicalDate()
+          : null,
+      clearCompletedDate: status != LibraryItemStatus.completed,
+      updatedAt: now,
+    );
     _libraryItems[index] = next;
     _syncLibraryGoalFromItem(next, now);
     _commit();
   }
 
   void deleteLibraryItem(String itemId) {
-    final before = _libraryItems.length;
-    _libraryItems.removeWhere((item) => item.id == itemId);
-    if (_libraryItems.length != before) {
-      _unlinkLibraryGoalsFromItem(itemId);
-      _commit();
+    final itemIndex = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (itemIndex == -1) {
+      return;
     }
+    _knowledgeService.trashForOwner('libraryItem', itemId);
+    if (_openKnowledgeLibraryItem?.id == itemId) {
+      _openKnowledgeLibraryItem = null;
+    }
+    final deleted = _libraryItems.removeAt(itemIndex);
+    final goalIndex = _libraryGoals.indexWhere(
+      (goal) =>
+          goal.id == deleted.linkedGoalId ||
+          goal.linkedLibraryItemId == deleted.id,
+    );
+    if (goalIndex != -1) {
+      final now = DateTime.now();
+      final goal = _libraryGoals[goalIndex].copyWith(
+        status: LibraryGoalStatus.pending,
+        clearLinkedLibraryItemId: true,
+        updatedAt: now,
+      );
+      final replacement = _libraryItemFromGoal(
+        goal,
+        _id('library'),
+        LibraryItemStatus.pending,
+        null,
+        deleted.rating,
+        now,
+        now,
+      );
+      _libraryItems.add(replacement);
+      unawaited(_knowledgeService.syncLibraryItem(replacement));
+      _libraryGoals[goalIndex] = goal.copyWith(
+        linkedLibraryItemId: replacement.id,
+        updatedAt: now,
+      );
+    }
+    _commit();
   }
 
   LibraryGoal createLibraryGoal({
@@ -2307,8 +2431,9 @@ class TodoWorkspace extends ChangeNotifier {
       updatedAt: now,
     );
     _libraryGoals.add(goal);
+    _syncLibraryItemFromGoal(goal, now);
     _commit();
-    return goal;
+    return _libraryGoals.firstWhere((item) => item.id == goal.id);
   }
 
   void updateLibraryGoal(LibraryGoal updated) {
@@ -2324,21 +2449,23 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void deleteLibraryGoal(String goalId) {
-    String? linkedItemId;
-    for (final goal in _libraryGoals) {
-      if (goal.id == goalId) {
-        linkedItemId = goal.linkedLibraryItemId;
-        break;
-      }
+    final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
+    if (index == -1) {
+      return;
     }
-    final before = _libraryGoals.length;
-    _libraryGoals.removeWhere((goal) => goal.id == goalId);
-    if (_libraryGoals.length != before) {
-      _libraryItems.removeWhere(
-        (item) => item.linkedGoalId == goalId || item.id == linkedItemId,
+    final deleted = _libraryGoals.removeAt(index);
+    final itemIndex = _libraryItems.indexWhere(
+      (item) =>
+          item.id == deleted.linkedLibraryItemId ||
+          item.linkedGoalId == deleted.id,
+    );
+    if (itemIndex != -1) {
+      _libraryItems[itemIndex] = _libraryItems[itemIndex].copyWith(
+        clearLinkedGoalId: true,
+        updatedAt: DateTime.now(),
       );
-      _commit();
     }
+    _commit();
   }
 
   void toggleLibraryGoalCompleted(String goalId) {
@@ -2355,72 +2482,118 @@ class TodoWorkspace extends ChangeNotifier {
           : LibraryGoalStatus.pending,
       updatedAt: now,
     );
-    if (willComplete) {
-      _syncLibraryItemFromGoal(_libraryGoals[index], now);
-    } else {
-      _removeLibraryItemLinkedToGoal(goal.id);
-    }
+    _syncLibraryItemFromGoal(
+      _libraryGoals[index],
+      now,
+      reopenAsPending: !willComplete,
+    );
     _commit();
   }
 
-  bool _syncLibraryItemFromGoal(LibraryGoal goal, DateTime now) {
-    if (!goal.isCompleted) {
+  bool _syncLibraryItemFromGoal(
+    LibraryGoal goal,
+    DateTime now, {
+    bool reopenAsPending = false,
+  }) {
+    final goalIndex = _libraryGoals.indexWhere((item) => item.id == goal.id);
+    if (goalIndex == -1) {
       return false;
     }
-    final completedDate = logicalDate();
-    final linkedIndex = goal.linkedLibraryItemId == null
+    final normalizedTitle = _libraryTitleKey(goal.title);
+    var linkedIndex = goal.linkedLibraryItemId == null
         ? -1
         : _libraryItems
             .indexWhere((item) => item.id == goal.linkedLibraryItemId);
-    final normalizedTitle = _libraryTitleKey(goal.title);
+
+    if (!goal.isCompleted &&
+        linkedIndex != -1 &&
+        _libraryItems[linkedIndex].status == LibraryItemStatus.completed &&
+        !reopenAsPending) {
+      final historical = _libraryItems[linkedIndex];
+      _libraryItems[linkedIndex] = historical.copyWith(
+        clearLinkedGoalId: true,
+        updatedAt: now,
+      );
+      linkedIndex = -1;
+    }
+
     final matchIndex = linkedIndex != -1
         ? linkedIndex
-        : _libraryItems.indexWhere((item) =>
-            item.type == goal.type &&
-            _libraryTitleKey(item.title) == normalizedTitle &&
-            item.completedDate.year == goal.targetYear);
+        : _libraryItems.indexWhere((item) {
+            if (item.type != goal.type ||
+                _libraryTitleKey(item.title) != normalizedTitle ||
+                item.linkedGoalId != null) {
+              return false;
+            }
+            if (goal.isCompleted) {
+              return item.status == LibraryItemStatus.completed &&
+                  item.completedDate?.year == goal.targetYear;
+            }
+            return item.status != LibraryItemStatus.completed;
+          });
+
     if (matchIndex != -1) {
       final item = _libraryItems[matchIndex];
+      final status = goal.isCompleted
+          ? LibraryItemStatus.completed
+          : reopenAsPending
+              ? LibraryItemStatus.pending
+              : item.status == LibraryItemStatus.inProgress
+                  ? LibraryItemStatus.inProgress
+                  : LibraryItemStatus.pending;
+      final completedDate = status == LibraryItemStatus.completed
+          ? item.completedDate ?? logicalDate()
+          : null;
       final synced = _libraryItemFromGoal(
         goal,
         item.id,
-        item.completedDate,
+        status,
+        completedDate,
         item.rating,
         item.createdAt,
         now,
       );
       _libraryItems[matchIndex] = synced;
-      if (goal.linkedLibraryItemId != synced.id) {
-        final goalIndex =
-            _libraryGoals.indexWhere((item) => item.id == goal.id);
-        if (goalIndex != -1) {
-          _libraryGoals[goalIndex] =
-              _libraryGoals[goalIndex].copyWith(linkedLibraryItemId: synced.id);
-        }
-      }
+      _libraryGoals[goalIndex] = goal.copyWith(
+        status: status == LibraryItemStatus.completed
+            ? LibraryGoalStatus.completed
+            : LibraryGoalStatus.pending,
+        linkedLibraryItemId: synced.id,
+        updatedAt: now,
+      );
       return true;
     }
+
+    final status = goal.isCompleted
+        ? LibraryItemStatus.completed
+        : LibraryItemStatus.pending;
     final item = _libraryItemFromGoal(
       goal,
       _id('library'),
-      completedDate,
+      status,
+      status == LibraryItemStatus.completed ? logicalDate() : null,
       null,
       now,
       now,
     );
     _libraryItems.add(item);
-    final goalIndex = _libraryGoals.indexWhere((item) => item.id == goal.id);
-    if (goalIndex != -1) {
-      _libraryGoals[goalIndex] =
-          _libraryGoals[goalIndex].copyWith(linkedLibraryItemId: item.id);
-    }
+    _libraryGoals[goalIndex] = goal.copyWith(
+      linkedLibraryItemId: item.id,
+      updatedAt: now,
+    );
     return true;
   }
 
   bool _syncCompletedLibraryGoalsIntoItems() {
     var changed = false;
-    for (final goal in _libraryGoals) {
-      if (goal.isCompleted) {
+    for (final goal in List<LibraryGoal>.of(_libraryGoals)) {
+      final linked = goal.linkedLibraryItemId == null
+          ? null
+          : _libraryItems.cast<LibraryItem?>().firstWhere(
+                (item) => item?.id == goal.linkedLibraryItemId,
+                orElse: () => null,
+              );
+      if (linked == null || linked.linkedGoalId != goal.id) {
         changed = _syncLibraryItemFromGoal(goal, DateTime.now()) || changed;
       }
     }
@@ -2431,7 +2604,8 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem _libraryItemFromGoal(
     LibraryGoal goal,
     String itemId,
-    DateTime completedDate,
+    LibraryItemStatus status,
+    DateTime? completedDate,
     double? rating,
     DateTime createdAt,
     DateTime updatedAt,
@@ -2440,6 +2614,7 @@ class TodoWorkspace extends ChangeNotifier {
       id: itemId,
       type: goal.type,
       title: goal.title.trim(),
+      status: status,
       completedDate: completedDate,
       coverUrl: goal.coverUrl,
       rating: rating,
@@ -2462,12 +2637,15 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void _syncLibraryGoalFromItem(LibraryItem item, DateTime now) {
+    final itemYear = item.completedDate?.year;
     final goalIndex = _libraryGoals.indexWhere(
       (goal) =>
           goal.id == item.linkedGoalId ||
-          (goal.type == item.type &&
+          (goal.linkedLibraryItemId == null &&
+              goal.type == item.type &&
               _libraryTitleKey(goal.title) == _libraryTitleKey(item.title) &&
-              goal.targetYear == item.completedDate.year),
+              (item.status != LibraryItemStatus.completed ||
+                  goal.targetYear == itemYear)),
     );
     if (goalIndex == -1) {
       return;
@@ -2476,7 +2654,9 @@ class TodoWorkspace extends ChangeNotifier {
     _libraryGoals[goalIndex] = goal.copyWith(
       type: item.type,
       title: item.title,
-      status: LibraryGoalStatus.completed,
+      status: item.status == LibraryItemStatus.completed
+          ? LibraryGoalStatus.completed
+          : LibraryGoalStatus.pending,
       linkedLibraryItemId: item.id,
       coverUrl: item.coverUrl,
       clearCoverUrl: item.coverUrl == null,
@@ -2515,19 +2695,6 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
-  void _unlinkLibraryGoalsFromItem(String itemId) {
-    for (var i = 0; i < _libraryGoals.length; i++) {
-      final goal = _libraryGoals[i];
-      if (goal.linkedLibraryItemId == itemId) {
-        _libraryGoals[i] = goal.copyWith(
-          status: LibraryGoalStatus.pending,
-          clearLinkedLibraryItemId: true,
-          updatedAt: DateTime.now(),
-        );
-      }
-    }
-  }
-
   bool _deduplicateLibraryItems() {
     var changed = false;
     for (var i = 0; i < _libraryItems.length; i++) {
@@ -2556,21 +2723,48 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   bool _isSameLibraryEntry(LibraryItem left, LibraryItem right) {
-    return left.type == right.type &&
-        left.completedDate.year == right.completedDate.year &&
-        _libraryTitleKey(left.title) == _libraryTitleKey(right.title);
+    if (left.type != right.type ||
+        _libraryTitleKey(left.title) != _libraryTitleKey(right.title)) {
+      return false;
+    }
+    if (left.linkedGoalId != null &&
+        right.linkedGoalId != null &&
+        left.linkedGoalId != right.linkedGoalId) {
+      return false;
+    }
+    if (left.status == LibraryItemStatus.completed ||
+        right.status == LibraryItemStatus.completed) {
+      return left.status == LibraryItemStatus.completed &&
+          right.status == LibraryItemStatus.completed &&
+          left.completedDate?.year == right.completedDate?.year;
+    }
+    return true;
   }
 
   LibraryItem _mergeLibraryItems(LibraryItem keeper, LibraryItem incoming) {
     final preferIncoming = incoming.linkedGoalId != null;
     final primary = preferIncoming ? incoming : keeper;
     final secondary = preferIncoming ? keeper : incoming;
+    final status = incoming.status == LibraryItemStatus.completed
+        ? LibraryItemStatus.completed
+        : primary.status == LibraryItemStatus.inProgress ||
+                secondary.status == LibraryItemStatus.inProgress
+            ? LibraryItemStatus.inProgress
+            : primary.status;
+    final primaryDate = primary.completedDate;
+    final secondaryDate = secondary.completedDate;
     return primary.copyWith(
       id: keeper.id,
       title: primary.title.trim().isEmpty ? secondary.title : primary.title,
-      completedDate: primary.completedDate.isBefore(secondary.completedDate)
-          ? primary.completedDate
-          : secondary.completedDate,
+      status: status,
+      completedDate: status == LibraryItemStatus.completed
+          ? primaryDate == null
+              ? secondaryDate
+              : secondaryDate == null || primaryDate.isBefore(secondaryDate)
+                  ? primaryDate
+                  : secondaryDate
+          : null,
+      clearCompletedDate: status != LibraryItemStatus.completed,
       coverUrl: primary.coverUrl ?? secondary.coverUrl,
       rating: primary.rating ?? secondary.rating,
       note: primary.note ?? secondary.note,
@@ -2598,26 +2792,6 @@ class TodoWorkspace extends ChangeNotifier {
     return value
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9áéíóúüñ]+', unicode: true), '');
-  }
-
-  void _removeLibraryItemLinkedToGoal(String goalId) {
-    String? linkedItemId;
-    for (final goal in _libraryGoals) {
-      if (goal.id == goalId) {
-        linkedItemId = goal.linkedLibraryItemId;
-        break;
-      }
-    }
-    _libraryItems.removeWhere(
-      (item) => item.linkedGoalId == goalId || item.id == linkedItemId,
-    );
-    for (var i = 0; i < _libraryGoals.length; i++) {
-      if (_libraryGoals[i].id == goalId) {
-        _libraryGoals[i] =
-            _libraryGoals[i].copyWith(clearLinkedLibraryItemId: true);
-        break;
-      }
-    }
   }
 
   void toggleLibraryGoalFavorite(String goalId) {
@@ -2725,12 +2899,14 @@ class TodoWorkspace extends ChangeNotifier {
       _loadedFromPersistence = true;
       final normalized = _normalizeLoadedSpanishText();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
-      if (normalized || syncedLibraryGoals) {
+      if (persisted.schemaVersion < 3 || normalized || syncedLibraryGoals) {
         await _persist();
       }
     } else {
       _clearStateToDefaults();
     }
+    await _knowledgeService.initialize();
+    await _knowledgeService.ensureLibraryRoots(_libraryItems);
     final session = await _store.loadCalendarSession();
     await _calendarService.restoreSession(session);
     _calendarAccount = await _calendarService.getAccount();
@@ -2840,10 +3016,12 @@ class TodoWorkspace extends ChangeNotifier {
     _calendarSettings = snapshot.calendarSettings;
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
+    _libraryStatusView = snapshot.libraryStatusView;
     _visualMode = snapshot.visualMode;
     _manualLogicalDate = snapshot.manualLogicalDate;
     _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
+    _syncCompletedLibraryGoalsIntoItems();
   }
 
   bool _normalizeLoadedSpanishText() {
@@ -2962,6 +3140,78 @@ class TodoWorkspace extends ChangeNotifier {
       }
     }
 
+    for (var i = 0; i < _libraryItems.length; i++) {
+      final item = _libraryItems[i];
+      final cleaned = item.copyWith(
+        title: _cleanSpanishText(item.title),
+        note: _cleanNullableSpanishText(item.note),
+        platform: _cleanNullableSpanishText(item.platform),
+        developer: _cleanNullableSpanishText(item.developer),
+        author: _cleanNullableSpanishText(item.author),
+        creatorOrDirector: _cleanNullableSpanishText(item.creatorOrDirector),
+        genre: _cleanNullableSpanishText(item.genre),
+        format: _cleanNullableSpanishText(item.format),
+        duration: _cleanNullableSpanishText(item.duration),
+        pages: _cleanNullableSpanishText(item.pages),
+        country: _cleanNullableSpanishText(item.country),
+      );
+      if (cleaned.toJson().toString() != item.toJson().toString()) {
+        _libraryItems[i] = cleaned;
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _libraryGoals.length; i++) {
+      final goal = _libraryGoals[i];
+      final cleaned = goal.copyWith(
+        title: _cleanSpanishText(goal.title),
+        note: _cleanNullableSpanishText(goal.note),
+        platform: _cleanNullableSpanishText(goal.platform),
+        developer: _cleanNullableSpanishText(goal.developer),
+        author: _cleanNullableSpanishText(goal.author),
+        creatorOrDirector: _cleanNullableSpanishText(goal.creatorOrDirector),
+        genre: _cleanNullableSpanishText(goal.genre),
+        format: _cleanNullableSpanishText(goal.format),
+        duration: _cleanNullableSpanishText(goal.duration),
+        pages: _cleanNullableSpanishText(goal.pages),
+        country: _cleanNullableSpanishText(goal.country),
+      );
+      if (cleaned.toJson().toString() != goal.toJson().toString()) {
+        _libraryGoals[i] = cleaned;
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _wardrobeItems.length; i++) {
+      final item = _wardrobeItems[i];
+      final cleaned = item.copyWith(
+        name: _cleanSpanishText(item.name),
+        category: _cleanSpanishText(item.category),
+        colors: item.colors.map(_cleanSpanishText).toList(),
+        material: _cleanSpanishText(item.material),
+        seasons: item.seasons.map(_cleanSpanishText).toList(),
+        occasions: item.occasions.map(_cleanSpanishText).toList(),
+        tags: item.tags.map(_cleanSpanishText).toList(),
+      );
+      if (cleaned.toJson().toString() != item.toJson().toString()) {
+        _wardrobeItems[i] = cleaned;
+        changed = true;
+      }
+    }
+
+    for (var i = 0; i < _wardrobeOutfits.length; i++) {
+      final outfit = _wardrobeOutfits[i];
+      final cleaned = outfit.copyWith(
+        name: _cleanSpanishText(outfit.name),
+        occasion: _cleanSpanishText(outfit.occasion),
+        tags: outfit.tags.map(_cleanSpanishText).toList(),
+      );
+      if (cleaned.toJson().toString() != outfit.toJson().toString()) {
+        _wardrobeOutfits[i] = cleaned;
+        changed = true;
+      }
+    }
+
     return changed;
   }
 
@@ -2973,9 +3223,27 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   String _cleanSpanishText(String value) {
-    var result = value;
-    for (var pass = 0; pass < 2; pass++) {
-      result = _decodeMojibakeOnce(result);
+    var result = value
+        .replaceAll('ÃƒÆ’Ã‚Â¡', 'á')
+        .replaceAll('ÃƒÆ’Ã‚Â©', 'é')
+        .replaceAll('ÃƒÆ’Ã‚Â­', 'í')
+        .replaceAll('ÃƒÆ’Ã‚Â³', 'ó')
+        .replaceAll('ÃƒÆ’Ã‚Âº', 'ú')
+        .replaceAll('ÃƒÆ’Ã‚Â±', 'ñ')
+        .replaceAll('ÃƒÂ¡', 'á')
+        .replaceAll('ÃƒÂ©', 'é')
+        .replaceAll('ÃƒÂ­', 'í')
+        .replaceAll('ÃƒÂ³', 'ó')
+        .replaceAll('ÃƒÂº', 'ú')
+        .replaceAll('ÃƒÂ±', 'ñ')
+        .replaceAll('ÃƒÂ«', 'ë')
+        .replaceAll('ÃƒÂ¯', 'ï')
+        .replaceAll('ÃƒÂ¼', 'ü')
+        .replaceAll('ÃƒÂ§', 'ç');
+    for (var pass = 0; pass < 4; pass++) {
+      final decoded = _decodeMojibakeOnce(result);
+      if (decoded == result) break;
+      result = decoded;
     }
     return result;
   }
@@ -3072,12 +3340,13 @@ class TodoWorkspace extends ChangeNotifier {
       calendarSettings: calendarSettings,
       section: section,
       todaySort: todaySort,
+      libraryStatusView: libraryStatusView,
       visualMode: visualMode,
       manualLogicalDate: _manualLogicalDate,
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 2,
+      schemaVersion: 3,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -3326,6 +3595,7 @@ class TodoWorkspace extends ChangeNotifier {
     _calendarAccount = null;
     _section = AppSection.today;
     _todaySort = TodaySort.manual;
+    _libraryStatusView = LibraryItemStatus.completed;
     _visualMode = AppVisualMode.classic;
     _manualLogicalDate = null;
     _manualLogicalDateStartedAt = null;
@@ -3588,6 +3858,44 @@ class TodoWorkspace extends ChangeNotifier {
   void dispose() {
     _saveDebounce?.cancel();
     _feedback.dispose();
+    _knowledgeService.dispose();
     super.dispose();
+  }
+}
+
+class _InMemoryTodoStateRepository implements TodoStateRepository {
+  _InMemoryTodoStateRepository(this._snapshot);
+
+  AppStateSnapshot? _snapshot;
+  String? _calendarSession;
+  LocalSyncMetadata _syncMetadata = const LocalSyncMetadata();
+
+  @override
+  Future<AppStateSnapshot?> load() async => _snapshot;
+
+  @override
+  Future<void> save(AppStateSnapshot snapshot) async {
+    _snapshot = snapshot;
+  }
+
+  @override
+  Future<String?> loadCalendarSession() async => _calendarSession;
+
+  @override
+  Future<void> saveCalendarSession(String encodedSession) async {
+    _calendarSession = encodedSession;
+  }
+
+  @override
+  Future<void> clearCalendarSession() async {
+    _calendarSession = null;
+  }
+
+  @override
+  Future<LocalSyncMetadata> loadSyncMetadata() async => _syncMetadata;
+
+  @override
+  Future<void> saveSyncMetadata(LocalSyncMetadata metadata) async {
+    _syncMetadata = metadata;
   }
 }

@@ -38,7 +38,7 @@ Future<bool> signInWithDesktopGoogleOAuth({
         request.response.statusCode = HttpStatus.notFound;
         request.response.headers.contentType = ContentType.html;
         request.response.write(_htmlPage(
-          title: 'Ruta no valida',
+          title: 'Ruta no válida',
           body: 'Esta ventana ya no hace falta. Puedes volver a Todo.',
           success: false,
         ));
@@ -65,13 +65,13 @@ Future<bool> signInWithDesktopGoogleOAuth({
       }
 
       if (code == null || code.isEmpty) {
-        setError('No llego el codigo de acceso de Google.');
+        setError('No llegó el código de acceso de Google.');
         await finishRequest(
           request,
           _htmlPage(
-            title: 'Falta el codigo',
+            title: 'Falta el código',
             body:
-                'No se pudo terminar el acceso. Vuelve a la app e intentalo de nuevo.',
+                'No se pudo terminar el acceso. Vuelve a la app e inténtalo de nuevo.',
             success: false,
           ),
           false,
@@ -85,7 +85,7 @@ Future<bool> signInWithDesktopGoogleOAuth({
         await finishRequest(
           request,
           _htmlPage(
-            title: 'Todo ya esta conectado',
+            title: 'Todo ya está conectado',
             body:
                 'La sesión se ha guardado. Puedes cerrar esta ventana y volver a la app.',
             success: true,

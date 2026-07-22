@@ -94,7 +94,7 @@ class IoCalendarService implements CalendarService {
         return false;
       }
       if (code == null || code.isEmpty) {
-        _lastError = 'Google no devolvio un codigo de autorizacion.';
+        _lastError = 'Google no devolvió un código de autorización.';
         return false;
       }
 

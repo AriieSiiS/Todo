@@ -95,3 +95,21 @@ La app ya trae una base para control externo por IA mediante un servidor MCP loc
 - El arranque portable del repo está en [mcp_server/start_mcp.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.ps1>) y [mcp_server/start_mcp.bat](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.bat>)
 - Hay una configuración de ejemplo para clientes en [mcp_server/client.example.json](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/client.example.json>)
 - Si quieres que el MCP use la misma nube que la app, copia [mcp_server/.env.example](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/.env.example>) a `mcp_server/.env` y rellena sus valores
+
+## Páginas y conocimiento
+
+Biblioteca incorpora un espacio documental local inspirado en páginas de
+Notion y enlaces de Obsidian. Cada obra dispone de una raíz con subpáginas,
+editor por bloques, multimedia, colecciones, pestañas persistentes, búsqueda
+FTS5, enlaces entrantes, revisiones y papelera.
+
+- La fuente de verdad está en `Documents/Todo/knowledge/knowledge.sqlite`.
+- Los recursos deduplicados por SHA-256 están en
+  `Documents/Todo/knowledge/assets`.
+- Flutter y MCP comparten la base en modo WAL y coordinan las escrituras con
+  concesiones locales.
+- `apply_knowledge_manifest` permite que Codex aplique guías y árboles enteros
+  de forma atómica e idempotente, respetando contenido manual.
+- La exportación genera un ZIP con manifiesto JSON, Markdown y recursos.
+- Supabase es solo un respaldo opcional por página y recurso. Para prepararlo,
+  aplica [supabase/003_knowledge_workspace.sql](supabase/003_knowledge_workspace.sql).

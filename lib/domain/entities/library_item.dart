@@ -6,7 +6,8 @@ class LibraryItem {
     required this.id,
     required this.type,
     required this.title,
-    required this.completedDate,
+    this.status = LibraryItemStatus.completed,
+    this.completedDate,
     this.coverUrl,
     this.rating,
     this.note,
@@ -29,7 +30,8 @@ class LibraryItem {
   final String id;
   final LibraryItemType type;
   final String title;
-  final DateTime completedDate;
+  final LibraryItemStatus status;
+  final DateTime? completedDate;
   final String? coverUrl;
   final double? rating;
   final String? note;
@@ -48,13 +50,15 @@ class LibraryItem {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  int get yearGroup => completedDate.year;
+  int? get yearGroup => completedDate?.year;
 
   LibraryItem copyWith({
     String? id,
     LibraryItemType? type,
     String? title,
+    LibraryItemStatus? status,
     DateTime? completedDate,
+    bool clearCompletedDate = false,
     String? coverUrl,
     bool clearCoverUrl = false,
     double? rating,
@@ -92,7 +96,9 @@ class LibraryItem {
       id: id ?? this.id,
       type: type ?? this.type,
       title: title ?? this.title,
-      completedDate: completedDate ?? this.completedDate,
+      status: status ?? this.status,
+      completedDate:
+          clearCompletedDate ? null : completedDate ?? this.completedDate,
       coverUrl: clearCoverUrl ? null : coverUrl ?? this.coverUrl,
       rating: clearRating ? null : rating ?? this.rating,
       note: clearNote ? null : note ?? this.note,
@@ -121,7 +127,8 @@ class LibraryItem {
       'id': id,
       'type': type.name,
       'title': title,
-      'completedDate': completedDate.toIso8601String(),
+      'status': status.name,
+      'completedDate': completedDate?.toIso8601String(),
       'yearGroup': yearGroup,
       'coverUrl': coverUrl,
       'rating': rating,
@@ -145,9 +152,8 @@ class LibraryItem {
 
   factory LibraryItem.fromJson(Map<String, dynamic> json) {
     final completed = DateTime.tryParse(
-          json['completedDate'] as String? ?? '',
-        ) ??
-        DateTime.now();
+      json['completedDate'] as String? ?? '',
+    );
     return LibraryItem(
       id: json['id'] as String? ?? '',
       type: enumByName(
@@ -156,6 +162,11 @@ class LibraryItem {
         LibraryItemType.game,
       ),
       title: json['title'] as String? ?? '',
+      status: enumByName(
+        LibraryItemStatus.values,
+        json['status'] as String?,
+        LibraryItemStatus.completed,
+      ),
       completedDate: completed,
       coverUrl: json['coverUrl'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
@@ -178,10 +189,12 @@ class LibraryItem {
       pages: json['pages'] as String?,
       country: json['country'] as String?,
       linkedGoalId: json['linkedGoalId'] as String?,
-      createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? completed,
-      updatedAt:
-          DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? completed,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          completed ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          completed ??
+          DateTime.now(),
     );
   }
 }

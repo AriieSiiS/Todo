@@ -1,6 +1,7 @@
 import '../../domain/models.dart';
 import '../../domain/repositories/cloud_sync_repository.dart';
 import '../../services/supabase_cloud_service.dart';
+import '../../services/knowledge_service.dart';
 
 class SupabaseCloudSyncRepository implements CloudSyncRepository {
   SupabaseCloudSyncRepository(this._service);
@@ -55,4 +56,7 @@ class SupabaseCloudSyncRepository implements CloudSyncRepository {
         snapshot: snapshot,
         expectedRevision: expectedRevision,
       );
+
+  Future<void> syncKnowledgeBackup(KnowledgeService knowledge) =>
+      _service.syncKnowledgeBackup(knowledge);
 }

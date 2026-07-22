@@ -346,4 +346,77 @@ void main() {
     expect(find.text('Pantalón beige'), findsNothing);
     await tester.pump(const Duration(milliseconds: 300));
   });
+
+  testWidgets('al pulsar una prenda abre su detalle visual antes de editar',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    controller.createWardrobeItem(
+      name: 'Camisa granate',
+      category: 'Camisetas',
+      material: 'algodón',
+      colors: const ['granate'],
+      tags: const ['casual'],
+    );
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Camisa granate').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalle de prenda'), findsOneWidget);
+    expect(find.text('algodón'), findsOneWidget);
+    expect(find.text('granate'), findsOneWidget);
+    expect(find.text('Editar'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar prenda'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(5));
+  });
+
+  testWidgets('el armario agrupa las prendas por categoría y nombre',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    controller.createWardrobeItem(
+      name: 'Pantalón negro',
+      category: 'Pantalones',
+    );
+    controller.createWardrobeItem(
+      name: 'Camiseta blanca',
+      category: 'Camisetas',
+    );
+    controller.createWardrobeItem(
+      name: 'Pantalón beige',
+      category: 'Pantalones',
+    );
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pumpAndSettle();
+
+    double visualOrder(String label) {
+      final position = tester.getCenter(find.text(label).last);
+      return position.dy * 10000 + position.dx;
+    }
+
+    expect(visualOrder('Camiseta blanca'),
+        lessThan(visualOrder('Pantalón beige')));
+    expect(
+        visualOrder('Pantalón beige'), lessThan(visualOrder('Pantalón negro')));
+    await tester.pump(const Duration(milliseconds: 300));
+  });
 }

@@ -15,6 +15,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from knowledge_repository import KnowledgeRepository
+
 
 PROTOCOL_VERSION = "2025-03-26"
 SERVER_INFO = {"name": "todo-mcp", "version": "0.2.0"}
@@ -52,6 +54,13 @@ if STATE_PATH_OVERRIDE:
 else:
     RUNTIME_DIR = documents_todo_dir() / "runtime"
     STATE_PATH = RUNTIME_DIR / "todo_state.json"
+KNOWLEDGE_PATH_OVERRIDE = os.environ.get("TODO_MCP_KNOWLEDGE_PATH")
+if KNOWLEDGE_PATH_OVERRIDE:
+    KNOWLEDGE_DIR = Path(KNOWLEDGE_PATH_OVERRIDE)
+elif RUNTIME_DIR.name.lower() == "runtime":
+    KNOWLEDGE_DIR = RUNTIME_DIR.parent / "knowledge"
+else:
+    KNOWLEDGE_DIR = RUNTIME_DIR / "knowledge"
 REPO_SUPABASE_URL = "https://hgdzwoieicreenpapese.supabase.co"
 REPO_PUBLISHABLE_KEY = "sb_publishable_7QgBLNA353YvBgI2dPlnaw_R_tkfjtS"
 REPO_OWNER_EMAIL = "ariesix20@gmail.com"
@@ -130,6 +139,7 @@ def default_state() -> dict[str, Any]:
         "fixedPayments": [],
         "libraryItems": [],
         "libraryGoals": [],
+        "libraryStatusView": "pending",
         "wardrobeItems": [],
         "wardrobeOutfits": [],
         "wardrobeWearLogs": [],
@@ -174,7 +184,7 @@ def default_state() -> dict[str, Any]:
             "settings",
         ],
         "updatedAt": now_iso(),
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "lastModifiedBy": "mcp",
     }
 
@@ -283,17 +293,23 @@ def write_remote_state(state: dict[str, Any]) -> None:
 
 
 def load_state() -> dict[str, Any]:
+    from_remote = False
     if remote_enabled():
         state = read_remote_state()
         if state is not None:
-            write_local_state(state)
-            write_app_snapshot(state)
-            return state
-        local = read_local_state()
-        write_remote_state(local)
-        write_app_snapshot(local)
-        return local
-    return read_local_state()
+            from_remote = True
+        else:
+            state = read_local_state()
+    else:
+        state = read_local_state()
+    migrated = migrate_library_state(state)
+    if migrated:
+        touch_state(state)
+    write_local_state(state)
+    write_app_snapshot(state)
+    if remote_enabled() and (migrated or not from_remote):
+        write_remote_state(state)
+    return state
 
 
 def save_state(state: dict[str, Any]) -> None:
@@ -306,7 +322,7 @@ def save_state(state: dict[str, Any]) -> None:
 
 def touch_state(state: dict[str, Any]) -> None:
     state["updatedAt"] = now_iso()
-    state["schemaVersion"] = max(2, int(state.get("schemaVersion", 1) or 1))
+    state["schemaVersion"] = max(3, int(state.get("schemaVersion", 1) or 1))
     credentials = remote_credentials() if remote_enabled() else None
     state["lastModifiedBy"] = credentials[2] if credentials is not None else "mcp"
 
@@ -673,11 +689,15 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_library_items",
-            "description": "Lista elementos completados de Biblioteca, con filtros opcionales por año y tipo.",
+            "description": "Lista elementos de Biblioteca, con filtros opcionales por estado, año completado y tipo.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "completed_year": {"type": "integer"},
+                    "status": {
+                        "type": "string",
+                        "description": "pending, inProgress o completed.",
+                    },
                     "type": {
                         "type": "string",
                         "description": "game, book o movieSeries.",
@@ -687,7 +707,7 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "bulk_upsert_library_items",
-            "description": "Crea o actualiza varios elementos completados de Biblioteca sin duplicarlos.",
+            "description": "Crea o actualiza varios elementos de Biblioteca sin duplicarlos.",
             "inputSchema": {
                 "type": "object",
                 "required": ["items"],
@@ -700,6 +720,10 @@ def tool_definitions() -> list[dict[str, Any]]:
                             "properties": {
                                 "type": {"type": "string"},
                                 "title": {"type": "string"},
+                                "status": {
+                                    "type": "string",
+                                    "description": "pending, inProgress o completed. Si se omite, usa completed por compatibilidad.",
+                                },
                                 "completed_date": {
                                     "type": "string",
                                     "description": "Fecha YYYY-MM-DD. Si se omite, usa hoy.",
@@ -966,7 +990,93 @@ def tool_definitions() -> list[dict[str, Any]]:
             "description": "Reinicia el estado a una base vacia y segura para la app.",
             "inputSchema": {"type": "object", "properties": {}},
         },
-    ] + extra_tool_definitions()
+    ] + extra_tool_definitions() + knowledge_tool_definitions()
+
+
+def knowledge_tool_definitions() -> list[dict[str, Any]]:
+    string = {"type": "string"}
+    boolean = {"type": "boolean"}
+    integer = {"type": "integer"}
+    object_schema = {"type": "object"}
+    return [
+        tool(
+            "get_knowledge_contract",
+            "Devuelve el contrato estable de páginas, bloques, enlaces y contenido gestionado por IA.",
+            {},
+            [],
+        ),
+        tool(
+            "list_knowledge_pages",
+            "Lista páginas locales, raíces, hijos o la página asociada a una entidad de la aplicación.",
+            {
+                "parent_id": {"type": ["string", "null"]},
+                "owner_type": string,
+                "owner_id": string,
+                "include_trashed": boolean,
+            },
+            [],
+        ),
+        tool("get_knowledge_page", "Lee una página con hijos, backlinks, enlaces y colecciones.", {"page_id": string}, ["page_id"]),
+        tool("search_knowledge", "Busca localmente en títulos, texto y propiedades mediante FTS5.", {"query": string, "limit": integer}, ["query"]),
+        tool(
+            "create_knowledge_page",
+            "Crea una página o la reutiliza por identidad canónica estable.",
+            {
+                "page_id": string, "parent_id": string, "title": string,
+                "icon": string, "cover_asset_id": string, "document": object_schema,
+                "properties": object_schema, "canonical_source": string,
+                "canonical_id": string, "externalKey": string,
+                "owner_type": string, "owner_id": string,
+            },
+            ["title"],
+        ),
+        tool(
+            "update_knowledge_page",
+            "Actualiza una página con checkpoint previo y conserva bloques manuales en actualizaciones gestionadas.",
+            {"page_id": string, "title": string, "icon": string,
+             "cover_asset_id": string, "document": object_schema,
+             "properties": object_schema, "managed_update": boolean},
+            ["page_id"],
+        ),
+        tool("move_knowledge_page", "Mueve una página impidiendo ciclos.",
+             {"page_id": string, "parent_id": {"type": ["string", "null"]}}, ["page_id"]),
+        tool("trash_knowledge_page", "Envía una página y todos sus descendientes a la papelera.",
+             {"page_id": string}, ["page_id"]),
+        tool("restore_knowledge_page", "Restaura una página y todos sus descendientes.",
+             {"page_id": string}, ["page_id"]),
+        tool("list_knowledge_backlinks", "Lista enlaces entrantes y salientes de una página.",
+             {"page_id": string}, ["page_id"]),
+        tool("list_unlinked_knowledge_pages", "Lista páginas que no tienen enlaces entrantes ni salientes.", {}, []),
+        tool(
+            "import_knowledge_asset",
+            "Incorpora y deduplica un recurso local o HTTPS conservando su procedencia.",
+            {"path": string, "url": string, "mime_type": string,
+             "source_url": string, "source_page_url": string,
+             "author": string, "alt_text": string},
+            [],
+        ),
+        tool(
+            "create_knowledge_collection",
+            "Crea o actualiza una colección con propiedades y vistas.",
+            {"collection_id": string, "page_id": string, "name": string,
+             "schema": {"type": "array"}, "views": {"type": "array"}},
+            ["page_id", "name"],
+        ),
+        tool("list_knowledge_collections", "Lista colecciones locales.", {"page_id": string}, []),
+        tool(
+            "apply_knowledge_manifest",
+            "Valida y aplica atómicamente un árbol documental idempotente, sin cambios parciales.",
+            {"manifest": object_schema},
+            ["manifest"],
+        ),
+        tool(
+            "import_knowledge_repository",
+            "Importa un manifiesto JSON con fidelidad estructural usando la misma transacción idempotente.",
+            {"manifest": object_schema},
+            ["manifest"],
+        ),
+        tool("export_knowledge_repository", "Exporta páginas, Markdown y recursos a un ZIP local recuperable.", {}, []),
+    ]
 
 
 def extra_tool_definitions() -> list[dict[str, Any]]:
@@ -1090,9 +1200,9 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("expense_totals", "Calcula totales de gastos.", {"year": integer, "month": integer, "group_by": string}, []),
         tool("export_financial_json", "Exporta datos financieros en JSON.", {}, []),
         tool("export_financial_csv", "Exporta gastos en CSV.", {}, []),
-        tool("create_library_item", "Crea un item completado de Biblioteca.", library_fields, ["type", "title"]),
-        tool("update_library_item", "Actualiza un item completado de Biblioteca.", library_fields, ["item_id"]),
-        tool("delete_library_item", "Borra un item completado de Biblioteca.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
+        tool("create_library_item", "Crea un elemento de Biblioteca. Si se omite status, se crea completado por compatibilidad.", library_fields, ["type", "title"]),
+        tool("update_library_item", "Actualiza datos o estado de un elemento de Biblioteca.", library_fields, ["item_id"]),
+        tool("delete_library_item", "Borra un elemento de Biblioteca; si tiene propósito, lo conserva y recrea una entrada pendiente.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
         tool("delete_library_goal", "Borra un propósito de Biblioteca.", {"goal_id": string, "confirm": boolean}, ["goal_id", "confirm"]),
         tool("toggle_library_goal_completed", "Alterna pendiente/completado y sincroniza con Biblioteca.", {"goal_id": string}, ["goal_id"]),
         tool("toggle_library_goal_favorite", "Alterna favorito en un propósito.", {"goal_id": string}, ["goal_id"]),
@@ -1886,6 +1996,29 @@ def normalize_goal_status(value: str | None) -> str:
     return normalized
 
 
+def normalize_library_item_status(value: str | None) -> str:
+    if not value:
+        return "completed"
+    aliases = {
+        "pending": "pending",
+        "pendiente": "pending",
+        "inProgress": "inProgress",
+        "in_progress": "inProgress",
+        "en curso": "inProgress",
+        "encurso": "inProgress",
+        "completed": "completed",
+        "complete": "completed",
+        "completado": "completed",
+        "terminado": "completed",
+    }
+    normalized = aliases.get(value.strip())
+    if normalized is None:
+        raise ValueError(
+            "Estado de biblioteca no válido. Usa pending, inProgress o completed."
+        )
+    return normalized
+
+
 def parse_completed_date(value: str | None) -> str:
     if not value:
         return now_iso()
@@ -1898,11 +2031,17 @@ def parse_completed_date(value: str | None) -> str:
 
 def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
     now = now_iso()
+    status = normalize_library_item_status(arguments.get("status"))
     return {
         "id": make_id("library"),
         "type": normalize_library_type(arguments["type"]),
         "title": arguments["title"].strip(),
-        "completedDate": parse_completed_date(arguments.get("completed_date")),
+        "status": status,
+        "completedDate": (
+            parse_completed_date(arguments.get("completed_date"))
+            if status == "completed"
+            else None
+        ),
         "coverUrl": (arguments.get("cover_url") or "").strip() or None,
         "rating": arguments.get("rating"),
         "note": (arguments.get("note") or "").strip() or None,
@@ -1926,12 +2065,20 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
     updated = dict(item)
+    status = normalize_library_item_status(
+        arguments.get("status", updated.get("status", "completed"))
+    )
+    updated["status"] = status
     if "type" in arguments:
         updated["type"] = normalize_library_type(arguments["type"])
     if "title" in arguments:
         updated["title"] = arguments["title"].strip()
-    if "completed_date" in arguments:
+    if status == "completed" and "completed_date" in arguments:
         updated["completedDate"] = parse_completed_date(arguments.get("completed_date"))
+    elif status == "completed" and not updated.get("completedDate"):
+        updated["completedDate"] = now_iso()
+    elif status != "completed":
+        updated["completedDate"] = None
     if "cover_url" in arguments:
         updated["coverUrl"] = (arguments.get("cover_url") or "").strip() or None
     if arguments.get("clear_cover_url"):
@@ -2006,9 +2153,13 @@ def list_library_items_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         if "type" in arguments and item.get("type") != normalize_library_type(arguments["type"]):
             continue
         if "completed_year" in arguments:
-            completed = dt.datetime.fromisoformat(item.get("completedDate", now_iso()))
+            if not item.get("completedDate"):
+                continue
+            completed = dt.datetime.fromisoformat(item["completedDate"])
             if completed.year != int(arguments["completed_year"]):
                 continue
+        if "status" in arguments and item.get("status", "completed") != normalize_library_item_status(arguments["status"]):
+            continue
         items.append(item)
     return {"items": items, "count": len(items)}
 
@@ -2021,12 +2172,29 @@ def bulk_upsert_library_items_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     for raw_item in arguments["items"]:
         item_type = normalize_library_type(raw_item["type"])
         title = library_title_key(raw_item["title"])
+        item_status = normalize_library_item_status(raw_item.get("status"))
+        item_date = (
+            parse_datetime(parse_completed_date(raw_item.get("completed_date")))
+            if item_status == "completed"
+            else None
+        )
         match_index = None
         for index, existing in enumerate(state["libraryItems"]):
             if existing.get("type") != item_type:
                 continue
             if library_title_key(existing.get("title")) != title:
                 continue
+            existing_status = existing.get("status", "completed")
+            if item_status == "completed" or existing_status == "completed":
+                existing_date = parse_datetime(existing.get("completedDate"))
+                if not (
+                    item_status == "completed"
+                    and existing_status == "completed"
+                    and existing_date is not None
+                    and item_date is not None
+                    and existing_date.year == item_date.year
+                ):
+                    continue
             match_index = index
             break
         if match_index is None:
@@ -2217,11 +2385,20 @@ def bulk_create_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     ensure_library_goal_lists(state)
     replace_year = arguments.get("replace_year")
     if replace_year is not None:
+        removed_ids = {
+            goal.get("id")
+            for goal in state["libraryGoals"]
+            if int(goal.get("targetYear", 0)) == int(replace_year)
+        }
         state["libraryGoals"] = [
             goal
             for goal in state["libraryGoals"]
             if int(goal.get("targetYear", 0)) != int(replace_year)
         ]
+        for item in state["libraryItems"]:
+            if item.get("linkedGoalId") in removed_ids:
+                item["linkedGoalId"] = None
+                item["updatedAt"] = now_iso()
     created = [library_goal_from_args(goal) for goal in arguments["goals"]]
     state["libraryGoals"].extend(created)
     synced_items = [item for goal in created if (item := sync_completed_goal_to_item(state, goal)) is not None]
@@ -2277,14 +2454,11 @@ def clear_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     ensure_library_goal_lists(state)
     before = len(state["libraryGoals"])
     removed_goal_ids: set[str] = set()
-    removed_item_ids: set[str] = set()
     if "target_year" in arguments:
         target_year = int(arguments["target_year"])
         for goal in state["libraryGoals"]:
             if int(goal.get("targetYear", 0)) == target_year:
                 removed_goal_ids.add(goal.get("id"))
-                if goal.get("linkedLibraryItemId"):
-                    removed_item_ids.add(goal.get("linkedLibraryItemId"))
         state["libraryGoals"] = [
             goal
             for goal in state["libraryGoals"]
@@ -2292,18 +2466,11 @@ def clear_library_goals_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         ]
     else:
         removed_goal_ids = {goal.get("id") for goal in state["libraryGoals"]}
-        removed_item_ids = {
-            goal.get("linkedLibraryItemId")
-            for goal in state["libraryGoals"]
-            if goal.get("linkedLibraryItemId")
-        }
         state["libraryGoals"] = []
-    state["libraryItems"] = [
-        item
-        for item in state["libraryItems"]
-        if item.get("linkedGoalId") not in removed_goal_ids
-        and item.get("id") not in removed_item_ids
-    ]
+    for item in state["libraryItems"]:
+        if item.get("linkedGoalId") in removed_goal_ids:
+            item["linkedGoalId"] = None
+            item["updatedAt"] = now_iso()
     save_state(state)
     return {"deleted": before - len(state["libraryGoals"])}
 
@@ -2979,17 +3146,40 @@ def create_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_library_goal_lists(state)
     item = library_item_from_args(arguments)
-    item_year = parse_datetime(item.get("completedDate", now_iso())).year
+    item_year = (
+        parse_datetime(item.get("completedDate")).year
+        if item.get("completedDate")
+        else None
+    )
     for index, existing in enumerate(state["libraryItems"]):
-        existing_year = parse_datetime(
-            existing.get("completedDate", now_iso())
-        ).year
-        if (
-            existing.get("type") == item.get("type")
+        if existing.get("type") != item.get("type") or library_title_key(
+            existing.get("title")
+        ) != library_title_key(item.get("title")):
+            continue
+        existing_status = existing.get("status", "completed")
+        existing_year = (
+            parse_datetime(existing.get("completedDate")).year
+            if existing.get("completedDate")
+            else None
+        )
+        same_cycle = (
+            existing_status == "completed"
+            and item["status"] == "completed"
             and existing_year == item_year
-            and library_title_key(existing.get("title"))
-            == library_title_key(item.get("title"))
-        ):
+        ) or (existing_status != "completed" and item["status"] != "completed")
+        if not same_cycle and item["status"] == "completed" and existing_status != "completed":
+            linked_goal = next(
+                (
+                    goal
+                    for goal in state["libraryGoals"]
+                    if goal.get("id") == existing.get("linkedGoalId")
+                ),
+                None,
+            )
+            same_cycle = bool(
+                linked_goal and int(linked_goal.get("targetYear", 0)) == item_year
+            )
+        if same_cycle:
             merged = merge_library_items(existing, item)
             state["libraryItems"][index] = merged
             synced_goal = sync_goal_from_library_item(state, merged)
@@ -3022,21 +3212,33 @@ def delete_library_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     ensure_library_goal_lists(state)
     index, item = find_library_item(state, arguments["item_id"])
     deleted = state["libraryItems"].pop(index)
+    replacement = None
     for goal in state["libraryGoals"]:
-        if goal.get("linkedLibraryItemId") == deleted.get("id"):
+        if goal.get("linkedLibraryItemId") == deleted.get("id") or goal.get("id") == deleted.get("linkedGoalId"):
             goal["linkedLibraryItemId"] = None
             goal["status"] = "pending"
             goal["updatedAt"] = now_iso()
+            replacement = library_item_from_goal(goal, status="pending")
+            replacement["rating"] = deleted.get("rating")
+            state["libraryItems"].append(replacement)
+            goal["linkedLibraryItemId"] = replacement["id"]
+            break
     save_state(state)
-    return {"deleted": deleted}
+    return {"deleted": deleted, "replacement": replacement}
 
 
-def library_item_from_goal(goal: dict[str, Any]) -> dict[str, Any]:
+def library_item_from_goal(
+    goal: dict[str, Any], *, status: str | None = None
+) -> dict[str, Any]:
+    item_status = status or (
+        "completed" if goal.get("status") == "completed" else "pending"
+    )
     return {
         "id": make_id("library_item"),
         "type": goal.get("type"),
         "title": goal.get("title"),
-        "completedDate": now_iso(),
+        "status": item_status,
+        "completedDate": now_iso() if item_status == "completed" else None,
         "coverUrl": goal.get("coverUrl"),
         "rating": None,
         "note": goal.get("note"),
@@ -3087,6 +3289,24 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
     secondary = keeper if primary is incoming else incoming
     merged = dict(primary)
     merged["id"] = keeper.get("id")
+    incoming_status = incoming.get("status", "completed")
+    primary_status = primary.get("status", "completed")
+    secondary_status = secondary.get("status", "completed")
+    if incoming_status == "completed":
+        merged["status"] = "completed"
+    elif "inProgress" in (primary_status, secondary_status):
+        merged["status"] = "inProgress"
+    else:
+        merged["status"] = primary_status
+    if merged["status"] == "completed":
+        dates = [
+            value
+            for value in (keeper.get("completedDate"), incoming.get("completedDate"))
+            if value
+        ]
+        merged["completedDate"] = min(dates) if dates else now_iso()
+    else:
+        merged["completedDate"] = None
     for key in (
         "coverUrl",
         "rating",
@@ -3113,24 +3333,65 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
     return merged
 
 
-def sync_completed_goal_to_item(state: dict[str, Any], goal: dict[str, Any]) -> dict[str, Any] | None:
-    if goal.get("status") != "completed":
-        return None
+def sync_completed_goal_to_item(
+    state: dict[str, Any],
+    goal: dict[str, Any],
+    *,
+    reopen_as_pending: bool = False,
+) -> dict[str, Any] | None:
     linked_item_id = goal.get("linkedLibraryItemId")
     for index, item in enumerate(state["libraryItems"]):
         if linked_item_id and item.get("id") == linked_item_id:
+            if (
+                goal.get("status") != "completed"
+                and item.get("status", "completed") == "completed"
+                and not reopen_as_pending
+            ):
+                item["linkedGoalId"] = None
+                item["updatedAt"] = now_iso()
+                goal["linkedLibraryItemId"] = None
+                break
             updated = update_library_item_from_goal(item, goal)
+            if goal.get("status") == "completed":
+                updated["status"] = "completed"
+                updated["completedDate"] = updated.get("completedDate") or now_iso()
+            else:
+                updated["status"] = (
+                    "pending"
+                    if reopen_as_pending or item.get("status") != "inProgress"
+                    else "inProgress"
+                )
+                updated["completedDate"] = None
             state["libraryItems"][index] = updated
+            goal["linkedLibraryItemId"] = updated["id"]
             return updated
     for index, item in enumerate(state["libraryItems"]):
-        if (
-            item.get("type") == goal.get("type")
-            and library_title_key(item.get("title"))
-            == library_title_key(goal.get("title"))
-            and parse_datetime(item.get("completedDate", now_iso())).year
-            == int(goal.get("targetYear", dt.datetime.now().year))
-        ):
+        if item.get("type") != goal.get("type") or library_title_key(
+            item.get("title")
+        ) != library_title_key(goal.get("title")) or item.get("linkedGoalId"):
+            continue
+        item_status = item.get("status", "completed")
+        if goal.get("status") == "completed":
+            completed = parse_datetime(item.get("completedDate"))
+            matches = (
+                item_status == "completed"
+                and completed is not None
+                and completed.year == int(goal.get("targetYear", dt.datetime.now().year))
+            )
+        else:
+            matches = item_status != "completed"
+        if matches:
             updated = update_library_item_from_goal(item, goal)
+            if goal.get("status") == "completed":
+                updated["status"] = "completed"
+                updated["completedDate"] = updated.get("completedDate") or now_iso()
+            else:
+                updated["status"] = (
+                    "pending"
+                    if reopen_as_pending or item_status != "inProgress"
+                    else "inProgress"
+                )
+                updated["completedDate"] = None
             state["libraryItems"][index] = updated
             goal["linkedLibraryItemId"] = updated["id"]
             return updated
@@ -3142,7 +3403,8 @@ def sync_completed_goal_to_item(state: dict[str, Any], goal: dict[str, Any]) -> 
 
 def sync_goal_from_library_item(state: dict[str, Any], item: dict[str, Any]) -> dict[str, Any] | None:
     linked_goal_id = item.get("linkedGoalId")
-    item_year = parse_datetime(item.get("completedDate", now_iso())).year
+    completed = parse_datetime(item.get("completedDate"))
+    item_year = completed.year if completed else None
     for index, goal in enumerate(state["libraryGoals"]):
         if linked_goal_id and goal.get("id") == linked_goal_id:
             return update_goal_from_library_item(state, index, item)
@@ -3151,7 +3413,11 @@ def sync_goal_from_library_item(state: dict[str, Any], item: dict[str, Any]) -> 
             goal.get("type") == item.get("type")
             and library_title_key(goal.get("title"))
             == library_title_key(item.get("title"))
-            and int(goal.get("targetYear", item_year)) == item_year
+            and goal.get("linkedLibraryItemId") in (None, item.get("id"))
+            and (
+                item.get("status", "completed") != "completed"
+                or int(goal.get("targetYear", item_year or 0)) == item_year
+            )
         ):
             return update_goal_from_library_item(state, index, item)
     return None
@@ -3177,8 +3443,11 @@ def update_goal_from_library_item(state: dict[str, Any], index: int, item: dict[
         "country",
     ):
         goal[key] = item.get(key)
-    goal["status"] = "completed"
-    goal["targetYear"] = parse_datetime(item.get("completedDate", now_iso())).year
+    item_status = item.get("status", "completed")
+    goal["status"] = "completed" if item_status == "completed" else "pending"
+    completed = parse_datetime(item.get("completedDate"))
+    if item_status == "completed" and completed is not None:
+        goal["targetYear"] = completed.year
     goal["linkedLibraryItemId"] = item.get("id")
     goal["updatedAt"] = now_iso()
     state["libraryGoals"][index] = goal
@@ -3193,12 +3462,10 @@ def delete_library_goal_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     index, goal = find_by_id(state["libraryGoals"], arguments["goal_id"], "el propósito")
     deleted = state["libraryGoals"].pop(index)
     linked_item_id = deleted.get("linkedLibraryItemId")
-    state["libraryItems"] = [
-        item
-        for item in state["libraryItems"]
-        if item.get("linkedGoalId") != deleted.get("id")
-        and item.get("id") != linked_item_id
-    ]
+    for item in state["libraryItems"]:
+        if item.get("linkedGoalId") == deleted.get("id") or item.get("id") == linked_item_id:
+            item["linkedGoalId"] = None
+            item["updatedAt"] = now_iso()
     save_state(state)
     return {"deleted": deleted}
 
@@ -3211,17 +3478,11 @@ def toggle_library_goal_completed_impl(arguments: dict[str, Any]) -> dict[str, A
     updated["status"] = "pending" if updated.get("status") == "completed" else "completed"
     updated["updatedAt"] = now_iso()
     state["libraryGoals"][index] = updated
-    item = sync_completed_goal_to_item(state, updated)
-    if updated.get("status") == "pending":
-        linked_item_id = updated.get("linkedLibraryItemId")
-        state["libraryItems"] = [
-            item
-            for item in state["libraryItems"]
-            if item.get("linkedGoalId") != updated.get("id")
-            and item.get("id") != linked_item_id
-        ]
-        updated["linkedLibraryItemId"] = None
-        state["libraryGoals"][index] = updated
+    item = sync_completed_goal_to_item(
+        state,
+        updated,
+        reopen_as_pending=updated.get("status") == "pending",
+    )
     save_state(state)
     return {"updated": updated, "synced_item": item}
 
@@ -3236,6 +3497,52 @@ def toggle_library_goal_favorite_impl(arguments: dict[str, Any]) -> dict[str, An
     state["libraryGoals"][index] = updated
     save_state(state)
     return {"updated": updated}
+
+
+def migrate_library_state(state: dict[str, Any]) -> bool:
+    changed = False
+    state.setdefault("libraryItems", [])
+    state.setdefault("libraryGoals", [])
+    if "libraryStatusView" not in state:
+        state["libraryStatusView"] = "pending"
+        changed = True
+    for item in state["libraryItems"]:
+        if "status" not in item:
+            item["status"] = "completed"
+            changed = True
+        status = normalize_library_item_status(item.get("status"))
+        if item.get("status") != status:
+            item["status"] = status
+            changed = True
+        if status != "completed" and item.get("completedDate") is not None:
+            item["completedDate"] = None
+            changed = True
+        if status == "completed" and not item.get("completedDate"):
+            item["completedDate"] = item.get("updatedAt") or now_iso()
+            changed = True
+    for goal in list(state["libraryGoals"]):
+        linked = next(
+            (
+                item
+                for item in state["libraryItems"]
+                if item.get("id") == goal.get("linkedLibraryItemId")
+            ),
+            None,
+        )
+        expected_status = "completed" if goal.get("status") == "completed" else None
+        needs_sync = (
+            linked is None
+            or linked.get("linkedGoalId") != goal.get("id")
+            or (expected_status == "completed" and linked.get("status") != "completed")
+            or (expected_status is None and linked.get("status") == "completed")
+        )
+        if needs_sync:
+            sync_completed_goal_to_item(state, goal)
+            changed = True
+    if int(state.get("schemaVersion", 1) or 1) < 3:
+        state["schemaVersion"] = 3
+        changed = True
+    return changed
 
 
 def wardrobe_directory() -> Path:
@@ -3632,6 +3939,10 @@ def reset_state_impl(arguments: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"reset": True, "mode": "supabase" if remote_enabled() else "local"}
 
 
+def knowledge_repository() -> KnowledgeRepository:
+    return KnowledgeRepository(KNOWLEDGE_DIR)
+
+
 def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if name == "get_app_state":
         state = load_state()
@@ -3804,6 +4115,46 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(toggle_library_goal_completed_impl(arguments))
     if name == "toggle_library_goal_favorite":
         return json_result(toggle_library_goal_favorite_impl(arguments))
+    if name == "get_knowledge_contract":
+        return json_result(knowledge_repository().contract())
+    if name == "list_knowledge_pages":
+        return json_result(knowledge_repository().list_pages(arguments))
+    if name == "get_knowledge_page":
+        return json_result(knowledge_repository().get_page(arguments["page_id"]))
+    if name == "search_knowledge":
+        return json_result(
+            knowledge_repository().search(
+                arguments["query"], int(arguments.get("limit", 50))
+            )
+        )
+    if name == "create_knowledge_page":
+        return json_result({"page": knowledge_repository().create_page(arguments)})
+    if name == "update_knowledge_page":
+        return json_result(
+            {"page": knowledge_repository().update_page(arguments["page_id"], arguments)}
+        )
+    if name == "move_knowledge_page":
+        return json_result(
+            {"page": knowledge_repository().move_page(arguments["page_id"], arguments.get("parent_id"))}
+        )
+    if name == "trash_knowledge_page":
+        return json_result(knowledge_repository().set_trash(arguments["page_id"], True))
+    if name == "restore_knowledge_page":
+        return json_result(knowledge_repository().set_trash(arguments["page_id"], False))
+    if name == "list_knowledge_backlinks":
+        return json_result(knowledge_repository().backlinks(arguments["page_id"]))
+    if name == "list_unlinked_knowledge_pages":
+        return json_result(knowledge_repository().list_unlinked())
+    if name == "import_knowledge_asset":
+        return json_result(knowledge_repository().import_asset(arguments))
+    if name == "create_knowledge_collection":
+        return json_result({"collection": knowledge_repository().create_collection(arguments)})
+    if name == "list_knowledge_collections":
+        return json_result(knowledge_repository().list_collections(arguments.get("page_id")))
+    if name in {"apply_knowledge_manifest", "import_knowledge_repository"}:
+        return json_result(knowledge_repository().apply_manifest(arguments["manifest"]))
+    if name == "export_knowledge_repository":
+        return json_result(knowledge_repository().export_archive())
     if name == "get_wardrobe_import_contract":
         return json_result(wardrobe_import_contract_impl())
     if name == "stage_wardrobe_batch":

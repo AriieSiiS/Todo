@@ -45,6 +45,8 @@ enum LibraryItemType { game, book, movieSeries }
 
 enum LibraryMediaType { movie, series }
 
+enum LibraryItemStatus { pending, inProgress, completed }
+
 enum LibraryGoalStatus { pending, completed }
 
 enum LibrarySortOrder {

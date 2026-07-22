@@ -5,6 +5,7 @@ export 'entities/enums.dart';
 export 'entities/financial.dart';
 export 'entities/library_item.dart';
 export 'entities/library_goal.dart';
+export 'entities/knowledge.dart';
 export 'entities/notification_plan.dart';
 export 'entities/project.dart';
 export 'entities/quick_note.dart';

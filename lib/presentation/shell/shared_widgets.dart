@@ -199,7 +199,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                       icon: const Icon(Icons.calendar_month_outlined, size: 18),
                       label: Text(
                         _scheduledFor == null
-                            ? 'Anadir fecha'
+                            ? 'Añadir fecha'
                             : _formatInboxDate(_scheduledFor!),
                       ),
                     ),
@@ -398,7 +398,8 @@ class _TaskCard extends StatelessWidget {
                               if (task.scheduledAt != null &&
                                   _hasVisibleTime(task.scheduledAt!))
                                 _SoftChip(label: _timeLabel(task.scheduledAt!)),
-                              _SoftChip(label: task.priority.name),
+                              _SoftChip(
+                                  label: _taskPriorityLabel(task.priority)),
                               if (task.reminderRule?.enabled ?? false)
                                 const _SoftChip(
                                     label: 'Aviso',
@@ -406,7 +407,7 @@ class _TaskCard extends StatelessWidget {
                               if (task.calendarLink != null)
                                 _SoftChip(
                                   label:
-                                      'Google ${task.calendarLink!.syncStatus.name}',
+                                      'Google ${_calendarSyncStatusLabel(task.calendarLink!.syncStatus)}',
                                   icon: Icons.calendar_month_rounded,
                                   color: const Color(0xFF6C7B8E),
                                 ),
@@ -425,7 +426,8 @@ class _TaskCard extends StatelessWidget {
                               Text('Materiales: ${task.materials.join(', ')}',
                                   style: TextStyle(color: visuals.textMuted)),
                             if (task.checklist.isNotEmpty)
-                              Text('Checklist: ${task.checklist.join(' · ')}',
+                              Text(
+                                  'Lista de comprobación: ${task.checklist.join(' · ')}',
                                   style: TextStyle(color: visuals.textMuted)),
                           ],
                         ],
@@ -828,3 +830,17 @@ class _PageHeader extends StatelessWidget {
     );
   }
 }
+
+String _taskPriorityLabel(TaskPriority priority) => switch (priority) {
+      TaskPriority.low => 'Prioridad baja',
+      TaskPriority.medium => 'Prioridad media',
+      TaskPriority.high => 'Prioridad alta',
+      TaskPriority.urgent => 'Urgente',
+    };
+
+String _calendarSyncStatusLabel(CalendarSyncStatus status) => switch (status) {
+      CalendarSyncStatus.idle => 'sin sincronizar',
+      CalendarSyncStatus.synced => 'sincronizado',
+      CalendarSyncStatus.pending => 'pendiente',
+      CalendarSyncStatus.error => 'con error',
+    };

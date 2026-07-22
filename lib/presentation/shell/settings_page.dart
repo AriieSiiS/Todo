@@ -159,7 +159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Ãšltima sincronización: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
+                                'Última sincronización: ${_settingsDateTime(controller.lastCloudSyncAt!)}',
                                 style: TextStyle(color: visuals.textMuted),
                               ),
                             ),
@@ -201,7 +201,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 if (controller.cloudRedirectUrl.isNotEmpty) ...[
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Redirect local: ${controller.cloudRedirectUrl}',
+                                    'Redirección local: ${controller.cloudRedirectUrl}',
                                     style: TextStyle(color: visuals.textMuted),
                                   ),
                                 ],
@@ -527,7 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Text('Ã¢â‚¬â€œ'),
+                              const Text('–'),
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: 120,
@@ -743,7 +743,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           title: 'Copias de seguridad',
                           subtitle: controller.lastSavedAt == null
                               ? 'Sin guardar'
-                              : 'Ãšltima: hoy, ${_timeLabel(controller.lastSavedAt!)}',
+                              : 'Última: hoy, ${_timeLabel(controller.lastSavedAt!)}',
                           active: controller.lastSavedAt != null,
                         ),
                         _SettingsStatusItem(

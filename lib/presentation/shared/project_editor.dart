@@ -214,7 +214,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel('Descripcion'),
+                  _sectionLabel('Descripción'),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _descriptionController,
@@ -656,7 +656,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
       children: [
         _AsideCard(
           title: 'Resumen',
-          subtitle: 'Asi se vera tu proyecto.',
+          subtitle: 'Así se verá tu proyecto.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

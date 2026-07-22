@@ -51,6 +51,7 @@ class _AppShellState extends ConsumerState<AppShell>
     final controller = ref.watch(todoWorkspaceProvider);
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     final visuals = context.visuals;
+    final knowledgeItem = controller.openKnowledgeLibraryItem;
 
     return Scaffold(
       body: Container(
@@ -71,20 +72,35 @@ class _AppShellState extends ConsumerState<AppShell>
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+                  padding: knowledgeItem == null
+                      ? const EdgeInsets.fromLTRB(20, 20, 20, 36)
+                      : const EdgeInsets.fromLTRB(12, 18, 18, 24),
                   child: _ShellFrame(
                     visuals: visuals,
-                    child: AnimatedSwitcher(
-                      duration:
-                          Duration(milliseconds: visuals.isPhantom ? 180 : 220),
-                      switchInCurve: visuals.isPhantom
-                          ? Curves.easeOutExpo
-                          : Curves.easeOutCubic,
-                      switchOutCurve: visuals.isPhantom
-                          ? Curves.easeInExpo
-                          : Curves.easeInCubic,
-                      child: _sectionView(context),
-                    ),
+                    child: knowledgeItem == null
+                        ? AnimatedSwitcher(
+                            duration: Duration(
+                                milliseconds: visuals.isPhantom ? 180 : 220),
+                            switchInCurve: visuals.isPhantom
+                                ? Curves.easeOutExpo
+                                : Curves.easeOutCubic,
+                            switchOutCurve: visuals.isPhantom
+                                ? Curves.easeInExpo
+                                : Curves.easeInCubic,
+                            child: _sectionView(context),
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                                visuals.isPhantom ? 0 : 30),
+                            child: KnowledgeWorkspacePage(
+                              key: ValueKey(
+                                  'knowledge-workspace-${knowledgeItem.id}'),
+                              controller: controller,
+                              libraryItem: knowledgeItem,
+                              embedded: true,
+                              onClose: controller.closeKnowledgeWorkspace,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -92,7 +108,9 @@ class _AppShellState extends ConsumerState<AppShell>
           ),
         ),
       ),
-      floatingActionButton: !wide && controller.section == AppSection.today
+      floatingActionButton: !wide &&
+              knowledgeItem == null &&
+              controller.section == AppSection.today
           ? FloatingActionButton(
               onPressed: () => showTaskEditor(context, controller),
               child: const Icon(Icons.add_rounded),

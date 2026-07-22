@@ -411,7 +411,7 @@ String _priorityLabel(TaskPriority priority) => switch (priority) {
 String _recurrenceLabelFor(
         RecurrenceType type, DateTime date, TimeOfDay time, int interval) =>
     switch (type) {
-      RecurrenceType.none => 'Sin repeticion',
+      RecurrenceType.none => 'Sin repetición',
       RecurrenceType.daily => 'Diaria',
       RecurrenceType.weekly =>
         'Semanal · ${_weekdayLong(date)} a las ${_formatTime24(time)}',
