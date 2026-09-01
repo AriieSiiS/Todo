@@ -34,6 +34,10 @@ class AppLaunchIntent {
         section = AppSection.settings;
       } else if (arg == '--section=wardrobe') {
         section = AppSection.wardrobe;
+      } else if (arg == '--section=household') {
+        section = AppSection.household;
+      } else if (arg == '--section=recipes') {
+        section = AppSection.recipes;
       } else if (arg == '--new-task') {
         section = AppSection.today;
         editorTarget = LaunchEditorTarget.task;

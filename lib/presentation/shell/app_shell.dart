@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../application/providers/todo_providers.dart';
 import '../../application/state/todo_workspace.dart';
@@ -24,6 +25,8 @@ part 'expenses_page.dart';
 part 'calendar_page.dart';
 part 'library_page.dart';
 part 'wardrobe_page.dart';
+part 'household_page.dart';
+part 'recipes_page.dart';
 part 'inbox_page.dart';
 part 'completed_page.dart';
 part 'settings_page.dart';

@@ -220,6 +220,17 @@ class SupabaseCloudService {
           await _backupKnowledgeCollection(client, payload);
         } else if (entityType == 'asset') {
           await _backupKnowledgeAsset(client, knowledge, payload);
+        } else if (entityType == 'progress') {
+          if (action == 'delete') {
+            await client
+                .from('todo_knowledge_progress')
+                .delete()
+                .eq('owner_email', currentEmail)
+                .eq('root_page_id', payload['rootPageId'])
+                .eq('progress_key', payload['key']);
+          } else {
+            await _backupKnowledgeProgress(client, payload);
+          }
         } else if (entityType == 'pageTree') {
           final pageIds = (payload['pageIds'] as List? ?? const <dynamic>[])
               .whereType<String>()
@@ -367,6 +378,24 @@ class SupabaseCloudService {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       },
       onConflict: 'owner_email,asset_id',
+    );
+  }
+
+  Future<void> _backupKnowledgeProgress(
+    SupabaseClient client,
+    Map<String, dynamic> entry,
+  ) async {
+    await client.from('todo_knowledge_progress').upsert(
+      <String, dynamic>{
+        'owner_email': currentEmail,
+        'root_page_id': entry['rootPageId'],
+        'progress_key': entry['key'],
+        'value': entry['value'],
+        'source': entry['source'] ?? 'manual',
+        'updated_at':
+            entry['updatedAt'] ?? DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'owner_email,root_page_id,progress_key',
     );
   }
 

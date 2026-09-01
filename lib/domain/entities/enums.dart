@@ -6,6 +6,8 @@ enum AppSection {
   calendar,
   library,
   wardrobe,
+  household,
+  recipes,
   inbox,
   completed,
   settings,

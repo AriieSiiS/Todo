@@ -56,10 +56,23 @@ create table if not exists public.todo_knowledge_assets (
   unique (owner_email, sha256)
 );
 
+-- Solo se respalda el estado derivado. Las rutas, slots y bytes de partidas
+-- guardadas permanecen exclusivamente en el equipo local.
+create table if not exists public.todo_knowledge_progress (
+  owner_email text not null,
+  root_page_id text not null,
+  progress_key text not null,
+  value jsonb,
+  source text not null default 'manual',
+  updated_at timestamptz not null default timezone('utc', now()),
+  primary key (owner_email, root_page_id, progress_key)
+);
+
 alter table public.todo_knowledge_pages enable row level security;
 alter table public.todo_knowledge_collections enable row level security;
 alter table public.todo_knowledge_revisions enable row level security;
 alter table public.todo_knowledge_assets enable row level security;
+alter table public.todo_knowledge_progress enable row level security;
 
 do $$
 declare
@@ -69,7 +82,8 @@ begin
     'todo_knowledge_pages',
     'todo_knowledge_collections',
     'todo_knowledge_revisions',
-    'todo_knowledge_assets'
+    'todo_knowledge_assets',
+    'todo_knowledge_progress'
   ] loop
     execute format('drop policy if exists todo_knowledge_select_own on public.%I', table_name);
     execute format(

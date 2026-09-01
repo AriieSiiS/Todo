@@ -19,6 +19,10 @@ import '../../domain/repositories/todo_state_repository.dart';
 import '../../services/calendar_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/knowledge_service.dart';
+import '../../services/isaac_save_service.dart';
+import '../../services/household_asset_service.dart';
+import '../../services/recipe_asset_service.dart';
+import '../../services/recipe_import_service.dart';
 import '../../services/supabase_cloud_service.dart';
 import '../../services/task_feedback_service.dart';
 import '../../services/task_scheduler_service.dart';
@@ -33,7 +37,9 @@ class TodoWorkspace extends ChangeNotifier {
     this._scheduler,
     this._feedback,
     this._knowledgeService,
-  );
+  ) {
+    _isaacSaveSync = IsaacSaveSyncService(_knowledgeService);
+  }
 
   static Future<TodoWorkspace> create() async {
     final controller = TodoWorkspace._(
@@ -58,6 +64,8 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.calendar,
     AppSection.library,
     AppSection.wardrobe,
+    AppSection.household,
+    AppSection.recipes,
     AppSection.completed,
     AppSection.settings,
   ];
@@ -92,6 +100,7 @@ class TodoWorkspace extends ChangeNotifier {
   final TaskSchedulerService _scheduler;
   final TaskFeedbackService _feedback;
   final KnowledgeService _knowledgeService;
+  late final IsaacSaveSyncService _isaacSaveSync;
   final Random _random = Random();
 
   final List<TaskModel> _tasks = <TaskModel>[];
@@ -112,8 +121,15 @@ class TodoWorkspace extends ChangeNotifier {
       <WardrobePackingList>[];
   final List<WardrobeImportBatch> _wardrobeImportBatches =
       <WardrobeImportBatch>[];
+  final List<HouseholdItem> _householdItems = <HouseholdItem>[];
+  final List<Recipe> _recipes = <Recipe>[];
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
   final WardrobeAssetService _wardrobeAssets = WardrobeAssetService();
+  final HouseholdAssetService _householdAssets = HouseholdAssetService();
+  final RecipeAssetService _recipeAssets = RecipeAssetService();
+  final RecipeImportService _recipeImporter = RecipeImportService();
+  final RecipeIngredientClassifier _recipeIngredientClassifier =
+      const RecipeIngredientClassifier();
 
   DaySettings _daySettings = const DaySettings();
   DeviceNotificationSettings _notificationSettings =
@@ -164,6 +180,7 @@ class TodoWorkspace extends ChangeNotifier {
   List<LibraryGoal> get libraryGoals =>
       List<LibraryGoal>.unmodifiable(_libraryGoals);
   KnowledgeService get knowledge => _knowledgeService;
+  IsaacSaveSyncService get isaacSaveSync => _isaacSaveSync;
   List<WardrobeItem> get wardrobeItems =>
       List<WardrobeItem>.unmodifiable(_wardrobeItems);
   List<WardrobeOutfit> get wardrobeOutfits =>
@@ -176,6 +193,9 @@ class TodoWorkspace extends ChangeNotifier {
       List<WardrobePackingList>.unmodifiable(_wardrobePackingLists);
   List<WardrobeImportBatch> get wardrobeImportBatches =>
       List<WardrobeImportBatch>.unmodifiable(_wardrobeImportBatches);
+  List<HouseholdItem> get householdItems =>
+      List<HouseholdItem>.unmodifiable(_householdItems);
+  List<Recipe> get recipes => List<Recipe>.unmodifiable(_recipes);
   List<CalendarEventModel> get calendarEvents =>
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
@@ -492,6 +512,8 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobeWearLogs: wardrobeWearLogs,
       wardrobePlanEntries: wardrobePlanEntries,
       wardrobePackingLists: wardrobePackingLists,
+      householdItems: householdItems,
+      recipes: recipes,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -959,6 +981,503 @@ class TodoWorkspace extends ChangeNotifier {
     if (persisted == null) return;
     _applySnapshot(persisted);
     notifyListeners();
+  }
+
+  HouseholdItem? householdItemById(String id) {
+    for (final item in _householdItems) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
+  Future<String> householdImageAbsolutePath(
+    HouseholdItem item, {
+    bool thumbnail = true,
+  }) {
+    final path = thumbnail && item.thumbnailPath.isNotEmpty
+        ? item.thumbnailPath
+        : item.imagePath;
+    return _householdAssets.absolutePath(path);
+  }
+
+  Future<String> householdDocumentAbsolutePath(String relativePath) =>
+      _householdAssets.absolutePath(relativePath);
+
+  HouseholdItem createHouseholdItem({
+    required String name,
+    required String category,
+    String brand = '',
+    String model = '',
+    String serialNumber = '',
+    String location = '',
+    String notes = '',
+    String manualSourceUrl = '',
+    String retailer = '',
+    DateTime? purchaseDate,
+    DateTime? warrantyUntil,
+    double? price,
+    List<String> tags = const <String>[],
+  }) {
+    final instant = DateTime.now();
+    final item = HouseholdItem(
+      id: _id('household-item'),
+      name: name.trim().isEmpty ? 'Artículo sin nombre' : name.trim(),
+      category: category.trim().isEmpty ? 'Sin categoría' : category.trim(),
+      brand: brand.trim(),
+      model: model.trim(),
+      serialNumber: serialNumber.trim(),
+      location: location.trim(),
+      notes: notes.trim(),
+      manualSourceUrl: manualSourceUrl.trim(),
+      retailer: retailer.trim(),
+      purchaseDate: purchaseDate,
+      warrantyUntil: warrantyUntil,
+      price: price,
+      tags: tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(),
+      createdAt: instant,
+      updatedAt: instant,
+    );
+    _householdItems.add(item);
+    _commit();
+    return item;
+  }
+
+  void updateHouseholdItem(
+    String id, {
+    String? name,
+    String? category,
+    String? brand,
+    String? model,
+    String? serialNumber,
+    String? location,
+    String? notes,
+    String? manualSourceUrl,
+    String? retailer,
+    DateTime? purchaseDate,
+    bool clearPurchaseDate = false,
+    DateTime? warrantyUntil,
+    bool clearWarrantyUntil = false,
+    double? price,
+    bool clearPrice = false,
+    List<String>? tags,
+  }) {
+    final index = _householdItems.indexWhere((item) => item.id == id);
+    if (index == -1) return;
+    _householdItems[index] = _householdItems[index].copyWith(
+      name: name?.trim(),
+      category: category?.trim(),
+      brand: brand?.trim(),
+      model: model?.trim(),
+      serialNumber: serialNumber?.trim(),
+      location: location?.trim(),
+      notes: notes?.trim(),
+      manualSourceUrl: manualSourceUrl?.trim(),
+      retailer: retailer?.trim(),
+      purchaseDate: purchaseDate,
+      clearPurchaseDate: clearPurchaseDate,
+      warrantyUntil: warrantyUntil,
+      clearWarrantyUntil: clearWarrantyUntil,
+      price: price,
+      clearPrice: clearPrice,
+      tags: tags
+          ?.map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(),
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  Future<void> importHouseholdImage(String id, String sourcePath) async {
+    final index = _householdItems.indexWhere((item) => item.id == id);
+    if (index == -1) throw StateError('No se encuentra el artículo.');
+    final previousImage = _householdItems[index].imagePath;
+    final previousThumbnail = _householdItems[index].thumbnailPath;
+    final imported = await _householdAssets.importImage(id, sourcePath);
+    _householdItems[index] = _householdItems[index].copyWith(
+      imagePath: imported.imagePath,
+      thumbnailPath: imported.thumbnailPath,
+      imageSha256: imported.sha256,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+    for (final path in <String>[previousImage, previousThumbnail]) {
+      if (path.isNotEmpty &&
+          path != imported.imagePath &&
+          path != imported.thumbnailPath) {
+        await _householdAssets.deleteAsset(path);
+      }
+    }
+  }
+
+  Future<void> importHouseholdManual(String id, String sourcePath) async {
+    await _importHouseholdPdf(id, sourcePath, manual: true);
+  }
+
+  Future<void> importHouseholdInvoice(String id, String sourcePath) async {
+    await _importHouseholdPdf(id, sourcePath, manual: false);
+  }
+
+  Future<void> _importHouseholdPdf(
+    String id,
+    String sourcePath, {
+    required bool manual,
+  }) async {
+    final index = _householdItems.indexWhere((item) => item.id == id);
+    if (index == -1) throw StateError('No se encuentra el artículo.');
+    final previous = manual
+        ? _householdItems[index].manualPath
+        : _householdItems[index].invoicePath;
+    final imported = await _householdAssets.importPdf(
+      id,
+      sourcePath,
+      kind: manual ? 'manuals' : 'invoices',
+    );
+    _householdItems[index] = _householdItems[index].copyWith(
+      manualPath: manual ? imported : null,
+      invoicePath: manual ? null : imported,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+    if (previous.isNotEmpty && previous != imported) {
+      await _householdAssets.deleteAsset(previous);
+    }
+  }
+
+  void archiveHouseholdItem(String id) {
+    final index = _householdItems.indexWhere((item) => item.id == id);
+    if (index == -1) return;
+    _householdItems[index] = _householdItems[index].copyWith(
+      archived: true,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void deleteHouseholdItem(String id) {
+    final item = householdItemById(id);
+    if (item == null) return;
+    _householdItems.removeWhere((value) => value.id == id);
+    _commit();
+    for (final path in <String>[
+      item.imagePath,
+      item.thumbnailPath,
+      item.manualPath,
+      item.invoicePath,
+    ]) {
+      if (path.isNotEmpty) unawaited(_householdAssets.deleteAsset(path));
+    }
+  }
+
+  Recipe? recipeById(String id) {
+    for (final recipe in _recipes) {
+      if (recipe.id == id) return recipe;
+    }
+    return null;
+  }
+
+  Future<String> recipeImageAbsolutePath(
+    Recipe recipe, {
+    bool thumbnail = true,
+  }) {
+    final path = thumbnail && recipe.thumbnailPath.isNotEmpty
+        ? recipe.thumbnailPath
+        : recipe.imagePath;
+    return _recipeAssets.absolutePath(path);
+  }
+
+  Recipe createRecipe({
+    required String title,
+    String description = '',
+    String category = 'Sin categoría',
+    String cuisine = '',
+    int servings = 1,
+    int prepMinutes = 0,
+    int cookMinutes = 0,
+    List<RecipeIngredient> ingredients = const <RecipeIngredient>[],
+    List<String> instructions = const <String>[],
+    List<String> tags = const <String>[],
+    String sourceUrl = '',
+    String imageSourceUrl = '',
+  }) {
+    final instant = DateTime.now();
+    final recipe = Recipe(
+      id: _id('recipe'),
+      title: title.trim().isEmpty ? 'Receta sin nombre' : title.trim(),
+      description: description.trim(),
+      category: category.trim().isEmpty ? 'Sin categoría' : category.trim(),
+      cuisine: cuisine.trim(),
+      servings: servings.clamp(1, 1000),
+      prepMinutes: prepMinutes.clamp(0, 10080),
+      cookMinutes: cookMinutes.clamp(0, 10080),
+      ingredients: _normalizedRecipeIngredients(ingredients),
+      instructions: instructions
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toList(),
+      tags: tags
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .toList(),
+      sourceUrl: sourceUrl.trim(),
+      imageSourceUrl: imageSourceUrl.trim(),
+      createdAt: instant,
+      updatedAt: instant,
+    );
+    _recipes.add(recipe);
+    _commit();
+    return recipe;
+  }
+
+  void updateRecipe(
+    String id, {
+    String? title,
+    String? description,
+    String? category,
+    String? cuisine,
+    int? servings,
+    int? prepMinutes,
+    int? cookMinutes,
+    List<RecipeIngredient>? ingredients,
+    List<String>? instructions,
+    List<String>? tags,
+    String? sourceUrl,
+  }) {
+    final index = _recipes.indexWhere((recipe) => recipe.id == id);
+    if (index == -1) return;
+    _recipes[index] = _recipes[index].copyWith(
+      title: title?.trim(),
+      description: description?.trim(),
+      category:
+          category?.trim().isEmpty == true ? 'Sin categoría' : category?.trim(),
+      cuisine: cuisine?.trim(),
+      servings: servings?.clamp(1, 1000),
+      prepMinutes: prepMinutes?.clamp(0, 10080),
+      cookMinutes: cookMinutes?.clamp(0, 10080),
+      ingredients: ingredients == null
+          ? null
+          : _normalizedRecipeIngredients(ingredients),
+      instructions: instructions
+          ?.map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toList(),
+      tags: tags
+          ?.map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .toList(),
+      sourceUrl: sourceUrl?.trim(),
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  Future<void> importRecipeImage(String id, String sourcePath) async {
+    final index = _recipes.indexWhere((recipe) => recipe.id == id);
+    if (index == -1) throw StateError('No se encuentra la receta.');
+    final previousImage = _recipes[index].imagePath;
+    final previousThumbnail = _recipes[index].thumbnailPath;
+    final imported = await _recipeAssets.importImage(id, sourcePath);
+    _recipes[index] = _recipes[index].copyWith(
+      imagePath: imported.imagePath,
+      thumbnailPath: imported.thumbnailPath,
+      imageSha256: imported.sha256,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+    for (final path in <String>[previousImage, previousThumbnail]) {
+      if (path.isNotEmpty &&
+          path != imported.imagePath &&
+          path != imported.thumbnailPath) {
+        await _recipeAssets.deleteAsset(path);
+      }
+    }
+  }
+
+  Future<void> importRecipeImageFromUrl(String id, String sourceUrl) async {
+    final index = _recipes.indexWhere((recipe) => recipe.id == id);
+    if (index == -1) throw StateError('No se encuentra la receta.');
+    final imported = await _recipeAssets.importImageFromUrl(id, sourceUrl);
+    _recipes[index] = _recipes[index].copyWith(
+      imagePath: imported.imagePath,
+      thumbnailPath: imported.thumbnailPath,
+      imageSha256: imported.sha256,
+      imageSourceUrl: sourceUrl,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  Future<Recipe> importRecipeFromUrl(String sourceUrl) async {
+    final imported = await _recipeImporter.importUrl(sourceUrl);
+    final recipe = _createImportedRecipe(imported);
+    if (imported.imageSourceUrl.isNotEmpty) {
+      try {
+        await importRecipeImageFromUrl(recipe.id, imported.imageSourceUrl);
+      } catch (_) {
+        // La receta sigue siendo útil aunque la página bloquee su imagen.
+      }
+    }
+    return recipeById(recipe.id) ?? recipe;
+  }
+
+  Recipe importRecipeFromJson(String source) {
+    return _createImportedRecipe(_recipeImporter.importJson(source));
+  }
+
+  Recipe _createImportedRecipe(ImportedRecipeData imported) => createRecipe(
+        title: imported.title,
+        description: imported.description,
+        category: imported.category,
+        cuisine: imported.cuisine,
+        servings: imported.servings,
+        prepMinutes: imported.prepMinutes,
+        cookMinutes: imported.cookMinutes,
+        ingredients: imported.ingredients,
+        instructions: imported.instructions,
+        tags: imported.tags,
+        sourceUrl: imported.sourceUrl,
+        imageSourceUrl: imported.imageSourceUrl,
+      );
+
+  void toggleRecipeFavorite(String id) {
+    final index = _recipes.indexWhere((recipe) => recipe.id == id);
+    if (index == -1) return;
+    _recipes[index] = _recipes[index].copyWith(
+      favorite: !_recipes[index].favorite,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void archiveRecipe(String id) {
+    final index = _recipes.indexWhere((recipe) => recipe.id == id);
+    if (index == -1) return;
+    _recipes[index] = _recipes[index].copyWith(
+      archived: true,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  void deleteRecipe(String id) {
+    final recipe = recipeById(id);
+    if (recipe == null) return;
+    _recipes.removeWhere((value) => value.id == id);
+    _commit();
+    for (final path in <String>[recipe.imagePath, recipe.thumbnailPath]) {
+      if (path.isNotEmpty) unawaited(_recipeAssets.deleteAsset(path));
+    }
+  }
+
+  TaskModel createRecipeShoppingTask(
+    String recipeId, {
+    DateTime? scheduledAt,
+  }) {
+    final recipe = recipeById(recipeId);
+    if (recipe == null) throw StateError('No se encuentra la receta.');
+    if (recipe.ingredients.isEmpty) {
+      throw StateError('La receta no tiene ingredientes.');
+    }
+    final category = _ensureTaskCategory(
+      'Compras',
+      const Color(0xFFDBA62D),
+      Icons.shopping_cart_rounded,
+    );
+    final date = scheduledAt ?? logicalDate();
+    final task = createTask(
+      title: 'Comprar ingredientes para ${recipe.title}',
+      description: 'Lista generada desde Recetas · ${recipe.servings} '
+          '${recipe.servings == 1 ? 'ración' : 'raciones'}.',
+      categoryIds: <String>[category.id],
+      scheduledAt: date,
+    );
+    final shoppingLabels = <String>[];
+    final seenLabels = <String>{};
+    for (final ingredient in recipe.ingredients) {
+      for (final label
+          in _recipeIngredientClassifier.shoppingLabels(ingredient)) {
+        final key = label.trim().toLowerCase();
+        if (key.isNotEmpty && seenLabels.add(key)) shoppingLabels.add(label);
+      }
+    }
+    for (final label in shoppingLabels) {
+      createTask(
+        title: label,
+        categoryIds: <String>[category.id],
+        scheduledAt: date,
+        parentTaskId: task.id,
+      );
+    }
+    return taskById(task.id) ?? task;
+  }
+
+  List<RecipeIngredient> _normalizedRecipeIngredients(
+    Iterable<RecipeIngredient> ingredients,
+  ) {
+    return ingredients
+        .map((value) => value.copyWith(
+              text: value.text.trim(),
+              group: value.group.trim(),
+            ))
+        .where((value) => value.text.isNotEmpty)
+        .map(_recipeIngredientClassifier.classify)
+        .toList();
+  }
+
+  TaskModel createRecipeCookingTask(
+    String recipeId, {
+    DateTime? scheduledAt,
+  }) {
+    final recipe = recipeById(recipeId);
+    if (recipe == null) throw StateError('No se encuentra la receta.');
+    final category = _ensureTaskCategory(
+      'Cocina',
+      const Color(0xFFC7744E),
+      Icons.restaurant_rounded,
+    );
+    final date = scheduledAt ?? logicalDate();
+    final time = recipe.totalMinutes > 0
+        ? 'Tiempo estimado: ${recipe.totalMinutes} min.'
+        : 'Tiempo estimado pendiente.';
+    final task = createTask(
+      title: 'Preparar ${recipe.title}',
+      description: '$time · ${recipe.servings} '
+          '${recipe.servings == 1 ? 'ración' : 'raciones'}.',
+      categoryIds: <String>[category.id],
+      scheduledAt: date,
+    );
+    for (var index = 0; index < recipe.instructions.length; index++) {
+      createTask(
+        title: '${index + 1}. ${recipe.instructions[index]}',
+        categoryIds: <String>[category.id],
+        scheduledAt: date,
+        parentTaskId: task.id,
+      );
+    }
+    return taskById(task.id) ?? task;
+  }
+
+  CategoryModel _ensureTaskCategory(
+    String name,
+    Color color,
+    IconData icon,
+  ) {
+    for (final category in _categories) {
+      if (category.name.toLowerCase() == name.toLowerCase()) return category;
+    }
+    return createCategory(
+      name: name,
+      description: 'Creada automáticamente desde Recetas.',
+      colorValue: color.toARGB32(),
+      icon: icon,
+    );
   }
 
   TaskModel createTask({
@@ -2907,6 +3426,9 @@ class TodoWorkspace extends ChangeNotifier {
     }
     await _knowledgeService.initialize();
     await _knowledgeService.ensureLibraryRoots(_libraryItems);
+    if (!_isFlutterTest) {
+      unawaited(_isaacSaveSync.start());
+    }
     final session = await _store.loadCalendarSession();
     await _calendarService.restoreSession(session);
     _calendarAccount = await _calendarService.getAccount();
@@ -3008,6 +3530,12 @@ class TodoWorkspace extends ChangeNotifier {
     _wardrobeImportBatches
       ..clear()
       ..addAll(snapshot.wardrobeImportBatches);
+    _householdItems
+      ..clear()
+      ..addAll(snapshot.householdItems);
+    _recipes
+      ..clear()
+      ..addAll(snapshot.recipes);
     _calendarEvents
       ..clear()
       ..addAll(snapshot.calendarEvents);
@@ -3212,6 +3740,30 @@ class TodoWorkspace extends ChangeNotifier {
       }
     }
 
+    for (var i = 0; i < _recipes.length; i++) {
+      final recipe = _recipes[i];
+      final cleaned = recipe.copyWith(
+        title: _cleanSpanishText(recipe.title),
+        description: _cleanSpanishText(recipe.description),
+        category: _cleanSpanishText(recipe.category),
+        cuisine: _cleanSpanishText(recipe.cuisine),
+        ingredients: _normalizedRecipeIngredients(
+          recipe.ingredients.map(
+            (ingredient) => ingredient.copyWith(
+              text: _cleanSpanishText(ingredient.text),
+              group: _cleanSpanishText(ingredient.group),
+            ),
+          ),
+        ),
+        instructions: recipe.instructions.map(_cleanSpanishText).toList(),
+        tags: recipe.tags.map(_cleanSpanishText).toList(),
+      );
+      if (cleaned.toJson().toString() != recipe.toJson().toString()) {
+        _recipes[i] = cleaned;
+        changed = true;
+      }
+    }
+
     return changed;
   }
 
@@ -3334,6 +3886,8 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobePlanEntries: wardrobePlanEntries,
       wardrobePackingLists: wardrobePackingLists,
       wardrobeImportBatches: wardrobeImportBatches,
+      householdItems: householdItems,
+      recipes: recipes,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -3588,6 +4142,8 @@ class TodoWorkspace extends ChangeNotifier {
     _wardrobePlanEntries.clear();
     _wardrobePackingLists.clear();
     _wardrobeImportBatches.clear();
+    _householdItems.clear();
+    _recipes.clear();
     _calendarEvents.clear();
     _daySettings = const DaySettings();
     _notificationSettings = const DeviceNotificationSettings();
@@ -3858,6 +4414,7 @@ class TodoWorkspace extends ChangeNotifier {
   void dispose() {
     _saveDebounce?.cancel();
     _feedback.dispose();
+    unawaited(_isaacSaveSync.dispose());
     _knowledgeService.dispose();
     super.dispose();
   }

@@ -68,6 +68,10 @@ La app tiene:
 - `lib/presentation/shell/calendar_page.dart`: vista Calendario
 - `lib/presentation/shell/wardrobe_page.dart`: armario, conjuntos,
   planificación, lavandería, maletas, estadísticas e importaciones de Ropa
+- `lib/presentation/shell/household_page.dart`: inventario visual de Hogar,
+  fichas técnicas, manuales, facturas y garantías
+- `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
+  tiempos, ingredientes, pasos y creación de tareas de compra o cocina
 - `lib/presentation/shell/completed_page.dart`: vista Completadas
 - `lib/presentation/shell/settings_page.dart`: vista Ajustes
 - `lib/presentation/shell/shared_widgets.dart`: widgets compartidos del shell
@@ -86,6 +90,8 @@ Secciones:
 - `--section=completed`
 - `--section=settings`
 - `--section=wardrobe`
+- `--section=household`
+- `--section=recipes`
 
 Editores:
 

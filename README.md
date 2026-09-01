@@ -19,7 +19,8 @@ Windows es la plataforma prioritaria. La persistencia de escritorio usa archivo 
 
 Este repositorio contiene:
 
-- una app Flutter funcional con secciones `Hoy`, `Proyectos`, `Categorías`, `Calendario`, `Completadas` y `Ajustes`
+- una app Flutter funcional con secciones de tareas, proyectos, calendario,
+  biblioteca, ropa, hogar, recetas, gastos y ajustes
 - modelo interno preparado para operaciones futuras por MCP o agente externo
 - lógica de día real configurable
 - persistencia local automática para Windows
@@ -27,6 +28,10 @@ Este repositorio contiene:
 - documentación inicial de arranque, diseño y plan
 - un módulo de Ropa para catálogo, conjuntos, planificación, lavandería,
   maletas, estadísticas e importaciones preparadas por Codex
+- un inventario visual de Hogar para compras, aparatos, manuales, facturas,
+  números de serie y garantías
+- un recetario visual con tiempos, raciones, ingredientes, pasos, favoritos,
+  imágenes e importación desde JSON o páginas con datos schema.org
 
 ## Ropa
 
@@ -35,6 +40,40 @@ La sección `Ropa` es local y prioritaria para Windows. Los PNG se guardan en
 metadatos. La skill `skills/extract-clothing-to-todo` guía a Codex para convertir
 un lote de fotografías en prendas transparentes y enviarlas al área de revisión
 mediante el MCP local, sin claves de IA dentro de la aplicación.
+
+## Hogar
+
+La sección `Hogar` reúne las compras y aparatos en tarjetas visuales. Cada ficha
+puede guardar marca, modelo, número de serie, ubicación, tienda, precio, fechas
+de compra y garantía, notas, etiquetas, una imagen de catálogo, el manual
+oficial y la factura. Los archivos viven en `Documents/Todo/household`; el
+snapshot y Supabase conservan sus metadatos y rutas relativas.
+
+Codex puede completar el flujo mediante el MCP local: crear la ficha con
+`create_household_item`, asociar un PNG preparado o generado con
+`set_household_item_image` y guardar el manual o la factura PDF con
+`set_household_item_document`. Así la aplicación no necesita claves de IA ni
+acceso permanente al correo o a la web.
+
+## Recetas
+
+La sección `Recetas` reutiliza el catálogo visual de Ropa y Hogar. Cada receta
+guarda imagen, categoría, cocina, tiempos de preparación y cocción, raciones,
+ingredientes, pasos, etiquetas y la fuente original. Las imágenes locales se
+guardan en `Documents/Todo/recipes`; el snapshot local y Supabase conservan las
+rutas relativas y todos los datos estructurados.
+
+Se puede crear una receta manualmente, importar un JSON propio o leer una URL
+que publique un objeto `Recipe` de schema.org. Desde la ficha, `Comprar
+ingredientes` crea una tarea padre con un ingrediente por subtarea, mientras
+que `Crear tarea de cocina` convierte los pasos en subtareas ordenadas.
+Las cantidades se mantienen intactas en la ficha. Al generar la compra, los
+condimentos y productos de despensa reconocidos se normalizan al producto
+comprable (`½ cucharadita de comino` pasa a `Comino`); los ingredientes normales
+conservan su cantidad y las líneas compuestas se separan y deduplican.
+
+El MCP expone el mismo flujo mediante `create_recipe`, `update_recipe`,
+`set_recipe_image`, `create_recipe_task`, `list_recipes` y `delete_recipe`.
 
 ## Supabase compartido
 
@@ -113,3 +152,21 @@ FTS5, enlaces entrantes, revisiones y papelera.
 - La exportación genera un ZIP con manifiesto JSON, Markdown y recursos.
 - Supabase es solo un respaldo opcional por página y recurso. Para prepararlo,
   aplica [supabase/003_knowledge_workspace.sql](supabase/003_knowledge_workspace.sql).
+
+### Wiki de The Binding of Isaac: Repentance+
+
+La ficha de Isaac incluye una wiki interactiva en español con nombres oficiales
+en inglés, ruta óptima marcable, fichas enlazadas, colecciones paginadas y
+progreso compartido. El importador reproducible está en
+`tooling/import_isaac_wiki.py` y siempre genera un ZIP recuperable antes de
+aplicar el manifiesto. `tooling/audit_isaac_wiki.py` verifica conteos, enlaces,
+recursos, fuentes, páginas huérfanas y las relaciones de pools.
+`tooling/translate_isaac_dataset.py` mantiene una caché local de redacción
+española y protege los nombres oficiales en inglés durante su generación.
+
+El lector de `rep+persistentgamedata#.dat` es original y estrictamente de solo
+lectura. Valida cabecera, checksum, secciones y longitudes; sincroniza únicamente
+estados derivados y conserva el último estado válido ante una escritura
+incompleta. Las rutas de Steam se guardan solo en SQLite local. Para respaldar
+el progreso derivado en Supabase sobre una instalación existente, aplica
+`supabase/004_knowledge_progress.sql`.

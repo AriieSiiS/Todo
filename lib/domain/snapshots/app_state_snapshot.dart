@@ -4,11 +4,13 @@ import '../entities/category.dart';
 import '../entities/calendar_models.dart';
 import '../entities/enums.dart';
 import '../entities/financial.dart';
+import '../entities/household.dart';
 import '../entities/json_helpers.dart';
 import '../entities/library_goal.dart';
 import '../entities/library_item.dart';
 import '../entities/project.dart';
 import '../entities/quick_note.dart';
+import '../entities/recipe.dart';
 import '../entities/settings.dart';
 import '../entities/task.dart';
 import '../entities/wardrobe.dart';
@@ -32,6 +34,8 @@ class AppStateSnapshot {
     this.wardrobePlanEntries = const <WardrobePlanEntry>[],
     this.wardrobePackingLists = const <WardrobePackingList>[],
     this.wardrobeImportBatches = const <WardrobeImportBatch>[],
+    this.householdItems = const <HouseholdItem>[],
+    this.recipes = const <Recipe>[],
     required this.daySettings,
     required this.notificationSettings,
     required this.calendarSettings,
@@ -64,6 +68,8 @@ class AppStateSnapshot {
   final List<WardrobePlanEntry> wardrobePlanEntries;
   final List<WardrobePackingList> wardrobePackingLists;
   final List<WardrobeImportBatch> wardrobeImportBatches;
+  final List<HouseholdItem> householdItems;
+  final List<Recipe> recipes;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -107,6 +113,8 @@ class AppStateSnapshot {
           wardrobePackingLists.map((item) => item.toJson()).toList(),
       'wardrobeImportBatches':
           wardrobeImportBatches.map((item) => item.toJson()).toList(),
+      'householdItems': householdItems.map((item) => item.toJson()).toList(),
+      'recipes': recipes.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
@@ -208,6 +216,15 @@ class AppStateSnapshot {
               .map((item) => WardrobeImportBatch.fromJson(
                   (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
               .toList(),
+      householdItems:
+          (json['householdItems'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => HouseholdItem.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .toList(),
+      recipes: (json['recipes'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => Recipe.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
       calendarEvents:
           (json['calendarEvents'] as List<dynamic>? ?? const <dynamic>[])
               .map((item) => CalendarEventModel.fromJson(

@@ -106,6 +106,8 @@ class KnowledgeRepository:
                 CREATE UNIQUE INDEX IF NOT EXISTS knowledge_canonical_identity
                   ON knowledge_pages(canonical_source, canonical_id)
                   WHERE canonical_source IS NOT NULL AND canonical_id IS NOT NULL;
+                CREATE INDEX IF NOT EXISTS knowledge_pages_tree
+                  ON knowledge_pages(parent_id, is_trashed, sort_order, title);
                 CREATE TABLE IF NOT EXISTS knowledge_owner_links (
                   owner_type TEXT NOT NULL,
                   owner_id TEXT NOT NULL,
@@ -124,6 +126,8 @@ class KnowledgeRepository:
                   name TEXT NOT NULL, schema_json TEXT NOT NULL, views_json TEXT NOT NULL,
                   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
                 );
+                CREATE INDEX IF NOT EXISTS knowledge_collections_page
+                  ON knowledge_collections(page_id);
                 CREATE TABLE IF NOT EXISTS knowledge_links (
                   source_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
                   source_block_id TEXT NOT NULL,
@@ -131,6 +135,10 @@ class KnowledgeRepository:
                   target_block_id TEXT,
                   PRIMARY KEY(source_page_id, source_block_id, target_page_id, target_block_id)
                 );
+                CREATE INDEX IF NOT EXISTS knowledge_links_target
+                  ON knowledge_links(target_page_id, source_page_id);
+                CREATE INDEX IF NOT EXISTS knowledge_links_source
+                  ON knowledge_links(source_page_id, target_page_id);
                 CREATE TABLE IF NOT EXISTS knowledge_revisions (
                   id TEXT PRIMARY KEY,
                   page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
@@ -161,19 +169,43 @@ class KnowledgeRepository:
                   attempts INTEGER NOT NULL DEFAULT 0, next_attempt_at TEXT,
                   last_error TEXT, created_at TEXT NOT NULL
                 );
+                CREATE INDEX IF NOT EXISTS knowledge_sync_queue_entity
+                  ON knowledge_sync_queue(entity_type, entity_id, operation);
+                CREATE TABLE IF NOT EXISTS knowledge_progress (
+                  root_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
+                  progress_key TEXT NOT NULL, value_json TEXT NOT NULL,
+                  source TEXT NOT NULL DEFAULT 'manual', updated_at TEXT NOT NULL,
+                  PRIMARY KEY(root_page_id, progress_key)
+                );
+                CREATE INDEX IF NOT EXISTS knowledge_progress_source
+                  ON knowledge_progress(root_page_id, source, progress_key);
+                CREATE TABLE IF NOT EXISTS knowledge_import_sources (
+                  root_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
+                  kind TEXT NOT NULL, path TEXT NOT NULL, slot INTEGER NOT NULL DEFAULT 1,
+                  enabled INTEGER NOT NULL DEFAULT 1, last_imported_at TEXT,
+                  last_modified_at TEXT, last_error TEXT,
+                  PRIMARY KEY(root_page_id, kind)
+                );
                 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
                   page_id UNINDEXED, title, body, properties
                 );
                 """
             )
+            schema = db.execute(
+                "SELECT value FROM knowledge_meta WHERE key='schema_version'"
+            ).fetchone()
+            previous_schema = int(schema["value"]) if schema is not None else 0
             db.execute(
-                "INSERT OR REPLACE INTO knowledge_meta(key,value) VALUES('schema_version','1')"
+                "INSERT OR REPLACE INTO knowledge_meta(key,value) VALUES('schema_version','3')"
             )
+            if previous_schema < 3:
+                db.execute("ANALYZE")
+                db.execute("PRAGMA optimize")
 
     @staticmethod
     def contract() -> dict[str, Any]:
         return {
-            "schemaVersion": 1,
+            "schemaVersion": 3,
             "sourceOfTruth": "SQLite local + recursos locales",
             "documentFormat": "AppFlowy JSON con UUID estable en data.knowledgeBlockId",
             "page": {
@@ -194,6 +226,17 @@ class KnowledgeRepository:
             "asset": {
                 "required": ["path o url"],
                 "provenance": ["sourceUrl", "sourcePageUrl", "author", "altText"],
+                "manifestReferences": ["externalKey", "assetExternalKey", "coverAssetExternalKey"],
+            },
+            "externalReferences": {
+                "page": ["pageExternalKey", "parentExternalKey", "knowledgeTargetExternalKey"],
+                "asset": ["assetExternalKey", "coverAssetExternalKey", "knowledgeAssetExternalKey"],
+                "collection": ["collectionExternalKey", "knowledgeCollectionExternalKey"],
+            },
+            "progress": {
+                "identity": ["rootPageId", "key"],
+                "fields": ["value", "source", "updatedAt"],
+                "blockType": "knowledgeProgress",
             },
             "imageBlock": {
                 "types": ["image", "knowledgeMedia"],
@@ -310,6 +353,136 @@ class KnowledgeRepository:
         results = [{"page": self._page(row), "snippet": row["snippet"]} for row in rows]
         return {"results": results, "count": len(results)}
 
+    def list_progress(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        root_page_id = arguments.get("root_page_id", arguments.get("rootPageId"))
+        if not root_page_id:
+            raise ValueError("root_page_id es obligatorio.")
+        where = ["root_page_id=?"]
+        values: list[Any] = [root_page_id]
+        prefix = arguments.get("prefix")
+        source = arguments.get("source")
+        if prefix:
+            where.append("progress_key LIKE ?")
+            values.append(f"{prefix}%")
+        if source:
+            where.append("source=?")
+            values.append(source)
+        with closing(self.connect()) as db, db:
+            rows = db.execute(
+                f"SELECT * FROM knowledge_progress WHERE {' AND '.join(where)} ORDER BY progress_key",
+                values,
+            ).fetchall()
+        entries = [self._progress(row) for row in rows]
+        return {"rootPageId": root_page_id, "entries": entries, "count": len(entries)}
+
+    def set_progress(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        root_page_id = arguments.get("root_page_id", arguments.get("rootPageId"))
+        key = arguments.get("key")
+        if not root_page_id or not key:
+            raise ValueError("root_page_id y key son obligatorios.")
+        source = str(arguments.get("source") or "manual")
+        stamp = _now()
+        with closing(self.connect()) as db, db:
+            if db.execute("SELECT 1 FROM knowledge_pages WHERE id=?", (root_page_id,)).fetchone() is None:
+                raise ValueError(f"No existe la página raíz {root_page_id}.")
+            db.execute(
+                "INSERT INTO knowledge_progress(root_page_id,progress_key,value_json,source,updated_at) "
+                "VALUES(?,?,?,?,?) ON CONFLICT(root_page_id,progress_key) DO UPDATE SET "
+                "value_json=excluded.value_json,source=excluded.source,updated_at=excluded.updated_at",
+                (root_page_id, str(key), _json(arguments.get("value")), source, stamp),
+            )
+            row = db.execute(
+                "SELECT * FROM knowledge_progress WHERE root_page_id=? AND progress_key=?",
+                (root_page_id, str(key)),
+            ).fetchone()
+            assert row is not None
+            entry = self._progress(row)
+            self._enqueue_progress_backup(db, entry)
+        return {"entry": entry}
+
+    def replace_progress(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        root_page_id = arguments.get("root_page_id", arguments.get("rootPageId"))
+        source = str(arguments.get("source") or "")
+        raw_entries = arguments.get("entries")
+        if not root_page_id or not source or not isinstance(raw_entries, list):
+            raise ValueError("root_page_id, source y entries son obligatorios.")
+        keys = [str(item.get("key") or "") for item in raw_entries if isinstance(item, dict)]
+        if any(not key for key in keys) or len(keys) != len(raw_entries) or len(keys) != len(set(keys)):
+            raise ValueError("Todas las entradas necesitan una key única.")
+        stamp = _now()
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            if db.execute("SELECT 1 FROM knowledge_pages WHERE id=?", (root_page_id,)).fetchone() is None:
+                raise ValueError(f"No existe la página raíz {root_page_id}.")
+            previous_keys = {
+                row["progress_key"]
+                for row in db.execute(
+                    "SELECT progress_key FROM knowledge_progress WHERE root_page_id=? AND source=?",
+                    (root_page_id, source),
+                ).fetchall()
+            }
+            db.execute(
+                "DELETE FROM knowledge_progress WHERE root_page_id=? AND source=?",
+                (root_page_id, source),
+            )
+            for item in raw_entries:
+                db.execute(
+                    "INSERT INTO knowledge_progress(root_page_id,progress_key,value_json,source,updated_at) "
+                    "VALUES(?,?,?,?,?) ON CONFLICT(root_page_id,progress_key) DO UPDATE SET "
+                    "value_json=excluded.value_json,source=excluded.source,updated_at=excluded.updated_at",
+                    (root_page_id, str(item["key"]), _json(item.get("value")), source, stamp),
+                )
+            rows = db.execute(
+                "SELECT * FROM knowledge_progress WHERE root_page_id=? AND source=? ORDER BY progress_key",
+                (root_page_id, source),
+            ).fetchall()
+            entries = [self._progress(row) for row in rows]
+            for removed_key in previous_keys.difference(keys):
+                self._enqueue_progress_delete(db, root_page_id, removed_key)
+            for entry in entries:
+                self._enqueue_progress_backup(db, entry)
+        return {"rootPageId": root_page_id, "source": source, "entries": entries, "count": len(entries)}
+
+    def _progress(self, row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "rootPageId": row["root_page_id"],
+            "key": row["progress_key"],
+            "value": json.loads(row["value_json"]),
+            "source": row["source"],
+            "updatedAt": row["updated_at"],
+        }
+
+    def _enqueue_progress_backup(self, db: sqlite3.Connection, entry: dict[str, Any]) -> None:
+        entity_id = f"{entry['rootPageId']}:{entry['key']}"
+        db.execute(
+            "DELETE FROM knowledge_sync_queue WHERE entity_type='progress' AND entity_id=? AND operation='upsert'",
+            (entity_id,),
+        )
+        db.execute(
+            "INSERT INTO knowledge_sync_queue(id,entity_type,entity_id,operation,payload_json,created_at) "
+            "VALUES(?,'progress',?,'upsert',?,?)",
+            (_id("sync"), entity_id, _json(entry), _now()),
+        )
+
+    def _enqueue_progress_delete(
+        self, db: sqlite3.Connection, root_page_id: str, key: str
+    ) -> None:
+        entity_id = f"{root_page_id}:{key}"
+        db.execute(
+            "DELETE FROM knowledge_sync_queue WHERE entity_type='progress' AND entity_id=?",
+            (entity_id,),
+        )
+        db.execute(
+            "INSERT INTO knowledge_sync_queue(id,entity_type,entity_id,operation,payload_json,created_at) "
+            "VALUES(?,'progress',?,'delete',?,?)",
+            (
+                _id("sync"),
+                entity_id,
+                _json({"rootPageId": root_page_id, "key": key}),
+                _now(),
+            ),
+        )
+
     def create_page(self, arguments: dict[str, Any], db: sqlite3.Connection | None = None) -> dict[str, Any]:
         own = db is None
         connection = db or self.connect()
@@ -386,12 +559,21 @@ class KnowledgeRepository:
                 document = self._merge_managed(old["document"], document)
             title = str(arguments.get("title", old["title"])).strip() or "Sin título"
             properties = arguments.get("properties", old["properties"])
+            parent_id = arguments.get("parent_id", arguments.get("parentId", old["parentId"]))
+            collection_id = arguments.get(
+                "collection_id", arguments.get("collectionId", old["collectionId"])
+            )
+            canonical_source = arguments.get("canonicalSource", old["canonicalSource"])
+            canonical_id = arguments.get("canonicalId", old["canonicalId"])
+            sort_order = int(arguments.get("sort_order", arguments.get("sortOrder", old["sortOrder"])))
             connection.execute(
-                "UPDATE knowledge_pages SET title=?,icon=?,cover_asset_id=?,document_json=?,"
-                "properties_json=?,revision=revision+1,updated_at=? WHERE id=?",
-                (title, arguments.get("icon", old["icon"]),
+                "UPDATE knowledge_pages SET parent_id=?,title=?,icon=?,cover_asset_id=?,document_json=?,"
+                "collection_id=?,properties_json=?,canonical_source=?,canonical_id=?,sort_order=?,"
+                "revision=revision+1,updated_at=? WHERE id=?",
+                (parent_id, title, arguments.get("icon", old["icon"]),
                  arguments.get("cover_asset_id", arguments.get("coverAssetId", old["coverAssetId"])),
-                 _json(document), _json(properties), _now(), page_id),
+                 _json(document), collection_id, _json(properties), canonical_source,
+                 canonical_id, sort_order, _now(), page_id),
             )
             updated_row = connection.execute(
                 "SELECT * FROM knowledge_pages WHERE id=?", (page_id,)
@@ -502,6 +684,31 @@ class KnowledgeRepository:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
 
+    def import_assets(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        entries = arguments.get("assets")
+        if not isinstance(entries, list) or not entries:
+            raise ValueError("assets debe ser una lista no vacía.")
+        external_keys = [item.get("externalKey") for item in entries if isinstance(item, dict)]
+        if any(not key for key in external_keys) or len(external_keys) != len(entries):
+            raise ValueError("Cada recurso necesita externalKey.")
+        if len(external_keys) != len(set(external_keys)):
+            raise ValueError("Hay externalKey de recursos duplicadas.")
+        for item in entries:
+            if not isinstance(item, dict):
+                raise ValueError("Cada recurso debe ser un objeto.")
+            if item.get("path"):
+                path = Path(item["path"]).expanduser().resolve()
+                if not path.is_file():
+                    raise ValueError(f"No existe el recurso local {path}.")
+        resolved: dict[str, str] = {}
+        imported: list[dict[str, Any]] = []
+        for item in entries:
+            result = self.import_asset(item)
+            asset = result["asset"]
+            resolved[str(item["externalKey"])] = str(asset["id"])
+            imported.append({"externalKey": item["externalKey"], **result})
+        return {"assets": imported, "resolvedExternalKeys": resolved, "count": len(imported)}
+
     def create_collection(self, arguments: dict[str, Any], db: sqlite3.Connection | None = None) -> dict[str, Any]:
         own = db is None
         connection = db or self.connect()
@@ -561,6 +768,11 @@ class KnowledgeRepository:
             if document is not None and not isinstance(document, dict):
                 raise ValueError("document debe ser un objeto JSON.")
 
+        asset_result = {"assets": [], "resolvedExternalKeys": {}, "count": 0}
+        if manifest.get("assets"):
+            asset_result = self.import_assets({"assets": manifest["assets"]})
+        asset_resolved: dict[str, str] = asset_result["resolvedExternalKeys"]
+
         with closing(self.connect()) as db, db:
             previous = db.execute(
                 "SELECT result_json FROM knowledge_operations WHERE operation_id=?", (operation_id,)
@@ -570,10 +782,14 @@ class KnowledgeRepository:
                 result["idempotentReplay"] = True
                 return result
             db.execute("BEGIN IMMEDIATE")
+            lease_holder = f"MCP:{operation_id}"
             db.execute("DELETE FROM knowledge_leases WHERE expires_at<=?", (_now(),))
+            # A failed attempt must never block an idempotent retry of the same
+            # operation. Older builds committed the lease before applying the
+            # manifest, so remove any such orphan here as a compatibility fix.
+            db.execute("DELETE FROM knowledge_leases WHERE holder=?", (lease_holder,))
             affected = self._manifest_existing_ids(db, pages)
             self._assert_many_unlocked(db, affected)
-            lease_holder = f"MCP:{operation_id}"
             lease_expiry = (
                 dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=2)
             ).isoformat()
@@ -582,9 +798,8 @@ class KnowledgeRepository:
                     "INSERT INTO knowledge_leases(page_id,holder,process_id,expires_at) VALUES(?,?,?,?)",
                     (page_id, lease_holder, os.getpid(), lease_expiry),
                 )
-            db.commit()
-            db.execute("BEGIN IMMEDIATE")
             resolved: dict[str, str] = {}
+            collection_resolved: dict[str, str] = {}
             created: list[str] = []
             updated: list[str] = []
 
@@ -612,6 +827,14 @@ class KnowledgeRepository:
                 if external_key:
                     resolved[external_key] = page["id"]
 
+            for raw in manifest.get("collections", []):
+                external_key = raw.get("externalKey")
+                if external_key:
+                    collection_resolved[external_key] = (
+                        raw.get("collectionId") or raw.get("id") or
+                        "collection-" + hashlib.sha256(str(external_key).encode("utf-8")).hexdigest()[:32]
+                    )
+
             for raw in pages:
                 page_id = resolved.get(raw.get("externalKey")) or raw.get("pageId")
                 parent_key = raw.get("parentExternalKey")
@@ -621,15 +844,70 @@ class KnowledgeRepository:
                         raise ValueError("El manifiesto crearía un ciclo en el árbol.")
                     db.execute("UPDATE knowledge_pages SET parent_id=? WHERE id=?", (parent_id, page_id))
 
+            # Resolve stable page/asset/collection references after every page
+            # identity exists. This also supports forward links.
+            for raw in pages:
+                page_id = resolved.get(raw.get("externalKey")) or raw.get("pageId")
+                cover_asset_id = raw.get("coverAssetId") or raw.get("cover_asset_id")
+                cover_external = raw.get("coverAssetExternalKey")
+                if cover_external:
+                    cover_asset_id = asset_resolved.get(cover_external)
+                    if not cover_asset_id:
+                        raise ValueError(f"No se pudo resolver coverAssetExternalKey={cover_external}.")
+                resolved_raw = self._resolve_manifest_references(
+                    raw, resolved, asset_resolved, collection_resolved
+                )
+                # The first pass has already merged editorial blocks with any
+                # manual overrides and normalized the document for storage.
+                # Resolve that exact merged representation so the second pass
+                # cannot discard user edits and does not mistake normalization
+                # for a manual change.
+                current_row = db.execute(
+                    "SELECT document_json FROM knowledge_pages WHERE id=?", (page_id,)
+                ).fetchone()
+                if current_row is not None:
+                    current_document = json.loads(current_row["document_json"])
+                    resolved_document = self._resolve_manifest_references(
+                        current_document,
+                        resolved,
+                        asset_resolved,
+                        collection_resolved,
+                    )
+                    resolved_raw["document"] = self._refresh_generation_hashes(
+                        resolved_document
+                    )
+                resolved_raw.update({
+                    "coverAssetId": cover_asset_id,
+                    "canonicalSource": "mcp" if raw.get("externalKey") else raw.get("canonicalSource"),
+                    "canonicalId": raw.get("externalKey") or raw.get("canonicalId"),
+                    "managed_update": False,
+                })
+                self.update_page(
+                    page_id, resolved_raw, reason=f"mcp-resolved:{operation_id}", db=db,
+                    lease_holder=lease_holder,
+                )
+
             for raw in manifest.get("collections", []):
                 page_id = raw.get("pageId") or resolved.get(raw.get("pageExternalKey"))
-                self.create_collection({**raw, "pageId": page_id}, db=db)
+                external_key = raw.get("externalKey")
+                collection = self.create_collection({
+                    **self._resolve_manifest_references(
+                        raw, resolved, asset_resolved, collection_resolved
+                    ),
+                    "collectionId": collection_resolved.get(external_key) or raw.get("collectionId") or raw.get("id"),
+                    "pageId": page_id,
+                }, db=db)
+                if external_key:
+                    collection_resolved[external_key] = collection["id"]
 
             result = {
                 "operationId": operation_id,
                 "createdPageIds": created,
                 "updatedPageIds": updated,
                 "resolvedExternalKeys": resolved,
+                "resolvedAssetExternalKeys": asset_resolved,
+                "resolvedCollectionExternalKeys": collection_resolved,
+                "importedAssetCount": asset_result["count"],
                 "idempotentReplay": False,
             }
             db.execute(
@@ -639,16 +917,59 @@ class KnowledgeRepository:
             db.execute("DELETE FROM knowledge_leases WHERE holder=?", (lease_holder,))
             return result
 
+    def _resolve_manifest_references(
+        self,
+        value: Any,
+        pages: dict[str, str],
+        assets: dict[str, str],
+        collections: dict[str, str],
+    ) -> Any:
+        if isinstance(value, list):
+            return [self._resolve_manifest_references(item, pages, assets, collections) for item in value]
+        if not isinstance(value, dict):
+            if isinstance(value, str) and value.startswith("knowledge://external/"):
+                key = urllib.parse.unquote(value.removeprefix("knowledge://external/"))
+                page_id = pages.get(key)
+                if not page_id:
+                    raise ValueError(f"No se pudo resolver el enlace externo {key}.")
+                return f"knowledge://page/{page_id}"
+            return value
+        ignored = {
+            "knowledgeTargetExternalKey", "knowledgeAssetExternalKey",
+            "knowledgeCollectionExternalKey", "knowledgeRewardExternalKey",
+        }
+        result = {
+            key: self._resolve_manifest_references(item, pages, assets, collections)
+            for key, item in value.items() if key not in ignored
+        }
+        mappings = (
+            ("knowledgeTargetExternalKey", "knowledgeTargetPageId", pages),
+            ("knowledgeAssetExternalKey", "knowledgeAssetId", assets),
+            ("knowledgeCollectionExternalKey", "knowledgeCollectionId", collections),
+            ("knowledgeRewardExternalKey", "rewardPageId", pages),
+        )
+        for external_field, id_field, lookup in mappings:
+            key = value.get(external_field)
+            if key:
+                target_id = lookup.get(str(key))
+                if not target_id:
+                    raise ValueError(f"No se pudo resolver {external_field}={key}.")
+                result[id_field] = target_id
+        return result
+
     def export_archive(self) -> dict[str, Any]:
-        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        destination = self.backups / f"todo-knowledge-{stamp}.zip"
+        destination = self.backups / "conocimiento-actual.zip"
+        temporary = destination.with_suffix(".zip.tmp")
         pages = self.list_pages({"include_trashed": True})["pages"]
         collections = self.list_collections()["collections"]
         with closing(self.connect()) as db, db:
             assets = [dict(row) for row in db.execute("SELECT * FROM knowledge_assets").fetchall()]
-        manifest = {"schemaVersion": 1, "exportedAt": _now(), "pages": pages,
-                    "collections": collections, "assets": assets}
-        with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
+            progress = [self._progress(row) for row in db.execute(
+                "SELECT * FROM knowledge_progress ORDER BY root_page_id,progress_key"
+            ).fetchall()]
+        manifest = {"schemaVersion": 3, "exportedAt": _now(), "pages": pages,
+                    "collections": collections, "assets": assets, "progress": progress}
+        with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
             for page in pages:
                 frontmatter = _json({"id": page["id"], "parentId": page["parentId"],
@@ -658,7 +979,16 @@ class KnowledgeRepository:
                 path = self.assets / Path(asset["relative_path"])
                 if path.is_file():
                     archive.write(path, f"assets/{asset['relative_path']}")
-        return {"path": str(destination), "pageCount": len(pages), "assetCount": len(assets)}
+        with zipfile.ZipFile(temporary, "r") as archive:
+            if "manifest.json" not in archive.namelist():
+                raise ValueError("La copia generada no contiene el manifiesto.")
+            archive.testzip()
+        os.replace(temporary, destination)
+        for previous in self.backups.glob("*.zip"):
+            if previous != destination:
+                previous.unlink()
+        return {"path": str(destination), "pageCount": len(pages), "assetCount": len(assets),
+                "progressCount": len(progress)}
 
     def _collection(self, row: sqlite3.Row) -> dict[str, Any]:
         return {"id": row["id"], "pageId": row["page_id"], "name": row["name"],
@@ -772,7 +1102,10 @@ class KnowledgeRepository:
             if isinstance(value, dict):
                 key = value.get("managedKey") or (value.get("data") or {}).get("managedKey") if isinstance(value.get("data"), dict) else value.get("managedKey")
                 if key:
-                    existing[str(key)] = value
+                    # El bloque contenedor se visita antes que su `data`. Si
+                    # ambos comparten managedKey, conservar el contenedor evita
+                    # devolver atributos desnudos y perder `type`/`children`.
+                    existing.setdefault(str(key), value)
                 for child in value.values():
                     collect(child)
             elif isinstance(value, list):
@@ -803,8 +1136,40 @@ class KnowledgeRepository:
         comparable = json.loads(json.dumps(block))
         target = comparable.get("data") if isinstance(comparable.get("data"), dict) else comparable
         target.pop("generationHash", None)
-        actual = hashlib.sha256(_json(comparable).encode("utf-8")).hexdigest()
+        actual = hashlib.sha256(
+            json.dumps(
+                comparable, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+        ).hexdigest()
         return actual != generation_hash
+
+    def _refresh_generation_hashes(self, value: Any) -> Any:
+        """Recalcula hashes tras resolver referencias externas del manifiesto."""
+        if isinstance(value, list):
+            return [self._refresh_generation_hashes(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        refreshed = {
+            key: self._refresh_generation_hashes(item) for key, item in value.items()
+        }
+        data = refreshed.get("data") if isinstance(refreshed.get("data"), dict) else refreshed
+        if data.get("managedKey"):
+            comparable = json.loads(json.dumps(refreshed, ensure_ascii=False))
+            target = (
+                comparable.get("data")
+                if isinstance(comparable.get("data"), dict)
+                else comparable
+            )
+            target.pop("generationHash", None)
+            data["generationHash"] = hashlib.sha256(
+                json.dumps(
+                    comparable,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        return refreshed
 
     def _asset_kind(self, mime: str) -> str:
         if mime.startswith("image/"):

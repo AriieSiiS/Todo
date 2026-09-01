@@ -69,7 +69,6 @@ class _LibraryPageState extends State<LibraryPage> {
               onChanged: (value) {
                 controller.setLibraryStatusView(value);
                 setState(() {
-                  _typeFilter = null;
                   if (value == LibraryItemStatus.completed &&
                       !availableYears.contains(_year)) {
                     _year = currentYear;
@@ -2010,7 +2009,7 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 880),
+        constraints: const BoxConstraints(maxWidth: 1040),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: Column(
@@ -2053,10 +2052,10 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _LibraryDetailCover(item: item),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 30),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2173,20 +2172,33 @@ class _LibraryDetailCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final source = item.coverUrl?.trim();
     return SizedBox(
-      width: 176,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          height: 300,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFFCF8),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE3D8CB)),
-          ),
-          child: _LibraryCoverImage(
-            source: source,
-            type: item.type,
-            iconSize: 34,
+      key: const ValueKey('library-item-detail-cover'),
+      width: 244,
+      height: 416,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x260F1B0C),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFCF8),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE3D8CB)),
+            ),
+            child: _LibraryCoverImage(
+              source: source,
+              type: item.type,
+              iconSize: 34,
+            ),
           ),
         ),
       ),
@@ -2367,7 +2379,7 @@ class _LibraryGoalDetailsDialogState extends State<_LibraryGoalDetailsDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 880),
+        constraints: const BoxConstraints(maxWidth: 1040),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: Column(
@@ -2415,7 +2427,7 @@ class _LibraryGoalDetailsDialogState extends State<_LibraryGoalDetailsDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _LibraryGoalDetailCover(goal: goal),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 30),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2513,20 +2525,33 @@ class _LibraryGoalDetailCover extends StatelessWidget {
   Widget build(BuildContext context) {
     final source = goal.coverUrl?.trim();
     return SizedBox(
-      width: 176,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          height: 300,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFFCF8),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE3D8CB)),
-          ),
-          child: _LibraryCoverImage(
-            source: source,
-            type: goal.type,
-            iconSize: 34,
+      key: const ValueKey('library-goal-detail-cover'),
+      width: 244,
+      height: 416,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x260F1B0C),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFCF8),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE3D8CB)),
+            ),
+            child: _LibraryCoverImage(
+              source: source,
+              type: goal.type,
+              iconSize: 34,
+            ),
           ),
         ),
       ),

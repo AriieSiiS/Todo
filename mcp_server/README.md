@@ -12,13 +12,13 @@ Eso significa que cuando lleves este proyecto a otro PC:
 2. levantas el servidor MCP desde `mcp_server`
 3. conectas tu cliente MCP a ese script
 
-## Como funciona ahora
+## Cómo funciona ahora
 
 - La app Flutter sigue guardando cache local en `Documents/Todo/runtime/todo_state.json`
 - Si configuras Supabase, el MCP usa Supabase como fuente principal y mantiene ese archivo como espejo local
 - Si no configuras Supabase, el MCP sigue funcionando en modo local
 
-## Que puede hacer
+## Qué puede hacer
 
 - leer el estado completo
 - ver tareas de hoy
@@ -33,6 +33,7 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - reiniciar a un estado vacio
 - preparar lotes de prendas PNG para revisarlos en la sección Ropa
 - gestionar prendas, conjuntos, usos, lavandería, planificación y maletas
+- gestionar recetas, sus imágenes y su conversión en tareas de compra o cocina
 
 ## Páginas de conocimiento
 
@@ -59,6 +60,21 @@ de IA utilicen exactamente el mismo formato.
 recursos. Este repositorio funciona aunque Supabase esté desactivado o no sea
 accesible.
 
+Los manifiestos también admiten `pageExternalKey`, `assetExternalKey` y
+`collectionExternalKey`; el servidor resuelve referencias adelantadas antes de
+confirmar la transacción. `import_knowledge_assets` importa recursos en lote.
+`list_knowledge_progress`, `set_knowledge_progress` y
+`replace_knowledge_progress` permiten consultar, cambiar o sustituir de forma
+exacta todos los valores de una fuente. La sustitución por fuente conserva los
+pasos manuales y permite que un guardado restaurado reduzca el progreso sin
+dejar valores antiguos.
+
+El ZIP de exportación usa el esquema 3 e incluye el progreso, pero nunca las
+rutas ni los bytes de partidas guardadas. Se escribe de forma atómica en
+`backups/conocimiento-actual.zip` y, tras verificarlo, sustituye cualquier copia
+documental anterior. Las pruebas del contrato se ejecutan con
+`python -m unittest tooling.test_knowledge_repository -v`.
+
 ## Ropa y Codex
 
 La herramienta `get_wardrobe_import_contract` devuelve el formato vigente del
@@ -70,6 +86,40 @@ La aprobación se realiza dentro de Todo. La app mueve los recursos aceptados a
 `wardrobe/items`, genera miniaturas en `wardrobe/thumbnails` y conserva en el
 snapshot únicamente rutas relativas y metadatos. Las fotografías originales no
 se copian al armario.
+
+## Inventario visual de Hogar
+
+El MCP permite que Codex prepare una compra o un aparato sin dar acceso
+permanente a la aplicación a servicios externos:
+
+1. `create_household_item` crea la ficha con categoría, marca, modelo, serie,
+   ubicación, compra y garantía.
+2. `set_household_item_image` copia una imagen PNG de catálogo de al menos
+   400 × 400 píxeles a `Documents/Todo/household`.
+3. `set_household_item_document` guarda un PDF como `manual` o `invoice`; para
+   el manual también admite la URL oficial de procedencia.
+4. `list_household_items` permite verificar la ficha final.
+
+Los archivos quedan bajo `household/images`, `household/thumbnails`,
+`household/manuals` y `household/invoices`; el snapshot guarda únicamente sus
+rutas relativas y metadatos.
+
+## Recetas y tareas
+
+El recetario puede gestionarse sin abrir la interfaz:
+
+1. `create_recipe` crea la ficha con tiempos, raciones, ingredientes y pasos.
+2. `set_recipe_image` guarda un PNG de al menos 300 × 200 píxeles en
+   `Documents/Todo/recipes`.
+3. `create_recipe_task` acepta `shopping` para convertir ingredientes en
+   subtareas de compra o `cooking` para convertir los pasos en subtareas. En
+   compras, los condimentos se guardan sin la medida de la receta y las líneas
+   compuestas como `sal y pimienta` generan productos independientes.
+4. `list_recipes`, `update_recipe` y `delete_recipe` completan el ciclo de
+   consulta y mantenimiento.
+
+Flutter también puede importar directamente archivos JSON y direcciones web
+que publiquen una receta compatible con schema.org.
 
 ## Arranque rápido
 

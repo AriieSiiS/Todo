@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -48,15 +49,46 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
   Timer? _saveTimer;
   Timer? _leaseTimer;
   Timer? _checkpointTimer;
+  StreamSubscription<String>? _progressSubscription;
   bool _editable = true;
   bool _disposing = false;
   int _navigationGeneration = 0;
-  String? _statusMessage;
+  final ValueNotifier<String?> _statusMessage = ValueNotifier<String?>(null);
+  final ValueNotifier<int> _progressVersion = ValueNotifier<int>(0);
+  final ValueNotifier<int> _metadataVersion = ValueNotifier<int>(0);
+  String? _rootPageId;
+  String? _lastSavedDocumentJson;
+  String? _lastSavedTitle;
+  late final Future<bool> Function(String?) _previousEditorLaunchUrl;
+  late final Future<bool> Function(String?) _knowledgeEditorLaunchUrl;
 
   @override
   void initState() {
     super.initState();
+    _previousEditorLaunchUrl = editorLaunchUrl;
+    _knowledgeEditorLaunchUrl = _handleEditorLink;
+    editorLaunchUrl = _knowledgeEditorLaunchUrl;
+    _progressSubscription = service.progressChanges.listen((rootPageId) {
+      if (rootPageId == _rootPageId) _progressVersion.value++;
+    });
     _openInitialWorkspace();
+  }
+
+  Future<bool> _handleEditorLink(String? href) async {
+    if (href == null || href.isEmpty) return false;
+    const prefix = 'knowledge://page/';
+    if (href.startsWith(prefix)) {
+      final remainder = href.substring(prefix.length);
+      final parts = remainder.split('#');
+      final pageId = Uri.decodeComponent(parts.first);
+      final blockId = parts.length > 1 ? Uri.decodeComponent(parts[1]) : null;
+      if (service.pageById(pageId) == null) return false;
+      _openPageFromBlock(pageId, blockId);
+      return true;
+    }
+    final uri = Uri.tryParse(href);
+    if (uri == null) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   void _openInitialWorkspace() {
@@ -67,10 +99,14 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
         if (!mounted) return;
         final created =
             service.rootForOwner('libraryItem', widget.libraryItem.id);
-        if (created != null) _openPage(created.id);
+        if (created != null) {
+          _rootPageId = created.id;
+          _openPage(created.id);
+        }
       });
       return;
     }
+    _rootPageId = root.id;
     _tabs.addAll(service
         .loadTabs()
         .where((tab) => service.pageById(tab.pageId) != null));
@@ -91,6 +127,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     _leaseTimer?.cancel();
     _checkpointTimer?.cancel();
     _transactionSubscription?.cancel();
+    _progressSubscription?.cancel();
     _editorScrollController?.dispose();
     _saveActive(checkpoint: true, reason: 'close-workspace');
     final page = _activePage;
@@ -98,6 +135,12 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     _editorState?.dispose();
     _searchController.dispose();
     _titleController.dispose();
+    _statusMessage.dispose();
+    _progressVersion.dispose();
+    _metadataVersion.dispose();
+    if (editorLaunchUrl == _knowledgeEditorLaunchUrl) {
+      editorLaunchUrl = _previousEditorLaunchUrl;
+    }
     super.dispose();
   }
 
@@ -109,7 +152,10 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       child: Column(
         children: [
           _buildTopBar(context),
-          _buildTabs(),
+          ValueListenableBuilder<int>(
+            valueListenable: _metadataVersion,
+            builder: (context, _, __) => _buildTabs(),
+          ),
           Expanded(
             child: page == null
                 ? const Center(child: CircularProgressIndicator())
@@ -177,16 +223,19 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
                   style: const TextStyle(
                       fontWeight: FontWeight.w800, fontSize: 16),
                 ),
-                Text(
-                  _statusMessage ??
-                      (_editable
-                          ? 'Guardado local automático'
-                          : 'Solo lectura: página bloqueada'),
-                  style: TextStyle(
-                    color: _editable
-                        ? const Color(0xFF6F7868)
-                        : const Color(0xFF9B4D43),
-                    fontSize: 12,
+                ValueListenableBuilder<String?>(
+                  valueListenable: _statusMessage,
+                  builder: (context, status, _) => Text(
+                    status ??
+                        (_editable
+                            ? 'Guardado local automático'
+                            : 'Solo lectura: página bloqueada'),
+                    style: TextStyle(
+                      color: _editable
+                          ? const Color(0xFF6F7868)
+                          : const Color(0xFF9B4D43),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -298,86 +347,18 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
 
   Widget _buildTreePanel() {
     final root = service.rootForOwner('libraryItem', widget.libraryItem.id);
-    return Container(
-      color: const Color(0xFFF8F4EE),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 10, 10),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('Páginas',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                ),
-                IconButton(
-                  onPressed: _editable ? _createChildPage : null,
-                  tooltip: 'Nueva subpágina',
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) => setState(
-                  () => _searchResults = service.search(value, limit: 20)),
-              decoration: const InputDecoration(
-                isDense: true,
-                hintText: 'Buscar páginas y contenido...',
-                prefixIcon: Icon(Icons.search_rounded, size: 18),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _searchController.text.trim().isNotEmpty
-                ? ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    children: [
-                      for (final result in _searchResults)
-                        ListTile(
-                          dense: true,
-                          leading:
-                              const Icon(Icons.description_outlined, size: 18),
-                          title: Text(result.page.title,
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: result.snippet.isEmpty
-                              ? null
-                              : Text(result.snippet,
-                                  maxLines: 2, overflow: TextOverflow.ellipsis),
-                          onTap: () => _openPage(result.page.id, newTab: true),
-                        ),
-                    ],
-                  )
-                : root == null
-                    ? const SizedBox.shrink()
-                    : ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
-                        children: [
-                          _PageTreeNode(
-                            service: service,
-                            page: root,
-                            activePageId: _activePage?.id,
-                            onOpen: (pageId) => _openPage(pageId),
-                            onOpenNewTab: (pageId) =>
-                                _openPage(pageId, newTab: true),
-                            onAddChild: _editable ? _createChildUnder : null,
-                          )
-                        ],
-                      ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.delete_outline_rounded, size: 19),
-            title: const Text('Papelera'),
-            onTap: _showTrash,
-          ),
-        ],
-      ),
+    if (root == null) return const SizedBox.shrink();
+    return _KnowledgeTreePanel(
+      service: service,
+      rootPageId: root.id,
+      activePageId: _activePage?.id,
+      editable: _editable,
+      onOpen: (pageId) => _openPage(pageId),
+      onOpenNewTab: (pageId) => _openPage(pageId, newTab: true),
+      onAddChild: _createChildUnder,
+      onAddPage: _createChildPage,
+      onShowTrash: _showTrash,
+      metadataVersion: _metadataVersion,
     );
   }
 
@@ -404,6 +385,12 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
         ),
         'knowledgePage':
             _KnowledgePageBlockBuilder(service, _openPageFromBlock),
+        'knowledgeProgress': _KnowledgeProgressBlockBuilder(
+          service,
+          (pageId) => _openPageFromBlock(pageId, null),
+          progressVersion: _progressVersion,
+        ),
+        'knowledgeCharacter': _KnowledgeCharacterBlockBuilder(service),
         'knowledgeCollection': _KnowledgeCollectionBlockBuilder(
           service,
           (pageId) => _openPageFromBlock(pageId, null),
@@ -412,7 +399,8 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       commandShortcutEvents: standardCommandShortcutEvents,
       characterShortcutEvents: standardCharacterShortcutEvents,
       editorStyle: EditorStyle.desktop(
-        padding: const EdgeInsets.fromLTRB(72, 12, 72, 80),
+        // AppFlowy aplica este padding a cada bloque, no al documento entero.
+        padding: const EdgeInsets.fromLTRB(72, 3, 72, 3),
         maxWidth: 900,
         cursorColor: const Color(0xFF607A4D),
         selectionColor: const Color(0xFFD8E4CF),
@@ -448,6 +436,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
               ),
             ),
           ),
+          if (_isIsaacRoot(page)) _buildIsaacSyncPanel(page),
           if (_editable) _buildBlockToolbar(),
           const Divider(height: 1),
           Expanded(
@@ -471,6 +460,98 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
           ),
         ],
       ),
+    );
+  }
+
+  bool _isIsaacRoot(KnowledgePage page) =>
+      page.parentId == null &&
+      page.title.toLowerCase().contains('binding of isaac');
+
+  Widget _buildIsaacSyncPanel(KnowledgePage root) {
+    return ValueListenableBuilder<int>(
+      valueListenable: _progressVersion,
+      builder: (context, _, __) {
+        final source = service.importSource(root.id, 'isaac-save');
+        final entries = service.listProgress(root.id, source: 'isaac-save');
+        int completed(String prefix) => entries
+            .where((entry) => entry.key.startsWith(prefix) && entry.isCompleted)
+            .length;
+        final saves = widget.controller.isaacSaveSync.discoverSaveFiles();
+        return Container(
+          margin: const EdgeInsets.fromLTRB(68, 0, 60, 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: source?.lastError == null
+                ? const Color(0xFFF1F6EC)
+                : const Color(0xFFFFF0EC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: source?.lastError == null
+                  ? const Color(0xFFC7D8BA)
+                  : const Color(0xFFE8B8AA),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.sync_rounded, color: Color(0xFF607A4D)),
+                  const SizedBox(width: 9),
+                  const Expanded(
+                    child: Text('Sincronización de Repentance+',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                  if (saves.isNotEmpty)
+                    DropdownButton<String>(
+                      value: source != null &&
+                              saves.any((file) => file.path == source.path)
+                          ? source.path
+                          : null,
+                      hint: const Text('Elegir slot'),
+                      items: [
+                        for (final file in saves)
+                          DropdownMenuItem<String>(
+                            value: file.path,
+                            child: Text(file.uri.pathSegments.last),
+                          ),
+                      ],
+                      onChanged: (path) async {
+                        if (path == null) return;
+                        await widget.controller.isaacSaveSync
+                            .selectSaveFile(root.id, path);
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              Text(source == null
+                  ? 'No se ha detectado una partida compatible.'
+                  : 'Slot ${source.slot} · última lectura: '
+                      '${source.lastImportedAt?.toLocal().toString() ?? 'pendiente'}'),
+              if (source?.lastError != null) ...[
+                const SizedBox(height: 5),
+                Text(source!.lastError!,
+                    style: const TextStyle(color: Color(0xFF9B312D))),
+              ],
+              if (entries.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(
+                  '${completed('isaac.achievement.')} / 641 logros · '
+                  '${completed('isaac.challenge.')} / 45 challenges · '
+                  '${completed('isaac.collectible.')} objetos recogidos',
+                ),
+              ],
+              const SizedBox(height: 4),
+              const Text(
+                'Solo lectura: Todo nunca modifica ni sube el archivo .dat.',
+                style: TextStyle(fontSize: 12.5, color: Color(0xFF6E685F)),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -687,7 +768,9 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     _editorState = editorState;
     _editorScrollController = EditorScrollController(editorState: editorState);
     _titleController.text = next.title;
-    _statusMessage = _editable
+    _lastSavedDocumentJson = jsonEncode(next.document);
+    _lastSavedTitle = next.title;
+    _statusMessage.value = _editable
         ? 'Página abierta para edición'
         : 'Otra operación está editando esta página';
     if (_editable) {
@@ -776,11 +859,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
   void _scheduleSave() {
     if (!_editable) return;
     _saveTimer?.cancel();
-    if (mounted) {
-      setState(() {
-        _statusMessage = 'Guardando cambios…';
-      });
-    }
+    _statusMessage.value = 'Guardando cambios…';
     _saveTimer = Timer(const Duration(milliseconds: 800), () {
       _saveActive();
     });
@@ -792,27 +871,36 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     final editor = _editorState;
     if (!_editable || page == null || editor == null) return;
     _ensureBlockIds(editor.document.root);
-    final encoded = jsonDecode(jsonEncode(editor.document.toJson()))
-        as Map<String, dynamic>;
+    final serialized = jsonEncode(editor.document.toJson());
+    final title = _titleController.text.trim().isEmpty
+        ? 'Sin título'
+        : _titleController.text.trim();
+    if (!checkpoint &&
+        serialized == _lastSavedDocumentJson &&
+        title == _lastSavedTitle) {
+      _statusMessage.value = 'Guardado local · ${_shortTime(DateTime.now())}';
+      return;
+    }
+    final encoded = jsonDecode(serialized) as Map<String, dynamic>;
     try {
       final saved = service.savePage(
         page.copyWith(
-          title: _titleController.text.trim().isEmpty
-              ? 'Sin título'
-              : _titleController.text.trim(),
+          title: title,
           document: encoded,
         ),
         checkpoint: checkpoint,
         reason: reason,
         leaseHolder: _holder,
       );
+      final titleChanged = title != _lastSavedTitle;
       _activePage = saved;
-      _statusMessage = 'Guardado local · ${_shortTime(DateTime.now())}';
-      if (mounted && !_disposing) setState(() {});
+      _lastSavedDocumentJson = serialized;
+      _lastSavedTitle = title;
+      _statusMessage.value = 'Guardado local · ${_shortTime(DateTime.now())}';
+      if (titleChanged) _metadataVersion.value++;
     } on KnowledgeLockedException catch (error) {
       _editable = false;
-      _statusMessage = error.toString();
-      if (mounted && !_disposing) setState(() {});
+      _statusMessage.value = error.toString();
     }
   }
 
@@ -1232,11 +1320,11 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
   }
 
   Future<void> _export() async {
-    setState(() => _statusMessage = 'Creando copia exportable…');
+    _statusMessage.value = 'Creando copia exportable…';
     try {
       final file = await service.exportArchive();
       if (!mounted) return;
-      setState(() => _statusMessage = 'Exportado en ${file.path}');
+      _statusMessage.value = 'Exportado en ${file.path}';
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Copia creada en ${file.path}')));
     } catch (error) {
@@ -1268,7 +1356,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     if (node == null || node.path.isEmpty) return;
     scrollController.jumpTo(offset: node.path.first.toDouble());
     editor.selection = Selection.collapsed(Position(path: node.path));
-    setState(() => _statusMessage = 'Bloque resaltado');
+    _statusMessage.value = 'Bloque resaltado';
   }
 
   List<(int, String, String?)> _headings(Map<String, dynamic> document) {
@@ -1317,6 +1405,324 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       };
 }
 
+class _KnowledgePageIcon extends StatelessWidget {
+  const _KnowledgePageIcon({
+    required this.service,
+    required this.pageId,
+    this.coverAssetId,
+    this.icon,
+    this.size = 20,
+  });
+
+  final KnowledgeService service;
+  final String pageId;
+  final String? coverAssetId;
+  final String? icon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetId = coverAssetId;
+    final asset = assetId == null ? null : service.assetById(assetId);
+    final path = asset == null ? '' : service.absoluteAssetPath(asset);
+    if (asset?.kind == KnowledgeAssetKind.image &&
+        path.isNotEmpty &&
+        File(path).existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Image.file(
+          key: ValueKey('knowledge-page-icon-$pageId'),
+          File(path),
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.none,
+          errorBuilder: (_, __, ___) =>
+              Icon(Icons.description_outlined, size: size * .82),
+        ),
+      );
+    }
+    final fallbackIcon = icon?.trim();
+    if (fallbackIcon != null && fallbackIcon.isNotEmpty) {
+      return Text(fallbackIcon, style: TextStyle(fontSize: size * .8));
+    }
+    return Icon(Icons.description_outlined, size: size * .82);
+  }
+}
+
+class _KnowledgeTreePanel extends StatefulWidget {
+  const _KnowledgeTreePanel({
+    required this.service,
+    required this.rootPageId,
+    required this.activePageId,
+    required this.editable,
+    required this.onOpen,
+    required this.onOpenNewTab,
+    required this.onAddChild,
+    required this.onAddPage,
+    required this.onShowTrash,
+    required this.metadataVersion,
+  });
+
+  final KnowledgeService service;
+  final String rootPageId;
+  final String? activePageId;
+  final bool editable;
+  final ValueChanged<String> onOpen;
+  final ValueChanged<String> onOpenNewTab;
+  final Future<void> Function(String pageId) onAddChild;
+  final VoidCallback onAddPage;
+  final VoidCallback onShowTrash;
+  final ValueListenable<int> metadataVersion;
+
+  @override
+  State<_KnowledgeTreePanel> createState() => _KnowledgeTreePanelState();
+}
+
+class _KnowledgeTreePanelState extends State<_KnowledgeTreePanel> {
+  final TextEditingController _controller = TextEditingController();
+  final Set<String> _expanded = <String>{};
+  List<KnowledgeSearchResult> _results = const <KnowledgeSearchResult>[];
+  Timer? _searchTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded.add(widget.rootPageId);
+    _expandActiveAncestors();
+    widget.metadataVersion.addListener(_refreshMetadata);
+  }
+
+  @override
+  void didUpdateWidget(covariant _KnowledgeTreePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.metadataVersion != widget.metadataVersion) {
+      oldWidget.metadataVersion.removeListener(_refreshMetadata);
+      widget.metadataVersion.addListener(_refreshMetadata);
+    }
+    if (oldWidget.rootPageId != widget.rootPageId) {
+      _expanded
+        ..clear()
+        ..add(widget.rootPageId);
+    }
+    if (oldWidget.activePageId != widget.activePageId) {
+      _expandActiveAncestors();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    widget.metadataVersion.removeListener(_refreshMetadata);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _refreshMetadata() {
+    if (mounted) setState(_expandActiveAncestors);
+  }
+
+  void _expandActiveAncestors() {
+    final activePageId = widget.activePageId;
+    if (activePageId == null) return;
+    _expanded.addAll(
+      widget.service.treeIndex(widget.rootPageId).ancestorsOf(activePageId),
+    );
+  }
+
+  void _search(String value) {
+    _searchTimer?.cancel();
+    setState(() {});
+    if (value.trim().isEmpty) {
+      _results = const <KnowledgeSearchResult>[];
+      return;
+    }
+    _searchTimer = Timer(const Duration(milliseconds: 220), () {
+      final results = widget.service.search(
+        value,
+        limit: 20,
+        rootPageId: widget.rootPageId,
+      );
+      if (mounted && value == _controller.text) {
+        setState(() => _results = results);
+      }
+    });
+  }
+
+  List<_KnowledgeTreeRow> _visibleRows(KnowledgeTreeIndex index) {
+    final result = <_KnowledgeTreeRow>[];
+    void visit(KnowledgePageOutline page, int depth) {
+      result.add(_KnowledgeTreeRow(page: page, depth: depth));
+      if (!_expanded.contains(page.id)) return;
+      for (final child in index.childrenOf(page.id)) {
+        visit(child, depth + 1);
+      }
+    }
+
+    final root = index.page(widget.rootPageId);
+    if (root != null) visit(root, 0);
+    return result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final searching = _controller.text.trim().isNotEmpty;
+    final index = widget.service.treeIndex(widget.rootPageId);
+    final rows = searching ? const <_KnowledgeTreeRow>[] : _visibleRows(index);
+    return Container(
+      color: const Color(0xFFF8F4EE),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 10, 10),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Páginas',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+                IconButton(
+                  onPressed: widget.editable ? widget.onAddPage : null,
+                  tooltip: 'Nueva subpágina',
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: TextField(
+              controller: _controller,
+              onChanged: _search,
+              decoration: const InputDecoration(
+                isDense: true,
+                hintText: 'Buscar páginas y contenido...',
+                prefixIcon: Icon(Icons.search_rounded, size: 18),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: searching
+                ? ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    itemCount: _results.length,
+                    itemBuilder: (context, index) {
+                      final result = _results[index];
+                      return ListTile(
+                        dense: true,
+                        leading: _KnowledgePageIcon(
+                          service: widget.service,
+                          pageId: result.page.id,
+                          coverAssetId: result.page.coverAssetId,
+                          icon: result.page.icon,
+                          size: 22,
+                        ),
+                        title: Text(result.page.title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: result.snippet.isEmpty
+                            ? null
+                            : Text(result.snippet,
+                                maxLines: 2, overflow: TextOverflow.ellipsis),
+                        onTap: () => widget.onOpenNewTab(result.page.id),
+                      );
+                    },
+                  )
+                : ListView.builder(
+                    key: const ValueKey('knowledge-virtual-tree'),
+                    padding: const EdgeInsets.symmetric(horizontal: 7),
+                    itemCount: rows.length,
+                    itemExtent: 42,
+                    itemBuilder: (context, rowIndex) {
+                      final row = rows[rowIndex];
+                      final page = row.page;
+                      final active = widget.activePageId == page.id;
+                      return Padding(
+                        padding: EdgeInsets.only(left: row.depth * 16.0),
+                        child: InkWell(
+                          onTap: () => widget.onOpen(page.id),
+                          onDoubleTap: () => widget.onOpenNewTab(page.id),
+                          borderRadius: BorderRadius.circular(7),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? const Color(0xFFDDE8D5)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 26,
+                                  child: page.hasChildren
+                                      ? IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () => setState(() {
+                                            if (!_expanded.remove(page.id)) {
+                                              _expanded.add(page.id);
+                                            }
+                                          }),
+                                          icon: Icon(
+                                            _expanded.contains(page.id)
+                                                ? Icons.expand_more_rounded
+                                                : Icons.chevron_right_rounded,
+                                            size: 18,
+                                          ),
+                                        )
+                                      : _KnowledgePageIcon(
+                                          service: widget.service,
+                                          pageId: page.id,
+                                          coverAssetId: page.coverAssetId,
+                                          icon: page.icon,
+                                          size: 21,
+                                        ),
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(page.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                                if (widget.editable)
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
+                                    onPressed: () => widget.onAddChild(page.id),
+                                    tooltip: 'Añadir subpágina',
+                                    icon:
+                                        const Icon(Icons.add_rounded, size: 17),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.delete_outline_rounded, size: 19),
+            title: const Text('Papelera'),
+            onTap: widget.onShowTrash,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KnowledgeTreeRow {
+  const _KnowledgeTreeRow({required this.page, required this.depth});
+
+  final KnowledgePageOutline page;
+  final int depth;
+}
+
 class _PageTreeNode extends StatefulWidget {
   const _PageTreeNode({
     required this.service,
@@ -1339,7 +1745,35 @@ class _PageTreeNode extends StatefulWidget {
 }
 
 class _PageTreeNodeState extends State<_PageTreeNode> {
-  bool _expanded = true;
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.page.parentId == null || _containsActivePage();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PageTreeNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activePageId != widget.activePageId &&
+        _containsActivePage()) {
+      _expanded = true;
+    }
+  }
+
+  bool _containsActivePage() {
+    var current = widget.activePageId == null
+        ? null
+        : widget.service.pageById(widget.activePageId!);
+    while (current != null) {
+      if (current.id == widget.page.id) return true;
+      current = current.parentId == null
+          ? null
+          : widget.service.pageById(current.parentId!);
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1363,7 +1797,13 @@ class _PageTreeNodeState extends State<_PageTreeNode> {
                 SizedBox(
                   width: 26,
                   child: children.isEmpty
-                      ? const Icon(Icons.description_outlined, size: 17)
+                      ? _KnowledgePageIcon(
+                          service: widget.service,
+                          pageId: widget.page.id,
+                          coverAssetId: widget.page.coverAssetId,
+                          icon: widget.page.icon,
+                          size: 21,
+                        )
                       : IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -1569,6 +2009,10 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
         final imageWidth = (_draftImageWidth ?? storedWidth)
             .clamp(minWidth, maxWidth)
             .toDouble();
+        final decodeWidth =
+            (imageWidth * MediaQuery.devicePixelRatioOf(context) * 1.25)
+                .ceil()
+                .clamp(1, 2400);
         final blockAlignment = switch (
             widget.node.attributes['knowledgeImageAlignment']?.toString() ??
                 widget.node.attributes['align']?.toString()) {
@@ -1603,7 +2047,7 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: _buildImageViewport(path),
+                      child: _buildImageViewport(path, decodeWidth),
                     ),
                     if (_imageSelected && widget.editable) ...[
                       Positioned(
@@ -1666,12 +2110,13 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
     );
   }
 
-  Widget _buildImageViewport(String path) {
+  Widget _buildImageViewport(String path, int decodeWidth) {
     final aspectRatio =
         _nullableAttributeDouble('knowledgeImageCropAspectRatio');
     if (aspectRatio == null) {
       return _knowledgeImageWidget(
         path,
+        cacheWidth: decodeWidth,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
         errorBuilder: (context, error, stackTrace) => const SizedBox(
@@ -1692,6 +2137,7 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
           scale: zoom.toDouble(),
           child: _knowledgeImageWidget(
             path,
+            cacheWidth: decodeWidth,
             width: double.infinity,
             height: double.infinity,
             fit: BoxFit.cover,
@@ -2116,6 +2562,7 @@ Widget _knowledgeImageWidget(
   String source, {
   double? width,
   double? height,
+  int? cacheWidth,
   required BoxFit fit,
   Alignment alignment = Alignment.center,
   FilterQuality filterQuality = FilterQuality.medium,
@@ -2127,6 +2574,7 @@ Widget _knowledgeImageWidget(
       source,
       width: width,
       height: height,
+      cacheWidth: cacheWidth,
       fit: fit,
       alignment: alignment,
       filterQuality: filterQuality,
@@ -2139,6 +2587,7 @@ Widget _knowledgeImageWidget(
         UriData.parse(source).contentAsBytes(),
         width: width,
         height: height,
+        cacheWidth: cacheWidth,
         fit: fit,
         alignment: alignment,
         filterQuality: filterQuality,
@@ -2152,6 +2601,7 @@ Widget _knowledgeImageWidget(
     File(source),
     width: width,
     height: height,
+    cacheWidth: cacheWidth,
     fit: fit,
     alignment: alignment,
     filterQuality: filterQuality,
@@ -2215,6 +2665,478 @@ class _KnowledgePageBlock extends BlockComponentStatelessWidget {
   }
 }
 
+class _KnowledgeCharacterBlockBuilder extends BlockComponentBuilder {
+  _KnowledgeCharacterBlockBuilder(this.service);
+
+  final KnowledgeService service;
+
+  @override
+  BlockComponentWidget build(BlockComponentContext context) =>
+      _KnowledgeCharacterBlock(
+        key: context.node.key,
+        node: context.node,
+        configuration: configuration,
+        service: service,
+      );
+
+  @override
+  BlockComponentValidate get validate => (node) => node.children.isEmpty;
+}
+
+class _KnowledgeCharacterBlock extends BlockComponentStatefulWidget {
+  const _KnowledgeCharacterBlock({
+    required super.key,
+    required super.node,
+    required super.configuration,
+    required this.service,
+  });
+
+  final KnowledgeService service;
+
+  @override
+  State<_KnowledgeCharacterBlock> createState() =>
+      _KnowledgeCharacterBlockState();
+}
+
+class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
+  StreamSubscription<String>? _subscription;
+
+  String get _rootPageId =>
+      widget.node.attributes['knowledgeRootPageId']?.toString() ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = widget.service.progressChanges.listen((rootPageId) {
+      if (mounted && rootPageId == _rootPageId) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final attributes = widget.node.attributes;
+    final name =
+        attributes['knowledgeCharacterName']?.toString() ?? 'Personaje';
+    final progressKey =
+        attributes['knowledgeCharacterProgressKey']?.toString() ?? '';
+    final unlocked = attributes['knowledgeCharacterInitiallyUnlocked'] ==
+            true ||
+        widget.service.progressByKey(_rootPageId, progressKey)?.isCompleted ==
+            true;
+    final stats =
+        (attributes['knowledgeCharacterStats'] as List? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList();
+    final startingItems =
+        (attributes['knowledgeCharacterStartingItems'] as List? ??
+                const <dynamic>[])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList();
+    final assetId = attributes['knowledgeAssetId']?.toString();
+    final asset = assetId == null ? null : widget.service.assetById(assetId);
+    final assetPath =
+        asset == null ? '' : widget.service.absoluteAssetPath(asset);
+
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(name,
+                  style: const TextStyle(
+                      fontSize: 25, fontWeight: FontWeight.w900)),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: unlocked
+                    ? const Color(0xFFDDECD3)
+                    : const Color(0xFFEDE9E2),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                unlocked ? 'Desbloqueado' : 'Bloqueado',
+                style: TextStyle(
+                  color: unlocked
+                      ? const Color(0xFF416231)
+                      : const Color(0xFF675F55),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Text(
+          attributes['knowledgeCharacterUnlock']?.toString() ?? '',
+          style: const TextStyle(color: Color(0xFF6D655C), height: 1.35),
+        ),
+        const SizedBox(height: 11),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            _characterFactChip(
+              Icons.favorite_rounded,
+              attributes['knowledgeCharacterHealth']?.toString() ??
+                  'Salud especial',
+            ),
+            for (final stat in stats)
+              _characterFactChip(
+                Icons.tune_rounded,
+                '${stat['label']}: ${stat['value']}',
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text.rich(
+          TextSpan(
+            style: const TextStyle(
+                color: Color(0xFF403B35), fontSize: 14.5, height: 1.38),
+            children: [
+              const TextSpan(
+                  text: 'Empieza con: ',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+              TextSpan(
+                  text: startingItems.isEmpty
+                      ? 'sin objetos adicionales'
+                      : startingItems.join(' · ')),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          attributes['knowledgeCharacterStyle']?.toString() ?? '',
+          style: const TextStyle(fontSize: 14.5, height: 1.42),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          attributes['knowledgeCharacterTip']?.toString() ?? '',
+          style: const TextStyle(
+            color: Color(0xFF526943),
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
+          ),
+        ),
+      ],
+    );
+
+    return Container(
+      key: const ValueKey('knowledge-character-profile'),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F6F1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2DCD2)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final portrait = _characterPortrait(assetPath, name);
+          if (constraints.maxWidth < 520) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [portrait, const SizedBox(height: 12), details],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              portrait,
+              const SizedBox(width: 18),
+              Expanded(child: details),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _characterPortrait(String path, String name) {
+    return Container(
+      width: 92,
+      height: 92,
+      padding: const EdgeInsets.all(7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7E0CF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFC9BFAE)),
+      ),
+      child: path.isNotEmpty && File(path).existsSync()
+          ? Image.file(
+              File(path),
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.none,
+              errorBuilder: (_, __, ___) => _portraitFallback(name),
+            )
+          : _portraitFallback(name),
+    );
+  }
+
+  Widget _portraitFallback(String name) => Center(
+        child: Text(
+          name.isEmpty ? '?' : name.characters.first,
+          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+        ),
+      );
+
+  Widget _characterFactChip(IconData icon, String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .78),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE3DDD3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: const Color(0xFF6B805B)),
+            const SizedBox(width: 5),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+}
+
+class _KnowledgeProgressBlockBuilder extends BlockComponentBuilder {
+  _KnowledgeProgressBlockBuilder(
+    this.service,
+    this.onOpen, {
+    required this.progressVersion,
+  });
+
+  final KnowledgeService service;
+  final ValueChanged<String> onOpen;
+  final ValueListenable<int> progressVersion;
+
+  @override
+  BlockComponentWidget build(BlockComponentContext context) =>
+      _KnowledgeProgressBlock(
+        key: context.node.key,
+        node: context.node,
+        configuration: configuration,
+        service: service,
+        onOpen: onOpen,
+        progressVersion: progressVersion,
+      );
+
+  @override
+  BlockComponentValidate get validate => (node) => node.children.isEmpty;
+}
+
+class _KnowledgeProgressBlock extends BlockComponentStatefulWidget {
+  const _KnowledgeProgressBlock({
+    required super.key,
+    required super.node,
+    required super.configuration,
+    required this.service,
+    required this.onOpen,
+    required this.progressVersion,
+  });
+
+  final KnowledgeService service;
+  final ValueChanged<String> onOpen;
+  final ValueListenable<int> progressVersion;
+
+  @override
+  State<_KnowledgeProgressBlock> createState() =>
+      _KnowledgeProgressBlockState();
+}
+
+class _KnowledgeProgressBlockState extends State<_KnowledgeProgressBlock> {
+  String get _rootPageId =>
+      widget.node.attributes['knowledgeRootPageId']?.toString() ?? '';
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.progressVersion,
+      builder: (context, _, __) {
+        final display =
+            widget.node.attributes['knowledgeProgressDisplay']?.toString() ??
+                'check';
+        if (display == 'summary') return _buildSummary();
+        if (display == 'marks') return _buildMarks();
+        return _buildCheck();
+      },
+    );
+  }
+
+  Widget _buildCheck() {
+    final singleKey =
+        widget.node.attributes['knowledgeProgressKey']?.toString() ?? '';
+    final listedKeys =
+        (widget.node.attributes['knowledgeProgressKeys'] as List? ??
+                const <dynamic>[])
+            .map((value) => value.toString())
+            .where((value) => value.isNotEmpty);
+    final keys = <String>{
+      if (singleKey.isNotEmpty) singleKey,
+      ...listedKeys,
+    }.toList();
+    final entries = keys
+        .map((key) => widget.service.progressByKey(_rootPageId, key))
+        .toList();
+    final minimum = (widget.node.attributes['knowledgeProgressMinimum'] as num?)
+        ?.toDouble();
+    final checked = keys.isNotEmpty &&
+        entries.every((entry) {
+          if (minimum == null) return entry?.isCompleted == true;
+          final value = entry?.value;
+          return value is num && value.toDouble() >= minimum;
+        });
+    final readOnly =
+        widget.node.attributes['knowledgeProgressReadOnly'] == true ||
+            entries.any((entry) => entry != null && entry.source != 'manual');
+    final targetPageId =
+        widget.node.attributes['knowledgeTargetPageId']?.toString();
+    final rewardPageId = widget.node.attributes['rewardPageId']?.toString();
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      elevation: 0,
+      color: checked ? const Color(0xFFE8F2E1) : const Color(0xFFF8F6F1),
+      child: ListTile(
+        leading: Checkbox(
+          value: checked,
+          onChanged: readOnly || keys.isEmpty
+              ? null
+              : (value) {
+                  for (final key in keys) {
+                    widget.service.setProgress(
+                      rootPageId: _rootPageId,
+                      key: key,
+                      value: value ?? false,
+                    );
+                  }
+                },
+        ),
+        title: Text(
+          widget.node.attributes['knowledgeProgressLabel']?.toString() ??
+              keys.join(', '),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            decoration: checked ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        onTap: targetPageId == null || targetPageId.isEmpty
+            ? null
+            : () => widget.onOpen(targetPageId),
+        trailing: rewardPageId == null || rewardPageId.isEmpty
+            ? null
+            : TextButton.icon(
+                onPressed: () => widget.onOpen(rewardPageId),
+                icon: const Icon(Icons.card_giftcard_rounded, size: 17),
+                label: const Text('Recompensa'),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSummary() {
+    final keys = (widget.node.attributes['knowledgeProgressKeys'] as List? ??
+            const <dynamic>[])
+        .map((value) => value.toString())
+        .toList();
+    final completed =
+        widget.service.progressSnapshot(_rootPageId).completedCount(keys);
+    final ratio = keys.isEmpty ? 0.0 : completed / keys.length;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F8EF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD7E4CC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.node.attributes['knowledgeProgressLabel']?.toString() ??
+                'Progreso',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 9),
+          LinearProgressIndicator(value: ratio),
+          const SizedBox(height: 7),
+          Text('$completed de ${keys.length} completados'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarks() {
+    final marks =
+        (widget.node.attributes['knowledgeCompletionMarks'] as List? ??
+                const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList();
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F8EF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD7E4CC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Completion marks',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final mark in marks) _markChip(mark),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _markChip(Map<String, dynamic> mark) {
+    final key = mark['key']?.toString() ?? '';
+    final entry = widget.service.progressByKey(_rootPageId, key);
+    final difficulty = switch (entry?.value) {
+      final num number => number.toInt(),
+      true => 1,
+      _ => 0,
+    };
+    final rewardPageId = mark['rewardPageId']?.toString();
+    return ActionChip(
+      avatar: Icon(
+        difficulty >= 2 ? Icons.workspace_premium : Icons.radio_button_checked,
+        size: 17,
+        color: difficulty >= 2
+            ? const Color(0xFF9B312D)
+            : difficulty == 1
+                ? const Color(0xFF607A4D)
+                : Colors.grey,
+      ),
+      label: Text(mark['label']?.toString() ?? key),
+      onPressed: rewardPageId == null || rewardPageId.isEmpty
+          ? null
+          : () => widget.onOpen(rewardPageId),
+    );
+  }
+}
+
 class _KnowledgeCollectionBlockBuilder extends BlockComponentBuilder {
   _KnowledgeCollectionBlockBuilder(this.service, this.onOpen);
   final KnowledgeService service;
@@ -2252,6 +3174,16 @@ class _KnowledgeCollectionBlock extends BlockComponentStatefulWidget {
 }
 
 class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
+  static const _pageSize = 48;
+  final _searchController = TextEditingController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   KnowledgeViewType get _viewType {
     final raw = widget.node.attributes['knowledgeViewType']?.toString();
     return KnowledgeViewType.values
@@ -2265,7 +3197,19 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
     final collectionId =
         widget.node.attributes['knowledgeCollectionId']?.toString() ?? '';
     final collection = widget.service.collectionById(collectionId);
-    final records = widget.service.collectionRecords(collectionId);
+    final allRecords = widget.service.collectionRecords(collectionId);
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? allRecords
+        : allRecords.where((record) {
+            final haystack =
+                '${record['title']} ${jsonEncode(record['properties'])}'
+                    .toLowerCase();
+            return haystack.contains(query);
+          }).toList();
+    final pageCount = (filtered.length / _pageSize).ceil().clamp(1, 1 << 20);
+    if (_page >= pageCount) _page = pageCount - 1;
+    final records = filtered.skip(_page * _pageSize).take(_pageSize).toList();
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.all(14),
@@ -2307,8 +3251,19 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text('${records.length} páginas'),
+              Text('${filtered.length} páginas'),
             ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              isDense: true,
+              prefixIcon: Icon(Icons.search_rounded),
+              hintText: 'Buscar en esta colección',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() => _page = 0),
           ),
           const SizedBox(height: 12),
           if (records.isEmpty)
@@ -2317,6 +3272,25 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
                 child: Text('La colección está vacía.'))
           else
             _buildRecords(records),
+          if (filtered.length > _pageSize)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: 'Página anterior',
+                  onPressed: _page == 0 ? null : () => setState(() => _page--),
+                  icon: const Icon(Icons.chevron_left_rounded),
+                ),
+                Text('${_page + 1} / $pageCount'),
+                IconButton(
+                  tooltip: 'Página siguiente',
+                  onPressed: _page + 1 >= pageCount
+                      ? null
+                      : () => setState(() => _page++),
+                  icon: const Icon(Icons.chevron_right_rounded),
+                ),
+              ],
+            ),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerLeft,
@@ -2384,7 +3358,7 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Icon(Icons.image_outlined, size: 36),
+                        _recordThumbnail(record),
                         const SizedBox(height: 8),
                         Text(record['title'] as String,
                             textAlign: TextAlign.center),
@@ -2472,6 +3446,27 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
             .where((value) => RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(value))
             .firstOrNull ??
         'Sin fecha';
+  }
+
+  Widget _recordThumbnail(Map<String, dynamic> record) {
+    final assetId = record['coverAssetId']?.toString();
+    final asset = assetId == null ? null : widget.service.assetById(assetId);
+    if (asset == null || asset.kind != KnowledgeAssetKind.image) {
+      return const Icon(Icons.image_outlined, size: 36);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: _knowledgeImageWidget(
+        widget.service.absoluteAssetPath(asset),
+        width: 128,
+        height: 82,
+        cacheWidth: 256,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.none,
+        errorBuilder: (_, __, ___) => const SizedBox(
+            height: 82, child: Icon(Icons.broken_image_outlined)),
+      ),
+    );
   }
 }
 

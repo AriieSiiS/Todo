@@ -1,5 +1,7 @@
 part of 'app_shell.dart';
 
+const bool _showAmbientMusic = false;
+
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     required this.launchIntent,
@@ -23,7 +25,7 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void initState() {
     super.initState();
-    _shouldInitializeMusic = !_isWidgetTest();
+    _shouldInitializeMusic = _showAmbientMusic && !_isWidgetTest();
     _musicController = AmbientMusicController(enabled: _shouldInitializeMusic);
     WidgetsBinding.instance.addObserver(this);
     if (_shouldInitializeMusic) {
@@ -129,6 +131,8 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.calendar => CalendarPage(controller: controller),
       AppSection.library => LibraryPage(controller: controller),
       AppSection.wardrobe => WardrobePage(controller: controller),
+      AppSection.household => HouseholdPage(controller: controller),
+      AppSection.recipes => RecipesPage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
       AppSection.settings => SettingsPage(controller: controller),
@@ -342,13 +346,15 @@ class _Sidebar extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 14),
-                AnimatedBuilder(
-                  animation: musicController,
-                  builder: (context, _) => _AmbientMusicPlayer(
-                    controller: musicController,
+                if (_showAmbientMusic) ...[
+                  const SizedBox(height: 14),
+                  AnimatedBuilder(
+                    animation: musicController,
+                    builder: (context, _) => _AmbientMusicPlayer(
+                      controller: musicController,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 12),
                 _SidebarStatus(controller: controller),
               ],
@@ -510,6 +516,16 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         section: AppSection.wardrobe,
         icon: Icons.checkroom_rounded,
         label: 'Ropa',
+      ),
+    AppSection.household => const _SidebarDestination(
+        section: AppSection.household,
+        icon: Icons.home_work_rounded,
+        label: 'Hogar',
+      ),
+    AppSection.recipes => const _SidebarDestination(
+        section: AppSection.recipes,
+        icon: Icons.restaurant_menu_rounded,
+        label: 'Recetas',
       ),
     AppSection.completed => const _SidebarDestination(
         section: AppSection.completed,

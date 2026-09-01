@@ -118,6 +118,77 @@ class KnowledgePage {
       };
 }
 
+class KnowledgePageOutline {
+  const KnowledgePageOutline({
+    required this.id,
+    required this.title,
+    required this.sortOrder,
+    required this.hasChildren,
+    this.parentId,
+    this.icon,
+    this.coverAssetId,
+  });
+
+  final String id;
+  final String? parentId;
+  final String title;
+  final int sortOrder;
+  final bool hasChildren;
+  final String? icon;
+  final String? coverAssetId;
+}
+
+class KnowledgeTreeIndex {
+  KnowledgeTreeIndex({
+    required this.rootPageId,
+    required Iterable<KnowledgePageOutline> pages,
+  })  : pagesById = <String, KnowledgePageOutline>{
+          for (final page in pages) page.id: page,
+        },
+        childrenByParentId = _groupChildren(pages);
+
+  final String rootPageId;
+  final Map<String, KnowledgePageOutline> pagesById;
+  final Map<String, List<KnowledgePageOutline>> childrenByParentId;
+
+  KnowledgePageOutline? page(String pageId) => pagesById[pageId];
+
+  List<KnowledgePageOutline> childrenOf(String pageId) =>
+      childrenByParentId[pageId] ?? const <KnowledgePageOutline>[];
+
+  List<String> ancestorsOf(String pageId) {
+    final result = <String>[];
+    final visited = <String>{};
+    var current = pagesById[pageId];
+    while (current?.parentId != null && visited.add(current!.id)) {
+      final parentId = current.parentId!;
+      result.add(parentId);
+      current = pagesById[parentId];
+    }
+    return result;
+  }
+
+  static Map<String, List<KnowledgePageOutline>> _groupChildren(
+    Iterable<KnowledgePageOutline> pages,
+  ) {
+    final result = <String, List<KnowledgePageOutline>>{};
+    for (final page in pages) {
+      final parentId = page.parentId;
+      if (parentId == null) continue;
+      result.putIfAbsent(parentId, () => <KnowledgePageOutline>[]).add(page);
+    }
+    for (final children in result.values) {
+      children.sort((left, right) {
+        final order = left.sortOrder.compareTo(right.sortOrder);
+        return order != 0
+            ? order
+            : left.title.toLowerCase().compareTo(right.title.toLowerCase());
+      });
+    }
+    return result;
+  }
+}
+
 class KnowledgeAsset {
   const KnowledgeAsset({
     required this.id,
@@ -256,4 +327,85 @@ class KnowledgeTab {
 
   String encodeBackHistory() => jsonEncode(backHistory);
   String encodeForwardHistory() => jsonEncode(forwardHistory);
+}
+
+class KnowledgeProgressEntry {
+  const KnowledgeProgressEntry({
+    required this.rootPageId,
+    required this.key,
+    required this.value,
+    required this.source,
+    required this.updatedAt,
+  });
+
+  final String rootPageId;
+  final String key;
+  final dynamic value;
+  final String source;
+  final DateTime updatedAt;
+
+  bool get isCompleted => switch (value) {
+        bool flag => flag,
+        num amount => amount > 0,
+        String text => text.isNotEmpty && text != '0' && text != 'false',
+        _ => value != null,
+      };
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'rootPageId': rootPageId,
+        'key': key,
+        'value': value,
+        'source': source,
+        'updatedAt': updatedAt.toUtc().toIso8601String(),
+      };
+}
+
+class KnowledgeProgressSnapshot {
+  KnowledgeProgressSnapshot({
+    required this.rootPageId,
+    required Iterable<KnowledgeProgressEntry> entries,
+  }) : entriesByKey = <String, KnowledgeProgressEntry>{
+          for (final entry in entries) entry.key: entry,
+        };
+
+  final String rootPageId;
+  final Map<String, KnowledgeProgressEntry> entriesByKey;
+
+  KnowledgeProgressEntry? entry(String key) => entriesByKey[key];
+
+  int completedCount(Iterable<String> keys) =>
+      keys.where((key) => entriesByKey[key]?.isCompleted == true).length;
+}
+
+class KnowledgeImportSource {
+  const KnowledgeImportSource({
+    required this.rootPageId,
+    required this.kind,
+    required this.path,
+    required this.slot,
+    required this.enabled,
+    this.lastImportedAt,
+    this.lastModifiedAt,
+    this.lastError,
+  });
+
+  final String rootPageId;
+  final String kind;
+  final String path;
+  final int slot;
+  final bool enabled;
+  final DateTime? lastImportedAt;
+  final DateTime? lastModifiedAt;
+  final String? lastError;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'rootPageId': rootPageId,
+        'kind': kind,
+        'path': path,
+        'slot': slot,
+        'enabled': enabled,
+        'lastImportedAt': lastImportedAt?.toUtc().toIso8601String(),
+        'lastModifiedAt': lastModifiedAt?.toUtc().toIso8601String(),
+        'lastError': lastError,
+      };
 }

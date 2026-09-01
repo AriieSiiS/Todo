@@ -72,6 +72,16 @@ void main() {
     expect(find.text('Esquema'), findsOneWidget);
     expect(find.text('Enlaces entrantes'), findsOneWidget);
     expect(find.text('Propiedades'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('knowledge-virtual-tree')), findsOneWidget);
+
+    controller.knowledge.resetPerformanceDiagnostics();
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'Película de prueba actualizada',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(controller.knowledge.treeIndexQueryCount, 0);
 
     await tester.tap(find.byTooltip('Nueva subpágina'));
     await tester.pumpAndSettle();
@@ -203,6 +213,7 @@ void main() {
     final root = controller.knowledge.rootForOwner('libraryItem', item.id)!;
     controller.knowledge.savePage(
       root.copyWith(
+        coverAssetId: asset.id,
         document: <String, dynamic>{
           'document': <String, dynamic>{
             'type': 'page',
@@ -250,6 +261,10 @@ void main() {
     );
     await tester.pump();
 
+    expect(
+      find.byKey(ValueKey('knowledge-page-icon-${root.id}')),
+      findsOneWidget,
+    );
     await tester.tap(find.byType(Image).last);
     await tester.pump();
     expect(find.byTooltip('Recortar imagen'), findsOneWidget);
@@ -284,5 +299,180 @@ void main() {
     expect(data['knowledgeImageWidth'], isA<num>());
     expect((data['knowledgeImageWidth'] as num).toDouble(), lessThan(900));
     expect(data['knowledgeImageCropAspectRatio'], 1.0);
+  });
+
+  testWidgets('progreso, resumen, marcas y recompensa permanecen vinculados',
+      (tester) async {
+    final now = DateTime(2026, 7, 22);
+    final item = LibraryItem(
+      id: 'knowledge-isaac-progress',
+      type: LibraryItemType.game,
+      title: 'Isaac progresivo',
+      status: LibraryItemStatus.inProgress,
+      createdAt: now,
+      updatedAt: now,
+    );
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: <LibraryItem>[item],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.knowledge.ensureLibraryRoots(<LibraryItem>[item]);
+    final root = controller.knowledge.rootForOwner('libraryItem', item.id)!;
+    final reward = controller.knowledge.createPage(
+      title: 'D6',
+      parentId: root.id,
+    );
+    controller.knowledge.savePage(
+      root.copyWith(
+        document: <String, dynamic>{
+          'document': <String, dynamic>{
+            'type': 'page',
+            'children': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'type': 'knowledgeProgress',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeProgressKey': 'isaac.guide.first-step',
+                  'knowledgeProgressLabel': 'Vence a Mom',
+                  'knowledgeProgressReadOnly': false,
+                  'rewardPageId': reward.id,
+                },
+              },
+              <String, dynamic>{
+                'type': 'knowledgeProgress',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeProgressKeys': <String>[
+                    'isaac.character.azazel.unlocked',
+                  ],
+                  'knowledgeProgressLabel': 'Desbloquea a Azazel',
+                  'knowledgeProgressReadOnly': true,
+                },
+              },
+              <String, dynamic>{
+                'type': 'knowledgeProgress',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeProgressKey': 'isaac.counter.mom-kills',
+                  'knowledgeProgressLabel': 'Derrota 11 veces a Mom\'s Heart',
+                  'knowledgeProgressMinimum': 11,
+                  'knowledgeProgressReadOnly': true,
+                },
+              },
+              <String, dynamic>{
+                'type': 'knowledgeCharacter',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeCharacterName': 'Azazel',
+                  'knowledgeCharacterProgressKey':
+                      'isaac.character.azazel.unlocked',
+                  'knowledgeCharacterUnlock':
+                      'Haz tres Devil Deals en una partida.',
+                  'knowledgeCharacterHealth': '3 corazones negros',
+                  'knowledgeCharacterStats': <Map<String, dynamic>>[
+                    <String, dynamic>{'label': 'Daño', 'value': '1.5x'},
+                  ],
+                  'knowledgeCharacterStartingItems': <String>['The Fool'],
+                  'knowledgeCharacterStyle':
+                      'Vuelo y Brimstone de corto alcance.',
+                  'knowledgeCharacterTip': 'Prioriza alcance y daño.',
+                },
+              },
+              <String, dynamic>{
+                'type': 'knowledgeProgress',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeProgressDisplay': 'summary',
+                  'knowledgeProgressLabel': 'Ruta',
+                  'knowledgeProgressKeys': <String>[
+                    'isaac.guide.first-step',
+                    'isaac.guide.second-step',
+                  ],
+                },
+              },
+              <String, dynamic>{
+                'type': 'knowledgeProgress',
+                'data': <String, dynamic>{
+                  'knowledgeRootPageId': root.id,
+                  'knowledgeProgressDisplay': 'marks',
+                  'knowledgeCompletionMarks': <Map<String, dynamic>>[
+                    <String, dynamic>{
+                      'key': 'isaac.character.0.mark.0',
+                      'label': 'Mom\'s Heart',
+                      'rewardPageId': reward.id,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ),
+    );
+    controller.knowledge.replaceProgressFromSource(
+      rootPageId: root.id,
+      source: 'isaac-save',
+      values: const <String, dynamic>{
+        'isaac.character.0.mark.0': 2,
+        'isaac.character.azazel.unlocked': true,
+        'isaac.counter.mom-kills': 11,
+      },
+    );
+    tester.view.physicalSize = const Size(1800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTodoTheme(),
+        locale: const Locale('es'),
+        supportedLocales: const <Locale>[Locale('es')],
+        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+          AppFlowyEditorLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: KnowledgeWorkspacePage(controller: controller, libraryItem: item),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vence a Mom'), findsOneWidget);
+    expect(find.text('Desbloquea a Azazel'), findsOneWidget);
+    expect(find.text('Derrota 11 veces a Mom\'s Heart'), findsOneWidget);
+    expect(find.text('Desbloqueado'), findsOneWidget);
+    expect(find.text('0 de 2 completados'), findsOneWidget);
+    expect(find.text('Mom\'s Heart'), findsOneWidget);
+    expect(find.text('Recompensa'), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('knowledge-character-profile')))
+          .height,
+      lessThan(360),
+    );
+
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pump();
+    expect(
+      controller.knowledge
+          .progressByKey(root.id, 'isaac.guide.first-step')
+          ?.value,
+      isTrue,
+    );
+    expect(find.text('1 de 2 completados'), findsOneWidget);
   });
 }

@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:todo/domain/models.dart';
 import 'package:todo/services/knowledge_service.dart';
 
@@ -179,6 +182,191 @@ void main() {
         ],
       ).single['title'],
       'Actriz uno',
+    );
+  });
+
+  test('el reemplazo de una fuente es exacto y conserva pasos manuales', () {
+    final root = service.createPage(title: 'The Binding of Isaac');
+    service.setProgress(
+      rootPageId: root.id,
+      key: 'isaac.guide.step.1',
+      value: true,
+    );
+    service.replaceProgressFromSource(
+      rootPageId: root.id,
+      source: 'isaac-save',
+      values: const <String, dynamic>{
+        'isaac.achievement.1.unlocked': true,
+        'isaac.challenge.1.completed': true,
+      },
+    );
+
+    service.replaceProgressFromSource(
+      rootPageId: root.id,
+      source: 'isaac-save',
+      values: const <String, dynamic>{
+        'isaac.achievement.1.unlocked': false,
+      },
+    );
+
+    expect(
+      service.progressByKey(root.id, 'isaac.guide.step.1')?.value,
+      isTrue,
+    );
+    expect(
+      service.progressByKey(root.id, 'isaac.achievement.1.unlocked')?.value,
+      isFalse,
+    );
+    expect(
+      service.progressByKey(root.id, 'isaac.challenge.1.completed'),
+      isNull,
+    );
+    expect(
+      service.pendingBackupOperations().where(
+            (operation) =>
+                operation['entityType'] == 'progressSource' &&
+                operation['entityId'] == '${root.id}:isaac-save' &&
+                operation['operation'] == 'replace' &&
+                ((operation['payload'] as Map<String, dynamic>)['removedKeys']
+                        as List<dynamic>)
+                    .contains('isaac.challenge.1.completed'),
+          ),
+      hasLength(1),
+    );
+  });
+
+  test('el árbol y el progreso grande se cargan una sola vez', () {
+    final root = service.createPage(title: 'The Binding of Isaac: Rebirth');
+    final objects = service.createPage(title: 'Objetos', parentId: root.id);
+    final achievements = service.createPage(title: 'Logros', parentId: root.id);
+    for (var index = 0; index < 720; index++) {
+      service.createPage(title: 'Objeto $index', parentId: objects.id);
+    }
+    for (var index = 0; index < 641; index++) {
+      service.createPage(title: 'Logro $index', parentId: achievements.id);
+    }
+    for (var index = 0; index < 637; index++) {
+      service.createPage(title: 'Página $index', parentId: root.id);
+    }
+    service.replaceProgressFromSource(
+      rootPageId: root.id,
+      source: 'isaac-save',
+      values: <String, dynamic>{
+        for (var index = 0; index < 1859; index++)
+          'isaac.progress.$index': index.isEven,
+      },
+    );
+
+    service.resetPerformanceDiagnostics();
+    final firstIndex = service.treeIndex(root.id);
+    final secondIndex = service.treeIndex(root.id);
+    expect(firstIndex.pagesById, hasLength(2001));
+    expect(identical(firstIndex, secondIndex), isTrue);
+    expect(service.treeIndexQueryCount, 1);
+
+    for (var index = 0; index < 686; index++) {
+      service.progressByKey(root.id, 'isaac.progress.$index');
+    }
+    expect(service.progressSnapshotQueryCount, 1);
+    expect(
+      service.pendingBackupOperations().where(
+            (operation) => operation['entityType'] == 'progressSource',
+          ),
+      hasLength(1),
+    );
+    expect(
+      service.database
+          .select("SELECT value FROM knowledge_meta WHERE key='schema_version'")
+          .single['value'],
+      '3',
+    );
+  });
+
+  test('la copia gestionada es atómica y conserva un único ZIP', () async {
+    service.createPage(title: 'Página para la copia');
+    final backups = Directory(
+      '${service.rootDirectory.path}${Platform.pathSeparator}backups',
+    );
+    await backups.create(recursive: true);
+    await File('${backups.path}${Platform.pathSeparator}antigua-1.zip')
+        .writeAsBytes(<int>[1]);
+    await File('${backups.path}${Platform.pathSeparator}antigua-2.zip')
+        .writeAsBytes(<int>[2]);
+
+    final backup = await service.createLocalBackup();
+    final files = backups
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.toLowerCase().endsWith('.zip'))
+        .toList();
+    expect(backup.path, endsWith('conocimiento-actual.zip'));
+    expect(files, hasLength(1));
+    expect(await backup.length(), greaterThan(100));
+  });
+
+  test('el índice detecta escrituras realizadas por MCP', () async {
+    final temporary = await Directory.systemTemp.createTemp(
+      'todo-knowledge-external-',
+    );
+    final diskService = KnowledgeService(rootOverride: temporary);
+    await diskService.initialize();
+    final root = diskService.createPage(title: 'Raíz');
+    diskService.resetPerformanceDiagnostics();
+    expect(diskService.treeIndex(root.id).pagesById, hasLength(1));
+
+    final external = sqlite3.open(
+      '${temporary.path}${Platform.pathSeparator}knowledge.sqlite',
+    );
+    final stamp = DateTime.now().toIso8601String();
+    external.execute('''
+      INSERT INTO knowledge_pages(
+        id, parent_id, title, document_json, properties_json,
+        sort_order, is_trashed, revision, created_at, updated_at
+      ) VALUES(?, ?, ?, ?, '{}', 0, 0, 1, ?, ?)
+    ''', <Object?>[
+      'external-child',
+      root.id,
+      'Página desde MCP',
+      '{"document":{"type":"page","children":[]}}',
+      stamp,
+      stamp,
+    ]);
+    external.close();
+
+    expect(diskService.treeIndex(root.id).pagesById, hasLength(2));
+    expect(diskService.treeIndexQueryCount, 2);
+    diskService.dispose();
+
+    final reopened = KnowledgeService(rootOverride: temporary);
+    await reopened.initialize();
+    expect(reopened.treeIndex(root.id).pagesById, hasLength(2));
+    expect(
+      reopened.database
+          .select("SELECT value FROM knowledge_meta WHERE key='schema_version'")
+          .single['value'],
+      '3',
+    );
+    reopened.dispose();
+    await temporary.delete(recursive: true);
+  });
+
+  test('la ruta del guardado queda local y no entra en la cola de backup', () {
+    final root = service.createPage(title: 'The Binding of Isaac');
+    service.saveImportSource(
+      KnowledgeImportSource(
+        rootPageId: root.id,
+        kind: 'isaac-save',
+        path:
+            r'C:\Steam\userdata\account\250900\remote\rep+persistentgamedata1.dat',
+        slot: 1,
+        enabled: true,
+      ),
+    );
+
+    expect(service.importSource(root.id, 'isaac-save')?.slot, 1);
+    expect(
+      service.pendingBackupOperations().toString(),
+      isNot(contains('persistentgamedata')),
     );
   });
 }

@@ -51,6 +51,8 @@ class McpServerTest(unittest.TestCase):
         os.environ["TODO_MCP_PREFS_PATH"] = str(root / "prefs.json")
         os.environ["TODO_MCP_DISABLE_REMOTE"] = "1"
         os.environ["TODO_MCP_WARDROBE_PATH"] = str(root / "wardrobe")
+        os.environ["TODO_MCP_HOUSEHOLD_PATH"] = str(root / "household")
+        os.environ["TODO_MCP_RECIPE_PATH"] = str(root / "recipes")
         os.environ["TODO_MCP_KNOWLEDGE_PATH"] = str(root / "knowledge")
         sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -136,6 +138,18 @@ class McpServerTest(unittest.TestCase):
             "set_wardrobe_plan",
             "create_wardrobe_packing_list",
             "add_wardrobe_packing_item",
+            "list_household_items",
+            "create_household_item",
+            "update_household_item",
+            "set_household_item_image",
+            "set_household_item_document",
+            "delete_household_item",
+            "list_recipes",
+            "create_recipe",
+            "update_recipe",
+            "set_recipe_image",
+            "create_recipe_task",
+            "delete_recipe",
             "get_knowledge_contract",
             "list_knowledge_pages",
             "get_knowledge_page",
@@ -155,7 +169,7 @@ class McpServerTest(unittest.TestCase):
 
     def test_local_knowledge_pages_search_links_collections_and_trash(self) -> None:
         contract = self.call("get_knowledge_contract")
-        self.assertEqual(contract["schemaVersion"], 1)
+        self.assertEqual(contract["schemaVersion"], 3)
         self.assertIn("image", contract["imageBlock"]["types"])
         self.assertIn(
             "knowledgeImageCropAspectRatio",
@@ -248,6 +262,10 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(self.call("list_knowledge_pages")["count"], 2)
         exported = self.call("export_knowledge_repository")
         self.assertTrue(Path(exported["path"]).is_file())
+        self.assertEqual(Path(exported["path"]).name, "conocimiento-actual.zip")
+        self.call("export_knowledge_repository")
+        backups = list((Path(self.temp_dir.name) / "knowledge" / "backups").glob("*.zip"))
+        self.assertEqual(len(backups), 1)
 
     def test_dangerous_operations_require_confirmation(self) -> None:
         with self.assertRaises(ValueError):
@@ -468,6 +486,98 @@ class McpServerTest(unittest.TestCase):
                 "source_directory": str(source),
                 "manifest_path": str(Path(self.temp_dir.name) / "outside.json"),
             })
+
+    def test_household_crud_saves_catalog_image_manual_and_invoice(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        item = self.call("create_household_item", {
+            "name": "Lavadora",
+            "category": "Electrodomésticos",
+            "brand": "Bosch",
+            "model": "WGG244Z0ES",
+            "serial_number": "FD-1234",
+            "purchase_date": "2026-08-30",
+            "warranty_until": "2029-08-30",
+            "price": 699.0,
+        })
+        image = Path(self.temp_dir.name) / "lavadora.png"
+        manual = Path(self.temp_dir.name) / "manual.pdf"
+        invoice = Path(self.temp_dir.name) / "factura.pdf"
+        image.write_bytes(opaque_png(700, 700))
+        manual.write_bytes(b"%PDF-1.4\nmanual oficial")
+        invoice.write_bytes(b"%PDF-1.4\nfactura")
+
+        item = self.call("set_household_item_image", {
+            "item_id": item["id"], "source_file": str(image)
+        })
+        item = self.call("set_household_item_document", {
+            "item_id": item["id"], "kind": "manual",
+            "source_file": str(manual),
+            "source_url": "https://example.com/manual.pdf",
+        })
+        item = self.call("set_household_item_document", {
+            "item_id": item["id"], "kind": "invoice",
+            "source_file": str(invoice),
+        })
+
+        stored = self.call("list_household_items")[0]
+        root = Path(self.temp_dir.name) / "household"
+        self.assertEqual(stored["model"], "WGG244Z0ES")
+        self.assertEqual(stored["manualSourceUrl"], "https://example.com/manual.pdf")
+        self.assertTrue((root / item["imagePath"]).is_file())
+        self.assertTrue((root / item["thumbnailPath"]).is_file())
+        self.assertTrue((root / item["manualPath"]).is_file())
+        self.assertTrue((root / item["invoicePath"]).is_file())
+
+    def test_recipe_crud_image_and_task_integration(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        recipe = self.call("create_recipe", {
+            "title": "Ropa vieja canaria",
+            "category": "Plato principal",
+            "cuisine": "Canaria",
+            "servings": 4,
+            "prep_minutes": 20,
+            "cook_minutes": 45,
+            "ingredients": [
+                "500 g de garbanzos",
+                "300 g de carne",
+                "1/2 cucharadita de comino",
+                "Un trocito de jengibre y cúrcuma",
+                "Sal y pimienta al gusto",
+            ],
+            "instructions": ["Prepara el sofrito.", "Añade el resto y cocina."],
+            "tags": ["tradicional"],
+        })
+        image = Path(self.temp_dir.name) / "ropa-vieja.png"
+        image.write_bytes(opaque_png(800, 500))
+
+        recipe = self.call("set_recipe_image", {
+            "recipe_id": recipe["id"], "source_file": str(image)
+        })
+        task = self.call("create_recipe_task", {
+            "recipe_id": recipe["id"], "kind": "shopping"
+        })
+
+        stored = self.call("list_recipes")[0]
+        root = Path(self.temp_dir.name) / "recipes"
+        self.assertEqual(stored["cuisine"], "Canaria")
+        self.assertEqual(len(stored["ingredients"]), 5)
+        self.assertEqual(stored["ingredients"][0]["kind"], "ingredient")
+        self.assertEqual(stored["ingredients"][2]["kind"], "condiment")
+        self.assertTrue((root / recipe["imagePath"]).is_file())
+        self.assertTrue((root / recipe["thumbnailPath"]).is_file())
+        self.assertEqual(
+            [subtask["title"] for subtask in task["subtasks"]],
+            [
+                "500 g de garbanzos",
+                "300 g de carne",
+                "Comino",
+                "Jengibre",
+                "Cúrcuma",
+                "Sal",
+                "Pimienta",
+            ],
+        )
+        self.assertEqual(task["task"]["title"], "Comprar ingredientes para Ropa vieja canaria")
 
 
 if __name__ == "__main__":

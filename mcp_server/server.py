@@ -8,6 +8,7 @@ import re
 import shutil
 import struct
 import sys
+import unicodedata
 import zlib
 import urllib.error
 import urllib.parse
@@ -146,6 +147,8 @@ def default_state() -> dict[str, Any]:
         "wardrobePlanEntries": [],
         "wardrobePackingLists": [],
         "wardrobeImportBatches": [],
+        "householdItems": [],
+        "recipes": [],
         "calendarEvents": [],
         "daySettings": {
             "dayEndsAtHour": 5,
@@ -180,6 +183,8 @@ def default_state() -> dict[str, Any]:
             "calendar",
             "library",
             "wardrobe",
+            "household",
+            "recipes",
             "completed",
             "settings",
         ],
@@ -1056,6 +1061,31 @@ def knowledge_tool_definitions() -> list[dict[str, Any]]:
             [],
         ),
         tool(
+            "import_knowledge_assets",
+            "Importa recursos por lotes y devuelve la resolución estable de cada externalKey.",
+            {"assets": {"type": "array", "items": object_schema}},
+            ["assets"],
+        ),
+        tool(
+            "list_knowledge_progress",
+            "Lee progreso global del juego por raíz, prefijo o fuente.",
+            {"root_page_id": string, "prefix": string, "source": string},
+            ["root_page_id"],
+        ),
+        tool(
+            "set_knowledge_progress",
+            "Escribe una entrada de progreso manual o derivada.",
+            {"root_page_id": string, "key": string, "value": {}, "source": string},
+            ["root_page_id", "key"],
+        ),
+        tool(
+            "replace_knowledge_progress",
+            "Reemplaza transaccionalmente todo el progreso de una fuente sin tocar otras fuentes.",
+            {"root_page_id": string, "source": string,
+             "entries": {"type": "array", "items": object_schema}},
+            ["root_page_id", "source", "entries"],
+        ),
+        tool(
             "create_knowledge_collection",
             "Crea o actualiza una colección con propiedades y vistas.",
             {"collection_id": string, "page_id": string, "name": string,
@@ -1153,6 +1183,40 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "archived": boolean,
         "laundry_status": string,
     }
+    household_fields = {
+        "item_id": string,
+        "name": string,
+        "category": string,
+        "brand": string,
+        "model": string,
+        "serial_number": string,
+        "location": string,
+        "notes": string,
+        "manual_source_url": string,
+        "retailer": string,
+        "purchase_date": string,
+        "warranty_until": string,
+        "price": number,
+        "tags": strings,
+        "archived": boolean,
+    }
+    recipe_fields = {
+        "recipe_id": string,
+        "title": string,
+        "description": string,
+        "category": string,
+        "cuisine": string,
+        "servings": integer,
+        "prep_minutes": integer,
+        "cook_minutes": integer,
+        "ingredients": strings,
+        "instructions": strings,
+        "tags": strings,
+        "source_url": string,
+        "image_source_url": string,
+        "favorite": boolean,
+        "archived": boolean,
+    }
 
     return [
         tool("delete_task", "Borra una tarea y limpia referencias de subtareas.", {"task_id": string}, ["task_id"]),
@@ -1223,6 +1287,18 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("set_wardrobe_plan", "Planifica prendas para un día.", {"date": string, "item_ids": strings, "outfit_id": string, "weather": string, "occasion": string}, ["date", "item_ids"]),
         tool("create_wardrobe_packing_list", "Crea una maleta de viaje.", {"name": string, "start_date": string, "end_date": string}, ["name", "start_date", "end_date"]),
         tool("add_wardrobe_packing_item", "Añade una prenda a una maleta.", {"packing_list_id": string, "item_id": string, "quantity": integer}, ["packing_list_id", "item_id"]),
+        tool("list_household_items", "Lista las compras y aparatos del inventario visual de Hogar.", {"include_archived": boolean}, []),
+        tool("create_household_item", "Crea una ficha de Hogar con marca, modelo, serie, compra y garantía.", household_fields, ["name", "category"]),
+        tool("update_household_item", "Actualiza la información de una ficha de Hogar.", household_fields, ["item_id"]),
+        tool("set_household_item_image", "Asocia a una ficha una imagen PNG de catálogo generada o preparada por Codex.", {"item_id": string, "source_file": string}, ["item_id", "source_file"]),
+        tool("set_household_item_document", "Guarda un manual o una factura PDF dentro de la ficha de Hogar.", {"item_id": string, "kind": string, "source_file": string, "source_url": string}, ["item_id", "kind", "source_file"]),
+        tool("delete_household_item", "Elimina una ficha de Hogar y sus recursos locales.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
+        tool("list_recipes", "Lista las recetas del recetario visual.", {"include_archived": boolean, "favorites_only": boolean}, []),
+        tool("create_recipe", "Crea una receta con tiempos, raciones, ingredientes y pasos.", recipe_fields, ["title"]),
+        tool("update_recipe", "Actualiza una receta existente.", recipe_fields, ["recipe_id"]),
+        tool("set_recipe_image", "Asocia a una receta una imagen PNG preparada por Codex.", {"recipe_id": string, "source_file": string}, ["recipe_id", "source_file"]),
+        tool("create_recipe_task", "Convierte ingredientes o pasos de una receta en una tarea con subtareas.", {"recipe_id": string, "kind": string, "scheduled_at": string}, ["recipe_id", "kind"]),
+        tool("delete_recipe", "Elimina una receta y sus imágenes locales.", {"recipe_id": string, "confirm": boolean}, ["recipe_id", "confirm"]),
     ]
 
 
@@ -2482,7 +2558,7 @@ VALID_NOTE_STATUSES = {"inbox", "converted", "archived"}
 VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "yearly"}
 VALID_TODAY_SORTS = {"manual", "category", "time", "project", "priority"}
 VALID_VISUAL_MODES = {"classic", "phantom"}
-VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "completed", "settings"}
+VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "recipes", "completed", "settings"}
 
 
 def require_confirm(arguments: dict[str, Any], action: str) -> None:
@@ -3925,6 +4001,567 @@ def add_wardrobe_packing_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     return packing
 
 
+def household_directory() -> Path:
+    override = os.environ.get("TODO_MCP_HOUSEHOLD_PATH")
+    directory = Path(override) if override else documents_todo_dir() / "household"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def list_household_items_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    items = load_state().setdefault("householdItems", [])
+    if bool(arguments.get("include_archived", False)):
+        return items
+    return [item for item in items if not item.get("archived", False)]
+
+
+def _household_values(arguments: dict[str, Any]) -> dict[str, Any]:
+    mapping = {
+        "name": "name",
+        "category": "category",
+        "brand": "brand",
+        "model": "model",
+        "serial_number": "serialNumber",
+        "location": "location",
+        "notes": "notes",
+        "manual_source_url": "manualSourceUrl",
+        "retailer": "retailer",
+        "purchase_date": "purchaseDate",
+        "warranty_until": "warrantyUntil",
+        "price": "price",
+        "tags": "tags",
+        "archived": "archived",
+    }
+    values: dict[str, Any] = {}
+    for source, destination in mapping.items():
+        if source not in arguments:
+            continue
+        value = arguments[source]
+        if source == "tags":
+            value = list(dict.fromkeys(
+                str(tag).strip() for tag in value if str(tag).strip()
+            ))
+        elif source in {"purchase_date", "warranty_until"}:
+            value = parse_datetime(str(value)).isoformat() if value else None
+        elif source not in {"price", "archived"}:
+            value = str(value).strip()
+        values[destination] = value
+    return values
+
+
+def create_household_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    instant = now_iso()
+    item = {
+        "id": make_id("household-item"),
+        "name": str(arguments["name"]).strip() or "Artículo sin nombre",
+        "category": str(arguments["category"]).strip() or "Sin categoría",
+        "brand": "",
+        "model": "",
+        "serialNumber": "",
+        "location": "",
+        "notes": "",
+        "imagePath": "",
+        "thumbnailPath": "",
+        "imageSha256": "",
+        "manualPath": "",
+        "manualSourceUrl": "",
+        "invoicePath": "",
+        "retailer": "",
+        "purchaseDate": None,
+        "warrantyUntil": None,
+        "price": None,
+        "tags": [],
+        "archived": False,
+        "createdAt": instant,
+        "updatedAt": instant,
+    }
+    item.update(_household_values(arguments))
+    state.setdefault("householdItems", []).append(item)
+    save_state(state)
+    return item
+
+
+def update_household_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, item = find_by_id(
+        state.setdefault("householdItems", []),
+        arguments["item_id"],
+        "artículo del hogar",
+    )
+    item.update(_household_values(arguments))
+    item["updatedAt"] = now_iso()
+    state["householdItems"][index] = item
+    save_state(state)
+    return item
+
+
+def _write_household_asset(directory: Path, file_name: str, data: bytes) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / file_name
+    if destination.exists():
+        return destination
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    try:
+        temporary.write_bytes(data)
+        temporary.replace(destination)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+    return destination
+
+
+def _delete_household_asset(relative_path: str) -> None:
+    if not relative_path:
+        return
+    root = household_directory().resolve()
+    candidate = (root / relative_path).resolve()
+    if root not in candidate.parents:
+        return
+    candidate.unlink(missing_ok=True)
+
+
+def set_household_item_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    if not source.is_file() or source.suffix.lower() != ".png":
+        raise ValueError("La imagen de Hogar debe ser un archivo PNG local.")
+    data = source.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) < 33:
+        raise ValueError("La imagen de Hogar no es un PNG válido.")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 400 or height < 400:
+        raise ValueError("La imagen debe medir al menos 400 × 400 píxeles.")
+    state = load_state()
+    index, item = find_by_id(
+        state.setdefault("householdItems", []),
+        arguments["item_id"],
+        "artículo del hogar",
+    )
+    digest = hashlib.sha256(data).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(item["id"]))
+    file_name = f"{safe_id}-{digest[:12]}.png"
+    root = household_directory()
+    _write_household_asset(root / "images", file_name, data)
+    _write_household_asset(root / "thumbnails", file_name, data)
+    previous = [str(item.get("imagePath") or ""), str(item.get("thumbnailPath") or "")]
+    item["imagePath"] = f"images/{file_name}"
+    item["thumbnailPath"] = f"thumbnails/{file_name}"
+    item["imageSha256"] = digest
+    item["updatedAt"] = now_iso()
+    state["householdItems"][index] = item
+    try:
+        save_state(state)
+    except Exception:
+        _delete_household_asset(item["imagePath"])
+        _delete_household_asset(item["thumbnailPath"])
+        raise
+    for old_path in previous:
+        if old_path not in {item["imagePath"], item["thumbnailPath"]}:
+            _delete_household_asset(old_path)
+    return item
+
+
+def set_household_item_document_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    kind = str(arguments["kind"]).strip().lower()
+    if kind not in {"manual", "invoice"}:
+        raise ValueError("kind debe ser manual o invoice.")
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    if not source.is_file() or source.suffix.lower() != ".pdf":
+        raise ValueError("El documento debe ser un archivo PDF local.")
+    data = source.read_bytes()
+    if not data.startswith(b"%PDF-"):
+        raise ValueError("El documento no es un PDF válido.")
+    state = load_state()
+    index, item = find_by_id(
+        state.setdefault("householdItems", []),
+        arguments["item_id"],
+        "artículo del hogar",
+    )
+    digest = hashlib.sha256(data).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(item["id"]))
+    file_name = f"{safe_id}-{digest[:12]}.pdf"
+    directory_name = "manuals" if kind == "manual" else "invoices"
+    relative_path = f"{directory_name}/{file_name}"
+    _write_household_asset(household_directory() / directory_name, file_name, data)
+    field = "manualPath" if kind == "manual" else "invoicePath"
+    previous = str(item.get(field) or "")
+    item[field] = relative_path
+    if kind == "manual" and arguments.get("source_url"):
+        item["manualSourceUrl"] = str(arguments["source_url"]).strip()
+    item["updatedAt"] = now_iso()
+    state["householdItems"][index] = item
+    try:
+        save_state(state)
+    except Exception:
+        _delete_household_asset(relative_path)
+        raise
+    if previous != relative_path:
+        _delete_household_asset(previous)
+    return item
+
+
+def delete_household_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    require_confirm(arguments, "delete_household_item")
+    state = load_state()
+    index, item = find_by_id(
+        state.setdefault("householdItems", []),
+        arguments["item_id"],
+        "artículo del hogar",
+    )
+    state["householdItems"].pop(index)
+    save_state(state)
+    for field in ("imagePath", "thumbnailPath", "manualPath", "invoicePath"):
+        _delete_household_asset(str(item.get(field) or ""))
+    return {"deleted": True, "item_id": arguments["item_id"]}
+
+
+def recipe_directory() -> Path:
+    override = os.environ.get("TODO_MCP_RECIPE_PATH")
+    directory = Path(override) if override else documents_todo_dir() / "recipes"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def list_recipes_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    recipes = load_state().setdefault("recipes", [])
+    if not bool(arguments.get("include_archived", False)):
+        recipes = [recipe for recipe in recipes if not recipe.get("archived", False)]
+    if bool(arguments.get("favorites_only", False)):
+        recipes = [recipe for recipe in recipes if recipe.get("favorite", False)]
+    return recipes
+
+
+RECIPE_CONDIMENTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Sal", ("flor de sal", "escamas de sal", "sal marina", "sal gruesa", "sal fina", "sal")),
+    ("Pimienta negra", ("pimienta negra",)),
+    ("Pimienta blanca", ("pimienta blanca",)),
+    ("Pimienta", ("pimienta",)),
+    ("Comino", ("comino en polvo", "comino")),
+    ("Jengibre", ("jengibre",)),
+    ("Cúrcuma", ("curcuma",)),
+    ("Pimentón", ("pimenton de la vera", "pimenton dulce", "pimenton picante", "pimenton", "paprika")),
+    ("Orégano", ("oregano",)),
+    ("Tomillo", ("tomillo",)),
+    ("Romero", ("romero",)),
+    ("Albahaca", ("albahaca",)),
+    ("Perejil", ("perejil",)),
+    ("Cilantro", ("cilantro",)),
+    ("Eneldo", ("eneldo",)),
+    ("Laurel", ("hoja de laurel", "laurel")),
+    ("Canela", ("canela",)),
+    ("Nuez moscada", ("nuez moscada",)),
+    ("Clavo", ("clavos de olor", "clavo de olor")),
+    ("Cardamomo", ("cardamomo",)),
+    ("Curry", ("curry en polvo", "curry")),
+    ("Garam masala", ("garam masala",)),
+    ("Ras el hanout", ("ras el hanout",)),
+    ("Chile", ("copos de chile", "chile en polvo", "chili flakes", "guindilla", "chile")),
+    ("Cayena", ("pimienta de cayena", "cayena")),
+    ("Ajo en polvo", ("ajo en polvo",)),
+    ("Cebolla en polvo", ("cebolla en polvo",)),
+    ("Aceite de oliva", ("aceite de oliva virgen extra", "aceite de oliva", "aove")),
+    ("Aceite de sésamo", ("aceite de sesamo",)),
+    ("Aceite de girasol", ("aceite de girasol",)),
+    ("Aceite de coco", ("aceite de coco",)),
+    ("Vinagre de manzana", ("vinagre de manzana",)),
+    ("Vinagre balsámico", ("vinagre balsamico", "aceto balsamico")),
+    ("Vinagre de arroz", ("vinagre de arroz",)),
+    ("Vinagre", ("vinagre de vino", "vinagre")),
+    ("Mostaza", ("mostaza dijon", "mostaza",)),
+    ("Salsa de soja", ("salsa de soja", "soja")),
+    ("Tamari", ("tamari",)),
+    ("Sriracha", ("sriracha",)),
+    ("Tabasco", ("tabasco",)),
+    ("Salsa Worcestershire", ("salsa worcestershire", "salsa perrins")),
+    ("Salsa de pescado", ("salsa de pescado",)),
+    ("Tahini", ("tahini",)),
+    ("Crema de cacahuete", ("mantequilla de cacahuete", "crema de cacahuete")),
+    ("Miel", ("miel",)),
+    ("Sirope de arce", ("sirope de arce",)),
+    ("Esencia de vainilla", ("extracto de vainilla", "esencia de vainilla")),
+    ("Levadura química", ("polvo de hornear", "levadura quimica")),
+    ("Bicarbonato", ("bicarbonato sodico", "bicarbonato")),
+)
+
+RECIPE_MEASUREMENT_NOISE = {
+    "a", "al", "aprox", "aproximadamente", "cda", "cdas", "cds", "cdta",
+    "cdtas", "chorrito", "chorritos", "cocinar", "cucharada", "cucharadas",
+    "cucharadita", "cucharaditas", "cuatro", "de", "decorar", "del", "dos",
+    "el", "en", "fina", "fino", "fresca", "fresco", "g", "gr", "gramo",
+    "gramos", "gruesa", "grueso", "gusto", "hoja", "hojas", "kg", "la",
+    "las", "l", "litro", "litros", "los", "manojo", "manojos", "media",
+    "medio", "ml", "molida", "molido", "o", "para", "pellizco", "pellizcos",
+    "picada", "picado", "pizca", "pizcas", "polvo", "rallada", "rallado",
+    "rama", "ramas", "ramita", "ramitas", "seca", "seco", "servir", "taza",
+    "tazas", "tres", "trocito", "trocitos", "un", "una", "unas", "unos", "y",
+}
+
+
+def _normalize_recipe_ingredient(value: str) -> str:
+    normalized = unicodedata.normalize("NFD", value.casefold())
+    return "".join(character for character in normalized if unicodedata.category(character) != "Mn")
+
+
+def _recipe_alias_pattern(alias: str) -> re.Pattern[str]:
+    return re.compile(rf"\b{re.escape(_normalize_recipe_ingredient(alias))}\b", re.IGNORECASE)
+
+
+def _detected_recipe_condiments(value: str) -> list[str]:
+    normalized = _normalize_recipe_ingredient(value)
+    detected = [
+        name
+        for name, aliases in RECIPE_CONDIMENTS
+        if any(_recipe_alias_pattern(alias).search(normalized) for alias in aliases)
+    ]
+    if any(name in detected for name in ("Pimienta negra", "Pimienta blanca", "Cayena")):
+        detected = [name for name in detected if name != "Pimienta"]
+    if any(name.startswith("Vinagre de") or name == "Vinagre balsámico" for name in detected):
+        detected = [name for name in detected if name != "Vinagre"]
+    return detected
+
+
+def _recipe_is_condiment(value: str) -> bool:
+    if not _detected_recipe_condiments(value):
+        return False
+    remainder = _normalize_recipe_ingredient(value)
+    for _name, aliases in RECIPE_CONDIMENTS:
+        for alias in sorted(aliases, key=len, reverse=True):
+            remainder = _recipe_alias_pattern(alias).sub(" ", remainder)
+    remainder = re.sub(r"\d+(?:[\.,/]\d+)?", " ", remainder)
+    remainder = re.sub(r"[¼½¾⅓⅔⅛⅜⅝⅞]", " ", remainder)
+    words = re.sub(r"[^a-z]+", " ", remainder).split()
+    return not any(word not in RECIPE_MEASUREMENT_NOISE for word in words)
+
+
+def _recipe_shopping_labels(ingredient: dict[str, Any]) -> list[str]:
+    text = str(ingredient.get("text", "")).strip()
+    if not text:
+        return []
+    if ingredient.get("kind") == "condiment" or _recipe_is_condiment(text):
+        detected = _detected_recipe_condiments(text)
+        if detected:
+            return detected
+    return [text]
+
+
+def _recipe_values(arguments: dict[str, Any]) -> dict[str, Any]:
+    mapping = {
+        "title": "title",
+        "description": "description",
+        "category": "category",
+        "cuisine": "cuisine",
+        "servings": "servings",
+        "prep_minutes": "prepMinutes",
+        "cook_minutes": "cookMinutes",
+        "ingredients": "ingredients",
+        "instructions": "instructions",
+        "tags": "tags",
+        "source_url": "sourceUrl",
+        "image_source_url": "imageSourceUrl",
+        "favorite": "favorite",
+        "archived": "archived",
+    }
+    values: dict[str, Any] = {}
+    for source, destination in mapping.items():
+        if source not in arguments:
+            continue
+        value = arguments[source]
+        if source == "ingredients":
+            value = [
+                {
+                    "text": str(item).strip(),
+                    "group": "",
+                    "kind": (
+                        "condiment"
+                        if _recipe_is_condiment(str(item).strip())
+                        else "ingredient"
+                    ),
+                }
+                for item in value
+                if str(item).strip()
+            ]
+        elif source in {"instructions", "tags"}:
+            value = list(dict.fromkeys(
+                str(item).strip() for item in value if str(item).strip()
+            ))
+        elif source in {"servings", "prep_minutes", "cook_minutes"}:
+            minimum = 1 if source == "servings" else 0
+            value = max(minimum, int(value))
+        elif source not in {"favorite", "archived"}:
+            value = str(value).strip()
+        values[destination] = value
+    return values
+
+
+def create_recipe_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    instant = now_iso()
+    recipe = {
+        "id": make_id("recipe"),
+        "title": str(arguments["title"]).strip() or "Receta sin nombre",
+        "description": "",
+        "category": "Sin categoría",
+        "cuisine": "",
+        "servings": 1,
+        "prepMinutes": 0,
+        "cookMinutes": 0,
+        "ingredients": [],
+        "instructions": [],
+        "tags": [],
+        "sourceUrl": "",
+        "imageSourceUrl": "",
+        "imagePath": "",
+        "thumbnailPath": "",
+        "imageSha256": "",
+        "favorite": False,
+        "archived": False,
+        "createdAt": instant,
+        "updatedAt": instant,
+    }
+    recipe.update(_recipe_values(arguments))
+    state.setdefault("recipes", []).append(recipe)
+    save_state(state)
+    return recipe
+
+
+def update_recipe_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, recipe = find_by_id(
+        state.setdefault("recipes", []), arguments["recipe_id"], "receta"
+    )
+    recipe.update(_recipe_values(arguments))
+    recipe["updatedAt"] = now_iso()
+    state["recipes"][index] = recipe
+    save_state(state)
+    return recipe
+
+
+def _delete_recipe_asset(relative_path: str) -> None:
+    if not relative_path:
+        return
+    root = recipe_directory().resolve()
+    candidate = (root / relative_path).resolve()
+    if root not in candidate.parents:
+        return
+    candidate.unlink(missing_ok=True)
+
+
+def set_recipe_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    if not source.is_file() or source.suffix.lower() != ".png":
+        raise ValueError("La imagen de la receta debe ser un archivo PNG local.")
+    data = source.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) < 33:
+        raise ValueError("La imagen de la receta no es un PNG válido.")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 300 or height < 200:
+        raise ValueError("La imagen debe medir al menos 300 × 200 píxeles.")
+    state = load_state()
+    index, recipe = find_by_id(
+        state.setdefault("recipes", []), arguments["recipe_id"], "receta"
+    )
+    digest = hashlib.sha256(data).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(recipe["id"]))
+    file_name = f"{safe_id}-{digest[:12]}.png"
+    root = recipe_directory()
+    _write_household_asset(root / "images", file_name, data)
+    _write_household_asset(root / "thumbnails", file_name, data)
+    previous = [str(recipe.get("imagePath") or ""), str(recipe.get("thumbnailPath") or "")]
+    recipe["imagePath"] = f"images/{file_name}"
+    recipe["thumbnailPath"] = f"thumbnails/{file_name}"
+    recipe["imageSha256"] = digest
+    recipe["updatedAt"] = now_iso()
+    state["recipes"][index] = recipe
+    try:
+        save_state(state)
+    except Exception:
+        _delete_recipe_asset(recipe["imagePath"])
+        _delete_recipe_asset(recipe["thumbnailPath"])
+        raise
+    for old_path in previous:
+        if old_path not in {recipe["imagePath"], recipe["thumbnailPath"]}:
+            _delete_recipe_asset(old_path)
+    return recipe
+
+
+def _recipe_task_category(name: str) -> dict[str, Any]:
+    state = load_state()
+    for category in state.setdefault("categories", []):
+        if str(category.get("name", "")).casefold() == name.casefold():
+            return category
+    category = {
+        "id": make_id("cat"),
+        "name": name,
+        "description": "Creada automáticamente desde Recetas.",
+        "colorValue": 0xFFDBA62D if name == "Compras" else 0xFFC7744E,
+        "iconCodePoint": 0xE59C,
+        "active": True,
+    }
+    state["categories"].append(category)
+    save_state(state)
+    return category
+
+
+def create_recipe_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    kind = str(arguments["kind"]).strip().lower()
+    if kind not in {"shopping", "cooking"}:
+        raise ValueError("kind debe ser shopping o cooking.")
+    state = load_state()
+    _index, recipe = find_by_id(
+        state.setdefault("recipes", []), arguments["recipe_id"], "receta"
+    )
+    shopping = kind == "shopping"
+    if shopping:
+        entries = list(dict.fromkeys(
+            label
+            for ingredient in recipe.get("ingredients", [])
+            for label in _recipe_shopping_labels(ingredient)
+        ))
+    else:
+        entries = [str(item).strip() for item in recipe.get("instructions", [])]
+        entries = [entry for entry in entries if entry]
+    if shopping and not entries:
+        raise ValueError("La receta no tiene ingredientes.")
+    category = _recipe_task_category("Compras" if shopping else "Cocina")
+    title = (
+        f"Comprar ingredientes para {recipe['title']}"
+        if shopping
+        else f"Preparar {recipe['title']}"
+    )
+    parent_result = create_task_impl({
+        "title": title,
+        "description": f"Tarea generada desde Recetas · {recipe.get('servings', 1)} raciones.",
+        "category_ids": [category["id"]],
+        "scheduled_at": arguments.get("scheduled_at"),
+    })
+    parent_id = parent_result["created"]["id"]
+    subtasks = []
+    for index, entry in enumerate(entries):
+        result = create_task_impl({
+            "title": entry if shopping else f"{index + 1}. {entry}",
+            "category_ids": [category["id"]],
+            "parent_task_id": parent_id,
+            "scheduled_at": arguments.get("scheduled_at"),
+        })
+        subtasks.append(result["created"])
+    final_state = load_state()
+    _parent_index, parent = find_task(final_state, parent_id)
+    return {"task": parent, "subtasks": subtasks}
+
+
+def delete_recipe_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    require_confirm(arguments, "delete_recipe")
+    state = load_state()
+    index, recipe = find_by_id(
+        state.setdefault("recipes", []), arguments["recipe_id"], "receta"
+    )
+    state["recipes"].pop(index)
+    save_state(state)
+    _delete_recipe_asset(str(recipe.get("imagePath") or ""))
+    _delete_recipe_asset(str(recipe.get("thumbnailPath") or ""))
+    return {"deleted": True, "recipe_id": arguments["recipe_id"]}
+
+
 def import_state_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     require_confirm(arguments, "import_state")
     state = json.loads(arguments["raw_json"])
@@ -4147,6 +4784,14 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(knowledge_repository().list_unlinked())
     if name == "import_knowledge_asset":
         return json_result(knowledge_repository().import_asset(arguments))
+    if name == "import_knowledge_assets":
+        return json_result(knowledge_repository().import_assets(arguments))
+    if name == "list_knowledge_progress":
+        return json_result(knowledge_repository().list_progress(arguments))
+    if name == "set_knowledge_progress":
+        return json_result(knowledge_repository().set_progress(arguments))
+    if name == "replace_knowledge_progress":
+        return json_result(knowledge_repository().replace_progress(arguments))
     if name == "create_knowledge_collection":
         return json_result({"collection": knowledge_repository().create_collection(arguments)})
     if name == "list_knowledge_collections":
@@ -4189,6 +4834,30 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(create_wardrobe_packing_list_impl(arguments))
     if name == "add_wardrobe_packing_item":
         return json_result(add_wardrobe_packing_item_impl(arguments))
+    if name == "list_household_items":
+        return json_result(list_household_items_impl(arguments))
+    if name == "create_household_item":
+        return json_result(create_household_item_impl(arguments))
+    if name == "update_household_item":
+        return json_result(update_household_item_impl(arguments))
+    if name == "set_household_item_image":
+        return json_result(set_household_item_image_impl(arguments))
+    if name == "set_household_item_document":
+        return json_result(set_household_item_document_impl(arguments))
+    if name == "delete_household_item":
+        return json_result(delete_household_item_impl(arguments))
+    if name == "list_recipes":
+        return json_result(list_recipes_impl(arguments))
+    if name == "create_recipe":
+        return json_result(create_recipe_impl(arguments))
+    if name == "update_recipe":
+        return json_result(update_recipe_impl(arguments))
+    if name == "set_recipe_image":
+        return json_result(set_recipe_image_impl(arguments))
+    if name == "create_recipe_task":
+        return json_result(create_recipe_task_impl(arguments))
+    if name == "delete_recipe":
+        return json_result(delete_recipe_impl(arguments))
     if name == "create_category":
         return json_result(create_category_impl(arguments))
     if name == "create_project":

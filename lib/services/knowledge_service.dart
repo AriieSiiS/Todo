@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -35,8 +36,27 @@ class KnowledgeService {
   final Directory? _rootOverride;
   final CommonDatabase? _databaseOverride;
   final Random _random = Random.secure();
+  final StreamController<String> _progressChanges =
+      StreamController<String>.broadcast();
   CommonDatabase? _database;
   Directory? _root;
+  int? _observedDataVersion;
+  final Map<String, KnowledgeTreeIndex> _treeIndexes =
+      <String, KnowledgeTreeIndex>{};
+  final Map<String, KnowledgeProgressSnapshot> _progressSnapshots =
+      <String, KnowledgeProgressSnapshot>{};
+  final Map<String, KnowledgeAsset?> _assetCache = <String, KnowledgeAsset?>{};
+  int _treeIndexQueryCount = 0;
+  int _progressSnapshotQueryCount = 0;
+
+  Stream<String> get progressChanges => _progressChanges.stream;
+  int get treeIndexQueryCount => _treeIndexQueryCount;
+  int get progressSnapshotQueryCount => _progressSnapshotQueryCount;
+
+  void resetPerformanceDiagnostics() {
+    _treeIndexQueryCount = 0;
+    _progressSnapshotQueryCount = 0;
+  }
 
   factory KnowledgeService.inMemory() {
     final root = Directory(
@@ -93,6 +113,8 @@ class KnowledgeService {
     database.execute('PRAGMA synchronous = NORMAL');
     database.execute('PRAGMA busy_timeout = 5000');
     _createSchema();
+    _observedDataVersion = _dataVersion();
+    purgeExpiredLeases();
   }
 
   Directory _defaultRoot() {
@@ -139,6 +161,10 @@ class KnowledgeService {
       WHERE canonical_source IS NOT NULL AND canonical_id IS NOT NULL
     ''');
     database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_pages_tree
+      ON knowledge_pages(parent_id, is_trashed, sort_order, title)
+    ''');
+    database.execute('''
       CREATE TABLE IF NOT EXISTS knowledge_owner_links (
         owner_type TEXT NOT NULL,
         owner_id TEXT NOT NULL,
@@ -174,6 +200,10 @@ class KnowledgeService {
       )
     ''');
     database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_collections_page
+      ON knowledge_collections(page_id)
+    ''');
+    database.execute('''
       CREATE TABLE IF NOT EXISTS knowledge_links (
         source_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
         source_block_id TEXT NOT NULL,
@@ -181,6 +211,14 @@ class KnowledgeService {
         target_block_id TEXT,
         PRIMARY KEY(source_page_id, source_block_id, target_page_id, target_block_id)
       )
+    ''');
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_links_target
+      ON knowledge_links(target_page_id, source_page_id)
+    ''');
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_links_source
+      ON knowledge_links(source_page_id, target_page_id)
     ''');
     database.execute('''
       CREATE TABLE IF NOT EXISTS knowledge_revisions (
@@ -235,6 +273,37 @@ class KnowledgeService {
       )
     ''');
     database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_sync_queue_entity
+      ON knowledge_sync_queue(entity_type, entity_id, operation)
+    ''');
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS knowledge_progress (
+        root_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
+        progress_key TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'manual',
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(root_page_id, progress_key)
+      )
+    ''');
+    database.execute('''
+      CREATE INDEX IF NOT EXISTS knowledge_progress_source
+      ON knowledge_progress(root_page_id, source, progress_key)
+    ''');
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS knowledge_import_sources (
+        root_page_id TEXT NOT NULL REFERENCES knowledge_pages(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        path TEXT NOT NULL,
+        slot INTEGER NOT NULL DEFAULT 1,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        last_imported_at TEXT,
+        last_modified_at TEXT,
+        last_error TEXT,
+        PRIMARY KEY(root_page_id, kind)
+      )
+    ''');
+    database.execute('''
       CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
         page_id UNINDEXED,
         title,
@@ -242,9 +311,19 @@ class KnowledgeService {
         properties
       )
     ''');
-    database.execute(
-      "INSERT OR REPLACE INTO knowledge_meta(key, value) VALUES('schema_version', '1')",
+    final schemaRows = database.select(
+      "SELECT value FROM knowledge_meta WHERE key = 'schema_version'",
     );
+    final previousSchema = schemaRows.isEmpty
+        ? 0
+        : int.tryParse(schemaRows.first['value'] as String? ?? '') ?? 0;
+    database.execute(
+      "INSERT OR REPLACE INTO knowledge_meta(key, value) VALUES('schema_version', '3')",
+    );
+    if (previousSchema < 3) {
+      database.execute('ANALYZE');
+      database.execute('PRAGMA optimize');
+    }
   }
 
   Future<void> ensureLibraryRoots(Iterable<LibraryItem> items) async {
@@ -343,6 +422,99 @@ class KnowledgeService {
     return rows.isEmpty ? null : _page(rows.first);
   }
 
+  KnowledgeTreeIndex treeIndex(String rootPageId) {
+    _invalidateCachesAfterExternalWrite();
+    final cached = _treeIndexes[rootPageId];
+    if (cached != null) return cached;
+    _treeIndexQueryCount++;
+    final rows = database.select('''
+      WITH RECURSIVE tree(
+        id, parent_id, title, sort_order, icon, cover_asset_id
+      ) AS (
+        SELECT id, parent_id, title, sort_order, icon, cover_asset_id
+        FROM knowledge_pages
+        WHERE id = ? AND is_trashed = 0
+        UNION ALL
+        SELECT page.id, page.parent_id, page.title, page.sort_order,
+          page.icon, page.cover_asset_id
+        FROM knowledge_pages page
+        JOIN tree parent ON page.parent_id = parent.id
+        WHERE page.is_trashed = 0
+      )
+      SELECT tree.*,
+        EXISTS(
+          SELECT 1 FROM knowledge_pages child
+          WHERE child.parent_id = tree.id AND child.is_trashed = 0
+        ) AS has_children
+      FROM tree
+    ''', <Object?>[rootPageId]);
+    final index = KnowledgeTreeIndex(
+      rootPageId: rootPageId,
+      pages: rows.map(
+        (row) => KnowledgePageOutline(
+          id: row['id'] as String,
+          parentId: row['parent_id'] as String?,
+          title: row['title'] as String,
+          sortOrder: row['sort_order'] as int,
+          hasChildren: (row['has_children'] as int) == 1,
+          icon: row['icon'] as String?,
+          coverAssetId: row['cover_asset_id'] as String?,
+        ),
+      ),
+    );
+    _treeIndexes[rootPageId] = index;
+    return index;
+  }
+
+  List<KnowledgePageOutline> rootPageOutlines() {
+    _invalidateCachesAfterExternalWrite();
+    final rows = database.select('''
+      SELECT page.id, page.parent_id, page.title, page.sort_order,
+        page.icon, page.cover_asset_id,
+        EXISTS(
+          SELECT 1 FROM knowledge_pages child
+          WHERE child.parent_id = page.id AND child.is_trashed = 0
+        ) AS has_children
+      FROM knowledge_pages page
+      WHERE page.parent_id IS NULL AND page.is_trashed = 0
+      ORDER BY page.sort_order, page.title COLLATE NOCASE
+    ''');
+    return rows
+        .map(
+          (row) => KnowledgePageOutline(
+            id: row['id'] as String,
+            parentId: row['parent_id'] as String?,
+            title: row['title'] as String,
+            sortOrder: row['sort_order'] as int,
+            hasChildren: (row['has_children'] as int) == 1,
+            icon: row['icon'] as String?,
+            coverAssetId: row['cover_asset_id'] as String?,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Map<String, Map<String, dynamic>> descendantProperties(String rootPageId) {
+    final rows = database.select('''
+      WITH RECURSIVE tree(id) AS (
+        SELECT id FROM knowledge_pages WHERE id = ? AND is_trashed = 0
+        UNION ALL
+        SELECT page.id FROM knowledge_pages page
+        JOIN tree parent ON page.parent_id = parent.id
+        WHERE page.is_trashed = 0
+      )
+      SELECT page.id, page.properties_json
+      FROM knowledge_pages page
+      JOIN tree ON tree.id = page.id
+    ''', <Object?>[rootPageId]);
+    return <String, Map<String, dynamic>>{
+      for (final row in rows)
+        row['id'] as String:
+            (jsonDecode(row['properties_json'] as String) as Map)
+                .cast<String, dynamic>(),
+    };
+  }
+
   List<KnowledgePage> listPages({bool includeTrashed = false}) {
     final rows = database.select(
       'SELECT * FROM knowledge_pages ${includeTrashed ? '' : 'WHERE is_trashed = 0'} ORDER BY parent_id, sort_order, title COLLATE NOCASE',
@@ -415,6 +587,7 @@ class KnowledgeService {
     ]);
     _indexPage(page);
     _enqueueBackup('page', page.id, 'upsert', page.toJson());
+    _invalidateLocalCaches();
     return page;
   }
 
@@ -438,6 +611,7 @@ class KnowledgeService {
     if (checkpoint) _createRevision(current, reason);
     final now = DateTime.now();
     final next = page.copyWith(
+      title: page.title.trim().isEmpty ? 'Sin título' : page.title.trim(),
       revision: current.revision + 1,
       updatedAt: now,
     );
@@ -452,7 +626,7 @@ class KnowledgeService {
         WHERE id = ?
       ''', <Object?>[
         next.parentId,
-        next.title.trim().isEmpty ? 'Sin título' : next.title.trim(),
+        next.title,
         next.icon,
         next.coverAssetId,
         jsonEncode(next.document),
@@ -475,9 +649,9 @@ class KnowledgeService {
       database.execute('ROLLBACK');
       rethrow;
     }
-    final saved = pageById(page.id)!;
-    _enqueueBackup('page', saved.id, 'upsert', saved.toJson());
-    return saved;
+    _enqueueBackup('page', next.id, 'upsert', next.toJson());
+    _invalidateLocalCaches();
+    return next;
   }
 
   void movePage(String pageId, String? newParentId, {String? leaseHolder}) {
@@ -527,6 +701,7 @@ class KnowledgeService {
       'pageIds': ids.toList(),
       'deletedAt': now,
     });
+    _invalidateLocalCaches();
   }
 
   void trashForOwner(String ownerType, String ownerId) {
@@ -549,15 +724,35 @@ class KnowledgeService {
       'pageId': pageId,
       'pageIds': ids.toList(),
     });
+    _invalidateLocalCaches();
   }
 
-  List<KnowledgeSearchResult> search(String query, {int limit = 50}) {
+  List<KnowledgeSearchResult> search(
+    String query, {
+    int limit = 50,
+    String? rootPageId,
+  }) {
     final normalized = query.trim();
+    final allowedPageIds = rootPageId == null
+        ? null
+        : treeIndex(rootPageId).pagesById.keys.toSet();
     if (normalized.isEmpty) {
-      return listPages()
-          .take(limit)
+      final pages = rootPageId == null
+          ? database.select('''
+                SELECT * FROM knowledge_pages
+                WHERE is_trashed = 0
+                ORDER BY title COLLATE NOCASE
+                LIMIT ?
+              ''', <Object?>[limit]).map(_page)
+          : treeIndex(rootPageId)
+              .pagesById
+              .values
+              .take(limit)
+              .map((outline) => pageById(outline.id))
+              .whereType<KnowledgePage>();
+      return pages
           .map((page) => KnowledgeSearchResult(page: page, snippet: ''))
-          .toList();
+          .toList(growable: false);
     }
     try {
       final rows = database.select('''
@@ -565,8 +760,14 @@ class KnowledgeService {
         FROM knowledge_fts
         WHERE knowledge_fts MATCH ?
         LIMIT ?
-      ''', <Object?>[_ftsQuery(normalized), limit]);
+      ''', <Object?>[
+        _ftsQuery(normalized),
+        rootPageId == null ? limit : limit * 20
+      ]);
       return rows
+          .where((row) =>
+              allowedPageIds == null ||
+              allowedPageIds.contains(row['page_id'] as String))
           .map((row) {
             final page = pageById(row['page_id'] as String)!;
             return KnowledgeSearchResult(
@@ -575,10 +776,12 @@ class KnowledgeService {
             );
           })
           .where((result) => !result.page.isTrashed)
+          .take(limit)
           .toList();
     } catch (_) {
       final lower = normalized.toLowerCase();
       return listPages()
+          .where((page) => _isWithinRoot(page, rootPageId))
           .where((page) =>
               page.title.toLowerCase().contains(lower) ||
               _plainText(page.document).toLowerCase().contains(lower))
@@ -589,6 +792,21 @@ class KnowledgeService {
               ))
           .toList();
     }
+  }
+
+  bool _isWithinRoot(KnowledgePage page, String? rootPageId) {
+    if (rootPageId == null) return true;
+    var current = page;
+    final visited = <String>{};
+    while (visited.add(current.id)) {
+      if (current.id == rootPageId) return true;
+      final parentId = current.parentId;
+      if (parentId == null) return false;
+      final parent = pageById(parentId);
+      if (parent == null) return false;
+      current = parent;
+    }
+    return false;
   }
 
   List<KnowledgePage> backlinks(String pageId) {
@@ -942,6 +1160,234 @@ class KnowledgeService {
     );
   }
 
+  KnowledgeProgressEntry? progressByKey(String rootPageId, String key) {
+    return progressSnapshot(rootPageId).entry(key);
+  }
+
+  KnowledgeProgressSnapshot progressSnapshot(String rootPageId) {
+    _invalidateCachesAfterExternalWrite();
+    final cached = _progressSnapshots[rootPageId];
+    if (cached != null) return cached;
+    _progressSnapshotQueryCount++;
+    final rows = database.select(
+      'SELECT * FROM knowledge_progress WHERE root_page_id = ? ORDER BY progress_key',
+      <Object?>[rootPageId],
+    );
+    final snapshot = KnowledgeProgressSnapshot(
+      rootPageId: rootPageId,
+      entries: rows.map(_progressEntry),
+    );
+    _progressSnapshots[rootPageId] = snapshot;
+    return snapshot;
+  }
+
+  List<KnowledgeProgressEntry> listProgress(
+    String rootPageId, {
+    String? prefix,
+    String? source,
+  }) {
+    final where = <String>['root_page_id = ?'];
+    final values = <Object?>[rootPageId];
+    if (prefix != null && prefix.isNotEmpty) {
+      where.add('progress_key LIKE ?');
+      values.add('$prefix%');
+    }
+    if (source != null && source.isNotEmpty) {
+      where.add('source = ?');
+      values.add(source);
+    }
+    return database
+        .select(
+          'SELECT * FROM knowledge_progress WHERE ${where.join(' AND ')} ORDER BY progress_key',
+          values,
+        )
+        .map(_progressEntry)
+        .toList(growable: false);
+  }
+
+  KnowledgeProgressEntry setProgress({
+    required String rootPageId,
+    required String key,
+    required dynamic value,
+    String source = 'manual',
+    bool enqueueBackup = true,
+  }) {
+    if (pageById(rootPageId) == null) {
+      throw ArgumentError.value(rootPageId, 'rootPageId', 'La raíz no existe.');
+    }
+    final stamp = DateTime.now().toUtc();
+    database.execute('''
+      INSERT INTO knowledge_progress(
+        root_page_id, progress_key, value_json, source, updated_at
+      ) VALUES(?, ?, ?, ?, ?)
+      ON CONFLICT(root_page_id, progress_key) DO UPDATE SET
+        value_json = excluded.value_json,
+        source = excluded.source,
+        updated_at = excluded.updated_at
+    ''', <Object?>[
+      rootPageId,
+      key,
+      jsonEncode(value),
+      source,
+      stamp.toIso8601String(),
+    ]);
+    final entry = KnowledgeProgressEntry(
+      rootPageId: rootPageId,
+      key: key,
+      value: value,
+      source: source,
+      updatedAt: stamp,
+    );
+    if (enqueueBackup) {
+      _enqueueBackup('progress', '$rootPageId:$key', 'upsert', entry.toJson());
+    }
+    _invalidateLocalCaches(progressRootPageId: rootPageId);
+    _progressChanges.add(rootPageId);
+    return entry;
+  }
+
+  List<KnowledgeProgressEntry> replaceProgressFromSource({
+    required String rootPageId,
+    required String source,
+    required Map<String, dynamic> values,
+  }) {
+    if (pageById(rootPageId) == null) {
+      throw ArgumentError.value(rootPageId, 'rootPageId', 'La raíz no existe.');
+    }
+    final stamp = DateTime.now().toUtc();
+    final previousKeys = listProgress(rootPageId, source: source)
+        .map((entry) => entry.key)
+        .toSet();
+    database.execute('BEGIN IMMEDIATE');
+    try {
+      database.execute(
+        'DELETE FROM knowledge_progress WHERE root_page_id = ? AND source = ?',
+        <Object?>[rootPageId, source],
+      );
+      for (final entry in values.entries) {
+        database.execute('''
+          INSERT INTO knowledge_progress(
+            root_page_id, progress_key, value_json, source, updated_at
+          ) VALUES(?, ?, ?, ?, ?)
+          ON CONFLICT(root_page_id, progress_key) DO UPDATE SET
+            value_json = excluded.value_json,
+            source = excluded.source,
+            updated_at = excluded.updated_at
+        ''', <Object?>[
+          rootPageId,
+          entry.key,
+          jsonEncode(entry.value),
+          source,
+          stamp.toIso8601String(),
+        ]);
+      }
+      database.execute('COMMIT');
+    } catch (_) {
+      database.execute('ROLLBACK');
+      rethrow;
+    }
+    final result = listProgress(rootPageId, source: source);
+    final removedKeys = previousKeys.difference(values.keys.toSet()).toList();
+    database.execute('BEGIN IMMEDIATE');
+    try {
+      database.execute('''
+        DELETE FROM knowledge_sync_queue
+        WHERE entity_type = 'progressSource' AND entity_id = ?
+      ''', <Object?>['$rootPageId:$source']);
+      database.execute('''
+        INSERT INTO knowledge_sync_queue(
+          id, entity_type, entity_id, operation, payload_json, created_at
+        ) VALUES(?, 'progressSource', ?, 'replace', ?, ?)
+      ''', <Object?>[
+        _id('sync'),
+        '$rootPageId:$source',
+        jsonEncode(<String, dynamic>{
+          'rootPageId': rootPageId,
+          'source': source,
+          'entries': result.map((entry) => entry.toJson()).toList(),
+          'removedKeys': removedKeys,
+        }),
+        stamp.toIso8601String(),
+      ]);
+      database.execute('COMMIT');
+    } catch (_) {
+      database.execute('ROLLBACK');
+      rethrow;
+    }
+    _invalidateLocalCaches(progressRootPageId: rootPageId);
+    _progressChanges.add(rootPageId);
+    return result;
+  }
+
+  KnowledgeImportSource? importSource(String rootPageId, String kind) {
+    final rows = database.select(
+      'SELECT * FROM knowledge_import_sources WHERE root_page_id = ? AND kind = ? LIMIT 1',
+      <Object?>[rootPageId, kind],
+    );
+    return rows.isEmpty ? null : _importSource(rows.first);
+  }
+
+  List<KnowledgeImportSource> listImportSources({String? kind}) {
+    final rows = kind == null
+        ? database.select(
+            'SELECT * FROM knowledge_import_sources WHERE enabled = 1 ORDER BY root_page_id, kind',
+          )
+        : database.select(
+            'SELECT * FROM knowledge_import_sources WHERE enabled = 1 AND kind = ? ORDER BY root_page_id',
+            <Object?>[kind],
+          );
+    return rows.map(_importSource).toList(growable: false);
+  }
+
+  KnowledgeImportSource saveImportSource(KnowledgeImportSource source) {
+    database.execute('''
+      INSERT INTO knowledge_import_sources(
+        root_page_id, kind, path, slot, enabled, last_imported_at,
+        last_modified_at, last_error
+      ) VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(root_page_id, kind) DO UPDATE SET
+        path = excluded.path,
+        slot = excluded.slot,
+        enabled = excluded.enabled,
+        last_imported_at = excluded.last_imported_at,
+        last_modified_at = excluded.last_modified_at,
+        last_error = excluded.last_error
+    ''', <Object?>[
+      source.rootPageId,
+      source.kind,
+      source.path,
+      source.slot,
+      source.enabled ? 1 : 0,
+      source.lastImportedAt?.toUtc().toIso8601String(),
+      source.lastModifiedAt?.toUtc().toIso8601String(),
+      source.lastError,
+    ]);
+    return source;
+  }
+
+  KnowledgeProgressEntry _progressEntry(Row row) => KnowledgeProgressEntry(
+        rootPageId: row['root_page_id'] as String,
+        key: row['progress_key'] as String,
+        value: jsonDecode(row['value_json'] as String),
+        source: row['source'] as String,
+        updatedAt: DateTime.parse(row['updated_at'] as String),
+      );
+
+  KnowledgeImportSource _importSource(Row row) => KnowledgeImportSource(
+        rootPageId: row['root_page_id'] as String,
+        kind: row['kind'] as String,
+        path: row['path'] as String,
+        slot: row['slot'] as int,
+        enabled: (row['enabled'] as int) == 1,
+        lastImportedAt: row['last_imported_at'] == null
+            ? null
+            : DateTime.tryParse(row['last_imported_at'] as String),
+        lastModifiedAt: row['last_modified_at'] == null
+            ? null
+            : DateTime.tryParse(row['last_modified_at'] as String),
+        lastError: row['last_error'] as String?,
+      );
+
   Future<KnowledgeAsset> importAsset(
     String sourcePath, {
     String? sourceUrl,
@@ -1014,6 +1460,7 @@ class KnowledgeService {
       asset.createdAt.toIso8601String(),
     ]);
     _enqueueBackup('asset', asset.id, 'upsert', asset.toJson());
+    _assetCache[asset.id] = asset;
     return asset;
   }
 
@@ -1108,13 +1555,18 @@ class KnowledgeService {
   }
 
   KnowledgeAsset? assetById(String assetId) {
+    _invalidateCachesAfterExternalWrite();
+    if (_assetCache.containsKey(assetId)) return _assetCache[assetId];
     final rows = database.select(
       'SELECT * FROM knowledge_assets WHERE id = ? LIMIT 1',
       <Object?>[assetId],
     );
-    if (rows.isEmpty) return null;
+    if (rows.isEmpty) {
+      _assetCache[assetId] = null;
+      return null;
+    }
     final row = rows.first;
-    return KnowledgeAsset(
+    final asset = KnowledgeAsset(
       id: row['id'] as String,
       kind: KnowledgeAssetKind.values.byName(row['kind'] as String),
       mimeType: row['mime_type'] as String,
@@ -1127,6 +1579,8 @@ class KnowledgeService {
       remoteStatus: row['remote_status'] as String,
       createdAt: DateTime.parse(row['created_at'] as String),
     );
+    _assetCache[assetId] = asset;
+    return asset;
   }
 
   String absoluteAssetPath(KnowledgeAsset asset) {
@@ -1136,19 +1590,21 @@ class KnowledgeService {
   }
 
   Future<File> exportArchive({String? targetPath}) async {
+    final managed = targetPath == null;
     final now = DateTime.now();
     final file = File(
       targetPath ??
-          '${rootDirectory.path}${Platform.pathSeparator}backups${Platform.pathSeparator}conocimiento-${_dateStamp(now)}.zip',
+          '${rootDirectory.path}${Platform.pathSeparator}backups${Platform.pathSeparator}conocimiento-actual.zip',
     );
     final archive = Archive();
     final manifest = <String, dynamic>{
-      'schemaVersion': 1,
+      'schemaVersion': 3,
       'exportedAt': now.toIso8601String(),
       'pages':
           listPages(includeTrashed: true).map((page) => page.toJson()).toList(),
       'collections': _rawCollections(),
       'assets': _rawAssets(),
+      'progress': _rawProgress(),
     };
     final manifestBytes = utf8.encode(
       const JsonEncoder.withIndent('  ').convert(manifest),
@@ -1169,11 +1625,40 @@ class KnowledgeService {
           ArchiveFile('assets/${asset.relativePath}', bytes.length, bytes));
     }
     final encoded = ZipEncoder().encode(archive);
+    final decoded = ZipDecoder().decodeBytes(encoded);
+    if (decoded.findFile('manifest.json') == null) {
+      throw const FormatException(
+          'La copia generada no contiene el manifiesto.');
+    }
     if (!await file.parent.exists()) await file.parent.create(recursive: true);
     final temporary = File('${file.path}.tmp');
     await temporary.writeAsBytes(encoded, flush: true);
-    await temporary.rename(file.path);
+    final previous = File('${file.path}.previous');
+    if (await previous.exists()) await previous.delete();
+    if (await file.exists()) await file.rename(previous.path);
+    try {
+      await temporary.rename(file.path);
+      if (await previous.exists()) await previous.delete();
+    } catch (_) {
+      if (!await file.exists() && await previous.exists()) {
+        await previous.rename(file.path);
+      }
+      rethrow;
+    }
+    if (managed) await _keepOnlyManagedBackup(file);
     return file;
+  }
+
+  Future<void> _keepOnlyManagedBackup(File current) async {
+    final folder = current.parent;
+    await for (final entity in folder.list()) {
+      if (entity is! File ||
+          entity.path == current.path ||
+          !entity.path.toLowerCase().endsWith('.zip')) {
+        continue;
+      }
+      await entity.delete();
+    }
   }
 
   Future<File> createLocalBackup() async {
@@ -1187,7 +1672,12 @@ class KnowledgeService {
     String operation,
     Map<String, dynamic> payload,
   ) {
-    if (operation == 'upsert') {
+    if (entityType == 'progress') {
+      database.execute('''
+        DELETE FROM knowledge_sync_queue
+        WHERE entity_type = ? AND entity_id = ?
+      ''', <Object?>[entityType, entityId]);
+    } else if (operation == 'upsert') {
       database.execute('''
         DELETE FROM knowledge_sync_queue
         WHERE entity_type = ? AND entity_id = ? AND operation = 'upsert'
@@ -1208,7 +1698,36 @@ class KnowledgeService {
     ]);
   }
 
+  int _dataVersion() {
+    final rows = database.select('PRAGMA data_version');
+    if (rows.isEmpty) return 0;
+    return rows.first.values.first as int? ?? 0;
+  }
+
+  void _invalidateCachesAfterExternalWrite() {
+    final current = _dataVersion();
+    final previous = _observedDataVersion;
+    if (previous != null && previous != current) {
+      _treeIndexes.clear();
+      _progressSnapshots.clear();
+      _assetCache.clear();
+    }
+    _observedDataVersion = current;
+  }
+
+  void _invalidateLocalCaches({String? progressRootPageId}) {
+    _treeIndexes.clear();
+    _assetCache.clear();
+    if (progressRootPageId == null) {
+      _progressSnapshots.clear();
+    } else {
+      _progressSnapshots.remove(progressRootPageId);
+    }
+    _observedDataVersion = _dataVersion();
+  }
+
   void dispose() {
+    _progressChanges.close();
     _database?.close();
     _database = null;
   }
@@ -1416,6 +1935,13 @@ class KnowledgeService {
       .map((row) => assetById(row['id'] as String)!.toJson())
       .toList();
 
+  List<Map<String, dynamic>> _rawProgress() => database
+      .select(
+        'SELECT * FROM knowledge_progress ORDER BY root_page_id, progress_key',
+      )
+      .map((row) => _progressEntry(row).toJson())
+      .toList(growable: false);
+
   String _pageMarkdown(KnowledgePage page) {
     final parent = page.parentId == null ? '' : 'parentId: ${page.parentId}\n';
     return '---\nid: ${page.id}\n${parent}title: ${jsonEncode(page.title)}\nrevision: ${page.revision}\n---\n\n# ${page.title}\n\n${_plainText(page.document)}\n';
@@ -1535,7 +2061,4 @@ class KnowledgeService {
         (a == 172 && b >= 16 && b <= 31) ||
         (a == 192 && b == 168);
   }
-
-  String _dateStamp(DateTime value) =>
-      '${value.year}${value.month.toString().padLeft(2, '0')}${value.day.toString().padLeft(2, '0')}-${value.hour.toString().padLeft(2, '0')}${value.minute.toString().padLeft(2, '0')}${value.second.toString().padLeft(2, '0')}';
 }

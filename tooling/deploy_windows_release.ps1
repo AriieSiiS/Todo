@@ -16,10 +16,27 @@ if (-not (Test-Path -LiteralPath (Join-Path $target 'todo.exe') -PathType Leaf))
   throw 'La instalación de destino no contiene todo.exe.'
 }
 
-Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
-
 $mismatches = [System.Collections.Generic.List[string]]::new()
+$copiedFiles = [System.Collections.Generic.List[string]]::new()
 $sourceFiles = Get-ChildItem -LiteralPath $source -File -Recurse
+foreach ($sourceFile in $sourceFiles) {
+  $relativePath = $sourceFile.FullName.Substring($source.Length).TrimStart('\')
+  $targetFile = Join-Path $target $relativePath
+  if (Test-Path -LiteralPath $targetFile -PathType Leaf) {
+    $sourceHash = (Get-FileHash -LiteralPath $sourceFile.FullName -Algorithm SHA256).Hash
+    $targetHash = (Get-FileHash -LiteralPath $targetFile -Algorithm SHA256).Hash
+    if ($sourceHash -eq $targetHash) {
+      continue
+    }
+  }
+  $targetParent = Split-Path -Parent $targetFile
+  if (-not (Test-Path -LiteralPath $targetParent -PathType Container)) {
+    New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
+  }
+  Copy-Item -LiteralPath $sourceFile.FullName -Destination $targetFile -Force
+  $copiedFiles.Add($relativePath)
+}
+
 foreach ($sourceFile in $sourceFiles) {
   $relativePath = $sourceFile.FullName.Substring($source.Length).TrimStart('\')
   $targetFile = Join-Path $target $relativePath
@@ -39,6 +56,7 @@ $result = [ordered]@{
   source = $source
   target = $target
   verifiedFiles = $sourceFiles.Count
+  copiedFiles = $copiedFiles
   mismatches = $mismatches
   executableSha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
   executableSize = (Get-Item -LiteralPath $executable).Length

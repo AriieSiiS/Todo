@@ -4,10 +4,12 @@ import '../entities/category.dart';
 import '../entities/calendar_models.dart';
 import '../entities/enums.dart';
 import '../entities/financial.dart';
+import '../entities/household.dart';
 import '../entities/library_goal.dart';
 import '../entities/library_item.dart';
 import '../entities/project.dart';
 import '../entities/quick_note.dart';
+import '../entities/recipe.dart';
 import '../entities/settings.dart';
 import '../entities/task.dart';
 import '../entities/wardrobe.dart';
@@ -29,6 +31,8 @@ class ExportSnapshot {
     this.wardrobeWearLogs = const <WardrobeWearLog>[],
     this.wardrobePlanEntries = const <WardrobePlanEntry>[],
     this.wardrobePackingLists = const <WardrobePackingList>[],
+    this.householdItems = const <HouseholdItem>[],
+    this.recipes = const <Recipe>[],
     required this.calendarEvents,
     required this.daySettings,
     required this.notificationSettings,
@@ -52,6 +56,8 @@ class ExportSnapshot {
   final List<WardrobeWearLog> wardrobeWearLogs;
   final List<WardrobePlanEntry> wardrobePlanEntries;
   final List<WardrobePackingList> wardrobePackingLists;
+  final List<HouseholdItem> householdItems;
+  final List<Recipe> recipes;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -82,6 +88,8 @@ class ExportSnapshot {
           wardrobePlanEntries.map((item) => item.toJson()).toList(),
       'wardrobePackingLists':
           wardrobePackingLists.map((item) => item.toJson()).toList(),
+      'householdItems': householdItems.map((item) => item.toJson()).toList(),
+      'recipes': recipes.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),

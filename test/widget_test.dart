@@ -185,6 +185,129 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('biblioteca mantiene el filtro de tipo al cambiar de estado', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'pending-game',
+            type: LibraryItemType.game,
+            title: 'Juego pendiente',
+            status: LibraryItemStatus.pending,
+            createdAt: DateTime(2026, 8, 20),
+            updatedAt: DateTime(2026, 8, 20),
+          ),
+          LibraryItem(
+            id: 'in-progress-game',
+            type: LibraryItemType.game,
+            title: 'Juego en curso',
+            status: LibraryItemStatus.inProgress,
+            createdAt: DateTime(2026, 8, 21),
+            updatedAt: DateTime(2026, 8, 21),
+          ),
+          LibraryItem(
+            id: 'in-progress-book',
+            type: LibraryItemType.book,
+            title: 'Libro en curso',
+            status: LibraryItemStatus.inProgress,
+            createdAt: DateTime(2026, 8, 22),
+            updatedAt: DateTime(2026, 8, 22),
+          ),
+        ],
+        libraryStatusView: LibraryItemStatus.pending,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+    });
+
+    await tester.tap(find.text('Juegos').first);
+    await tester.pump();
+    expect(find.text('Juego pendiente'), findsOneWidget);
+
+    await tester.tap(find.text('En curso').first);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(controller.libraryStatusView, LibraryItemStatus.inProgress);
+    expect(find.text('Juego en curso'), findsOneWidget);
+    expect(find.text('Libro en curso'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('el detalle de un propósito da protagonismo a la portada', (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now();
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryGoals: [
+          LibraryGoal(
+            id: 'goal-prey',
+            type: LibraryItemType.game,
+            title: 'Prey',
+            targetYear: now.year,
+            platform: 'PC',
+            releaseYear: 2017,
+            format: 'Digital',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTodoTheme(),
+        home: Scaffold(body: LibraryPage(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Propósitos'));
+    await tester.pump();
+    await tester.tap(find.text('Prey').first);
+    await tester.pumpAndSettle();
+
+    final cover = find.byKey(
+      const ValueKey('library-goal-detail-cover'),
+    );
+    expect(cover, findsOneWidget);
+    expect(tester.getSize(cover), const Size(244, 416));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('weekly calendar opens today and navigates between weeks', (
     WidgetTester tester,
   ) async {
