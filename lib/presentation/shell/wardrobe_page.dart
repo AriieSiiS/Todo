@@ -24,44 +24,32 @@ class _WardrobePageState extends State<WardrobePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ropa',
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${controller.wardrobeItems.where((item) => !item.archived).length} prendas · '
-                        '${controller.wardrobeOutfits.length} conjuntos',
-                        style: TextStyle(color: context.visuals.textMuted),
-                      ),
-                    ],
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: () => _showCreateWardrobeItem(context, controller),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Añadir prenda'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const TabBar(
-              isScrollable: true,
-              tabs: [
-                Tab(text: 'Armario'),
-                Tab(text: 'Conjuntos'),
-                Tab(text: 'Planificador'),
-                Tab(text: 'Lavandería'),
-                Tab(text: 'Maletas'),
-                Tab(text: 'Estadísticas'),
-                Tab(text: 'Importaciones'),
-              ],
+            _PageHeader(
+              title: 'Ropa',
+              subtitle:
+                  '${controller.wardrobeItems.where((item) => !item.archived).length} prendas · '
+                  '${controller.wardrobeOutfits.length} conjuntos',
+              compact: true,
+              pinTrailingToEdge: true,
+              trailing: _HeaderActionButton(
+                label: 'Añadir prenda',
+                icon: Icons.add_rounded,
+                onPressed: () => _showCreateWardrobeItem(context, controller),
+              ),
             ),
             const SizedBox(height: 14),
+            const _SectionTabBar(
+              labels: [
+                'Armario',
+                'Conjuntos',
+                'Planificador',
+                'Lavandería',
+                'Maletas',
+                'Estadísticas',
+                'Importaciones',
+              ],
+            ),
+            const SizedBox(height: 12),
             Expanded(
               child: TabBarView(
                 children: [
@@ -145,10 +133,10 @@ class _WardrobePageState extends State<WardrobePage> {
                   : controller.wardrobeItems
                       .where((item) => !item.archived && item.category == value)
                       .length;
-              return FilterChip(
-                label: Text('$value ($count)'),
+              return _FilterPill(
+                label: '$value ($count)',
                 selected: selectedCategory == value,
-                onSelected: (_) => setState(() => _category = value),
+                onTap: () => setState(() => _category = value),
               );
             },
           ),
@@ -162,14 +150,6 @@ class _WardrobePageState extends State<WardrobePage> {
           ),
         ),
         const SizedBox(height: 10),
-        if (controller.wardrobeItems.isNotEmpty &&
-            selectedCategory == 'Todas' &&
-            normalizedQuery.isEmpty)
-          _SuggestionStrip(controller: controller),
-        if (controller.wardrobeItems.isNotEmpty &&
-            selectedCategory == 'Todas' &&
-            normalizedQuery.isEmpty)
-          const SizedBox(height: 14),
         Expanded(
           child: items.isEmpty
               ? _WardrobeEmpty(
@@ -284,39 +264,6 @@ class _WardrobeItemCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SuggestionStrip extends StatelessWidget {
-  const _SuggestionStrip({required this.controller});
-  final TodoWorkspace controller;
-  @override
-  Widget build(BuildContext context) {
-    final suggestions = controller.wardrobeSuggestions(limit: 5);
-    if (suggestions.isEmpty) return const SizedBox.shrink();
-    return Row(
-      children: [
-        const Icon(Icons.auto_awesome_rounded, size: 18),
-        const SizedBox(width: 8),
-        const Text('Sugerencias: ',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-                children: suggestions
-                    .map((item) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ActionChip(
-                              label: Text(item.name),
-                              onPressed: () => _showEditWardrobeItem(
-                                  context, controller, item)),
-                        ))
-                    .toList()),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -771,11 +771,15 @@ class _PageHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.trailing,
+    this.compact = false,
+    this.pinTrailingToEdge = false,
   });
 
   final String title;
   final String subtitle;
   final Widget? trailing;
+  final bool compact;
+  final bool pinTrailingToEdge;
 
   @override
   Widget build(BuildContext context) {
@@ -795,7 +799,15 @@ class _PageHeader extends StatelessWidget {
             ),
           ),
         Flexible(
-          child: Text(title, style: Theme.of(context).textTheme.displaySmall),
+          child: Text(
+            title,
+            style: compact
+                ? Theme.of(context)
+                    .textTheme
+                    .displaySmall
+                    ?.copyWith(fontSize: 40, height: 1)
+                : Theme.of(context).textTheme.displaySmall,
+          ),
         ),
       ],
     );
@@ -825,8 +837,92 @@ class _PageHeader extends StatelessWidget {
           ),
         ),
         if (trailing != null) const SizedBox(width: 12),
-        if (trailing != null) Flexible(child: trailing!),
+        if (trailing != null)
+          if (pinTrailingToEdge) trailing! else Flexible(child: trailing!),
       ],
+    );
+  }
+}
+
+class _SectionTabBar extends StatelessWidget {
+  const _SectionTabBar({required this.labels});
+
+  final List<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return TabBar(
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      dividerColor: Colors.transparent,
+      indicatorSize: TabBarIndicatorSize.label,
+      indicator: UnderlineTabIndicator(
+        borderSide: BorderSide(
+          color: visuals.isPhantom ? visuals.accent : const Color(0xFF70835D),
+          width: 2,
+        ),
+      ),
+      labelColor:
+          visuals.isPhantom ? visuals.textStrong : const Color(0xFF51693E),
+      unselectedLabelColor: visuals.textMuted,
+      labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      unselectedLabelStyle:
+          const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      labelPadding: const EdgeInsets.only(right: 26),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      tabs: [
+        for (final label in labels)
+          Tab(
+              height: 42,
+              child:
+                  Align(alignment: Alignment.centerLeft, child: Text(label))),
+      ],
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? (visuals.isPhantom ? visuals.accent : const Color(0xFFE8F1DD))
+              : (visuals.isPhantom ? visuals.panel : Colors.white),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: visuals.pageBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: visuals.textStrong,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
