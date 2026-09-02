@@ -123,6 +123,7 @@ class TodoWorkspace extends ChangeNotifier {
       <WardrobeImportBatch>[];
   final List<HouseholdItem> _householdItems = <HouseholdItem>[];
   final List<Recipe> _recipes = <Recipe>[];
+  final List<WeeklyMenu> _weeklyMenus = <WeeklyMenu>[];
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
   final WardrobeAssetService _wardrobeAssets = WardrobeAssetService();
   final HouseholdAssetService _householdAssets = HouseholdAssetService();
@@ -196,6 +197,8 @@ class TodoWorkspace extends ChangeNotifier {
   List<HouseholdItem> get householdItems =>
       List<HouseholdItem>.unmodifiable(_householdItems);
   List<Recipe> get recipes => List<Recipe>.unmodifiable(_recipes);
+  List<WeeklyMenu> get weeklyMenus =>
+      List<WeeklyMenu>.unmodifiable(_weeklyMenus);
   List<CalendarEventModel> get calendarEvents =>
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
@@ -514,6 +517,7 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobePackingLists: wardrobePackingLists,
       householdItems: householdItems,
       recipes: recipes,
+      weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -1179,6 +1183,268 @@ class TodoWorkspace extends ChangeNotifier {
       if (recipe.id == id) return recipe;
     }
     return null;
+  }
+
+  WeeklyMenu? weeklyMenuById(String id) {
+    for (final menu in _weeklyMenus) {
+      if (menu.id == id) return menu;
+    }
+    return null;
+  }
+
+  List<Recipe> recipesForWeeklyMenu(WeeklyMenu menu) => menu.allRecipeIds
+      .map(recipeById)
+      .whereType<Recipe>()
+      .toList(growable: false);
+
+  Future<String> weeklyMenuImageAbsolutePath(
+    WeeklyMenu menu, {
+    bool thumbnail = true,
+  }) {
+    final path = thumbnail && menu.thumbnailPath.isNotEmpty
+        ? menu.thumbnailPath
+        : menu.imagePath;
+    return _recipeAssets.absolutePath(path);
+  }
+
+  WeeklyMenu createWeeklyMenu({
+    required String title,
+    String description = '',
+    int people = 1,
+    int totalPriceCents = 0,
+    List<String> recipeIds = const <String>[],
+    List<WeeklyMenuEntry> mealEntries = const <WeeklyMenuEntry>[],
+    List<WeeklyMenuShoppingItem> shoppingItems =
+        const <WeeklyMenuShoppingItem>[],
+    String sourceUrl = '',
+    String imageSourceUrl = '',
+  }) {
+    final instant = DateTime.now();
+    final validRecipeIds =
+        recipeIds.where((id) => recipeById(id) != null).toSet().toList();
+    final validEntries = mealEntries
+        .where((entry) => recipeById(entry.recipeId) != null)
+        .toList();
+    final resolvedEntries = validEntries.isNotEmpty
+        ? validEntries
+        : <WeeklyMenuEntry>[
+            for (var index = 0; index < validRecipeIds.length; index++)
+              WeeklyMenuEntry(
+                id: _id('weekly-meal'),
+                day: WeeklyMenuDay.values[index % WeeklyMenuDay.values.length],
+                mealType: WeeklyMealType.lunch,
+                recipeId: validRecipeIds[index],
+              ),
+          ];
+    final menu = WeeklyMenu(
+      id: _id('weekly-menu'),
+      title: title.trim().isEmpty ? 'Menú semanal' : title.trim(),
+      description: description.trim(),
+      people: people.clamp(1, 1000),
+      totalPriceCents: totalPriceCents.clamp(0, 100000000),
+      recipeIds:
+          resolvedEntries.map((entry) => entry.recipeId).toSet().toList(),
+      shoppingListRecipeIds: shoppingItems.isEmpty
+          ? const <String>[]
+          : resolvedEntries.map((entry) => entry.recipeId).toSet().toList(),
+      mealEntries: resolvedEntries,
+      shoppingItems:
+          shoppingItems.where((item) => item.name.trim().isNotEmpty).toList(),
+      sourceUrl: sourceUrl.trim(),
+      imageSourceUrl: imageSourceUrl.trim(),
+      createdAt: instant,
+      updatedAt: instant,
+    );
+    _weeklyMenus.add(menu);
+    _commit();
+    return menu;
+  }
+
+  void setWeeklyMenuMeal(
+    String menuId, {
+    required WeeklyMenuDay day,
+    required WeeklyMealType mealType,
+    String? recipeId,
+  }) {
+    final index = _weeklyMenus.indexWhere((menu) => menu.id == menuId);
+    if (index == -1) return;
+    final entries = _weeklyMenus[index]
+        .mealEntries
+        .where((entry) => entry.day != day || entry.mealType != mealType)
+        .toList();
+    if (recipeId != null && recipeById(recipeId) != null) {
+      entries.add(WeeklyMenuEntry(
+        id: _id('weekly-meal'),
+        day: day,
+        mealType: mealType,
+        recipeId: recipeId,
+      ));
+    }
+    entries.sort((left, right) {
+      final dayOrder = left.day.index.compareTo(right.day.index);
+      return dayOrder != 0
+          ? dayOrder
+          : left.mealType.index.compareTo(right.mealType.index);
+    });
+    _weeklyMenus[index] = _weeklyMenus[index].copyWith(
+      recipeIds: entries.map((entry) => entry.recipeId).toSet().toList(),
+      mealEntries: entries,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+  }
+
+  TaskModel createWeeklyMenuShoppingTask(
+    String menuId, {
+    DateTime? scheduledAt,
+    List<String> selectedEntryIds = const <String>[],
+  }) {
+    final menu = weeklyMenuById(menuId);
+    if (menu == null) throw StateError('No se encuentra el menú semanal.');
+    final availableEntries = menu.mealEntries
+        .where((entry) => recipeById(entry.recipeId) != null)
+        .toList();
+    final requestedIds = selectedEntryIds.toSet();
+    final selectedEntries = requestedIds.isEmpty
+        ? availableEntries
+        : availableEntries
+            .where((entry) => requestedIds.contains(entry.id))
+            .toList();
+    if (selectedEntries.isEmpty) {
+      throw StateError('Selecciona al menos una comida del menú.');
+    }
+    final selectedIds = selectedEntries.map((entry) => entry.id).toSet();
+    final completeMenu = availableEntries.isNotEmpty &&
+        selectedIds.length == availableEntries.length &&
+        availableEntries.every((entry) => selectedIds.contains(entry.id));
+    final curatedSelection =
+        _weeklyMenuSelectionUsesCuratedList(menu, selectedEntries);
+    final shoppingItems = curatedSelection
+        ? menu.shoppingItems
+        : _shoppingItemsForWeeklyMenuEntries(selectedEntries);
+    if (shoppingItems.isEmpty) {
+      throw StateError('Las recetas elegidas no tienen ingredientes.');
+    }
+    final category = _ensureTaskCategory(
+      'Compras',
+      const Color(0xFFDBA62D),
+      Icons.shopping_cart_rounded,
+    );
+    final date = scheduledAt ?? logicalDate();
+    final price = curatedSelection && menu.totalPriceCents > 0
+        ? ' · Presupuesto aproximado: ${_formatEuroCents(menu.totalPriceCents)}.'
+        : '';
+    final selectedDays = selectedEntries.map((entry) => entry.day).toSet();
+    final scope = completeMenu
+        ? 'semana completa'
+        : '${selectedEntries.length} ${selectedEntries.length == 1 ? 'comida' : 'comidas'} · '
+            '${selectedDays.length} ${selectedDays.length == 1 ? 'día' : 'días'}';
+    final task = createTask(
+      title: completeMenu
+          ? 'Comprar ${menu.title}'
+          : 'Comprar selección de ${menu.title}',
+      description: 'Lista de compra del menú para ${menu.people} '
+          '${menu.people == 1 ? 'persona' : 'personas'} · $scope$price',
+      categoryIds: <String>[category.id],
+      scheduledAt: date,
+    );
+    final seen = <String>{};
+    for (final item in shoppingItems) {
+      final key = item.name.trim().toLowerCase();
+      if (key.isEmpty || !seen.add(key)) continue;
+      createTask(
+        title: item.name.trim(),
+        description: <String>[
+          if (item.group.trim().isNotEmpty) item.group.trim(),
+          if (item.priceCents > 0)
+            'Precio orientativo: ${_formatEuroCents(item.priceCents)}',
+        ].join(' · '),
+        categoryIds: <String>[category.id],
+        scheduledAt: date,
+        parentTaskId: task.id,
+      );
+    }
+    return taskById(task.id) ?? task;
+  }
+
+  List<WeeklyMenuShoppingItem> weeklyMenuShoppingItemsForSelection(
+    String menuId,
+    Iterable<String> selectedEntryIds,
+  ) {
+    final menu = weeklyMenuById(menuId);
+    if (menu == null) return const <WeeklyMenuShoppingItem>[];
+    final selectedIds = selectedEntryIds.toSet();
+    if (selectedIds.isEmpty) return const <WeeklyMenuShoppingItem>[];
+    final available = menu.mealEntries
+        .where((entry) => recipeById(entry.recipeId) != null)
+        .toList();
+    final selected =
+        available.where((entry) => selectedIds.contains(entry.id)).toList();
+    final curatedSelection =
+        _weeklyMenuSelectionUsesCuratedList(menu, selected);
+    return curatedSelection
+        ? List<WeeklyMenuShoppingItem>.unmodifiable(menu.shoppingItems)
+        : List<WeeklyMenuShoppingItem>.unmodifiable(
+            _shoppingItemsForWeeklyMenuEntries(selected),
+          );
+  }
+
+  bool weeklyMenuSelectionUsesCuratedList(
+    String menuId,
+    Iterable<String> selectedEntryIds,
+  ) {
+    final menu = weeklyMenuById(menuId);
+    if (menu == null) return false;
+    final selectedIds = selectedEntryIds.toSet();
+    final selected = menu.mealEntries
+        .where((entry) => selectedIds.contains(entry.id))
+        .toList();
+    return _weeklyMenuSelectionUsesCuratedList(menu, selected);
+  }
+
+  bool _weeklyMenuSelectionUsesCuratedList(
+    WeeklyMenu menu,
+    List<WeeklyMenuEntry> selectedEntries,
+  ) {
+    if (menu.shoppingItems.isEmpty || menu.shoppingListRecipeIds.isEmpty) {
+      return false;
+    }
+    final selectedRecipeIds =
+        selectedEntries.map((entry) => entry.recipeId).toList();
+    final selectedSet = selectedRecipeIds.toSet();
+    final curatedSet = menu.shoppingListRecipeIds.toSet();
+    return selectedRecipeIds.length == selectedSet.length &&
+        selectedSet.length == curatedSet.length &&
+        selectedSet.containsAll(curatedSet);
+  }
+
+  List<WeeklyMenuShoppingItem> _shoppingItemsForWeeklyMenuEntries(
+    Iterable<WeeklyMenuEntry> entries,
+  ) {
+    final items = <WeeklyMenuShoppingItem>[];
+    final seen = <String>{};
+    final recipeIds = entries.map((entry) => entry.recipeId).toSet();
+    for (final recipeId in recipeIds) {
+      final recipe = recipeById(recipeId);
+      if (recipe == null) continue;
+      for (final ingredient in recipe.ingredients) {
+        for (final label
+            in _recipeIngredientClassifier.shoppingLabels(ingredient)) {
+          final key = label.trim().toLowerCase();
+          if (key.isEmpty || !seen.add(key)) continue;
+          items.add(WeeklyMenuShoppingItem(
+            name: label.trim(),
+            group: recipe.title,
+          ));
+        }
+      }
+    }
+    return items;
+  }
+
+  String _formatEuroCents(int cents) {
+    final euros = cents / 100;
+    return '${euros.toStringAsFixed(cents % 100 == 0 ? 0 : 2).replaceAll('.', ',')} €';
   }
 
   Future<String> recipeImageAbsolutePath(
@@ -3536,6 +3802,9 @@ class TodoWorkspace extends ChangeNotifier {
     _recipes
       ..clear()
       ..addAll(snapshot.recipes);
+    _weeklyMenus
+      ..clear()
+      ..addAll(snapshot.weeklyMenus);
     _calendarEvents
       ..clear()
       ..addAll(snapshot.calendarEvents);
@@ -3764,6 +4033,25 @@ class TodoWorkspace extends ChangeNotifier {
       }
     }
 
+    for (var i = 0; i < _weeklyMenus.length; i++) {
+      final menu = _weeklyMenus[i];
+      final cleaned = menu.copyWith(
+        title: _cleanSpanishText(menu.title),
+        description: _cleanSpanishText(menu.description),
+        shoppingItems: menu.shoppingItems
+            .map((item) => WeeklyMenuShoppingItem(
+                  name: _cleanSpanishText(item.name),
+                  group: _cleanSpanishText(item.group),
+                  priceCents: item.priceCents,
+                ))
+            .toList(),
+      );
+      if (cleaned.toJson().toString() != menu.toJson().toString()) {
+        _weeklyMenus[i] = cleaned;
+        changed = true;
+      }
+    }
+
     return changed;
   }
 
@@ -3888,6 +4176,7 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobeImportBatches: wardrobeImportBatches,
       householdItems: householdItems,
       recipes: recipes,
+      weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       notificationSettings: notificationSettings,
@@ -4144,6 +4433,7 @@ class TodoWorkspace extends ChangeNotifier {
     _wardrobeImportBatches.clear();
     _householdItems.clear();
     _recipes.clear();
+    _weeklyMenus.clear();
     _calendarEvents.clear();
     _daySettings = const DaySettings();
     _notificationSettings = const DeviceNotificationSettings();

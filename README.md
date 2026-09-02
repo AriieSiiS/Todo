@@ -76,6 +76,12 @@ Dentro de `Recetas`, el selector superior separa las recetas individuales de
 los `Menús semanales`. Cada menú enlaza sus siete recetas, conserva la lista de
 compra agrupada y los precios aproximados, y puede generar una tarea de Compras
 con un producto por subtarea sin duplicar las recetas del catálogo.
+La compra parte con toda la semana marcada, pero admite seleccionar días o
+momentos concretos (`Desayuno`, `Comida`, `Merienda` y `Cena`). Para una selección
+parcial o una semana editada, la lista se recalcula desde los ingredientes de
+las recetas elegidas; mientras el menú original no cambie, la semana completa
+mantiene su compra consolidada y su presupuesto. El editor semanal permite
+asignar, cambiar o quitar una receta en cualquiera de los 28 huecos del plan.
 
 El MCP expone el mismo flujo mediante `create_recipe`, `update_recipe`,
 `set_recipe_image`, `create_recipe_task`, `list_recipes` y `delete_recipe`.

@@ -36,6 +36,7 @@ class AppStateSnapshot {
     this.wardrobeImportBatches = const <WardrobeImportBatch>[],
     this.householdItems = const <HouseholdItem>[],
     this.recipes = const <Recipe>[],
+    this.weeklyMenus = const <WeeklyMenu>[],
     required this.daySettings,
     required this.notificationSettings,
     required this.calendarSettings,
@@ -70,6 +71,7 @@ class AppStateSnapshot {
   final List<WardrobeImportBatch> wardrobeImportBatches;
   final List<HouseholdItem> householdItems;
   final List<Recipe> recipes;
+  final List<WeeklyMenu> weeklyMenus;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -115,6 +117,7 @@ class AppStateSnapshot {
           wardrobeImportBatches.map((item) => item.toJson()).toList(),
       'householdItems': householdItems.map((item) => item.toJson()).toList(),
       'recipes': recipes.map((item) => item.toJson()).toList(),
+      'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
@@ -223,6 +226,10 @@ class AppStateSnapshot {
               .toList(),
       recipes: (json['recipes'] as List<dynamic>? ?? const <dynamic>[])
           .map((item) => Recipe.fromJson(
+              (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+      weeklyMenus: (json['weeklyMenus'] as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => WeeklyMenu.fromJson(
               (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
           .toList(),
       calendarEvents:

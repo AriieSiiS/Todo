@@ -33,6 +33,7 @@ class ExportSnapshot {
     this.wardrobePackingLists = const <WardrobePackingList>[],
     this.householdItems = const <HouseholdItem>[],
     this.recipes = const <Recipe>[],
+    this.weeklyMenus = const <WeeklyMenu>[],
     required this.calendarEvents,
     required this.daySettings,
     required this.notificationSettings,
@@ -58,6 +59,7 @@ class ExportSnapshot {
   final List<WardrobePackingList> wardrobePackingLists;
   final List<HouseholdItem> householdItems;
   final List<Recipe> recipes;
+  final List<WeeklyMenu> weeklyMenus;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final DeviceNotificationSettings notificationSettings;
@@ -90,6 +92,7 @@ class ExportSnapshot {
           wardrobePackingLists.map((item) => item.toJson()).toList(),
       'householdItems': householdItems.map((item) => item.toJson()).toList(),
       'recipes': recipes.map((item) => item.toJson()).toList(),
+      'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),

@@ -150,6 +150,8 @@ class McpServerTest(unittest.TestCase):
             "set_recipe_image",
             "create_recipe_task",
             "delete_recipe",
+            "list_weekly_menus",
+            "create_weekly_menu_task",
             "get_knowledge_contract",
             "list_knowledge_pages",
             "get_knowledge_page",
@@ -578,6 +580,62 @@ class McpServerTest(unittest.TestCase):
             ],
         )
         self.assertEqual(task["task"]["title"], "Comprar ingredientes para Ropa vieja canaria")
+
+    def test_weekly_menu_list_and_shopping_task(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        state = self.server.load_state()
+        state["recipes"] = [
+            {
+                "id": "recipe-salmon",
+                "title": "Bowl de salmón",
+                "ingredients": [
+                    {"text": "500 g de salmón", "group": "", "kind": "ingredient"},
+                    {"text": "1/2 cucharadita de sal", "group": "", "kind": "condiment"},
+                ],
+            },
+            {
+                "id": "recipe-aguacate",
+                "title": "Ensalada de aguacate",
+                "ingredients": [
+                    {"text": "2 aguacates", "group": "", "kind": "ingredient"},
+                ],
+            },
+        ]
+        state["weeklyMenus"] = [{
+            "id": "weekly-menu-01",
+            "title": "Menú semanal 01",
+            "people": 1,
+            "totalPriceCents": 2200,
+            "recipeIds": ["recipe-salmon", "recipe-aguacate"],
+            "mealEntries": [
+                {"id": "meal-1", "day": "monday", "mealType": "lunch", "recipeId": "recipe-salmon"},
+                {"id": "meal-2", "day": "tuesday", "mealType": "dinner", "recipeId": "recipe-aguacate"},
+            ],
+            "shoppingItems": [
+                {"name": "Salmón", "group": "Proteínas", "priceCents": 540},
+                {"name": "Aguacate", "group": "Frutas y verduras", "priceCents": 88},
+            ],
+            "archived": False,
+        }]
+        self.server.save_state(state)
+
+        menus = self.call("list_weekly_menus")
+        task = self.call("create_weekly_menu_task", {"menu_id": "weekly-menu-01"})
+        partial = self.call("create_weekly_menu_task", {
+            "menu_id": "weekly-menu-01", "entry_ids": ["meal-1"]
+        })
+
+        self.assertEqual(len(menus), 1)
+        self.assertEqual(task["task"]["title"], "Comprar Menú semanal 01")
+        self.assertEqual(
+            [subtask["title"] for subtask in task["subtasks"]],
+            ["Salmón", "Aguacate"],
+        )
+        self.assertEqual(partial["task"]["title"], "Comprar selección de Menú semanal 01")
+        self.assertEqual(
+            [subtask["title"] for subtask in partial["subtasks"]],
+            ["500 g de salmón", "Sal"],
+        )
 
 
 if __name__ == "__main__":

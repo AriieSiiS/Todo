@@ -118,6 +118,12 @@ El recetario puede gestionarse sin abrir la interfaz:
 4. `list_recipes`, `update_recipe` y `delete_recipe` completan el ciclo de
    consulta y mantenimiento.
 
+Los menús están separados de las recetas individuales en `weeklyMenus`.
+`list_weekly_menus` devuelve su planificación, compra y recetas enlazadas;
+`create_weekly_menu_task` crea una tarea de Compras con todos sus productos. Si
+se envía `entry_ids`, recalcula la compra usando únicamente las comidas
+seleccionadas; sin ese argumento utiliza la semana completa.
+
 Flutter también puede importar directamente archivos JSON y direcciones web
 que publiquen una receta compatible con schema.org.
 

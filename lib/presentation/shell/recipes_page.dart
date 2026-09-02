@@ -1,5 +1,7 @@
 part of 'app_shell.dart';
 
+enum _RecipesArea { recipes, weeklyMenus }
+
 class RecipesPage extends StatefulWidget {
   const RecipesPage({required this.controller, super.key});
 
@@ -14,6 +16,7 @@ class _RecipesPageState extends State<RecipesPage> {
   String _category = 'Todas';
   bool _favoritesOnly = false;
   bool _importing = false;
+  _RecipesArea _area = _RecipesArea.recipes;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -21,6 +24,10 @@ class _RecipesPageState extends State<RecipesPage> {
   Widget build(BuildContext context) {
     final active =
         controller.recipes.where((recipe) => !recipe.archived).toList();
+    final weeklyMenus = controller.weeklyMenus
+        .where((menu) => !menu.archived)
+        .toList()
+      ..sort((left, right) => right.title.compareTo(left.title));
     final categories = active
         .map((recipe) => recipe.category.trim())
         .where((value) => value.isNotEmpty)
@@ -71,167 +78,211 @@ class _RecipesPageState extends State<RecipesPage> {
                         style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${active.length} ${active.length == 1 ? 'receta' : 'recetas'} · '
-                      '$favoriteCount ${favoriteCount == 1 ? 'favorita' : 'favoritas'}',
+                      _area == _RecipesArea.recipes
+                          ? '${active.length} ${active.length == 1 ? 'receta' : 'recetas'} · '
+                              '$favoriteCount ${favoriteCount == 1 ? 'favorita' : 'favoritas'}'
+                          : '${weeklyMenus.length} '
+                              '${weeklyMenus.length == 1 ? 'menú planificado' : 'menús planificados'}',
                       style: TextStyle(color: context.visuals.textMuted),
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                enabled: !_importing,
-                tooltip: 'Importar receta',
-                onSelected: (value) {
-                  if (value == 'url') {
-                    _importFromUrl();
-                  } else {
-                    _importFromFile();
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'url',
-                    child: ListTile(
-                      leading: Icon(Icons.link_rounded),
-                      title: Text('Desde una dirección web'),
-                      contentPadding: EdgeInsets.zero,
+              if (_area == _RecipesArea.recipes)
+                PopupMenuButton<String>(
+                  enabled: !_importing,
+                  tooltip: 'Importar receta',
+                  onSelected: (value) {
+                    if (value == 'url') {
+                      _importFromUrl();
+                    } else {
+                      _importFromFile();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'url',
+                      child: ListTile(
+                        leading: Icon(Icons.link_rounded),
+                        title: Text('Desde una dirección web'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                  PopupMenuItem(
-                    value: 'file',
-                    child: ListTile(
-                      leading: Icon(Icons.data_object_rounded),
-                      title: Text('Desde un archivo JSON'),
-                      contentPadding: EdgeInsets.zero,
+                    PopupMenuItem(
+                      value: 'file',
+                      child: ListTile(
+                        leading: Icon(Icons.data_object_rounded),
+                        title: Text('Desde un archivo JSON'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                ],
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: context.visuals.pageBorder),
-                    borderRadius: BorderRadius.circular(
-                      context.visuals.isPhantom ? 0 : 20,
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 15, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: context.visuals.pageBorder),
+                      borderRadius: BorderRadius.circular(
+                        context.visuals.isPhantom ? 0 : 20,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_importing)
-                        const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        const Icon(Icons.file_download_outlined, size: 19),
-                      const SizedBox(width: 8),
-                      const Text('Importar'),
-                    ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_importing)
+                          const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          const Icon(Icons.file_download_outlined, size: 19),
+                        const SizedBox(width: 8),
+                        const Text('Importar'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 9),
-              FilledButton.icon(
-                onPressed: () => _showRecipeEditor(context, controller),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Nueva receta'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _RecipeSummaryChip(
-                icon: Icons.menu_book_rounded,
-                label: '${active.length} guardadas',
-              ),
-              _RecipeSummaryChip(
-                icon: Icons.favorite_rounded,
-                label: '$favoriteCount favoritas',
-              ),
-              _RecipeSummaryChip(
-                icon: Icons.schedule_rounded,
-                label: averageMinutes == 0
-                    ? 'Tiempo por completar'
-                    : '$averageMinutes min de media',
-              ),
-              _RecipeSummaryChip(
-                icon: Icons.shopping_cart_outlined,
-                label: 'Ingredientes → tareas',
-              ),
+              if (_area == _RecipesArea.recipes) ...[
+                const SizedBox(width: 9),
+                FilledButton.icon(
+                  onPressed: () => _showRecipeEditor(context, controller),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Nueva receta'),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const ValueKey('recipes-search'),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search_rounded),
-                    labelText: 'Buscar recetas',
-                    hintText: 'Pasta, vegetariana, tomate, cena…',
-                  ),
-                  onChanged: (value) => setState(() => _query = value),
-                ),
+          SegmentedButton<_RecipesArea>(
+            key: const ValueKey('recipes-area-selector'),
+            segments: [
+              ButtonSegment(
+                value: _RecipesArea.recipes,
+                icon: const Icon(Icons.menu_book_rounded),
+                label: Text('Recetas (${active.length})'),
               ),
-              const SizedBox(width: 10),
-              FilterChip(
-                avatar: const Icon(Icons.favorite_rounded, size: 17),
-                label: const Text('Solo favoritas'),
-                selected: _favoritesOnly,
-                onSelected: (value) => setState(() => _favoritesOnly = value),
+              ButtonSegment(
+                value: _RecipesArea.weeklyMenus,
+                icon: const Icon(Icons.calendar_view_week_rounded),
+                label: Text('Menús semanales (${weeklyMenus.length})'),
               ),
             ],
+            selected: <_RecipesArea>{_area},
+            onSelectionChanged: (selection) =>
+                setState(() => _area = selection.first),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 7),
-              itemBuilder: (context, index) {
-                final value = categories[index];
-                final count = value == 'Todas'
-                    ? active.length
-                    : active.where((recipe) => recipe.category == value).length;
-                return FilterChip(
-                  label: Text('$value ($count)'),
-                  selected: selectedCategory == value,
-                  onSelected: (_) => setState(() => _category = value),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: recipes.isEmpty
-                ? _RecipesEmpty(filtered: active.isNotEmpty)
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final columns =
-                          max(2, (constraints.maxWidth / 285).floor());
-                      return GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          childAspectRatio: .82,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                        ),
-                        itemCount: recipes.length,
-                        itemBuilder: (context, index) => _RecipeCard(
-                          controller: controller,
-                          recipe: recipes[index],
-                          onOpen: () => _openRecipe(recipes[index]),
-                        ),
-                      );
-                    },
+          const SizedBox(height: 16),
+          if (_area == _RecipesArea.weeklyMenus)
+            Expanded(
+              child: _WeeklyMenusCatalog(
+                controller: controller,
+                menus: weeklyMenus,
+                onOpenRecipe: _openRecipe,
+                onCreateShoppingTask: (menu, selectedEntryIds) => _createTask(
+                  () => controller.createWeeklyMenuShoppingTask(
+                    menu.id,
+                    selectedEntryIds: selectedEntryIds,
                   ),
-          ),
+                ),
+              ),
+            )
+          else ...[
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _RecipeSummaryChip(
+                  icon: Icons.menu_book_rounded,
+                  label: '${active.length} guardadas',
+                ),
+                _RecipeSummaryChip(
+                  icon: Icons.favorite_rounded,
+                  label: '$favoriteCount favoritas',
+                ),
+                _RecipeSummaryChip(
+                  icon: Icons.schedule_rounded,
+                  label: averageMinutes == 0
+                      ? 'Tiempo por completar'
+                      : '$averageMinutes min de media',
+                ),
+                _RecipeSummaryChip(
+                  icon: Icons.shopping_cart_outlined,
+                  label: 'Ingredientes → tareas',
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('recipes-search'),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search_rounded),
+                      labelText: 'Buscar recetas',
+                      hintText: 'Pasta, vegetariana, tomate, cena…',
+                    ),
+                    onChanged: (value) => setState(() => _query = value),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilterChip(
+                  avatar: const Icon(Icons.favorite_rounded, size: 17),
+                  label: const Text('Solo favoritas'),
+                  selected: _favoritesOnly,
+                  onSelected: (value) => setState(() => _favoritesOnly = value),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 7),
+                itemBuilder: (context, index) {
+                  final value = categories[index];
+                  final count = value == 'Todas'
+                      ? active.length
+                      : active
+                          .where((recipe) => recipe.category == value)
+                          .length;
+                  return FilterChip(
+                    label: Text('$value ($count)'),
+                    selected: selectedCategory == value,
+                    onSelected: (_) => setState(() => _category = value),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: recipes.isEmpty
+                  ? _RecipesEmpty(filtered: active.isNotEmpty)
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns =
+                            max(2, (constraints.maxWidth / 285).floor());
+                        return GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            childAspectRatio: .82,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                          ),
+                          itemCount: recipes.length,
+                          itemBuilder: (context, index) => _RecipeCard(
+                            controller: controller,
+                            recipe: recipes[index],
+                            onOpen: () => _openRecipe(recipes[index]),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ],
       ),
     );
@@ -374,6 +425,760 @@ class _RecipeSummaryChip extends StatelessWidget {
         ),
       );
 }
+
+class _WeeklyMenusCatalog extends StatelessWidget {
+  const _WeeklyMenusCatalog({
+    required this.controller,
+    required this.menus,
+    required this.onOpenRecipe,
+    required this.onCreateShoppingTask,
+  });
+
+  final TodoWorkspace controller;
+  final List<WeeklyMenu> menus;
+  final Future<void> Function(Recipe recipe) onOpenRecipe;
+  final void Function(WeeklyMenu menu, List<String> selectedEntryIds)
+      onCreateShoppingTask;
+
+  @override
+  Widget build(BuildContext context) {
+    if (menus.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.calendar_view_week_outlined,
+                size: 58, color: context.visuals.textMuted),
+            const SizedBox(height: 12),
+            Text('Todavía no hay menús semanales',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              'Aquí aparecerán las semanas completas, separadas de las recetas individuales.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = max(1, (constraints.maxWidth / 360).floor());
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            childAspectRatio: 1.08,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+          ),
+          itemCount: menus.length,
+          itemBuilder: (context, index) {
+            final menu = menus[index];
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: ValueKey('weekly-menu-${menu.id}'),
+                onTap: () => _showWeeklyMenuDetail(
+                  context,
+                  controller,
+                  menu,
+                  onOpenRecipe: onOpenRecipe,
+                  onCreateShoppingTask: onCreateShoppingTask,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _WeeklyMenuImage(
+                            controller: controller,
+                            menu: menu,
+                          ),
+                          const Positioned(
+                            left: 10,
+                            top: 10,
+                            child: _RecipeImageBadge(label: 'Menú semanal'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            menu.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          Row(
+                            children: [
+                              const Icon(Icons.restaurant_rounded, size: 17),
+                              const SizedBox(width: 5),
+                              Text('${menu.allRecipeIds.length} recetas'),
+                              const Spacer(),
+                              const Icon(Icons.person_outline_rounded,
+                                  size: 17),
+                              const SizedBox(width: 4),
+                              Text('${menu.people}'),
+                              if (menu.totalPriceCents > 0) ...[
+                                const SizedBox(width: 12),
+                                Text(
+                                  _weeklyMenuPrice(menu.totalPriceCents),
+                                  style: TextStyle(
+                                    color: context.visuals.accent,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _WeeklyMenuImage extends StatelessWidget {
+  const _WeeklyMenuImage({
+    required this.controller,
+    required this.menu,
+    this.thumbnail = true,
+  });
+
+  final TodoWorkspace controller;
+  final WeeklyMenu menu;
+  final bool thumbnail;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+        color: const Color(0xFFF1E7D9),
+        child: FutureBuilder<String>(
+          future: controller.weeklyMenuImageAbsolutePath(
+            menu,
+            thumbnail: thumbnail,
+          ),
+          builder: (context, snapshot) {
+            final path = snapshot.data ?? '';
+            if (path.isNotEmpty && File(path).existsSync()) {
+              return Image.file(File(path), fit: BoxFit.cover);
+            }
+            if (menu.imageSourceUrl.isNotEmpty) {
+              return Image.network(
+                menu.imageSourceUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const _MissingRecipeImage(),
+              );
+            }
+            return const _MissingRecipeImage();
+          },
+        ),
+      );
+}
+
+Future<void> _showWeeklyMenuDetail(
+  BuildContext context,
+  TodoWorkspace controller,
+  WeeklyMenu initialMenu, {
+  required Future<void> Function(Recipe recipe) onOpenRecipe,
+  required void Function(WeeklyMenu menu, List<String> selectedEntryIds)
+      onCreateShoppingTask,
+}) async {
+  var menu = controller.weeklyMenuById(initialMenu.id) ?? initialMenu;
+  final selectedEntryIds = menu.mealEntries.map((entry) => entry.id).toSet();
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        menu = controller.weeklyMenuById(initialMenu.id) ?? menu;
+        final entries = menu.mealEntries
+            .where((entry) => controller.recipeById(entry.recipeId) != null)
+            .toList();
+        selectedEntryIds.retainWhere(
+          (id) => entries.any((entry) => entry.id == id),
+        );
+        final completeSelection =
+            entries.isNotEmpty && selectedEntryIds.length == entries.length;
+        final curatedSelection = controller.weeklyMenuSelectionUsesCuratedList(
+          menu.id,
+          selectedEntryIds,
+        );
+        final shoppingItems = controller.weeklyMenuShoppingItemsForSelection(
+          menu.id,
+          selectedEntryIds,
+        );
+        final groupedItems = <String, List<WeeklyMenuShoppingItem>>{};
+        for (final item in shoppingItems) {
+          groupedItems
+              .putIfAbsent(
+                item.group.trim().isEmpty ? 'Otros' : item.group.trim(),
+                () => <WeeklyMenuShoppingItem>[],
+              )
+              .add(item);
+        }
+
+        void toggleEntries(Iterable<WeeklyMenuEntry> target) {
+          final targetIds = target.map((entry) => entry.id).toSet();
+          final allSelected = targetIds.isNotEmpty &&
+              targetIds.every(selectedEntryIds.contains);
+          setDialogState(() {
+            if (allSelected) {
+              selectedEntryIds.removeAll(targetIds);
+            } else {
+              selectedEntryIds.addAll(targetIds);
+            }
+          });
+        }
+
+        return Dialog(
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1180, maxHeight: 860),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cover = Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _WeeklyMenuImage(
+                      controller: controller,
+                      menu: menu,
+                      thumbnail: false,
+                    ),
+                    const Positioned(
+                      left: 14,
+                      top: 14,
+                      child: _RecipeImageBadge(label: 'Menú semanal'),
+                    ),
+                  ],
+                );
+                final details = Material(
+                  color: context.visuals.panel,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('Planificación semanal',
+                                  style: TextStyle(
+                                      color: context.visuals.textMuted)),
+                            ),
+                            IconButton(
+                              tooltip: 'Cerrar',
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                          ],
+                        ),
+                        Text(menu.title,
+                            style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _SoftChip(
+                              label: '${entries.length} comidas planificadas',
+                              icon: Icons.restaurant_menu_rounded,
+                            ),
+                            _SoftChip(
+                              label:
+                                  '${menu.people} ${menu.people == 1 ? 'persona' : 'personas'}',
+                              icon: Icons.people_alt_outlined,
+                            ),
+                            if (menu.totalPriceCents > 0)
+                              _SoftChip(
+                                label:
+                                    'Semana completa: ${_weeklyMenuPrice(menu.totalPriceCents)}',
+                                icon: Icons.euro_rounded,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: ListView(
+                            children: [
+                              if (menu.description.isNotEmpty) ...[
+                                Text(menu.description,
+                                    style: const TextStyle(height: 1.45)),
+                                const SizedBox(height: 18),
+                              ],
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _RecipeSectionTitle(
+                                      icon: Icons.calendar_view_week_rounded,
+                                      title: 'Elige qué vas a comprar',
+                                      count: selectedEntryIds.length,
+                                    ),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      await _showWeeklyMenuPlannerEditor(
+                                        context,
+                                        controller,
+                                        menu,
+                                      );
+                                      final refreshed =
+                                          controller.weeklyMenuById(menu.id);
+                                      if (refreshed == null) return;
+                                      setDialogState(() {
+                                        menu = refreshed;
+                                        selectedEntryIds
+                                          ..clear()
+                                          ..addAll(refreshed.mealEntries
+                                              .map((entry) => entry.id));
+                                      });
+                                    },
+                                    icon:
+                                        const Icon(Icons.edit_calendar_rounded),
+                                    label: const Text('Editar semana'),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 7,
+                                runSpacing: 7,
+                                children: [
+                                  FilterChip(
+                                    label: const Text('Toda la semana'),
+                                    selected: completeSelection,
+                                    onSelected: (_) => toggleEntries(entries),
+                                  ),
+                                  for (final day in WeeklyMenuDay.values)
+                                    if (entries
+                                        .any((entry) => entry.day == day))
+                                      FilterChip(
+                                        label: Text(_weeklyDayLabel(day)),
+                                        selected: entries
+                                            .where((entry) => entry.day == day)
+                                            .every((entry) => selectedEntryIds
+                                                .contains(entry.id)),
+                                        onSelected: (_) => toggleEntries(
+                                            entries.where(
+                                                (entry) => entry.day == day)),
+                                      ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 7,
+                                runSpacing: 7,
+                                children: [
+                                  for (final mealType in WeeklyMealType.values)
+                                    if (entries.any(
+                                        (entry) => entry.mealType == mealType))
+                                      FilterChip(
+                                        avatar: Icon(
+                                          _weeklyMealIcon(mealType),
+                                          size: 16,
+                                        ),
+                                        label: Text(_weeklyMealLabel(mealType)),
+                                        selected: entries
+                                            .where((entry) =>
+                                                entry.mealType == mealType)
+                                            .every((entry) => selectedEntryIds
+                                                .contains(entry.id)),
+                                        onSelected: (_) => toggleEntries(
+                                          entries.where((entry) =>
+                                              entry.mealType == mealType),
+                                        ),
+                                      ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              for (final day in WeeklyMenuDay.values)
+                                if (entries
+                                    .any((entry) => entry.day == day)) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        top: 8, bottom: 4),
+                                    child: Text(
+                                      _weeklyDayLabel(day),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                  for (final entry in entries
+                                      .where((entry) => entry.day == day))
+                                    Card(
+                                      margin: const EdgeInsets.only(bottom: 6),
+                                      child: CheckboxListTile(
+                                        value:
+                                            selectedEntryIds.contains(entry.id),
+                                        onChanged: (_) =>
+                                            toggleEntries(<WeeklyMenuEntry>[
+                                          entry,
+                                        ]),
+                                        secondary: IconButton(
+                                          tooltip: 'Abrir receta',
+                                          icon: const Icon(
+                                              Icons.open_in_new_rounded),
+                                          onPressed: () {
+                                            final recipe = controller
+                                                .recipeById(entry.recipeId);
+                                            if (recipe == null) return;
+                                            Navigator.pop(dialogContext);
+                                            onOpenRecipe(recipe);
+                                          },
+                                        ),
+                                        title: Text(controller
+                                                .recipeById(entry.recipeId)
+                                                ?.title ??
+                                            'Receta no disponible'),
+                                        subtitle: Text(
+                                            _weeklyMealLabel(entry.mealType)),
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                      ),
+                                    ),
+                                ],
+                              const SizedBox(height: 18),
+                              _RecipeSectionTitle(
+                                icon: Icons.shopping_basket_outlined,
+                                title: curatedSelection
+                                    ? 'Compra consolidada del menú original'
+                                    : 'Compra calculada para la selección',
+                                count: shoppingItems.length,
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                curatedSelection
+                                    ? 'Se usa la lista consolidada del menú, con sus precios orientativos.'
+                                    : 'Se combinan los ingredientes de las recetas marcadas y se normalizan los condimentos.',
+                                style: TextStyle(
+                                  color: context.visuals.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (shoppingItems.isEmpty)
+                                Text('Marca al menos una comida.',
+                                    style: TextStyle(
+                                        color: context.visuals.textMuted))
+                              else
+                                for (final group in groupedItems.entries) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        top: 8, bottom: 6),
+                                    child: Text(group.key,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800)),
+                                  ),
+                                  for (final item in group.value)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 7),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.circle, size: 6),
+                                          const SizedBox(width: 9),
+                                          Expanded(child: Text(item.name)),
+                                          if (item.priceCents > 0)
+                                            Text(
+                                              _weeklyMenuPrice(item.priceCents),
+                                              style: TextStyle(
+                                                  color: context
+                                                      .visuals.textMuted),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              if (menu.sourceUrl.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: () => launchUrl(
+                                    Uri.parse(menu.sourceUrl),
+                                    mode: LaunchMode.externalApplication,
+                                  ),
+                                  icon: const Icon(Icons.open_in_new_rounded),
+                                  label: const Text('Abrir menú original'),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+                        FilledButton.icon(
+                          onPressed:
+                              selectedEntryIds.isEmpty || shoppingItems.isEmpty
+                                  ? null
+                                  : () {
+                                      Navigator.pop(dialogContext);
+                                      onCreateShoppingTask(
+                                        menu,
+                                        selectedEntryIds.toList(),
+                                      );
+                                    },
+                          icon: const Icon(Icons.shopping_cart_rounded),
+                          label: Text(completeSelection
+                              ? 'Comprar semana completa'
+                              : 'Comprar selección (${selectedEntryIds.length})'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                if (constraints.maxWidth < 780) {
+                  return Column(
+                    children: [
+                      SizedBox(
+                          height: 220, width: double.infinity, child: cover),
+                      Expanded(child: details),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(flex: 4, child: cover),
+                    Expanded(flex: 6, child: details),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+Future<void> _showWeeklyMenuPlannerEditor(
+  BuildContext context,
+  TodoWorkspace controller,
+  WeeklyMenu initialMenu,
+) async {
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        final menu = controller.weeklyMenuById(initialMenu.id) ?? initialMenu;
+        return AlertDialog(
+          title: const Text('Editar planificación semanal'),
+          content: SizedBox(
+            width: 760,
+            height: 650,
+            child: ListView(
+              children: [
+                Text(
+                  'Asigna una receta a cada momento del día. Puedes dejar huecos sin planificar.',
+                  style: TextStyle(color: context.visuals.textMuted),
+                ),
+                const SizedBox(height: 12),
+                for (final day in WeeklyMenuDay.values)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ExpansionTile(
+                      initiallyExpanded: day == WeeklyMenuDay.monday,
+                      title: Text(_weeklyDayLabel(day),
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: Text(
+                        '${menu.mealEntries.where((entry) => entry.day == day).length} comidas planificadas',
+                      ),
+                      children: [
+                        for (final mealType in WeeklyMealType.values)
+                          Builder(builder: (context) {
+                            final entry = menu.mealEntries
+                                .where((entry) =>
+                                    entry.day == day &&
+                                    entry.mealType == mealType)
+                                .firstOrNull;
+                            final recipe = entry == null
+                                ? null
+                                : controller.recipeById(entry.recipeId);
+                            return ListTile(
+                              leading: Icon(_weeklyMealIcon(mealType)),
+                              title: Text(_weeklyMealLabel(mealType)),
+                              subtitle: Text(
+                                recipe?.title ?? 'Sin receta asignada',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (recipe != null)
+                                    IconButton(
+                                      tooltip: 'Quitar',
+                                      onPressed: () {
+                                        controller.setWeeklyMenuMeal(
+                                          menu.id,
+                                          day: day,
+                                          mealType: mealType,
+                                        );
+                                        setDialogState(() {});
+                                      },
+                                      icon: const Icon(Icons.clear_rounded),
+                                    ),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ],
+                              ),
+                              onTap: () async {
+                                final selected = await _pickWeeklyMenuRecipe(
+                                  context,
+                                  controller,
+                                  mealType,
+                                );
+                                if (selected == null) return;
+                                controller.setWeeklyMenuMeal(
+                                  menu.id,
+                                  day: day,
+                                  mealType: mealType,
+                                  recipeId: selected.id,
+                                );
+                                setDialogState(() {});
+                              },
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Listo'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+Future<Recipe?> _pickWeeklyMenuRecipe(
+  BuildContext context,
+  TodoWorkspace controller,
+  WeeklyMealType mealType,
+) {
+  var query = '';
+  return showDialog<Recipe>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        final normalizedQuery = query.trim().toLowerCase();
+        final recipes = controller.recipes
+            .where((recipe) => !recipe.archived)
+            .where((recipe) =>
+                normalizedQuery.isEmpty ||
+                <String>[
+                  recipe.title,
+                  recipe.category,
+                  ...recipe.tags,
+                ].join(' ').toLowerCase().contains(normalizedQuery))
+            .toList()
+          ..sort((left, right) {
+            final leftSuggested = _recipeFitsMeal(left, mealType);
+            final rightSuggested = _recipeFitsMeal(right, mealType);
+            if (leftSuggested != rightSuggested) return leftSuggested ? -1 : 1;
+            return left.title.compareTo(right.title);
+          });
+        return AlertDialog(
+          title: Text('Elegir ${_weeklyMealLabel(mealType).toLowerCase()}'),
+          content: SizedBox(
+            width: 620,
+            height: 560,
+            child: Column(
+              children: [
+                TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    labelText: 'Buscar receta',
+                  ),
+                  onChanged: (value) => setDialogState(() => query = value),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: recipes.length,
+                    itemBuilder: (context, index) {
+                      final recipe = recipes[index];
+                      return ListTile(
+                        leading: Icon(_recipeFitsMeal(recipe, mealType)
+                            ? Icons.auto_awesome_rounded
+                            : Icons.restaurant_menu_rounded),
+                        title: Text(recipe.title),
+                        subtitle: Text(
+                            '${recipe.category} · ${_recipeDuration(recipe)}'),
+                        onTap: () => Navigator.pop(dialogContext, recipe),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+bool _recipeFitsMeal(Recipe recipe, WeeklyMealType mealType) {
+  final category = recipe.category.toLowerCase();
+  return switch (mealType) {
+    WeeklyMealType.breakfast => category.contains('desayuno'),
+    WeeklyMealType.lunch => category.contains('comida'),
+    WeeklyMealType.snack =>
+      category.contains('snack') || category.contains('postre'),
+    WeeklyMealType.dinner => category.contains('cena'),
+  };
+}
+
+String _weeklyDayLabel(WeeklyMenuDay day) => switch (day) {
+      WeeklyMenuDay.monday => 'Lunes',
+      WeeklyMenuDay.tuesday => 'Martes',
+      WeeklyMenuDay.wednesday => 'Miércoles',
+      WeeklyMenuDay.thursday => 'Jueves',
+      WeeklyMenuDay.friday => 'Viernes',
+      WeeklyMenuDay.saturday => 'Sábado',
+      WeeklyMenuDay.sunday => 'Domingo',
+    };
+
+String _weeklyMealLabel(WeeklyMealType mealType) => switch (mealType) {
+      WeeklyMealType.breakfast => 'Desayuno',
+      WeeklyMealType.lunch => 'Comida',
+      WeeklyMealType.snack => 'Merienda',
+      WeeklyMealType.dinner => 'Cena',
+    };
+
+IconData _weeklyMealIcon(WeeklyMealType mealType) => switch (mealType) {
+      WeeklyMealType.breakfast => Icons.free_breakfast_rounded,
+      WeeklyMealType.lunch => Icons.lunch_dining_rounded,
+      WeeklyMealType.snack => Icons.cookie_outlined,
+      WeeklyMealType.dinner => Icons.dinner_dining_rounded,
+    };
+
+String _weeklyMenuPrice(int cents) =>
+    '${(cents / 100).toStringAsFixed(cents % 100 == 0 ? 0 : 2).replaceAll('.', ',')} €';
 
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({
@@ -893,7 +1698,14 @@ class _RecipeSectionTitle extends StatelessWidget {
         children: [
           Icon(icon, color: context.visuals.accent),
           const SizedBox(width: 8),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
           const SizedBox(width: 8),
           Text('$count', style: TextStyle(color: context.visuals.textMuted)),
         ],

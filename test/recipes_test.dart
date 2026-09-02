@@ -43,6 +43,24 @@ void main() {
           updatedAt: instant,
         ),
       ],
+      weeklyMenus: [
+        WeeklyMenu(
+          id: 'menu-1',
+          title: 'Menú semanal 01',
+          people: 1,
+          totalPriceCents: 2200,
+          recipeIds: const ['papas-1'],
+          shoppingItems: const [
+            WeeklyMenuShoppingItem(
+              name: 'Papas bonitas',
+              group: 'Frutas y verduras',
+              priceCents: 120,
+            ),
+          ],
+          createdAt: instant,
+          updatedAt: instant,
+        ),
+      ],
       daySettings: const DaySettings(),
       notificationSettings: const DeviceNotificationSettings(),
       calendarSettings: const CalendarIntegrationSettings(),
@@ -56,8 +74,91 @@ void main() {
     expect(decoded.recipes.single.title, 'Papas arrugadas');
     expect(decoded.recipes.single.totalMinutes, 30);
     expect(decoded.recipes.single.ingredients.last.isCondiment, isTrue);
+    expect(decoded.weeklyMenus.single.totalPriceCents, 2200);
+    expect(decoded.weeklyMenus.single.recipeIds, ['papas-1']);
+    expect(decoded.weeklyMenus.single.mealEntries.single.day,
+        WeeklyMenuDay.monday);
+    expect(decoded.weeklyMenus.single.mealEntries.single.mealType,
+        WeeklyMealType.lunch);
     expect(decoded.section, AppSection.recipes);
     expect(legacy.recipes, isEmpty);
+    expect(legacy.weeklyMenus, isEmpty);
+  });
+
+  test('un menú semanal genera una única tarea de compra agrupada', () {
+    final controller = TodoWorkspace.createForTest();
+    final recipe = controller.createRecipe(
+      title: 'Bowl de salmón',
+      ingredients: const [
+        RecipeIngredient(text: '500 g de salmón'),
+        RecipeIngredient(text: '½ cucharadita de sal'),
+      ],
+    );
+    final secondRecipe = controller.createRecipe(
+      title: 'Ensalada de aguacate',
+      ingredients: const [RecipeIngredient(text: '2 aguacates')],
+    );
+    final menu = controller.createWeeklyMenu(
+      title: 'Menú semanal 01',
+      people: 1,
+      totalPriceCents: 2200,
+      recipeIds: [recipe.id, secondRecipe.id],
+      shoppingItems: const [
+        WeeklyMenuShoppingItem(
+          name: 'Salmón congelado',
+          group: 'Proteínas',
+          priceCents: 540,
+        ),
+        WeeklyMenuShoppingItem(
+          name: 'Aguacate',
+          group: 'Frutas y verduras',
+          priceCents: 88,
+        ),
+      ],
+    );
+
+    final task = controller.createWeeklyMenuShoppingTask(menu.id);
+    final partialTask = controller.createWeeklyMenuShoppingTask(
+      menu.id,
+      selectedEntryIds: [menu.mealEntries.first.id],
+    );
+
+    expect(task.title, 'Comprar Menú semanal 01');
+    expect(controller.subtasksOf(task).map((item) => item.title),
+        ['Salmón congelado', 'Aguacate']);
+    expect(partialTask.title, 'Comprar selección de Menú semanal 01');
+    expect(controller.subtasksOf(partialTask).map((item) => item.title),
+        ['500 g de salmón', 'Sal']);
+    expect(controller.recipesForWeeklyMenu(menu), hasLength(2));
+    expect(
+      controller.weeklyMenuSelectionUsesCuratedList(
+        menu.id,
+        menu.mealEntries.map((entry) => entry.id),
+      ),
+      isTrue,
+    );
+
+    controller.setWeeklyMenuMeal(
+      menu.id,
+      day: WeeklyMenuDay.wednesday,
+      mealType: WeeklyMealType.breakfast,
+      recipeId: secondRecipe.id,
+    );
+    expect(
+      controller.weeklyMenuById(menu.id)!.mealEntries,
+      contains(predicate<WeeklyMenuEntry>((entry) =>
+          entry.day == WeeklyMenuDay.wednesday &&
+          entry.mealType == WeeklyMealType.breakfast &&
+          entry.recipeId == secondRecipe.id)),
+    );
+    final editedMenu = controller.weeklyMenuById(menu.id)!;
+    expect(
+      controller.weeklyMenuSelectionUsesCuratedList(
+        menu.id,
+        editedMenu.mealEntries.map((entry) => entry.id),
+      ),
+      isFalse,
+    );
   });
 
   test('una receta genera tareas de compra y cocina con subtareas', () {
@@ -186,7 +287,7 @@ void main() {
   testWidgets('Recetas muestra el catálogo visual y sus filtros',
       (tester) async {
     final controller = TodoWorkspace.createForTest();
-    controller.createRecipe(
+    final potaje = controller.createRecipe(
       title: 'Potaje de berros',
       category: 'Cuchara',
       cuisine: 'Canaria',
@@ -195,6 +296,14 @@ void main() {
       cookMinutes: 60,
       ingredients: const [RecipeIngredient(text: '1 manojo de berros')],
       instructions: const ['Cuece todos los ingredientes.'],
+    );
+    final weeklyMenu = controller.createWeeklyMenu(
+      title: 'Menú semanal 01',
+      totalPriceCents: 2200,
+      recipeIds: [potaje.id],
+      shoppingItems: const [
+        WeeklyMenuShoppingItem(name: 'Berros', group: 'Frutas y verduras'),
+      ],
     );
     tester.view.physicalSize = const Size(1800, 1000);
     tester.view.devicePixelRatio = 1;
@@ -211,6 +320,7 @@ void main() {
     expect(find.text('Nueva receta'), findsOneWidget);
     expect(find.text('Potaje de berros'), findsOneWidget);
     expect(find.text('Cuchara (1)'), findsOneWidget);
+    expect(find.text('Menús semanales (1)'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('recipes-search')),
@@ -219,6 +329,23 @@ void main() {
     await tester.pump();
     expect(find.text('Potaje de berros'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('Menús semanales (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Menú semanal 01'), findsOneWidget);
+
+    await tester.tap(find.byKey(ValueKey('weekly-menu-${weeklyMenu.id}')));
+    await tester.pumpAndSettle();
+    expect(find.text('Toda la semana'), findsOneWidget);
+    expect(find.text('Comprar semana completa'), findsOneWidget);
+
+    await tester.tap(find.text('Editar semana'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar planificación semanal'), findsOneWidget);
+    expect(find.text('Desayuno'), findsOneWidget);
+    expect(find.text('Comida'), findsWidgets);
+    expect(find.text('Merienda'), findsOneWidget);
+    expect(find.text('Cena'), findsOneWidget);
   });
 
   testWidgets(

@@ -149,6 +149,7 @@ def default_state() -> dict[str, Any]:
         "wardrobeImportBatches": [],
         "householdItems": [],
         "recipes": [],
+        "weeklyMenus": [],
         "calendarEvents": [],
         "daySettings": {
             "dayEndsAtHour": 5,
@@ -1299,6 +1300,8 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("set_recipe_image", "Asocia a una receta una imagen PNG preparada por Codex.", {"recipe_id": string, "source_file": string}, ["recipe_id", "source_file"]),
         tool("create_recipe_task", "Convierte ingredientes o pasos de una receta en una tarea con subtareas.", {"recipe_id": string, "kind": string, "scheduled_at": string}, ["recipe_id", "kind"]),
         tool("delete_recipe", "Elimina una receta y sus imágenes locales.", {"recipe_id": string, "confirm": boolean}, ["recipe_id", "confirm"]),
+        tool("list_weekly_menus", "Lista los menús semanales, sus recetas y su compra planificada.", {"include_archived": boolean}, []),
+        tool("create_weekly_menu_task", "Convierte la semana completa o una selección de comidas de un menú en una tarea de compra.", {"menu_id": string, "entry_ids": strings, "scheduled_at": string}, ["menu_id"]),
     ]
 
 
@@ -4562,6 +4565,141 @@ def delete_recipe_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"deleted": True, "recipe_id": arguments["recipe_id"]}
 
 
+def list_weekly_menus_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    menus = load_state().setdefault("weeklyMenus", [])
+    if not bool(arguments.get("include_archived", False)):
+        menus = [menu for menu in menus if not menu.get("archived", False)]
+    return menus
+
+
+def create_weekly_menu_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    _index, menu = find_by_id(
+        state.setdefault("weeklyMenus", []), arguments["menu_id"], "menú semanal"
+    )
+    recipe_ids = [str(value) for value in menu.get("recipeIds", [])]
+    meal_entries = list(menu.get("mealEntries") or [])
+    if not meal_entries:
+        days = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+        meal_entries = [
+            {
+                "id": f"legacy-{index + 1}",
+                "day": days[index % len(days)],
+                "mealType": "lunch",
+                "recipeId": recipe_id,
+            }
+            for index, recipe_id in enumerate(recipe_ids)
+        ]
+    requested_ids = {
+        str(value) for value in (arguments.get("entry_ids") or []) if str(value)
+    }
+    selected_entries = (
+        [entry for entry in meal_entries if str(entry.get("id")) in requested_ids]
+        if requested_ids
+        else meal_entries
+    )
+    if not selected_entries:
+        raise ValueError("Selecciona al menos una comida del menú.")
+    complete_menu = len(selected_entries) == len(meal_entries)
+    selected_recipe_list = [
+        str(entry.get("recipeId", "")) for entry in selected_entries
+    ]
+    selected_recipe_set = set(selected_recipe_list)
+    curated_recipe_set = {
+        str(value)
+        for value in (menu.get("shoppingListRecipeIds") or recipe_ids)
+        if str(value)
+    }
+    curated_selection = (
+        bool(menu.get("shoppingItems"))
+        and len(selected_recipe_list) == len(selected_recipe_set)
+        and selected_recipe_set == curated_recipe_set
+    )
+    if curated_selection:
+        shopping_items = [
+            item
+            for item in menu.get("shoppingItems", [])
+            if str(item.get("name", "")).strip()
+        ]
+    else:
+        shopping_items = []
+        seen_labels: set[str] = set()
+        selected_recipe_ids = {
+            str(entry.get("recipeId", "")) for entry in selected_entries
+        }
+        for recipe in state.setdefault("recipes", []):
+            if str(recipe.get("id", "")) not in selected_recipe_ids:
+                continue
+            for ingredient in recipe.get("ingredients", []):
+                for label in _recipe_shopping_labels(ingredient):
+                    if label.casefold() in seen_labels:
+                        continue
+                    seen_labels.add(label.casefold())
+                    shopping_items.append({
+                        "name": label,
+                        "group": str(recipe.get("title", "")),
+                        "priceCents": 0,
+                    })
+    if not shopping_items:
+        raise ValueError("El menú no tiene lista de la compra.")
+    category = _recipe_task_category("Compras")
+    people = max(1, int(menu.get("people", 1)))
+    total_cents = max(0, int(menu.get("totalPriceCents", 0)))
+    price = (
+        f" · Presupuesto aproximado: {total_cents / 100:.2f} €".replace(".", ",")
+        if total_cents and curated_selection
+        else ""
+    )
+    selected_days = {str(entry.get("day", "")) for entry in selected_entries}
+    scope = (
+        "semana completa"
+        if complete_menu
+        else f"{len(selected_entries)} comidas · {len(selected_days)} días"
+    )
+    parent_result = create_task_impl({
+        "title": (
+            f"Comprar {menu['title']}"
+            if complete_menu
+            else f"Comprar selección de {menu['title']}"
+        ),
+        "description": (
+            f"Lista de compra del menú para {people} "
+            f"{'persona' if people == 1 else 'personas'} · {scope}{price}."
+        ),
+        "category_ids": [category["id"]],
+        "scheduled_at": arguments.get("scheduled_at"),
+    })
+    parent_id = parent_result["created"]["id"]
+    subtasks = []
+    seen: set[str] = set()
+    for item in shopping_items:
+        name = str(item["name"]).strip()
+        if name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        group = str(item.get("group", "")).strip()
+        item_cents = max(0, int(item.get("priceCents", 0)))
+        description = " · ".join(filter(None, [
+            group,
+            (
+                f"Precio orientativo: {item_cents / 100:.2f} €".replace(".", ",")
+                if item_cents
+                else ""
+            ),
+        ]))
+        result = create_task_impl({
+            "title": name,
+            "description": description,
+            "category_ids": [category["id"]],
+            "parent_task_id": parent_id,
+            "scheduled_at": arguments.get("scheduled_at"),
+        })
+        subtasks.append(result["created"])
+    final_state = load_state()
+    _parent_index, parent = find_task(final_state, parent_id)
+    return {"task": parent, "subtasks": subtasks}
+
+
 def import_state_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     require_confirm(arguments, "import_state")
     state = json.loads(arguments["raw_json"])
@@ -4858,6 +4996,10 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(create_recipe_task_impl(arguments))
     if name == "delete_recipe":
         return json_result(delete_recipe_impl(arguments))
+    if name == "list_weekly_menus":
+        return json_result(list_weekly_menus_impl(arguments))
+    if name == "create_weekly_menu_task":
+        return json_result(create_weekly_menu_task_impl(arguments))
     if name == "create_category":
         return json_result(create_category_impl(arguments))
     if name == "create_project":

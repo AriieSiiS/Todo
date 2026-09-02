@@ -189,3 +189,231 @@ class Recipe {
             DateTime.fromMillisecondsSinceEpoch(0),
       );
 }
+
+class WeeklyMenuShoppingItem {
+  const WeeklyMenuShoppingItem({
+    required this.name,
+    this.group = '',
+    this.priceCents = 0,
+  });
+
+  final String name;
+  final String group;
+  final int priceCents;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'name': name,
+        'group': group,
+        'priceCents': priceCents,
+      };
+
+  factory WeeklyMenuShoppingItem.fromJson(Map<String, dynamic> json) =>
+      WeeklyMenuShoppingItem(
+        name: json['name'] as String? ?? '',
+        group: json['group'] as String? ?? '',
+        priceCents: (json['priceCents'] as num?)?.toInt() ?? 0,
+      );
+}
+
+enum WeeklyMenuDay {
+  monday,
+  tuesday,
+  wednesday,
+  thursday,
+  friday,
+  saturday,
+  sunday
+}
+
+enum WeeklyMealType { breakfast, lunch, snack, dinner }
+
+class WeeklyMenuEntry {
+  const WeeklyMenuEntry({
+    required this.id,
+    required this.day,
+    required this.mealType,
+    required this.recipeId,
+  });
+
+  final String id;
+  final WeeklyMenuDay day;
+  final WeeklyMealType mealType;
+  final String recipeId;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'day': day.name,
+        'mealType': mealType.name,
+        'recipeId': recipeId,
+      };
+
+  factory WeeklyMenuEntry.fromJson(Map<String, dynamic> json) =>
+      WeeklyMenuEntry(
+        id: json['id'] as String? ?? '',
+        day: enumByName(
+          WeeklyMenuDay.values,
+          json['day'] as String?,
+          WeeklyMenuDay.monday,
+        ),
+        mealType: enumByName(
+          WeeklyMealType.values,
+          json['mealType'] as String?,
+          WeeklyMealType.lunch,
+        ),
+        recipeId: json['recipeId'] as String? ?? '',
+      );
+}
+
+class WeeklyMenu {
+  const WeeklyMenu({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description = '',
+    this.people = 1,
+    this.totalPriceCents = 0,
+    this.recipeIds = const <String>[],
+    this.shoppingListRecipeIds = const <String>[],
+    this.mealEntries = const <WeeklyMenuEntry>[],
+    this.shoppingItems = const <WeeklyMenuShoppingItem>[],
+    this.sourceUrl = '',
+    this.imageSourceUrl = '',
+    this.imagePath = '',
+    this.thumbnailPath = '',
+    this.imageSha256 = '',
+    this.archived = false,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final int people;
+  final int totalPriceCents;
+  final List<String> recipeIds;
+  final List<String> shoppingListRecipeIds;
+  final List<WeeklyMenuEntry> mealEntries;
+  final List<WeeklyMenuShoppingItem> shoppingItems;
+  final String sourceUrl;
+  final String imageSourceUrl;
+  final String imagePath;
+  final String thumbnailPath;
+  final String imageSha256;
+  final bool archived;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  List<String> get allRecipeIds => mealEntries.isEmpty
+      ? recipeIds
+      : mealEntries.map((entry) => entry.recipeId).toSet().toList();
+
+  WeeklyMenu copyWith({
+    String? title,
+    String? description,
+    int? people,
+    int? totalPriceCents,
+    List<String>? recipeIds,
+    List<String>? shoppingListRecipeIds,
+    List<WeeklyMenuEntry>? mealEntries,
+    List<WeeklyMenuShoppingItem>? shoppingItems,
+    String? sourceUrl,
+    String? imageSourceUrl,
+    String? imagePath,
+    String? thumbnailPath,
+    String? imageSha256,
+    bool? archived,
+    DateTime? updatedAt,
+  }) =>
+      WeeklyMenu(
+        id: id,
+        title: title ?? this.title,
+        description: description ?? this.description,
+        people: people ?? this.people,
+        totalPriceCents: totalPriceCents ?? this.totalPriceCents,
+        recipeIds: recipeIds ?? this.recipeIds,
+        shoppingListRecipeIds:
+            shoppingListRecipeIds ?? this.shoppingListRecipeIds,
+        mealEntries: mealEntries ?? this.mealEntries,
+        shoppingItems: shoppingItems ?? this.shoppingItems,
+        sourceUrl: sourceUrl ?? this.sourceUrl,
+        imageSourceUrl: imageSourceUrl ?? this.imageSourceUrl,
+        imagePath: imagePath ?? this.imagePath,
+        thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+        imageSha256: imageSha256 ?? this.imageSha256,
+        archived: archived ?? this.archived,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'title': title,
+        'description': description,
+        'people': people,
+        'totalPriceCents': totalPriceCents,
+        'recipeIds': recipeIds,
+        'shoppingListRecipeIds': shoppingListRecipeIds,
+        'mealEntries': mealEntries.map((entry) => entry.toJson()).toList(),
+        'shoppingItems': shoppingItems.map((item) => item.toJson()).toList(),
+        'sourceUrl': sourceUrl,
+        'imageSourceUrl': imageSourceUrl,
+        'imagePath': imagePath,
+        'thumbnailPath': thumbnailPath,
+        'imageSha256': imageSha256,
+        'archived': archived,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  factory WeeklyMenu.fromJson(Map<String, dynamic> json) {
+    final recipeIds = stringList(json['recipeIds']);
+    var entries = (json['mealEntries'] as List<dynamic>? ?? const <dynamic>[])
+        .map((item) => WeeklyMenuEntry.fromJson(
+            (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+        .where((entry) => entry.recipeId.trim().isNotEmpty)
+        .toList();
+    if (entries.isEmpty) {
+      entries = <WeeklyMenuEntry>[
+        for (var index = 0; index < recipeIds.length; index++)
+          WeeklyMenuEntry(
+            id: 'legacy-${index + 1}',
+            day: WeeklyMenuDay.values[index % WeeklyMenuDay.values.length],
+            mealType: WeeklyMealType.lunch,
+            recipeId: recipeIds[index],
+          ),
+      ];
+    }
+    final resolvedRecipeIds = recipeIds.isEmpty
+        ? entries.map((entry) => entry.recipeId).toSet().toList()
+        : recipeIds;
+    final shoppingListRecipeIds = stringList(json['shoppingListRecipeIds']);
+    return WeeklyMenu(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? 'Menú semanal',
+      description: json['description'] as String? ?? '',
+      people: (json['people'] as num?)?.toInt() ?? 1,
+      totalPriceCents: (json['totalPriceCents'] as num?)?.toInt() ?? 0,
+      recipeIds: resolvedRecipeIds,
+      shoppingListRecipeIds: shoppingListRecipeIds.isEmpty
+          ? resolvedRecipeIds
+          : shoppingListRecipeIds,
+      mealEntries: entries,
+      shoppingItems:
+          (json['shoppingItems'] as List<dynamic>? ?? const <dynamic>[])
+              .map((item) => WeeklyMenuShoppingItem.fromJson(
+                  (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
+              .where((item) => item.name.trim().isNotEmpty)
+              .toList(),
+      sourceUrl: json['sourceUrl'] as String? ?? '',
+      imageSourceUrl: json['imageSourceUrl'] as String? ?? '',
+      imagePath: json['imagePath'] as String? ?? '',
+      thumbnailPath: json['thumbnailPath'] as String? ?? '',
+      imageSha256: json['imageSha256'] as String? ?? '',
+      archived: json['archived'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
