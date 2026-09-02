@@ -160,3 +160,20 @@ Antes de dar por terminada una actualización, hay que verificar técnicamente q
 la instalación contiene la compilación nueva. Codex no debe abrir ni manejar la
 app instalada para hacer la prueba visual o funcional: el usuario se encarga de
 probarla después del despliegue.
+
+## Copia y recuperación de datos
+
+La guía canónica es `RECUPERACION_DATOS.md`. Cuando el usuario pida «recupera
+los datos de la copia de seguridad» o algo equivalente, hay que seguirla
+directamente, sin investigar otra vez las rutas ni restaurar solo el JSON.
+
+- La fuente activa está en `C:\Users\aries\Documents\Todo`.
+- Las copias completas están en `C:\Users\aries\Documents\Todo Backups`.
+- Cerrar `todo.exe` y mantenerlo cerrado durante toda la operación.
+- Usar `tooling\restore_todo_backup.ps1`: valida hashes, crea una copia
+  preventiva, restaura snapshot y recursos, y vuelve a verificarlos.
+- No omitir ropa, recetas, hogar, portadas ni conocimiento.
+- Solo comunicar éxito si el script devuelve `restaurado_y_verificado`.
+
+Para crear otra copia recuperable se usa
+`tooling\backup_todo_data_full.ps1` con la app cerrada.

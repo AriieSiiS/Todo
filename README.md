@@ -72,8 +72,15 @@ condimentos y productos de despensa reconocidos se normalizan al producto
 comprable (`½ cucharadita de comino` pasa a `Comino`); los ingredientes normales
 conservan su cantidad y las líneas compuestas se separan y deduplican.
 
+Dentro de `Recetas`, el selector superior separa las recetas individuales de
+los `Menús semanales`. Cada menú enlaza sus siete recetas, conserva la lista de
+compra agrupada y los precios aproximados, y puede generar una tarea de Compras
+con un producto por subtarea sin duplicar las recetas del catálogo.
+
 El MCP expone el mismo flujo mediante `create_recipe`, `update_recipe`,
 `set_recipe_image`, `create_recipe_task`, `list_recipes` y `delete_recipe`.
+Los menús semanales se consultan con `list_weekly_menus` y su lista completa se
+convierte en tarea mediante `create_weekly_menu_task`.
 
 ## Supabase compartido
 
@@ -170,3 +177,17 @@ estados derivados y conserva el último estado válido ante una escritura
 incompleta. Las rutas de Steam se guardan solo en SQLite local. Para respaldar
 el progreso derivado en Supabase sobre una instalación existente, aplica
 `supabase/004_knowledge_progress.sql`.
+
+## Copias y recuperación de datos
+
+La recuperación completa está documentada en
+[RECUPERACION_DATOS.md](RECUPERACION_DATOS.md). Con la aplicación cerrada:
+
+```powershell
+.\tooling\backup_todo_data_full.ps1
+.\tooling\restore_todo_backup.ps1 -BackupDirectory 'RUTA_DE_LA_COPIA_COMPLETA'
+```
+
+La restauración valida todos los hashes, crea primero una copia preventiva y
+recupera el snapshot junto con imágenes, documentos, recetas, ropa, hogar,
+portadas y conocimiento.
