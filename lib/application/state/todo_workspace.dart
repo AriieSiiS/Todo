@@ -133,6 +133,8 @@ class TodoWorkspace extends ChangeNotifier {
       const RecipeIngredientClassifier();
 
   DaySettings _daySettings = const DaySettings();
+  WardrobeDisplaySettings _wardrobeDisplaySettings =
+      const WardrobeDisplaySettings();
   DeviceNotificationSettings _notificationSettings =
       const DeviceNotificationSettings();
   CalendarIntegrationSettings _calendarSettings =
@@ -203,6 +205,8 @@ class TodoWorkspace extends ChangeNotifier {
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
   DaySettings get daySettings => _daySettings;
+  WardrobeDisplaySettings get wardrobeDisplaySettings =>
+      _wardrobeDisplaySettings;
   DeviceNotificationSettings get notificationSettings => _notificationSettings;
   CalendarIntegrationSettings get calendarSettings => _calendarSettings;
   CalendarAccount? get calendarAccount => _calendarAccount;
@@ -520,6 +524,7 @@ class TodoWorkspace extends ChangeNotifier {
       weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
+      wardrobeDisplaySettings: wardrobeDisplaySettings,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       visualMode: visualMode,
@@ -589,6 +594,8 @@ class TodoWorkspace extends ChangeNotifier {
     List<String>? seasons,
     List<String>? occasions,
     List<String>? tags,
+    bool? favorite,
+    WardrobeLaundryStatus? laundryStatus,
     double? price,
     bool clearPrice = false,
   }) {
@@ -602,6 +609,8 @@ class TodoWorkspace extends ChangeNotifier {
       seasons: seasons,
       occasions: occasions,
       tags: tags,
+      favorite: favorite,
+      laundryStatus: laundryStatus,
       price: price,
       clearPrice: clearPrice,
       updatedAt: DateTime.now(),
@@ -2347,6 +2356,11 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void updateWardrobeDisplaySettings(WardrobeDisplaySettings value) {
+    _wardrobeDisplaySettings = value;
+    _commit();
+  }
+
   Future<void> updateNotificationSettings(
       DeviceNotificationSettings value) async {
     _notificationSettings = value;
@@ -3809,6 +3823,7 @@ class TodoWorkspace extends ChangeNotifier {
       ..clear()
       ..addAll(snapshot.calendarEvents);
     _daySettings = snapshot.daySettings;
+    _wardrobeDisplaySettings = snapshot.wardrobeDisplaySettings;
     _notificationSettings = snapshot.notificationSettings;
     _calendarSettings = snapshot.calendarSettings;
     _section = snapshot.section;
@@ -4179,6 +4194,7 @@ class TodoWorkspace extends ChangeNotifier {
       weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
+      wardrobeDisplaySettings: wardrobeDisplaySettings,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       section: section,
@@ -4436,6 +4452,7 @@ class TodoWorkspace extends ChangeNotifier {
     _weeklyMenus.clear();
     _calendarEvents.clear();
     _daySettings = const DaySettings();
+    _wardrobeDisplaySettings = const WardrobeDisplaySettings();
     _notificationSettings = const DeviceNotificationSettings();
     _calendarSettings = const CalendarIntegrationSettings();
     _calendarAccount = null;

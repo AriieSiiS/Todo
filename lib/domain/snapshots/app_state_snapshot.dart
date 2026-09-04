@@ -38,6 +38,7 @@ class AppStateSnapshot {
     this.recipes = const <Recipe>[],
     this.weeklyMenus = const <WeeklyMenu>[],
     required this.daySettings,
+    this.wardrobeDisplaySettings = const WardrobeDisplaySettings(),
     required this.notificationSettings,
     required this.calendarSettings,
     required this.section,
@@ -74,6 +75,7 @@ class AppStateSnapshot {
   final List<WeeklyMenu> weeklyMenus;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
+  final WardrobeDisplaySettings wardrobeDisplaySettings;
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
   final AppSection section;
@@ -120,6 +122,7 @@ class AppStateSnapshot {
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
+      'wardrobeDisplaySettings': wardrobeDisplaySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
       'section': section.name,
@@ -241,6 +244,11 @@ class AppStateSnapshot {
           (json['daySettings'] as Map<dynamic, dynamic>? ??
                   const <dynamic, dynamic>{})
               .cast<String, dynamic>()),
+      wardrobeDisplaySettings: WardrobeDisplaySettings.fromJson(
+        (json['wardrobeDisplaySettings'] as Map<dynamic, dynamic>? ??
+                const <dynamic, dynamic>{})
+            .cast<String, dynamic>(),
+      ),
       notificationSettings: DeviceNotificationSettings.fromJson(
         (json['notificationSettings'] as Map<dynamic, dynamic>? ??
                 const <dynamic, dynamic>{})

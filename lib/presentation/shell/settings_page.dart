@@ -660,6 +660,26 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 18),
                     _SettingsSectionCard(
+                      icon: Icons.checkroom_outlined,
+                      title: 'Ropa',
+                      child: _settingsToggleRow(
+                        title: 'Mostrar número de usos',
+                        subtitle:
+                            'Enseña los usos y el coste por uso en las prendas del armario.',
+                        value:
+                            controller.wardrobeDisplaySettings.showUsageCount,
+                        onChanged: (value) {
+                          controller.updateWardrobeDisplaySettings(
+                            controller.wardrobeDisplaySettings.copyWith(
+                              showUsageCount: value,
+                            ),
+                          );
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _SettingsSectionCard(
                       icon: Icons.spa_outlined,
                       title: 'Rutinas y comportamiento',
                       child: Column(

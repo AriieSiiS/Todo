@@ -36,6 +36,7 @@ class ExportSnapshot {
     this.weeklyMenus = const <WeeklyMenu>[],
     required this.calendarEvents,
     required this.daySettings,
+    this.wardrobeDisplaySettings = const WardrobeDisplaySettings(),
     required this.notificationSettings,
     required this.calendarSettings,
     this.visualMode = AppVisualMode.classic,
@@ -62,6 +63,7 @@ class ExportSnapshot {
   final List<WeeklyMenu> weeklyMenus;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
+  final WardrobeDisplaySettings wardrobeDisplaySettings;
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
   final AppVisualMode visualMode;
@@ -95,6 +97,7 @@ class ExportSnapshot {
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
+      'wardrobeDisplaySettings': wardrobeDisplaySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
       'visualMode': visualMode.name,

@@ -816,8 +816,10 @@ class _PageHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           heading,
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(color: visuals.textMuted)),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(subtitle, style: TextStyle(color: visuals.textMuted)),
+          ],
           if (trailing != null) const SizedBox(height: 14),
           if (trailing != null) trailing!,
         ],
@@ -831,8 +833,10 @@ class _PageHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               heading,
-              const SizedBox(height: 6),
-              Text(subtitle, style: TextStyle(color: visuals.textMuted)),
+              if (subtitle.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(subtitle, style: TextStyle(color: visuals.textMuted)),
+              ],
             ],
           ),
         ),
@@ -874,7 +878,7 @@ class _SectionTabBar extends StatelessWidget {
       tabs: [
         for (final label in labels)
           Tab(
-              height: 42,
+              height: 36,
               child:
                   Align(alignment: Alignment.centerLeft, child: Text(label))),
       ],
@@ -887,11 +891,14 @@ class _FilterPill extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.icon,
+    super.key,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -913,6 +920,16 @@ class _FilterPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: visuals.isPhantom
+                    ? visuals.textStrong
+                    : const Color(0xFF61764C),
+              ),
+              const SizedBox(width: 7),
+            ],
             Text(
               label,
               style: TextStyle(

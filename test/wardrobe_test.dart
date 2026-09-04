@@ -46,6 +46,8 @@ void main() {
         ),
       ],
       daySettings: const DaySettings(),
+      wardrobeDisplaySettings:
+          const WardrobeDisplaySettings(showUsageCount: true),
       notificationSettings: const DeviceNotificationSettings(),
       calendarSettings: const CalendarIntegrationSettings(),
       section: AppSection.wardrobe,
@@ -60,8 +62,10 @@ void main() {
     expect(
         decoded.wardrobeOutfits.single.renderImagePath, 'outfits/oficina.png');
     expect(decoded.section, AppSection.wardrobe);
+    expect(decoded.wardrobeDisplaySettings.showUsageCount, isTrue);
     expect(legacy.wardrobeItems, isEmpty);
     expect(legacy.wardrobeOutfits, isEmpty);
+    expect(legacy.wardrobeDisplaySettings.showUsageCount, isFalse);
   });
 
   test('el workspace gestiona conjuntos, usos, lavado, planes y maletas', () {
@@ -235,7 +239,8 @@ void main() {
     expect(img.decodePng(destination.readAsBytesSync()), isNotNull);
   });
 
-  testWidgets('la sección Ropa muestra sus siete áreas', (tester) async {
+  testWidgets('Ropa muestra seis áreas y abre importaciones desde la cabecera',
+      (tester) async {
     final controller = TodoWorkspace.createForTest();
     tester.view.physicalSize = const Size(1800, 1000);
     tester.view.devicePixelRatio = 1;
@@ -253,7 +258,13 @@ void main() {
     expect(find.text('Lavandería'), findsOneWidget);
     expect(find.text('Maletas'), findsOneWidget);
     expect(find.text('Estadísticas'), findsOneWidget);
-    expect(find.text('Importaciones'), findsOneWidget);
+    expect(find.text('Importaciones'), findsNothing);
+    expect(find.text('Importar'), findsOneWidget);
+
+    await tester.tap(find.text('Importar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Importar ropa'), findsOneWidget);
+    expect(find.text('Importar lote desde carpeta'), findsOneWidget);
   });
 
   testWidgets('editar conjunto mantiene selección y ofrece búsqueda y filtros',
@@ -329,7 +340,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Todas (2)'), findsOneWidget);
+    expect(find.text('Todo (2)'), findsOneWidget);
+    expect(find.text('Favoritos (0)'), findsOneWidget);
     expect(find.text('Calzado (1)'), findsOneWidget);
     expect(find.text('Pantalones (1)'), findsOneWidget);
 
@@ -338,7 +350,7 @@ void main() {
     expect(find.text('Puma Palermo'), findsOneWidget);
     expect(find.text('Pantalón beige'), findsNothing);
 
-    await tester.tap(find.text('Todas (2)'));
+    await tester.tap(find.text('Todo (2)'));
     await tester.enterText(
         find.byKey(const ValueKey('wardrobe-search')), 'burdeos');
     await tester.pump();
@@ -379,7 +391,86 @@ void main() {
     await tester.tap(find.text('Editar'));
     await tester.pumpAndSettle();
     expect(find.text('Editar prenda'), findsOneWidget);
-    expect(find.byType(TextField), findsNWidgets(5));
+    expect(find.text('Información básica'), findsOneWidget);
+    expect(find.text('Clasificación'), findsOneWidget);
+    expect(find.text('Guardar cambios'), findsOneWidget);
+    expect(find.text('Camisetas'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('wardrobe-editor-category')), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('wardrobe-editor-form')),
+      const Offset(0, -600),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Estado y valor'), findsOneWidget);
+    expect(find.text('Prenda favorita'), findsOneWidget);
+  });
+
+  testWidgets('las prendas favoritas se pueden mostrar por separado',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    final favorite = controller.createWardrobeItem(
+      name: 'Chaqueta favorita',
+      category: 'Chaquetas',
+    );
+    controller.createWardrobeItem(
+      name: 'Camiseta normal',
+      category: 'Camisetas',
+    );
+    controller.toggleWardrobeFavorite(favorite.id);
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Favoritos (1)'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('wardrobe-favorites-filter')));
+    await tester.pump();
+
+    expect(find.text('Chaqueta favorita'), findsOneWidget);
+    expect(find.text('Camiseta normal'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('los usos están ocultos y pueden activarse desde Ajustes',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    final item = controller.createWardrobeItem(
+      name: 'Camisa de prueba',
+      category: 'Camisas',
+    );
+    controller.recordWardrobeWear(
+      date: DateTime(2026, 9, 2),
+      itemIds: [item.id],
+    );
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('1 usos'), findsNothing);
+
+    controller.updateWardrobeDisplaySettings(
+      const WardrobeDisplaySettings(showUsageCount: true),
+    );
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pump();
+    expect(find.text('1 usos'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
   });
 
   testWidgets('el armario agrupa las prendas por categoría y nombre',

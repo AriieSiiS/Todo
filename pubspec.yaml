@@ -30,6 +30,7 @@ dependencies:
   oauth2: ^2.0.5
   path_provider: ^2.1.5
   pdfrx: ^2.4.7
+  qr_flutter: ^4.1.0
   shared_preferences: ^2.5.5
   sqlite3: ^3.5.0
   supabase_flutter: ^2.10.3

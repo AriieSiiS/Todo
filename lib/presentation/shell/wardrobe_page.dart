@@ -11,33 +11,48 @@ class WardrobePage extends StatefulWidget {
 
 class _WardrobePageState extends State<WardrobePage> {
   String _query = '';
-  String _category = 'Todas';
+  String _category = 'Todo';
+  bool _favoritesOnly = false;
 
   TodoWorkspace get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 7,
+      length: 6,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _PageHeader(
-              title: 'Ropa',
-              subtitle:
-                  '${controller.wardrobeItems.where((item) => !item.archived).length} prendas · '
-                  '${controller.wardrobeOutfits.length} conjuntos',
-              compact: true,
-              pinTrailingToEdge: true,
-              trailing: _HeaderActionButton(
-                label: 'Añadir prenda',
-                icon: Icons.add_rounded,
-                onPressed: () => _showCreateWardrobeItem(context, controller),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: _PageHeader(
+                title: 'Ropa',
+                subtitle: '',
+                compact: true,
+                pinTrailingToEdge: true,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _HeaderSecondaryButton(
+                      label: 'Importar',
+                      icon: Icons.file_download_outlined,
+                      onPressed: () =>
+                          _showWardrobeImports(context, controller),
+                    ),
+                    const SizedBox(width: 10),
+                    _HeaderActionButton(
+                      label: 'Añadir prenda',
+                      icon: Icons.add_rounded,
+                      onPressed: () =>
+                          _showCreateWardrobeItem(context, controller),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
             const _SectionTabBar(
               labels: [
                 'Armario',
@@ -46,10 +61,9 @@ class _WardrobePageState extends State<WardrobePage> {
                 'Lavandería',
                 'Maletas',
                 'Estadísticas',
-                'Importaciones',
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
                 children: [
@@ -59,7 +73,6 @@ class _WardrobePageState extends State<WardrobePage> {
                   _WardrobeLaundryTab(controller: controller),
                   _WardrobePackingTab(controller: controller),
                   _WardrobeStatsTab(controller: controller),
-                  _WardrobeImportsTab(controller: controller),
                 ],
               ),
             ),
@@ -77,13 +90,13 @@ class _WardrobePageState extends State<WardrobePage> {
         .toSet()
         .toList()
       ..sort();
-    categories.insert(0, 'Todas');
     final selectedCategory =
-        categories.contains(_category) ? _category : 'Todas';
+        categories.contains(_category) ? _category : 'Todo';
     final normalizedQuery = _query.trim().toLowerCase();
     final items = controller.wardrobeItems.where((item) {
       if (item.archived) return false;
-      if (selectedCategory != 'Todas' && item.category != selectedCategory) {
+      if (_favoritesOnly && !item.favorite) return false;
+      if (selectedCategory != 'Todo' && item.category != selectedCategory) {
         return false;
       }
       if (normalizedQuery.isEmpty) return true;
@@ -99,6 +112,7 @@ class _WardrobePageState extends State<WardrobePage> {
       return searchable.contains(normalizedQuery);
     }).toList()
       ..sort((left, right) {
+        if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
         final categoryOrder = left.category.toLowerCase().compareTo(
               right.category.toLowerCase(),
             );
@@ -107,14 +121,21 @@ class _WardrobePageState extends State<WardrobePage> {
       });
     return Column(
       children: [
-        TextField(
-          key: const ValueKey('wardrobe-search'),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: 'Buscar: pantalón beige, zapatillas, camiseta granate…',
-            labelText: 'Buscar en el armario',
-          ),
-          onChanged: (value) => setState(() => _query = value),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const ValueKey('wardrobe-search'),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search_rounded),
+                  hintText:
+                      'Buscar: pantalón beige, zapatillas, camiseta granate…',
+                  labelText: 'Buscar en el armario',
+                ),
+                onChanged: (value) => setState(() => _query = value),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -122,45 +143,69 @@ class _WardrobePageState extends State<WardrobePage> {
           child: ListView.separated(
             key: const ValueKey('wardrobe-category-filters'),
             scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
+            itemCount: categories.length + 2,
             separatorBuilder: (_, __) => const SizedBox(width: 7),
             itemBuilder: (context, index) {
-              final value = categories[index];
-              final count = value == 'Todas'
-                  ? controller.wardrobeItems
-                      .where((item) => !item.archived)
-                      .length
-                  : controller.wardrobeItems
-                      .where((item) => !item.archived && item.category == value)
-                      .length;
+              if (index == 0) {
+                final count = controller.wardrobeItems
+                    .where((item) => !item.archived)
+                    .length;
+                return _FilterPill(
+                  label: 'Todo ($count)',
+                  selected: selectedCategory == 'Todo' && !_favoritesOnly,
+                  onTap: () => setState(() {
+                    _category = 'Todo';
+                    _favoritesOnly = false;
+                  }),
+                );
+              }
+              if (index == 1) {
+                final count = controller.wardrobeItems
+                    .where((item) => !item.archived && item.favorite)
+                    .length;
+                return _FilterPill(
+                  key: const ValueKey('wardrobe-favorites-filter'),
+                  label: 'Favoritos ($count)',
+                  icon: Icons.favorite_rounded,
+                  selected: _favoritesOnly,
+                  onTap: () => setState(() {
+                    _category = 'Todo';
+                    _favoritesOnly = true;
+                  }),
+                );
+              }
+              final value = categories[index - 2];
+              final count = controller.wardrobeItems
+                  .where((item) => !item.archived && item.category == value)
+                  .length;
               return _FilterPill(
                 label: '$value ($count)',
-                selected: selectedCategory == value,
-                onTap: () => setState(() => _category = value),
+                selected: selectedCategory == value && !_favoritesOnly,
+                onTap: () => setState(() {
+                  _category = value;
+                  _favoritesOnly = false;
+                }),
               );
             },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            '${items.length} ${items.length == 1 ? 'prenda' : 'prendas'}',
-            style: TextStyle(color: context.visuals.textMuted, fontSize: 12),
           ),
         ),
         const SizedBox(height: 10),
         Expanded(
           child: items.isEmpty
               ? _WardrobeEmpty(
-                  icon: normalizedQuery.isEmpty && selectedCategory == 'Todas'
+                  icon: normalizedQuery.isEmpty &&
+                          selectedCategory == 'Todo' &&
+                          !_favoritesOnly
                       ? Icons.checkroom_outlined
                       : Icons.search_off_rounded,
-                  title: normalizedQuery.isEmpty && selectedCategory == 'Todas'
+                  title: normalizedQuery.isEmpty &&
+                          selectedCategory == 'Todo' &&
+                          !_favoritesOnly
                       ? 'Tu armario está vacío'
                       : 'No hay prendas con estos filtros',
                   subtitle: normalizedQuery.isEmpty &&
-                          selectedCategory == 'Todas'
+                          selectedCategory == 'Todo' &&
+                          !_favoritesOnly
                       ? 'Añade una prenda o importa un lote preparado por Codex.'
                       : 'Prueba otra categoría o cambia la búsqueda.',
                 )
@@ -254,10 +299,13 @@ class _WardrobeItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: context.visuals.textMuted, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  Text(
+                  if (controller.wardrobeDisplaySettings.showUsageCount) ...[
+                    const SizedBox(height: 6),
+                    Text(
                       '${item.useCount} usos${item.price == null || item.useCount == 0 ? '' : ' · ${(item.price! / item.useCount).toStringAsFixed(2)} €/uso'}',
-                      style: const TextStyle(fontSize: 12)),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -738,6 +786,65 @@ class _WardrobeStatsTab extends StatelessWidget {
   }
 }
 
+Future<void> _showWardrobeImports(
+  BuildContext context,
+  TodoWorkspace controller,
+) async {
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 980, maxHeight: 760),
+        child: Material(
+          color: context.visuals.panel,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 22, 18, 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Importar ropa',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            'Añade un lote desde una carpeta y revísalo antes de incorporarlo al armario.',
+                            style: TextStyle(color: context.visuals.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Cerrar',
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: context.visuals.pageBorder),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: _WardrobeImportsTab(controller: controller),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _WardrobeImportsTab extends StatelessWidget {
   const _WardrobeImportsTab({required this.controller});
   final TodoWorkspace controller;
@@ -1010,7 +1117,8 @@ class _WardrobeItemDetailPanel extends StatelessWidget {
         (label: 'Temporadas', value: item.seasons.join(', ')),
       if (item.occasions.isNotEmpty)
         (label: 'Ocasiones', value: item.occasions.join(', ')),
-      (label: 'Usos', value: '${item.useCount}'),
+      if (controller.wardrobeDisplaySettings.showUsageCount)
+        (label: 'Usos', value: '${item.useCount}'),
       if (item.price != null)
         (label: 'Precio', value: '${item.price!.toStringAsFixed(2)} €'),
     ];
@@ -1105,60 +1213,350 @@ class _WardrobeItemDetailPanel extends StatelessWidget {
 
 Future<void> _showEditWardrobeItem(
     BuildContext context, TodoWorkspace controller, WardrobeItem item) async {
-  final name = TextEditingController(text: item.name);
-  final category = TextEditingController(text: item.category);
-  final tags = TextEditingController(text: item.tags.join(', '));
-  final price = TextEditingController(text: item.price?.toString() ?? '');
-  final action = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-              title: const Text('Editar prenda'),
-              content: SizedBox(
-                  width: 440,
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    TextField(
-                        controller: name,
-                        decoration: const InputDecoration(labelText: 'Nombre')),
-                    const SizedBox(height: 8),
-                    TextField(
-                        controller: category,
-                        decoration:
-                            const InputDecoration(labelText: 'Categoría')),
-                    const SizedBox(height: 8),
-                    TextField(
-                        controller: tags,
-                        decoration: const InputDecoration(
-                            labelText: 'Etiquetas separadas por comas')),
-                    const SizedBox(height: 8),
-                    TextField(
-                        controller: price,
-                        keyboardType: TextInputType.number,
-                        decoration:
-                            const InputDecoration(labelText: 'Precio opcional'))
-                  ])),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, 'delete'),
-                    child: const Text('Eliminar')),
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
-                FilledButton(
-                    onPressed: () => Navigator.pop(context, 'save'),
-                    child: const Text('Guardar'))
-              ]));
-  if (action == 'save') {
-    controller.updateWardrobeItem(item.id,
-        name: name.text,
-        category: category.text,
-        tags: _splitTags(tags.text),
-        price: double.tryParse(price.text.replaceAll(',', '.')),
-        clearPrice: price.text.trim().isEmpty);
-  }
-  if (action == 'delete' && context.mounted) {
+  final action = await showDialog<_WardrobeEditAction>(
+    context: context,
+    builder: (context) => _WardrobeItemEditorDialog(
+      controller: controller,
+      item: item,
+    ),
+  );
+  if (action == _WardrobeEditAction.delete && context.mounted) {
     final confirmed = await _confirm(context, 'Eliminar prenda',
         'Se quitará de conjuntos, planes y maletas. El historial conservará su referencia.');
     if (confirmed) controller.deleteWardrobeItem(item.id);
+  }
+}
+
+enum _WardrobeEditAction { saved, delete }
+
+class _WardrobeItemEditorDialog extends StatefulWidget {
+  const _WardrobeItemEditorDialog({
+    required this.controller,
+    required this.item,
+  });
+
+  final TodoWorkspace controller;
+  final WardrobeItem item;
+
+  @override
+  State<_WardrobeItemEditorDialog> createState() =>
+      _WardrobeItemEditorDialogState();
+}
+
+class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late String _category;
+  late final TextEditingController _material;
+  late final TextEditingController _colors;
+  late final TextEditingController _seasons;
+  late final TextEditingController _occasions;
+  late final TextEditingController _tags;
+  late final TextEditingController _price;
+  late WardrobeLaundryStatus _laundryStatus;
+  late bool _favorite;
+
+  WardrobeItem get item => widget.item;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: item.name);
+    _category = item.category;
+    _material = TextEditingController(text: item.material);
+    _colors = TextEditingController(text: item.colors.join(', '));
+    _seasons = TextEditingController(text: item.seasons.join(', '));
+    _occasions = TextEditingController(text: item.occasions.join(', '));
+    _tags = TextEditingController(text: item.tags.join(', '));
+    _price = TextEditingController(text: item.price?.toString() ?? '');
+    _laundryStatus = item.laundryStatus;
+    _favorite = item.favorite;
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _material.dispose();
+    _colors.dispose();
+    _seasons.dispose();
+    _occasions.dispose();
+    _tags.dispose();
+    _price.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return Dialog(
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1040, maxHeight: 780),
+        child: Material(
+          color: visuals.panel,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 22, 18, 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Editar prenda',
+                              style:
+                                  Theme.of(context).textTheme.headlineMedium),
+                          const SizedBox(height: 5),
+                          Text(
+                            'Actualiza la ficha completa sin perder de vista la prenda.',
+                            style: TextStyle(color: visuals.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Cerrar',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: visuals.pageBorder),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 760;
+                    if (compact) {
+                      return ListView(
+                        children: [
+                          SizedBox(height: 280, child: _imagePreview()),
+                          _form(),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(width: 380, child: _imagePreview()),
+                        VerticalDivider(width: 1, color: visuals.pageBorder),
+                        Expanded(child: _form()),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Divider(height: 1, color: visuals.pageBorder),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 15, 22, 17),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => Navigator.pop(
+                        context,
+                        _WardrobeEditAction.delete,
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: const Text('Eliminar prenda'),
+                      style:
+                          TextButton.styleFrom(foregroundColor: visuals.danger),
+                    ),
+                    const Spacer(),
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton.icon(
+                      onPressed: _save,
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Guardar cambios'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePreview() {
+    return ColoredBox(
+      color: const Color(0xFFF3EEE5),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: FutureBuilder<String>(
+          future: widget.controller.wardrobeImageAbsolutePath(
+            item,
+            thumbnail: false,
+          ),
+          builder: (context, snapshot) {
+            final path = snapshot.data ?? '';
+            if (path.isEmpty || !File(path).existsSync()) {
+              return const _MissingWardrobeImage();
+            }
+            return Image.file(
+              File(path),
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _form() {
+    return Form(
+      key: _formKey,
+      child: ListView(
+        key: const ValueKey('wardrobe-editor-form'),
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('Información básica',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Nombre'),
+            validator: _requiredField,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            key: const ValueKey('wardrobe-editor-category'),
+            initialValue: _category,
+            decoration: const InputDecoration(labelText: 'Categoría'),
+            items: _availableCategories
+                .map(
+                  (category) => DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) => setState(() {
+              _category = value ?? _category;
+            }),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _material,
+            decoration: const InputDecoration(
+              labelText: 'Material',
+              hintText: 'Algodón, cuero, lino…',
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text('Clasificación', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 14),
+          _listField(_colors, 'Colores', 'Crema, burdeos, caramelo…'),
+          const SizedBox(height: 12),
+          _listField(_seasons, 'Temporadas', 'Primavera, verano…'),
+          const SizedBox(height: 12),
+          _listField(_occasions, 'Ocasiones', 'Diario, trabajo, formal…'),
+          const SizedBox(height: 12),
+          _listField(_tags, 'Etiquetas', 'Puma, perfil bajo, limpias…'),
+          const SizedBox(height: 22),
+          Text('Estado y valor',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<WardrobeLaundryStatus>(
+            initialValue: _laundryStatus,
+            decoration: const InputDecoration(labelText: 'Lavandería'),
+            items: WardrobeLaundryStatus.values
+                .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(_laundryLabel(value)),
+                    ))
+                .toList(),
+            onChanged: (value) => setState(() {
+              _laundryStatus = value ?? WardrobeLaundryStatus.available;
+            }),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _price,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Precio',
+              suffixText: '€',
+            ),
+            validator: (value) {
+              final text = value?.trim() ?? '';
+              if (text.isEmpty) return null;
+              return double.tryParse(text.replaceAll(',', '.')) == null
+                  ? 'Escribe un importe válido'
+                  : null;
+            },
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile.adaptive(
+            value: _favorite,
+            onChanged: (value) => setState(() => _favorite = value),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            secondary: const Icon(Icons.favorite_outline_rounded),
+            title: const Text('Prenda favorita'),
+            subtitle: const Text(
+              'Aparecerá primero y podrá mostrarse con el filtro de favoritas.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  TextFormField _listField(
+    TextEditingController controller,
+    String label,
+    String hint,
+  ) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        helperText: 'Separa varios valores con comas',
+      ),
+    );
+  }
+
+  String? _requiredField(String? value) =>
+      (value?.trim().isEmpty ?? true) ? 'Este campo es obligatorio' : null;
+
+  List<String> get _availableCategories {
+    final categories = widget.controller.wardrobeItems
+        .where((wardrobeItem) => !wardrobeItem.archived)
+        .map((wardrobeItem) => wardrobeItem.category.trim())
+        .where((category) => category.isNotEmpty)
+        .toSet();
+    categories.add(item.category);
+    return categories.toList()..sort();
+  }
+
+  void _save() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final priceText = _price.text.trim();
+    widget.controller.updateWardrobeItem(
+      item.id,
+      name: _name.text,
+      category: _category,
+      material: _material.text,
+      colors: _splitTags(_colors.text),
+      seasons: _splitTags(_seasons.text),
+      occasions: _splitTags(_occasions.text),
+      tags: _splitTags(_tags.text),
+      favorite: _favorite,
+      laundryStatus: _laundryStatus,
+      price: double.tryParse(priceText.replaceAll(',', '.')),
+      clearPrice: priceText.isEmpty,
+    );
+    Navigator.pop(context, _WardrobeEditAction.saved);
   }
 }
 

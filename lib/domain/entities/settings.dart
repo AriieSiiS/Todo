@@ -33,6 +33,34 @@ class DaySettings {
   }
 }
 
+class WardrobeDisplaySettings {
+  const WardrobeDisplaySettings({
+    this.showUsageCount = false,
+  });
+
+  final bool showUsageCount;
+
+  WardrobeDisplaySettings copyWith({
+    bool? showUsageCount,
+  }) {
+    return WardrobeDisplaySettings(
+      showUsageCount: showUsageCount ?? this.showUsageCount,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'showUsageCount': showUsageCount,
+    };
+  }
+
+  factory WardrobeDisplaySettings.fromJson(Map<String, dynamic> json) {
+    return WardrobeDisplaySettings(
+      showUsageCount: json['showUsageCount'] as bool? ?? false,
+    );
+  }
+}
+
 class DeviceNotificationSettings {
   const DeviceNotificationSettings({
     this.notificationsEnabled = true,

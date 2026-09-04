@@ -297,10 +297,20 @@ void main() {
       ingredients: const [RecipeIngredient(text: '1 manojo de berros')],
       instructions: const ['Cuece todos los ingredientes.'],
     );
+    final weeklyRecipes = <Recipe>[
+      potaje,
+      for (var index = 2; index <= 7; index++)
+        controller.createRecipe(
+          title: 'Plato $index',
+          category: 'Comida',
+          servings: 2,
+          ingredients: [RecipeIngredient(text: 'Ingrediente $index')],
+        ),
+    ];
     final weeklyMenu = controller.createWeeklyMenu(
       title: 'Menú semanal 01',
       totalPriceCents: 2200,
-      recipeIds: [potaje.id],
+      recipeIds: weeklyRecipes.map((recipe) => recipe.id).toList(),
       shoppingItems: const [
         WeeklyMenuShoppingItem(name: 'Berros', group: 'Frutas y verduras'),
       ],
@@ -316,11 +326,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Recetas'), findsOneWidget);
-    expect(find.text('Nueva receta'), findsOneWidget);
+    expect(find.text('Recetas'), findsNWidgets(2));
+    expect(find.text('Añadir receta'), findsOneWidget);
     expect(find.text('Potaje de berros'), findsOneWidget);
+    expect(find.text('Todo (7)'), findsOneWidget);
+    expect(find.text('Favoritos (0)'), findsOneWidget);
     expect(find.text('Cuchara (1)'), findsOneWidget);
-    expect(find.text('Menús semanales (1)'), findsOneWidget);
+    expect(find.text('Menús semanales'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('recipes-search')),
@@ -330,13 +342,60 @@ void main() {
     expect(find.text('Potaje de berros'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('Menús semanales (1)'));
+    await tester.tap(find.text('Potaje de berros'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ficha de receta'), findsOneWidget);
+    expect(find.text('Crear compra'), findsOneWidget);
+    expect(find.text('Planificar cocina'), findsOneWidget);
+    expect(find.text('Editar receta'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-detail-more')), findsOneWidget);
+
+    await tester.tap(find.text('Editar receta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar receta'), findsOneWidget);
+    expect(find.text('Información básica'), findsOneWidget);
+    expect(find.text('Tiempo y raciones'), findsOneWidget);
+    expect(find.text('Ingredientes y preparación'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('recipe-editor-category')), findsOneWidget);
+    expect(find.text('Guardar cambios'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Menús semanales'));
     await tester.pumpAndSettle();
     expect(find.text('Menú semanal 01'), findsOneWidget);
+    for (final recipe in weeklyRecipes) {
+      expect(
+        find.byKey(
+          ValueKey('weekly-menu-recipe-${weeklyMenu.id}-${recipe.id}'),
+        ),
+        findsOneWidget,
+      );
+    }
 
-    await tester.tap(find.byKey(ValueKey('weekly-menu-${weeklyMenu.id}')));
+    await tester.tap(
+      find.byKey(
+        ValueKey('weekly-menu-recipe-${weeklyMenu.id}-${potaje.id}'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ficha de receta'), findsOneWidget);
+    expect(find.text('Planificación semanal'), findsNothing);
+    await tester.tap(find.byTooltip('Cerrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(ValueKey('weekly-menu-cover-${weeklyMenu.id}')),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Toda la semana'), findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('recipe-section-count-Elige qué vas a comprar'),
+      ),
+      findsNothing,
+    );
     expect(find.text('Comprar semana completa'), findsOneWidget);
 
     await tester.tap(find.text('Editar semana'));

@@ -1,7 +1,5 @@
 part of 'app_shell.dart';
 
-enum _RecipesArea { recipes, weeklyMenus }
-
 class RecipesPage extends StatefulWidget {
   const RecipesPage({required this.controller, super.key});
 
@@ -16,7 +14,6 @@ class _RecipesPageState extends State<RecipesPage> {
   String _category = 'Todas';
   bool _favoritesOnly = false;
   bool _importing = false;
-  _RecipesArea _area = _RecipesArea.recipes;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -58,233 +55,192 @@ class _RecipesPageState extends State<RecipesPage> {
         return left.title.toLowerCase().compareTo(right.title.toLowerCase());
       });
     final favoriteCount = active.where((recipe) => recipe.favorite).length;
-    final averageMinutes = active.isEmpty
-        ? 0
-        : active.fold<int>(0, (sum, recipe) => sum + recipe.totalMinutes) ~/
-            active.length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return DefaultTabController(
+      length: 2,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: _PageHeader(
+                title: 'Recetas',
+                subtitle: '',
+                compact: true,
+                pinTrailingToEdge: true,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Recetas',
-                        style: Theme.of(context).textTheme.headlineMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      _area == _RecipesArea.recipes
-                          ? '${active.length} ${active.length == 1 ? 'receta' : 'recetas'} · '
-                              '$favoriteCount ${favoriteCount == 1 ? 'favorita' : 'favoritas'}'
-                          : '${weeklyMenus.length} '
-                              '${weeklyMenus.length == 1 ? 'menú planificado' : 'menús planificados'}',
-                      style: TextStyle(color: context.visuals.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              if (_area == _RecipesArea.recipes)
-                PopupMenuButton<String>(
-                  enabled: !_importing,
-                  tooltip: 'Importar receta',
-                  onSelected: (value) {
-                    if (value == 'url') {
-                      _importFromUrl();
-                    } else {
-                      _importFromFile();
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: 'url',
-                      child: ListTile(
-                        leading: Icon(Icons.link_rounded),
-                        title: Text('Desde una dirección web'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'file',
-                      child: ListTile(
-                        leading: Icon(Icons.data_object_rounded),
-                        title: Text('Desde un archivo JSON'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: context.visuals.pageBorder),
-                      borderRadius: BorderRadius.circular(
-                        context.visuals.isPhantom ? 0 : 20,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_importing)
-                          const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        else
-                          const Icon(Icons.file_download_outlined, size: 19),
-                        const SizedBox(width: 8),
-                        const Text('Importar'),
-                      ],
-                    ),
-                  ),
-                ),
-              if (_area == _RecipesArea.recipes) ...[
-                const SizedBox(width: 9),
-                FilledButton.icon(
-                  onPressed: () => _showRecipeEditor(context, controller),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Nueva receta'),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 14),
-          SegmentedButton<_RecipesArea>(
-            key: const ValueKey('recipes-area-selector'),
-            segments: [
-              ButtonSegment(
-                value: _RecipesArea.recipes,
-                icon: const Icon(Icons.menu_book_rounded),
-                label: Text('Recetas (${active.length})'),
-              ),
-              ButtonSegment(
-                value: _RecipesArea.weeklyMenus,
-                icon: const Icon(Icons.calendar_view_week_rounded),
-                label: Text('Menús semanales (${weeklyMenus.length})'),
-              ),
-            ],
-            selected: <_RecipesArea>{_area},
-            onSelectionChanged: (selection) =>
-                setState(() => _area = selection.first),
-          ),
-          const SizedBox(height: 16),
-          if (_area == _RecipesArea.weeklyMenus)
-            Expanded(
-              child: _WeeklyMenusCatalog(
-                controller: controller,
-                menus: weeklyMenus,
-                onOpenRecipe: _openRecipe,
-                onCreateShoppingTask: (menu, selectedEntryIds) => _createTask(
-                  () => controller.createWeeklyMenuShoppingTask(
-                    menu.id,
-                    selectedEntryIds: selectedEntryIds,
-                  ),
-                ),
-              ),
-            )
-          else ...[
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _RecipeSummaryChip(
-                  icon: Icons.menu_book_rounded,
-                  label: '${active.length} guardadas',
-                ),
-                _RecipeSummaryChip(
-                  icon: Icons.favorite_rounded,
-                  label: '$favoriteCount favoritas',
-                ),
-                _RecipeSummaryChip(
-                  icon: Icons.schedule_rounded,
-                  label: averageMinutes == 0
-                      ? 'Tiempo por completar'
-                      : '$averageMinutes min de media',
-                ),
-                _RecipeSummaryChip(
-                  icon: Icons.shopping_cart_outlined,
-                  label: 'Ingredientes → tareas',
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey('recipes-search'),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search_rounded),
-                      labelText: 'Buscar recetas',
-                      hintText: 'Pasta, vegetariana, tomate, cena…',
-                    ),
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                FilterChip(
-                  avatar: const Icon(Icons.favorite_rounded, size: 17),
-                  label: const Text('Solo favoritas'),
-                  selected: _favoritesOnly,
-                  onSelected: (value) => setState(() => _favoritesOnly = value),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 7),
-                itemBuilder: (context, index) {
-                  final value = categories[index];
-                  final count = value == 'Todas'
-                      ? active.length
-                      : active
-                          .where((recipe) => recipe.category == value)
-                          .length;
-                  return FilterChip(
-                    label: Text('$value ($count)'),
-                    selected: selectedCategory == value,
-                    onSelected: (_) => setState(() => _category = value),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: recipes.isEmpty
-                  ? _RecipesEmpty(filtered: active.isNotEmpty)
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final columns =
-                            max(2, (constraints.maxWidth / 285).floor());
-                        return GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            childAspectRatio: .82,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                          ),
-                          itemCount: recipes.length,
-                          itemBuilder: (context, index) => _RecipeCard(
-                            controller: controller,
-                            recipe: recipes[index],
-                            onOpen: () => _openRecipe(recipes[index]),
-                          ),
-                        );
+                    PopupMenuButton<String>(
+                      enabled: !_importing,
+                      tooltip: 'Importar receta',
+                      onSelected: (value) {
+                        if (value == 'url') {
+                          _importFromUrl();
+                        } else {
+                          _importFromFile();
+                        }
                       },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'url',
+                          child: ListTile(
+                            leading: Icon(Icons.link_rounded),
+                            title: Text('Desde una dirección web'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'file',
+                          child: ListTile(
+                            leading: Icon(Icons.data_object_rounded),
+                            title: Text('Desde un archivo JSON'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                      child: IgnorePointer(
+                        child: _HeaderSecondaryButton(
+                          label: _importing ? 'Importando…' : 'Importar',
+                          icon: Icons.file_download_outlined,
+                          onPressed: () {},
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 10),
+                    _HeaderActionButton(
+                      label: 'Añadir receta',
+                      icon: Icons.add_rounded,
+                      onPressed: () => _showRecipeEditor(context, controller),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const _SectionTabBar(labels: ['Recetas', 'Menús semanales']),
+            const SizedBox(height: 8),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _recipesCatalog(
+                    active: active,
+                    categories: categories,
+                    selectedCategory: selectedCategory,
+                    recipes: recipes,
+                    favoriteCount: favoriteCount,
+                  ),
+                  _WeeklyMenusCatalog(
+                    controller: controller,
+                    menus: weeklyMenus,
+                    onOpenRecipe: _openRecipe,
+                    onCreateShoppingTask: (menu, selectedEntryIds) =>
+                        _createTask(
+                      () => controller.createWeeklyMenuShoppingTask(
+                        menu.id,
+                        selectedEntryIds: selectedEntryIds,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _recipesCatalog({
+    required List<Recipe> active,
+    required List<String> categories,
+    required String selectedCategory,
+    required List<Recipe> recipes,
+    required int favoriteCount,
+  }) {
+    return Column(
+      children: [
+        TextField(
+          key: const ValueKey('recipes-search'),
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search_rounded),
+            labelText: 'Buscar recetas',
+            hintText: 'Pasta, vegetariana, tomate, cena…',
+          ),
+          onChanged: (value) => setState(() => _query = value),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            key: const ValueKey('recipes-category-filters'),
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _FilterPill(
+                  label: 'Todo (${active.length})',
+                  selected: selectedCategory == 'Todas' && !_favoritesOnly,
+                  onTap: () => setState(() {
+                    _category = 'Todas';
+                    _favoritesOnly = false;
+                  }),
+                );
+              }
+              if (index == 1) {
+                return _FilterPill(
+                  key: const ValueKey('recipes-favorites-filter'),
+                  label: 'Favoritos ($favoriteCount)',
+                  icon: Icons.favorite_rounded,
+                  selected: _favoritesOnly,
+                  onTap: () => setState(() {
+                    _category = 'Todas';
+                    _favoritesOnly = true;
+                  }),
+                );
+              }
+              final value = categories[index - 1];
+              final count =
+                  active.where((recipe) => recipe.category == value).length;
+              return _FilterPill(
+                label: '$value ($count)',
+                selected: selectedCategory == value && !_favoritesOnly,
+                onTap: () => setState(() {
+                  _category = value;
+                  _favoritesOnly = false;
+                }),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: recipes.isEmpty
+              ? _RecipesEmpty(filtered: active.isNotEmpty)
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns =
+                        max(2, (constraints.maxWidth / 285).floor());
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        childAspectRatio: .82,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      itemCount: recipes.length,
+                      itemBuilder: (context, index) => _RecipeCard(
+                        controller: controller,
+                        recipe: recipes[index],
+                        onOpen: () => _openRecipe(recipes[index]),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -400,32 +356,6 @@ class _RecipesPageState extends State<RecipesPage> {
   }
 }
 
-class _RecipeSummaryChip extends StatelessWidget {
-  const _RecipeSummaryChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: context.visuals.panelAlt,
-          borderRadius:
-              BorderRadius.circular(context.visuals.isPhantom ? 0 : 16),
-          border: Border.all(color: context.visuals.pageBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: context.visuals.accent),
-            const SizedBox(width: 7),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
-}
-
 class _WeeklyMenusCatalog extends StatelessWidget {
   const _WeeklyMenusCatalog({
     required this.controller,
@@ -464,17 +394,19 @@ class _WeeklyMenusCatalog extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = max(1, (constraints.maxWidth / 360).floor());
+        final columns = min(4, max(1, (constraints.maxWidth / 280).floor()));
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            childAspectRatio: 1.08,
+            mainAxisExtent: 920,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
           ),
           itemCount: menus.length,
           itemBuilder: (context, index) {
             final menu = menus[index];
+            final recipes =
+                controller.recipesForWeeklyMenu(menu).take(7).toList();
             return Card(
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -489,7 +421,9 @@ class _WeeklyMenusCatalog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
+                    SizedBox(
+                      key: ValueKey('weekly-menu-cover-${menu.id}'),
+                      height: 250,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -545,12 +479,196 @@ class _WeeklyMenusCatalog extends StatelessWidget {
                         ],
                       ),
                     ),
+                    Divider(height: 1, color: context.visuals.pageBorder),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu_rounded,
+                            size: 18,
+                            color: context.visuals.accent,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Platos de la semana',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        child: recipes.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No hay recetas enlazadas.',
+                                  style: TextStyle(
+                                    color: context.visuals.textMuted,
+                                  ),
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  for (var recipeIndex = 0;
+                                      recipeIndex < recipes.length;
+                                      recipeIndex++) ...[
+                                    if (recipeIndex > 0)
+                                      const SizedBox(height: 7),
+                                    Expanded(
+                                      child: _WeeklyMenuRecipeRow(
+                                        menu: menu,
+                                        controller: controller,
+                                        recipe: recipes[recipeIndex],
+                                        onOpen: () =>
+                                            onOpenRecipe(recipes[recipeIndex]),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             );
           },
         );
+      },
+    );
+  }
+}
+
+class _WeeklyMenuRecipeRow extends StatelessWidget {
+  const _WeeklyMenuRecipeRow({
+    required this.menu,
+    required this.controller,
+    required this.recipe,
+    required this.onOpen,
+  });
+
+  final WeeklyMenu menu;
+  final TodoWorkspace controller;
+  final Recipe recipe;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.visuals.pageBorder),
+      ),
+      child: Material(
+        color: context.visuals.panelAlt,
+        child: InkWell(
+          key: ValueKey('weekly-menu-recipe-${menu.id}-${recipe.id}'),
+          mouseCursor: SystemMouseCursors.click,
+          hoverColor: context.visuals.accent.withValues(alpha: .08),
+          onTap: onOpen,
+          child: Row(
+            children: [
+              AspectRatio(
+                aspectRatio: 1.15,
+                child: _WeeklyMenuRecipeThumbnail(
+                  controller: controller,
+                  recipe: recipe,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        recipe.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${recipe.category} · ${_recipeDuration(recipe)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.visuals.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 9),
+                child: Tooltip(
+                  message: 'Abrir receta',
+                  child: Icon(
+                    Icons.arrow_outward_rounded,
+                    size: 16,
+                    color: context.visuals.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeeklyMenuRecipeThumbnail extends StatelessWidget {
+  const _WeeklyMenuRecipeThumbnail({
+    required this.controller,
+    required this.recipe,
+  });
+
+  final TodoWorkspace controller;
+  final Recipe recipe;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = ColoredBox(
+      color: const Color(0xFFF1E7D9),
+      child: Center(
+        child: Icon(
+          Icons.restaurant_menu_rounded,
+          size: 25,
+          color: context.visuals.textMuted,
+        ),
+      ),
+    );
+    return FutureBuilder<String>(
+      future: controller.recipeImageAbsolutePath(recipe),
+      builder: (context, snapshot) {
+        final path = snapshot.data ?? '';
+        if (path.isNotEmpty && File(path).existsSync()) {
+          return Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback,
+          );
+        }
+        if (recipe.imageSourceUrl.isNotEmpty) {
+          return Image.network(
+            recipe.imageSourceUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback,
+          );
+        }
+        return fallback;
       },
     );
   }
@@ -728,7 +846,6 @@ Future<void> _showWeeklyMenuDetail(
                                     child: _RecipeSectionTitle(
                                       icon: Icons.calendar_view_week_rounded,
                                       title: 'Elige qué vas a comprar',
-                                      count: selectedEntryIds.length,
                                     ),
                                   ),
                                   OutlinedButton.icon(
@@ -1487,6 +1604,24 @@ class _RecipeDetailPanel extends StatelessWidget {
                     child: Text('Ficha de receta',
                         style: TextStyle(color: context.visuals.textMuted)),
                   ),
+                  PopupMenuButton<String>(
+                    key: const ValueKey('recipe-detail-more'),
+                    tooltip: 'Más opciones',
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    onSelected: onAction,
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'archive',
+                        child: Row(
+                          children: [
+                            Icon(Icons.archive_outlined),
+                            SizedBox(width: 10),
+                            Text('Archivar receta'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   IconButton(
                     tooltip: 'Cerrar',
                     onPressed: onClose,
@@ -1648,33 +1783,35 @@ class _RecipeDetailPanel extends StatelessWidget {
               ),
               const Divider(height: 1),
               const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              Row(
                 children: [
-                  FilledButton.icon(
-                    onPressed: recipe.ingredients.isEmpty
-                        ? null
-                        : () => onAction('shopping'),
-                    icon: const Icon(Icons.shopping_cart_rounded),
-                    label: const Text('Comprar ingredientes'),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: recipe.ingredients.isEmpty
+                          ? null
+                          : () => onAction('shopping'),
+                      icon: const Icon(Icons.shopping_cart_rounded),
+                      label: const Text('Crear compra'),
+                    ),
                   ),
-                  FilledButton.tonalIcon(
-                    onPressed: () => onAction('cooking'),
-                    icon: const Icon(Icons.event_available_rounded),
-                    label: const Text('Crear tarea de cocina'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => onAction('edit'),
-                    icon: const Icon(Icons.edit_rounded),
-                    label: const Text('Editar'),
-                  ),
-                  IconButton(
-                    tooltip: 'Archivar',
-                    onPressed: () => onAction('archive'),
-                    icon: const Icon(Icons.archive_outlined),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => onAction('cooking'),
+                      icon: const Icon(Icons.event_available_rounded),
+                      label: const Text('Planificar cocina'),
+                    ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => onAction('edit'),
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text('Editar receta'),
+                ),
               ),
             ],
           ),
@@ -1686,12 +1823,12 @@ class _RecipeSectionTitle extends StatelessWidget {
   const _RecipeSectionTitle({
     required this.icon,
     required this.title,
-    required this.count,
+    this.count,
   });
 
   final IconData icon;
   final String title;
-  final int count;
+  final int? count;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -1706,8 +1843,14 @@ class _RecipeSectionTitle extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-          const SizedBox(width: 8),
-          Text('$count', style: TextStyle(color: context.visuals.textMuted)),
+          if (count != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              '$count',
+              key: ValueKey('recipe-section-count-$title'),
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+          ],
         ],
       );
 }
@@ -1745,168 +1888,41 @@ Future<void> _showRecipeEditor(
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: Text(current == null ? 'Nueva receta' : 'Editar receta'),
-        content: SizedBox(
-          width: 760,
-          height: 700,
-          child: ListView(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: title,
-                      autofocus: true,
-                      onChanged: (_) => setDialogState(() {}),
-                      decoration: const InputDecoration(labelText: 'Título'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: category,
-                      decoration: const InputDecoration(
-                        labelText: 'Categoría',
-                        hintText: 'Cena, postre, desayuno…',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: cuisine,
-                      decoration: const InputDecoration(
-                        labelText: 'Cocina',
-                        hintText: 'Canaria, italiana, asiática…',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: servings,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Raciones'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: prep,
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Preparación (min)'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: cook,
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Cocción (min)'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: description,
-                minLines: 2,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción',
-                  hintText:
-                      'Qué hace especial esta receta o cuándo prepararla…',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: ingredients,
-                minLines: 5,
-                maxLines: 9,
-                decoration: const InputDecoration(
-                  labelText: 'Ingredientes · uno por línea',
-                  hintText:
-                      '250 g de pasta\n2 tomates maduros\n1 diente de ajo',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: instructions,
-                minLines: 5,
-                maxLines: 10,
-                decoration: const InputDecoration(
-                  labelText: 'Preparación · un paso por línea',
-                  hintText:
-                      'Cuece la pasta.\nPrepara la salsa.\nMezcla y sirve.',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: tags,
-                decoration: const InputDecoration(
-                  labelText: 'Etiquetas',
-                  hintText: 'rápida, vegetariana, para invitados',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: sourceUrl,
-                decoration: const InputDecoration(
-                  labelText: 'Fuente original',
-                  hintText: 'https://…',
-                ),
-              ),
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final selected = await openFile(
-                      acceptedTypeGroups: const [
-                        XTypeGroup(
-                          label: 'Imágenes',
-                          extensions: ['png', 'jpg', 'jpeg', 'webp'],
-                        ),
-                      ],
-                    );
-                    if (selected != null) {
-                      setDialogState(() => imageFile = selected);
-                    }
-                  },
-                  icon: const Icon(Icons.image_outlined),
-                  label: Text(imageFile?.name ??
-                      (current?.imagePath.isNotEmpty == true
-                          ? 'Cambiar imagen'
-                          : 'Elegir imagen')),
-                ),
+      builder: (context, setDialogState) => _RecipeEditorDialog(
+        controller: controller,
+        current: current,
+        title: title,
+        category: category,
+        cuisine: cuisine,
+        servings: servings,
+        prep: prep,
+        cook: cook,
+        description: description,
+        ingredients: ingredients,
+        instructions: instructions,
+        tags: tags,
+        sourceUrl: sourceUrl,
+        imageFile: imageFile,
+        onTitleChanged: () => setDialogState(() {}),
+        onSelectImage: () async {
+          final selected = await openFile(
+            acceptedTypeGroups: const [
+              XTypeGroup(
+                label: 'Imágenes',
+                extensions: ['png', 'jpg', 'jpeg', 'webp'],
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: title.text.trim().isEmpty
-                ? null
-                : () => Navigator.pop(dialogContext, true),
-            child: Text(current == null ? 'Crear receta' : 'Guardar'),
-          ),
-        ],
+          );
+          if (selected != null) {
+            setDialogState(() => imageFile = selected);
+          }
+        },
+        onCancel: () => Navigator.pop(dialogContext, false),
+        onSave: () => Navigator.pop(dialogContext, true),
       ),
     ),
   );
+  await Future<void>.delayed(const Duration(milliseconds: 250));
 
   if (result == true && context.mounted) {
     final parsedIngredients = ingredients.text
@@ -1981,6 +1997,346 @@ Future<void> _showRecipeEditor(
     sourceUrl,
   ]) {
     field.dispose();
+  }
+}
+
+class _RecipeEditorDialog extends StatelessWidget {
+  const _RecipeEditorDialog({
+    required this.controller,
+    required this.current,
+    required this.title,
+    required this.category,
+    required this.cuisine,
+    required this.servings,
+    required this.prep,
+    required this.cook,
+    required this.description,
+    required this.ingredients,
+    required this.instructions,
+    required this.tags,
+    required this.sourceUrl,
+    required this.imageFile,
+    required this.onTitleChanged,
+    required this.onSelectImage,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  final TodoWorkspace controller;
+  final Recipe? current;
+  final TextEditingController title;
+  final TextEditingController category;
+  final TextEditingController cuisine;
+  final TextEditingController servings;
+  final TextEditingController prep;
+  final TextEditingController cook;
+  final TextEditingController description;
+  final TextEditingController ingredients;
+  final TextEditingController instructions;
+  final TextEditingController tags;
+  final TextEditingController sourceUrl;
+  final XFile? imageFile;
+  final VoidCallback onTitleChanged;
+  final Future<void> Function() onSelectImage;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  bool get editing => current != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return Dialog(
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 820),
+        child: Material(
+          color: visuals.panel,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 22, 18, 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            editing ? 'Editar receta' : 'Nueva receta',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            editing
+                                ? 'Actualiza la receta, sus tiempos y todos los pasos.'
+                                : 'Guarda ingredientes, preparación e imagen en una sola ficha.',
+                            style: TextStyle(color: visuals.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Cerrar',
+                      onPressed: onCancel,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: visuals.pageBorder),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 780) {
+                      return Column(
+                        children: [
+                          SizedBox(height: 240, child: _imagePanel(context)),
+                          Divider(height: 1, color: visuals.pageBorder),
+                          Expanded(child: _form(context)),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(width: 390, child: _imagePanel(context)),
+                        VerticalDivider(width: 1, color: visuals.pageBorder),
+                        Expanded(child: _form(context)),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Divider(height: 1, color: visuals.pageBorder),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 15, 22, 17),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    OutlinedButton(
+                      onPressed: onCancel,
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton.icon(
+                      onPressed: title.text.trim().isEmpty ? null : onSave,
+                      icon: const Icon(Icons.check_rounded),
+                      label: Text(
+                        editing ? 'Guardar cambios' : 'Crear receta',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePanel(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFF3EEE5),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: imageFile != null
+                    ? Image.file(
+                        File(imageFile!.path),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) =>
+                            const _MissingRecipeImage(),
+                      )
+                    : current == null
+                        ? const _MissingRecipeImage()
+                        : _RecipeImage(
+                            controller: controller,
+                            recipe: current!,
+                            thumbnail: false,
+                          ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onSelectImage,
+                icon: const Icon(Icons.image_outlined),
+                label: Text(
+                  imageFile?.name ??
+                      (current?.imagePath.isNotEmpty == true
+                          ? 'Cambiar imagen'
+                          : 'Elegir imagen'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _form(BuildContext context) {
+    final categories = controller.recipes
+        .where((recipe) => !recipe.archived)
+        .map((recipe) => recipe.category.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet();
+    if (current?.category.trim().isNotEmpty == true) {
+      categories.add(current!.category.trim());
+    }
+    final availableCategories = categories.toList()..sort();
+    return ListView(
+      key: const ValueKey('recipe-editor-form'),
+      padding: const EdgeInsets.all(24),
+      children: [
+        _sectionTitle(context, 'Información básica'),
+        const SizedBox(height: 14),
+        TextField(
+          controller: title,
+          autofocus: true,
+          onChanged: (_) => onTitleChanged(),
+          decoration: const InputDecoration(labelText: 'Título'),
+        ),
+        const SizedBox(height: 12),
+        _pairedFields(
+          editing && availableCategories.contains(category.text)
+              ? DropdownButtonFormField<String>(
+                  key: const ValueKey('recipe-editor-category'),
+                  initialValue: category.text,
+                  decoration: const InputDecoration(labelText: 'Categoría'),
+                  items: availableCategories
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => category.text = value ?? category.text,
+                )
+              : TextField(
+                  key: const ValueKey('recipe-editor-category'),
+                  controller: category,
+                  decoration: const InputDecoration(
+                    labelText: 'Categoría',
+                    hintText: 'Cena, postre, desayuno…',
+                  ),
+                ),
+          TextField(
+            controller: cuisine,
+            decoration: const InputDecoration(
+              labelText: 'Cocina',
+              hintText: 'Canaria, italiana, asiática…',
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: description,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Descripción',
+            hintText: 'Qué hace especial esta receta o cuándo prepararla…',
+          ),
+        ),
+        const SizedBox(height: 24),
+        _sectionTitle(context, 'Tiempo y raciones'),
+        const SizedBox(height: 14),
+        _pairedFields(
+          TextField(
+            controller: servings,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Raciones'),
+          ),
+          TextField(
+            controller: prep,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Preparación (min)'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: cook,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Cocción (min)'),
+        ),
+        const SizedBox(height: 24),
+        _sectionTitle(context, 'Ingredientes y preparación'),
+        const SizedBox(height: 14),
+        TextField(
+          controller: ingredients,
+          minLines: 5,
+          maxLines: 9,
+          decoration: const InputDecoration(
+            labelText: 'Ingredientes · uno por línea',
+            hintText: '250 g de pasta\n2 tomates maduros\n1 diente de ajo',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: instructions,
+          minLines: 5,
+          maxLines: 10,
+          decoration: const InputDecoration(
+            labelText: 'Preparación · un paso por línea',
+            hintText: 'Cuece la pasta.\nPrepara la salsa.\nMezcla y sirve.',
+          ),
+        ),
+        const SizedBox(height: 24),
+        _sectionTitle(context, 'Organización y origen'),
+        const SizedBox(height: 14),
+        TextField(
+          controller: tags,
+          decoration: const InputDecoration(
+            labelText: 'Etiquetas',
+            hintText: 'rápida, vegetariana, para invitados',
+            helperText: 'Separa varias etiquetas con comas',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: sourceUrl,
+          decoration: const InputDecoration(
+            labelText: 'Fuente original',
+            hintText: 'https://…',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(BuildContext context, String value) =>
+      Text(value, style: Theme.of(context).textTheme.titleMedium);
+
+  Widget _pairedFields(Widget first, Widget second) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            children: [first, const SizedBox(height: 12), second],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: 12),
+            Expanded(child: second),
+          ],
+        );
+      },
+    );
   }
 }
 
