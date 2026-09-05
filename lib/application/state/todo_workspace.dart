@@ -4308,16 +4308,18 @@ class TodoWorkspace extends ChangeNotifier {
 
   List<TaskModel> _tasksForDay(DateTime day) {
     final logicalToday = logicalDate();
+    final occurrenceKey = _occurrenceKey(day);
+    final isToday = _sameDay(day, logicalToday);
     return _tasks
         .where((task) => task.status == TaskStatus.active)
         .where((task) => !task.isSubtask)
         .where((task) {
       if (task.recurrence.isRecurring &&
-          task.recurrenceCompletions.containsKey(_occurrenceKey(day))) {
+          task.recurrenceCompletions.containsKey(occurrenceKey)) {
         return false;
       }
       if (task.recurrence.isRecurring) {
-        if (!_sameDay(day, logicalToday) &&
+        if (!isToday &&
             task.recurrence.type == RecurrenceType.daily) {
           return false;
         }
@@ -4327,7 +4329,7 @@ class TodoWorkspace extends ChangeNotifier {
       if (scheduled == null) {
         return true;
       }
-      if (_sameDay(day, logicalToday) && scheduled.isBefore(logicalToday)) {
+      if (isToday && scheduled.isBefore(logicalToday)) {
         return true;
       }
       return _sameDay(scheduled, day);
@@ -4432,8 +4434,14 @@ class TodoWorkspace extends ChangeNotifier {
             (left, right) => left.manualOrder.compareTo(right.manualOrder));
         break;
       case TodaySort.category:
-        sorted.sort((left, right) =>
-            _primaryCategory(left).compareTo(_primaryCategory(right)));
+        final names = <String, String>{};
+        for (final category in _categories) {
+          names.putIfAbsent(category.id, () => category.name);
+        }
+        String label(TaskModel task) => task.categoryIds.isEmpty
+            ? 'zzz'
+            : names[task.categoryIds.first] ?? 'zzz';
+        sorted.sort((left, right) => label(left).compareTo(label(right)));
         break;
       case TodaySort.time:
         sorted.sort(
@@ -4442,8 +4450,14 @@ class TodoWorkspace extends ChangeNotifier {
         );
         break;
       case TodaySort.project:
-        sorted.sort((left, right) =>
-            _primaryProject(left).compareTo(_primaryProject(right)));
+        final names = <String, String>{};
+        for (final project in _projects) {
+          names.putIfAbsent(project.id, () => project.name);
+        }
+        String label(TaskModel task) => task.projectIds.isEmpty
+            ? 'zzz'
+            : names[task.projectIds.first] ?? 'zzz';
+        sorted.sort((left, right) => label(left).compareTo(label(right)));
         break;
       case TodaySort.priority:
         sorted.sort((left, right) =>
@@ -4451,20 +4465,6 @@ class TodoWorkspace extends ChangeNotifier {
         break;
     }
     return sorted;
-  }
-
-  String _primaryCategory(TaskModel task) {
-    if (task.categoryIds.isEmpty) {
-      return 'zzz';
-    }
-    return categoryById(task.categoryIds.first)?.name ?? 'zzz';
-  }
-
-  String _primaryProject(TaskModel task) {
-    if (task.projectIds.isEmpty) {
-      return 'zzz';
-    }
-    return projectById(task.projectIds.first)?.name ?? 'zzz';
   }
 
   double _nextManualOrder({String? parentTaskId}) {

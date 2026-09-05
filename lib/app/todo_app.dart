@@ -81,11 +81,13 @@ class _TodoMaterialApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final workspace = ref.watch(todoWorkspaceProvider);
+    final visualMode = ref.watch(
+      todoWorkspaceProvider.select((workspace) => workspace.visualMode),
+    );
     return MaterialApp(
       title: 'Todo',
       debugShowCheckedModeBanner: false,
-      theme: buildTodoTheme(workspace.visualMode),
+      theme: buildTodoTheme(visualMode),
       locale: const Locale('es', 'ES'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
