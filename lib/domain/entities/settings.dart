@@ -63,30 +63,29 @@ class WardrobeDisplaySettings {
 
 class DeviceNotificationSettings {
   const DeviceNotificationSettings({
-    this.notificationsEnabled = true,
-    this.windowsPermissionGranted = true,
-    this.dayStartReminderEnabled = true,
-    this.dayEndReminderEnabled = true,
+    this.notificationsEnabled = false,
+    this.permissionGranted = false,
+    this.dayStartReminderEnabled = false,
+    this.dayEndReminderEnabled = false,
     this.defaultMinutesBeforeTask = 30,
   });
 
   final bool notificationsEnabled;
-  final bool windowsPermissionGranted;
+  final bool permissionGranted;
   final bool dayStartReminderEnabled;
   final bool dayEndReminderEnabled;
   final int defaultMinutesBeforeTask;
 
   DeviceNotificationSettings copyWith({
     bool? notificationsEnabled,
-    bool? windowsPermissionGranted,
+    bool? permissionGranted,
     bool? dayStartReminderEnabled,
     bool? dayEndReminderEnabled,
     int? defaultMinutesBeforeTask,
   }) {
     return DeviceNotificationSettings(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      windowsPermissionGranted:
-          windowsPermissionGranted ?? this.windowsPermissionGranted,
+      permissionGranted: permissionGranted ?? this.permissionGranted,
       dayStartReminderEnabled:
           dayStartReminderEnabled ?? this.dayStartReminderEnabled,
       dayEndReminderEnabled:
@@ -99,7 +98,7 @@ class DeviceNotificationSettings {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'notificationsEnabled': notificationsEnabled,
-      'windowsPermissionGranted': windowsPermissionGranted,
+      'notificationPermissionGranted': permissionGranted,
       'dayStartReminderEnabled': dayStartReminderEnabled,
       'dayEndReminderEnabled': dayEndReminderEnabled,
       'defaultMinutesBeforeTask': defaultMinutesBeforeTask,
@@ -108,11 +107,13 @@ class DeviceNotificationSettings {
 
   factory DeviceNotificationSettings.fromJson(Map<String, dynamic> json) {
     return DeviceNotificationSettings(
-      notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
-      windowsPermissionGranted:
-          json['windowsPermissionGranted'] as bool? ?? true,
-      dayStartReminderEnabled: json['dayStartReminderEnabled'] as bool? ?? true,
-      dayEndReminderEnabled: json['dayEndReminderEnabled'] as bool? ?? true,
+      notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
+      permissionGranted: json['notificationPermissionGranted'] as bool? ??
+          json['windowsPermissionGranted'] as bool? ??
+          false,
+      dayStartReminderEnabled:
+          json['dayStartReminderEnabled'] as bool? ?? false,
+      dayEndReminderEnabled: json['dayEndReminderEnabled'] as bool? ?? false,
       defaultMinutesBeforeTask:
           (json['defaultMinutesBeforeTask'] as num?)?.toInt() ?? 30,
     );

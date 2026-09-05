@@ -37,12 +37,35 @@ class _ProjectsPageState extends State<ProjectsPage> {
         children: [
           if (openedProject == null)
             _ReferenceProjectsHeader(
-              filterActive: _statusFilter != null,
               onCreateProject: () => showProjectEditor(context, controller),
-              onOpenFilter: _showStatusFilterMenu,
-              onReorder: _sortProjectsByUrgency,
             ),
-          const SizedBox(height: 16),
+          if (openedProject == null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _FilterPill(
+                    label: 'Todos (${allProjects.length})',
+                    selected: _statusFilter == null,
+                    onTap: () => setState(() => _statusFilter = null),
+                  ),
+                  const SizedBox(width: 7),
+                  ...ProjectStatus.values.expand((status) => [
+                        _FilterPill(
+                          label:
+                              '${_projectStatusLabel(status)} (${allProjects.where((project) => project.status == status).length})',
+                          selected: _statusFilter == status,
+                          onTap: () => setState(() => _statusFilter = status),
+                        ),
+                        const SizedBox(width: 7),
+                      ]),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
           Expanded(
             child: openedProject != null
                 ? _ReferenceProjectFullView(
@@ -162,117 +185,30 @@ class _ProjectsPageState extends State<ProjectsPage> {
         return leftTime.compareTo(rightTime);
       });
   }
-
-  Future<void> _showStatusFilterMenu() async {
-    final selected = await showMenu<ProjectStatus?>(
-      context: context,
-      position: const RelativeRect.fromLTRB(0, 120, 24, 0),
-      items: [
-        CheckedPopupMenuItem<ProjectStatus?>(
-          value: null,
-          checked: _statusFilter == null,
-          child: const Text('Todos'),
-        ),
-        ...ProjectStatus.values.map(
-          (status) => CheckedPopupMenuItem<ProjectStatus?>(
-            value: status,
-            checked: _statusFilter == status,
-            child: Text(_projectStatusLabel(status)),
-          ),
-        ),
-      ],
-    );
-    if (!mounted || selected == _statusFilter) {
-      return;
-    }
-    setState(() {
-      _statusFilter = selected;
-    });
-  }
-
-  void _sortProjectsByUrgency() {
-    final sorted = [...controller.projects]..sort((left, right) {
-        final leftDate = _projectDueDate(left) ?? DateTime(9999);
-        final rightDate = _projectDueDate(right) ?? DateTime(9999);
-        return leftDate.compareTo(rightDate);
-      });
-    if (sorted.isNotEmpty) {
-      setState(() {
-        _selectedProjectId = sorted.first.id;
-      });
-    }
-  }
-
-  DateTime? _projectDueDate(ProjectModel project) {
-    final scheduled = controller.tasks
-        .where((task) =>
-            task.projectIds.contains(project.id) &&
-            task.status == TaskStatus.active &&
-            task.scheduledAt != null)
-        .map((task) => task.scheduledAt!)
-        .toList()
-      ..sort();
-    return scheduled.isEmpty ? null : scheduled.first;
-  }
 }
 
 class _ReferenceProjectsHeader extends StatelessWidget {
   const _ReferenceProjectsHeader({
-    required this.filterActive,
     required this.onCreateProject,
-    required this.onOpenFilter,
-    required this.onReorder,
   });
 
-  final bool filterActive;
   final VoidCallback onCreateProject;
-  final VoidCallback onOpenFilter;
-  final VoidCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Proyectos',
-                  style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 6),
-              Text(
-                'Organiza objetivos temporales, planes y agrupaciones activas.',
-                style: TextStyle(
-                    color: context.visuals.textMuted,
-                    fontSize: 15,
-                    height: 1.2),
-              ),
-            ],
-          ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: _PageHeader(
+        title: 'Proyectos',
+        subtitle: '',
+        compact: true,
+        pinTrailingToEdge: true,
+        trailing: _HeaderActionButton(
+          label: 'Nuevo proyecto',
+          icon: Icons.add_rounded,
+          onPressed: onCreateProject,
         ),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _HeaderActionButton(
-              label: 'Nuevo proyecto',
-              icon: Icons.add_rounded,
-              onPressed: onCreateProject,
-            ),
-            _HeaderSecondaryButton(
-              onPressed: onOpenFilter,
-              icon: Icons.filter_alt_outlined,
-              label: filterActive ? 'Filtrar · Activo' : 'Filtrar',
-            ),
-            _HeaderSecondaryButton(
-              onPressed: onReorder,
-              icon: Icons.swap_vert_rounded,
-              label: 'Ordenar',
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

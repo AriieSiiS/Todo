@@ -19,6 +19,7 @@ class _AppShellState extends ConsumerState<AppShell>
   late final AmbientMusicController _musicController;
   late final bool _shouldInitializeMusic;
   bool _launchIntentHandled = false;
+  bool _openingNotificationTask = false;
 
   TodoWorkspace get controller => ref.read(todoWorkspaceProvider);
 
@@ -51,6 +52,13 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(todoWorkspaceProvider);
+    if (controller.pendingNotificationTaskId != null &&
+        !_openingNotificationTask) {
+      _openingNotificationTask = true;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openTaskFromNotification(),
+      );
+    }
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     final visuals = context.visuals;
     final knowledgeItem = controller.openKnowledgeLibraryItem;
@@ -120,6 +128,22 @@ class _AppShellState extends ConsumerState<AppShell>
           : null,
       bottomNavigationBar: wide ? null : _MobileNav(controller: controller),
     );
+  }
+
+  Future<void> _openTaskFromNotification() async {
+    final taskId = controller.takeNotificationTaskToOpen();
+    if (!mounted || taskId == null) {
+      _openingNotificationTask = false;
+      return;
+    }
+    final task = controller.tasks.cast<TaskModel?>().firstWhere(
+          (candidate) => candidate?.id == taskId,
+          orElse: () => null,
+        );
+    if (task != null) {
+      await showTaskEditor(context, controller, initialTask: task);
+    }
+    _openingNotificationTask = false;
   }
 
   Widget _sectionView(BuildContext context) {
@@ -355,110 +379,11 @@ class _Sidebar extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                _SidebarStatus(controller: controller),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SidebarStatus extends StatelessWidget {
-  const _SidebarStatus({required this.controller});
-
-  final TodoWorkspace controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final visuals = context.visuals;
-    final cloudLabel =
-        controller.cloudConnected ? 'Cuenta conectada' : 'Cuenta pendiente';
-    final calendarLabel = controller.isCalendarConnected
-        ? 'Google Calendar sincronizado'
-        : 'Google Calendar pendiente';
-    final alertsLabel = controller.notificationSettings.notificationsEnabled
-        ? 'Avisos activos'
-        : 'Avisos en pausa';
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? visuals.panelAlt
-            : Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 18),
-        border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.textStrong
-                : Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SidebarStatusRow(
-            icon: Icons.person_rounded,
-            label: cloudLabel,
-            active: controller.cloudConnected,
-          ),
-          const SizedBox(height: 8),
-          _SidebarStatusRow(
-            icon: Icons.calendar_month_rounded,
-            label: calendarLabel,
-            active: controller.isCalendarConnected,
-          ),
-          const SizedBox(height: 8),
-          _SidebarStatusRow(
-            icon: Icons.notifications_active_rounded,
-            label: alertsLabel,
-            active: controller.notificationSettings.notificationsEnabled,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarStatusRow extends StatelessWidget {
-  const _SidebarStatusRow({
-    required this.icon,
-    required this.label,
-    required this.active,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final visuals = context.visuals;
-    final textColor =
-        visuals.isPhantom ? visuals.textStrong : const Color(0xFFF1EADC);
-    final iconColor =
-        visuals.isPhantom ? visuals.accentAlt : const Color(0xFFC6CEBD);
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(color: textColor, fontSize: 12.6, height: 1.25),
-          ),
-        ),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active
-                ? const Color(0xFF8DCD67)
-                : Colors.white.withValues(alpha: 0.28),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,6 +1,8 @@
 import '../domain/models.dart';
 
 class TaskSchedulerService {
+  static const int _dailyReminderHorizonDays = 45;
+
   List<NotificationPlan> buildPlans({
     required List<TaskModel> tasks,
     required List<QuickNote> notes,
@@ -33,36 +35,56 @@ class TaskSchedulerService {
             title: task.title,
             body: _taskBody(task),
             when: trigger,
+            taskId: task.id,
           ),
         );
       }
     }
 
     if (notificationSettings.dayStartReminderEnabled) {
-      final nextStart = _nextDayStart(now, daySettings.nextDayVisibleAtHour);
-      plans.add(
-        NotificationPlan(
-          id: 910001,
-          title: 'Comienza tu día real',
-          body:
-              'Tienes ${tasks.where((task) => task.status == TaskStatus.active).length} tareas activas para revisar.',
-          when: nextStart,
-        ),
-      );
+      for (var offset = 0; offset < _dailyReminderHorizonDays; offset++) {
+        final date = now.add(Duration(days: offset));
+        final trigger = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          daySettings.nextDayVisibleAtHour,
+        );
+        if (!trigger.isAfter(now)) {
+          continue;
+        }
+        plans.add(
+          NotificationPlan(
+            id: 100000000 + _dateKey(trigger),
+            title: 'Comienza tu día real',
+            body:
+                'Tienes ${tasks.where((task) => task.status == TaskStatus.active).length} tareas activas para revisar.',
+            when: trigger,
+          ),
+        );
+      }
     }
 
     if (notificationSettings.dayEndReminderEnabled &&
         notes.any((note) => note.status == NoteStatus.inbox)) {
-      final nextEndWarning = _nextDayEndWarning(now, daySettings.dayEndsAtHour);
-      plans.add(
-        NotificationPlan(
-          id: 910002,
-          title: 'Notas pendientes antes del cierre del día',
-          body:
-              'Todavía tienes ${notes.where((note) => note.status == NoteStatus.inbox).length} notas sin procesar.',
-          when: nextEndWarning,
-        ),
-      );
+      final warningHour =
+          daySettings.dayEndsAtHour == 0 ? 23 : daySettings.dayEndsAtHour - 1;
+      for (var offset = 0; offset < _dailyReminderHorizonDays; offset++) {
+        final date = now.add(Duration(days: offset));
+        final trigger = DateTime(date.year, date.month, date.day, warningHour);
+        if (!trigger.isAfter(now)) {
+          continue;
+        }
+        plans.add(
+          NotificationPlan(
+            id: 200000000 + _dateKey(trigger),
+            title: 'Notas pendientes antes del cierre del día',
+            body:
+                'Todavía tienes ${notes.where((note) => note.status == NoteStatus.inbox).length} notas sin procesar.',
+            when: trigger,
+          ),
+        );
+      }
     }
 
     plans.sort((left, right) => left.when.compareTo(right.when));
@@ -78,18 +100,6 @@ class TaskSchedulerService {
     return 'Programada para las $hour:$minute';
   }
 
-  DateTime _nextDayStart(DateTime now, int hour) {
-    final candidate = DateTime(now.year, now.month, now.day, hour);
-    return candidate.isAfter(now)
-        ? candidate
-        : candidate.add(const Duration(days: 1));
-  }
-
-  DateTime _nextDayEndWarning(DateTime now, int dayEndsAtHour) {
-    final warningHour = dayEndsAtHour == 0 ? 23 : dayEndsAtHour - 1;
-    final candidate = DateTime(now.year, now.month, now.day, warningHour);
-    return candidate.isAfter(now)
-        ? candidate
-        : candidate.add(const Duration(days: 1));
-  }
+  int _dateKey(DateTime value) =>
+      value.year * 10000 + value.month * 100 + value.day;
 }

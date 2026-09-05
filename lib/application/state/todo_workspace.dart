@@ -39,6 +39,8 @@ class TodoWorkspace extends ChangeNotifier {
     this._knowledgeService,
   ) {
     _isaacSaveSync = IsaacSaveSyncService(_knowledgeService);
+    _notificationActionSubscription =
+        _notificationService.actions.listen(_handleNotificationAction);
   }
 
   static Future<TodoWorkspace> create() async {
@@ -101,6 +103,8 @@ class TodoWorkspace extends ChangeNotifier {
   final TaskFeedbackService _feedback;
   final KnowledgeService _knowledgeService;
   late final IsaacSaveSyncService _isaacSaveSync;
+  late final StreamSubscription<NotificationAction>
+      _notificationActionSubscription;
   final Random _random = Random();
 
   final List<TaskModel> _tasks = <TaskModel>[];
@@ -144,6 +148,7 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem? _openKnowledgeLibraryItem;
   TodaySort _todaySort = TodaySort.manual;
   LibraryItemStatus _libraryStatusView = LibraryItemStatus.completed;
+  LibraryAreaView _libraryAreaView = LibraryAreaView.library;
   AppVisualMode _visualMode = AppVisualMode.classic;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   DateTime? _manualLogicalDate;
@@ -152,6 +157,11 @@ class TodoWorkspace extends ChangeNotifier {
   bool _loadedFromPersistence = false;
   bool _calendarBusy = false;
   bool _notificationBusy = false;
+  bool _notificationAvailable = false;
+  int _scheduledNotificationCount = 0;
+  int _scheduledTaskNotificationCount = 0;
+  String _notificationError = '';
+  String? _pendingNotificationTaskId;
   bool _cloudBusy = false;
   DateTime? _lastCloudSyncAt;
   LocalSyncMetadata _syncMetadata = const LocalSyncMetadata();
@@ -214,6 +224,7 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem? get openKnowledgeLibraryItem => _openKnowledgeLibraryItem;
   TodaySort get todaySort => _todaySort;
   LibraryItemStatus get libraryStatusView => _libraryStatusView;
+  LibraryAreaView get libraryAreaView => _libraryAreaView;
   AppVisualMode get visualMode => _visualMode;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
@@ -222,6 +233,11 @@ class TodoWorkspace extends ChangeNotifier {
   bool get loadedFromPersistence => _loadedFromPersistence;
   bool get calendarBusy => _calendarBusy;
   bool get notificationBusy => _notificationBusy;
+  bool get notificationAvailable => _notificationAvailable;
+  int get scheduledNotificationCount => _scheduledNotificationCount;
+  int get scheduledTaskNotificationCount => _scheduledTaskNotificationCount;
+  String get notificationError => _notificationError;
+  String? get pendingNotificationTaskId => _pendingNotificationTaskId;
   bool get cloudBusy => _cloudBusy;
   bool get cloudConfigured => _cloudService.isConfigured;
   bool get cloudInitialized => _cloudService.isInitialized;
@@ -318,6 +334,14 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     _libraryStatusView = value;
+    _commit();
+  }
+
+  void setLibraryAreaView(LibraryAreaView value) {
+    if (_libraryAreaView == value) {
+      return;
+    }
+    _libraryAreaView = value;
     _commit();
   }
 
@@ -2606,8 +2630,10 @@ class TodoWorkspace extends ChangeNotifier {
     notifyListeners();
     try {
       final granted = await _notificationService.requestPermissions();
+      _notificationAvailable = granted;
+      _notificationError = granted ? '' : _notificationService.permissionIssue;
       _notificationSettings = _notificationSettings.copyWith(
-        windowsPermissionGranted: granted,
+        permissionGranted: granted,
       );
       _commit();
       return granted;
@@ -2797,10 +2823,68 @@ class TodoWorkspace extends ChangeNotifier {
       notificationSettings: notificationSettings,
       now: DateTime.now(),
     );
-    await _notificationService.syncSchedules(
-      plans: plans,
-      notificationSettings: notificationSettings,
-    );
+    try {
+      _notificationAvailable = await _notificationService.isAvailable();
+      if (!_notificationAvailable) {
+        _scheduledNotificationCount = 0;
+        _scheduledTaskNotificationCount = 0;
+        _notificationError =
+            'Las notificaciones no están disponibles en este dispositivo.';
+        notifyListeners();
+        return;
+      }
+      await _notificationService.syncSchedules(
+        plans: plans,
+        notificationSettings: notificationSettings,
+      );
+      _scheduledNotificationCount = await _notificationService.pendingCount();
+      _scheduledTaskNotificationCount =
+          plans.where((plan) => plan.taskId != null).length;
+      _notificationAvailable = true;
+      _notificationError = '';
+    } catch (error) {
+      _scheduledNotificationCount = 0;
+      _scheduledTaskNotificationCount = 0;
+      _notificationAvailable = false;
+      _notificationError = error.toString();
+    }
+    notifyListeners();
+  }
+
+  Future<bool> sendTestNotification() async {
+    _notificationBusy = true;
+    notifyListeners();
+    try {
+      final granted = await _notificationService.requestPermissions();
+      if (!granted) {
+        _notificationAvailable = false;
+        _notificationError = _notificationService.permissionIssue;
+        return false;
+      }
+      await _notificationService.showTest();
+      _notificationAvailable = true;
+      _notificationError = '';
+      return true;
+    } catch (error) {
+      _notificationAvailable = false;
+      _notificationError = error.toString();
+      return false;
+    } finally {
+      _notificationBusy = false;
+      notifyListeners();
+    }
+  }
+
+  String? takeNotificationTaskToOpen() {
+    final taskId = _pendingNotificationTaskId;
+    _pendingNotificationTaskId = null;
+    return taskId;
+  }
+
+  void _handleNotificationAction(NotificationAction action) {
+    _section = AppSection.today;
+    _pendingNotificationTaskId = action.taskId;
+    notifyListeners();
   }
 
   bool importStateFromJson(String rawJson) {
@@ -3698,7 +3782,7 @@ class TodoWorkspace extends ChangeNotifier {
       _loadedFromPersistence = true;
       final normalized = _normalizeLoadedSpanishText();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
-      if (persisted.schemaVersion < 3 || normalized || syncedLibraryGoals) {
+      if (persisted.schemaVersion < 4 || normalized || syncedLibraryGoals) {
         await _persist();
       }
     } else {
@@ -3754,8 +3838,12 @@ class TodoWorkspace extends ChangeNotifier {
     try {
       await _notificationService.initialize();
       await rescheduleTaskReminders();
-    } catch (_) {
-      // Las notificaciones no deben bloquear la apertura de la app.
+    } catch (error) {
+      _notificationAvailable = false;
+      _scheduledNotificationCount = 0;
+      _scheduledTaskNotificationCount = 0;
+      _notificationError = error.toString();
+      notifyListeners();
     }
   }
 
@@ -3824,12 +3912,17 @@ class TodoWorkspace extends ChangeNotifier {
       ..addAll(snapshot.calendarEvents);
     _daySettings = snapshot.daySettings;
     _wardrobeDisplaySettings = snapshot.wardrobeDisplaySettings;
-    _notificationSettings = snapshot.notificationSettings;
+    _notificationSettings = snapshot.schemaVersion < 4
+        ? const DeviceNotificationSettings()
+        : snapshot.notificationSettings;
     _calendarSettings = snapshot.calendarSettings;
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
     _libraryStatusView = snapshot.libraryStatusView;
-    _visualMode = snapshot.visualMode;
+    _libraryAreaView = snapshot.libraryAreaView;
+    // Phantom ya no forma parte de la interfaz. Los snapshots antiguos siguen
+    // siendo compatibles, pero la aplicación vuelve siempre al tema clásico.
+    _visualMode = AppVisualMode.classic;
     _manualLogicalDate = snapshot.manualLogicalDate;
     _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
@@ -4200,12 +4293,13 @@ class TodoWorkspace extends ChangeNotifier {
       section: section,
       todaySort: todaySort,
       libraryStatusView: libraryStatusView,
+      libraryAreaView: libraryAreaView,
       visualMode: visualMode,
       manualLogicalDate: _manualLogicalDate,
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 3,
+      schemaVersion: 4,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -4459,6 +4553,7 @@ class TodoWorkspace extends ChangeNotifier {
     _section = AppSection.today;
     _todaySort = TodaySort.manual;
     _libraryStatusView = LibraryItemStatus.completed;
+    _libraryAreaView = LibraryAreaView.library;
     _visualMode = AppVisualMode.classic;
     _manualLogicalDate = null;
     _manualLogicalDateStartedAt = null;
@@ -4720,6 +4815,7 @@ class TodoWorkspace extends ChangeNotifier {
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    unawaited(_notificationActionSubscription.cancel());
     _feedback.dispose();
     unawaited(_isaacSaveSync.dispose());
     _knowledgeService.dispose();

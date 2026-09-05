@@ -28,6 +28,7 @@ class AppStateSnapshot {
     this.libraryItems = const <LibraryItem>[],
     this.libraryGoals = const <LibraryGoal>[],
     this.libraryStatusView = LibraryItemStatus.completed,
+    this.libraryAreaView = LibraryAreaView.library,
     this.wardrobeItems = const <WardrobeItem>[],
     this.wardrobeOutfits = const <WardrobeOutfit>[],
     this.wardrobeWearLogs = const <WardrobeWearLog>[],
@@ -64,6 +65,7 @@ class AppStateSnapshot {
   final List<LibraryItem> libraryItems;
   final List<LibraryGoal> libraryGoals;
   final LibraryItemStatus libraryStatusView;
+  final LibraryAreaView libraryAreaView;
   final List<WardrobeItem> wardrobeItems;
   final List<WardrobeOutfit> wardrobeOutfits;
   final List<WardrobeWearLog> wardrobeWearLogs;
@@ -107,6 +109,7 @@ class AppStateSnapshot {
       'libraryItems': libraryItems.map((item) => item.toJson()).toList(),
       'libraryGoals': libraryGoals.map((goal) => goal.toJson()).toList(),
       'libraryStatusView': libraryStatusView.name,
+      'libraryAreaView': libraryAreaView.name,
       'wardrobeItems': wardrobeItems.map((item) => item.toJson()).toList(),
       'wardrobeOutfits': wardrobeOutfits.map((item) => item.toJson()).toList(),
       'wardrobeWearLogs':
@@ -191,6 +194,11 @@ class AppStateSnapshot {
         LibraryItemStatus.values,
         json['libraryStatusView'] as String?,
         LibraryItemStatus.completed,
+      ),
+      libraryAreaView: enumByName(
+        LibraryAreaView.values,
+        json['libraryAreaView'] as String?,
+        LibraryAreaView.library,
       ),
       wardrobeItems:
           (json['wardrobeItems'] as List<dynamic>? ?? const <dynamic>[])

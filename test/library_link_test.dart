@@ -7,6 +7,21 @@ void main() {
     final controller = TodoWorkspace.createForTest();
 
     expect(controller.libraryStatusView, LibraryItemStatus.completed);
+    expect(controller.libraryAreaView, LibraryAreaView.library);
+  });
+
+  test('library restores its last internal view', () {
+    final snapshot = _snapshot(
+      schemaVersion: 3,
+      items: const [],
+      goals: const [],
+    ).toJson()
+      ..['libraryAreaView'] = LibraryAreaView.goals.name;
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot.fromJson(snapshot),
+    );
+
+    expect(controller.libraryAreaView, LibraryAreaView.goals);
   });
 
   test('completed library goals and library items stay linked', () {

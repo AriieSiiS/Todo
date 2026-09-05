@@ -46,8 +46,6 @@ class _InboxPageState extends State<InboxPage> {
       allNotes: notes,
     );
     final wide = MediaQuery.sizeOf(context).width >= 1180;
-    final notesWithDate =
-        notes.where((note) => note.scheduledFor != null).length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
@@ -56,40 +54,24 @@ class _InboxPageState extends State<InboxPage> {
         children: [
           _PageHeader(
             title: 'Entrada',
-            subtitle: 'Aquí llegan las notas rápidas para revisarlas después.',
-            trailing: wide
-                ? _InboxHeaderControls(
-                    searchController: _searchController,
-                    onCreateNote: () =>
-                        showQuickNoteComposer(context, controller),
-                    onSearchChanged: (value) {
-                      setState(() {
-                        _query = value;
-                      });
-                    },
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _HeaderActionButton(
-                        label: 'Nueva nota',
-                        icon: Icons.add_rounded,
-                        onPressed: () =>
-                            showQuickNoteComposer(context, controller),
-                      ),
-                      const SizedBox(height: 12),
-                      _InboxSearchField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _query = value;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
+            subtitle: '',
+            compact: true,
+            pinTrailingToEdge: true,
+            trailing: _HeaderActionButton(
+              label: 'Nueva nota',
+              icon: Icons.add_rounded,
+              onPressed: () => showQuickNoteComposer(context, controller),
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
+          _CatalogSearchField(
+            key: const ValueKey('inbox-search'),
+            controller: _searchController,
+            onChanged: (value) => setState(() => _query = value),
+            label: 'Buscar en la entrada',
+            hint: 'Una idea, un recado o una nota…',
+          ),
+          const SizedBox(height: 12),
           Expanded(
             child: wide
                 ? Row(
@@ -111,65 +93,48 @@ class _InboxPageState extends State<InboxPage> {
                       const SizedBox(width: 18),
                       SizedBox(
                         width: 360,
-                        child: Column(
-                          children: [
-                            _InboxStatsCard(
-                              pendingCount: notes.length,
-                              withDateCount: notesWithDate,
-                            ),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: _InboxProcessCard(
-                                controller: controller,
-                                selectedNote: selected,
-                                target: _target,
-                                selectedDate: _resolvedSelectedDate(selected),
-                                onTargetChanged: (value) {
+                        child: _InboxProcessCard(
+                          controller: controller,
+                          selectedNote: selected,
+                          target: _target,
+                          selectedDate: _resolvedSelectedDate(selected),
+                          onTargetChanged: (value) {
+                            setState(() {
+                              _target = value;
+                            });
+                          },
+                          onDatePressed: selected == null ? null : _pickDate,
+                          onOpenForm: selected == null
+                              ? null
+                              : () => _processSelectedNote(selected),
+                          onArchive: selected == null
+                              ? null
+                              : () {
+                                  controller.archiveNote(selected.id);
                                   setState(() {
-                                    _target = value;
+                                    _selectedNoteId = null;
+                                    _selectedDate = null;
                                   });
                                 },
-                                onDatePressed:
-                                    selected == null ? null : _pickDate,
-                                onOpenForm: selected == null
-                                    ? null
-                                    : () => _processSelectedNote(selected),
-                                onArchive: selected == null
-                                    ? null
-                                    : () {
-                                        controller.archiveNote(selected.id);
-                                        setState(() {
-                                          _selectedNoteId = null;
-                                          _selectedDate = null;
-                                        });
-                                      },
-                                onEdit: selected == null
-                                    ? null
-                                    : () async {
-                                        await showQuickNoteComposer(
-                                          context,
-                                          controller,
-                                          initialNote: selected,
-                                        );
-                                        if (!mounted) {
-                                          return;
-                                        }
-                                        setState(() {});
-                                      },
-                              ),
-                            ),
-                          ],
+                          onEdit: selected == null
+                              ? null
+                              : () async {
+                                  await showQuickNoteComposer(
+                                    context,
+                                    controller,
+                                    initialNote: selected,
+                                  );
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  setState(() {});
+                                },
                         ),
                       ),
                     ],
                   )
                 : ListView(
                     children: [
-                      _InboxStatsCard(
-                        pendingCount: notes.length,
-                        withDateCount: notesWithDate,
-                      ),
-                      const SizedBox(height: 16),
                       _InboxProcessCard(
                         controller: controller,
                         selectedNote: selected,
@@ -457,79 +422,6 @@ class _InboxNotesCard extends StatelessWidget {
   }
 }
 
-class _InboxStatsCard extends StatelessWidget {
-  const _InboxStatsCard({
-    required this.pendingCount,
-    required this.withDateCount,
-  });
-
-  final int pendingCount;
-  final int withDateCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceCard(
-      child: Row(
-        children: [
-          Expanded(
-            child: _InboxMiniStat(
-              icon: Icons.inventory_2_outlined,
-              tone: const Color(0xFFE58E1C),
-              value: pendingCount.toString(),
-              label: 'pendientes',
-            ),
-          ),
-          Container(width: 1, height: 92, color: const Color(0xFFE8DCCD)),
-          Expanded(
-            child: _InboxMiniStat(
-              icon: Icons.calendar_month_outlined,
-              tone: const Color(0xFF607A5A),
-              value: withDateCount.toString(),
-              label: 'con fecha',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InboxMiniStat extends StatelessWidget {
-  const _InboxMiniStat({
-    required this.icon,
-    required this.tone,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final Color tone;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          Icon(icon, color: tone, size: 24),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: Theme.of(context)
-                .textTheme
-                .displaySmall
-                ?.copyWith(fontSize: 22),
-          ),
-          const SizedBox(height: 4),
-          Text(label),
-        ],
-      ),
-    );
-  }
-}
-
 class _InboxProcessCard extends StatelessWidget {
   const _InboxProcessCard({
     required this.controller,
@@ -779,70 +671,6 @@ class _InboxTargetButton extends StatelessWidget {
             const SizedBox(height: 6),
             Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InboxHeaderControls extends StatelessWidget {
-  const _InboxHeaderControls({
-    required this.searchController,
-    required this.onCreateNote,
-    required this.onSearchChanged,
-  });
-
-  final TextEditingController searchController;
-  final VoidCallback onCreateNote;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 568,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _HeaderActionButton(
-            icon: Icons.add_rounded,
-            label: 'Nueva nota',
-            onPressed: onCreateNote,
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 386,
-            child: _InboxSearchField(
-              controller: searchController,
-              onChanged: onSearchChanged,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InboxSearchField extends StatelessWidget {
-  const _InboxSearchField({
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        textAlignVertical: TextAlignVertical.center,
-        decoration: const InputDecoration(
-          hintText: 'Buscar una nota...',
-          prefixIcon: Icon(Icons.search_rounded),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
     );

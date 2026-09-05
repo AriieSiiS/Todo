@@ -3,6 +3,7 @@
 #include <propkey.h>
 #include <propvarutil.h>
 #include <shobjidl.h>
+#include <shlobj.h>
 #include <shellapi.h>
 #include <windows.h>
 #include <wrl/client.h>
@@ -24,6 +25,8 @@ namespace {
   }
 
 constexpr wchar_t kTodoAppId[] = L"AlejandroAfonso.Todo.App";
+constexpr wchar_t kTodoNotificationClsid[] =
+    L"{cf7b9a93-31fc-45c5-8cee-31f61b7aac84}";
 constexpr wchar_t kTodoSingleInstanceMutex[] =
     L"Local\\AlejandroAfonso.Todo.SingleInstance";
 constexpr wchar_t kTodoWindowClass[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
@@ -105,6 +108,79 @@ HRESULT ConfigureJumpList() {
   return S_OK;
 }
 
+void RegisterNotificationActivator() {
+  const std::wstring key_path =
+      std::wstring(L"Software\\Classes\\CLSID\\") +
+      kTodoNotificationClsid + L"\\LocalServer32";
+  HKEY key = nullptr;
+  if (::RegCreateKeyExW(HKEY_CURRENT_USER, key_path.c_str(), 0, nullptr, 0,
+                        KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) {
+    return;
+  }
+
+  const std::wstring command = L"\"" + GetExecutablePath() +
+                               L"\" -ToastActivated";
+  ::RegSetValueExW(
+      key, nullptr, 0, REG_SZ,
+      reinterpret_cast<const BYTE*>(command.c_str()),
+      static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+  ::RegCloseKey(key);
+}
+
+HRESULT EnsureNotificationShortcut() {
+  PWSTR programs_path = nullptr;
+  RETURN_IF_FAILED(::SHGetKnownFolderPath(
+      FOLDERID_Programs, KF_FLAG_DEFAULT, nullptr, &programs_path));
+  const std::wstring todo_directory =
+      std::wstring(programs_path) + L"\\Todo";
+  ::CoTaskMemFree(programs_path);
+  ::CreateDirectoryW(todo_directory.c_str(), nullptr);
+
+  const std::wstring executable_path = GetExecutablePath();
+  const auto separator = executable_path.find_last_of(L"\\/");
+  const std::wstring working_directory =
+      separator == std::wstring::npos
+          ? std::wstring()
+          : executable_path.substr(0, separator);
+
+  Microsoft::WRL::ComPtr<IShellLinkW> shortcut;
+  RETURN_IF_FAILED(::CoCreateInstance(CLSID_ShellLink, nullptr,
+                                      CLSCTX_INPROC_SERVER,
+                                      IID_PPV_ARGS(&shortcut)));
+  RETURN_IF_FAILED(shortcut->SetPath(executable_path.c_str()));
+  RETURN_IF_FAILED(shortcut->SetWorkingDirectory(working_directory.c_str()));
+  RETURN_IF_FAILED(shortcut->SetDescription(L"Abrir Todo"));
+  RETURN_IF_FAILED(shortcut->SetIconLocation(executable_path.c_str(), 0));
+
+  Microsoft::WRL::ComPtr<IPropertyStore> property_store;
+  RETURN_IF_FAILED(shortcut.As(&property_store));
+
+  PROPVARIANT app_id;
+  RETURN_IF_FAILED(::InitPropVariantFromString(kTodoAppId, &app_id));
+  const HRESULT app_id_result =
+      property_store->SetValue(PKEY_AppUserModel_ID, app_id);
+  ::PropVariantClear(&app_id);
+  RETURN_IF_FAILED(app_id_result);
+
+  CLSID activator_clsid;
+  RETURN_IF_FAILED(
+      ::CLSIDFromString(kTodoNotificationClsid, &activator_clsid));
+  PROPVARIANT toast_activator;
+  RETURN_IF_FAILED(
+      ::InitPropVariantFromCLSID(activator_clsid, &toast_activator));
+  const HRESULT activator_result = property_store->SetValue(
+      PKEY_AppUserModel_ToastActivatorCLSID, toast_activator);
+  ::PropVariantClear(&toast_activator);
+  RETURN_IF_FAILED(activator_result);
+  RETURN_IF_FAILED(property_store->Commit());
+
+  Microsoft::WRL::ComPtr<IPersistFile> persist_file;
+  RETURN_IF_FAILED(shortcut.As(&persist_file));
+  const std::wstring shortcut_path = todo_directory + L"\\Todo.lnk";
+  RETURN_IF_FAILED(persist_file->Save(shortcut_path.c_str(), TRUE));
+  return S_OK;
+}
+
 bool FocusExistingInstance() {
   HWND window = ::FindWindowW(kTodoWindowClass, kTodoWindowTitle);
   if (window == nullptr) {
@@ -133,6 +209,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  RegisterNotificationActivator();
+  EnsureNotificationShortcut();
   ConfigureJumpList();
 
   flutter::DartProject project(L"data");

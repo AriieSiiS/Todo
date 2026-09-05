@@ -41,9 +41,7 @@ class _CalendarPageState extends State<CalendarPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _CalendarTopHeader(
-            controller: controller,
             mode: _mode,
-            today: today,
             onModeSelected: (mode) {
               setState(() {
                 if (mode == _CalendarViewMode.week &&
@@ -70,11 +68,8 @@ class _CalendarPageState extends State<CalendarPage> {
                 _visibleMonth = DateTime(today.year, today.month);
               });
             },
-            onSyncPressed: controller.isCalendarConnected
-                ? () => controller.refreshCalendarEvents()
-                : null,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Expanded(
             child: switch (_mode) {
               _CalendarViewMode.month => _CalendarMonthView(
@@ -176,118 +171,63 @@ class _CalendarPageState extends State<CalendarPage> {
 
 class _CalendarTopHeader extends StatelessWidget {
   const _CalendarTopHeader({
-    required this.controller,
     required this.mode,
-    required this.today,
     required this.onModeSelected,
     required this.onCreate,
     required this.onTodayPressed,
-    required this.onSyncPressed,
   });
 
-  final TodoWorkspace controller;
   final _CalendarViewMode mode;
-  final DateTime today;
   final ValueChanged<_CalendarViewMode> onModeSelected;
   final VoidCallback onCreate;
   final VoidCallback onTodayPressed;
-  final VoidCallback? onSyncPressed;
 
   @override
   Widget build(BuildContext context) {
-    final secondaryText =
-        '${today.day}/${today.month}/${today.year} · tu día real cierra a las ${controller.daySettings.dayEndsAtHour}:00';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: _PageHeader(
+            title: 'Calendario',
+            subtitle: '',
+            compact: true,
+            pinTrailingToEdge: true,
+            trailing: _HeaderActionButton(
+              label: 'Nueva tarea o evento',
+              icon: Icons.add_rounded,
+              onPressed: onCreate,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Calendario',
-                      style: Theme.of(context).textTheme.displaySmall),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Text(
-                        secondaryText,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.info_outline_rounded,
-                          size: 18, color: context.visuals.textMuted),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 280,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 390),
                   child: _CalendarModeSwitcher(
                     selected: mode,
                     onSelected: onModeSelected,
                   ),
                 ),
-                const SizedBox(width: 12),
-                _CalendarFixedActionSlot(
-                  child: _CalendarGhostButton(
-                    label: 'Filtrar',
-                    icon: Icons.filter_alt_outlined,
-                    onPressed: mode == _CalendarViewMode.agenda ? () {} : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _CalendarFixedActionSlot(
-                  child: _CalendarGhostButton(
-                    label: 'Ordenar',
-                    icon: Icons.swap_vert_rounded,
-                    onPressed: mode == _CalendarViewMode.agenda ? () {} : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 154,
-                  child: _HeaderActionButton(
-                    label: 'Nueva tarea / evento',
-                    icon: Icons.add_rounded,
-                    onPressed: onCreate,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _CalendarFixedActionSlot(
-                  child: _CalendarGhostButton(
-                    label: 'Hoy',
-                    icon: Icons.calendar_today_outlined,
-                    onPressed: onTodayPressed,
-                  ),
-                ),
-              ],
+              ),
             ),
+            if (mode != _CalendarViewMode.month) ...[
+              const SizedBox(width: 10),
+              _HeaderSecondaryButton(
+                label: 'Hoy',
+                icon: Icons.calendar_today_outlined,
+                onPressed: onTodayPressed,
+              ),
+            ],
           ],
         ),
       ],
     );
-  }
-}
-
-class _CalendarFixedActionSlot extends StatelessWidget {
-  const _CalendarFixedActionSlot({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(width: 154, child: child);
   }
 }
 
@@ -353,27 +293,6 @@ Widget _calendarModeChip(String label, bool selected,
   );
 }
 
-class _CalendarGhostButton extends StatelessWidget {
-  const _CalendarGhostButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return _HeaderSecondaryButton(
-      label: label,
-      icon: icon,
-      onPressed: onPressed,
-    );
-  }
-}
-
 class _CalendarMonthView extends StatelessWidget {
   const _CalendarMonthView({
     required this.controller,
@@ -428,7 +347,7 @@ class _CalendarMonthView extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    _CalendarGhostButton(
+                    _HeaderSecondaryButton(
                       label: 'Hoy',
                       icon: Icons.calendar_today_outlined,
                       onPressed: () => onSelectDay(today),

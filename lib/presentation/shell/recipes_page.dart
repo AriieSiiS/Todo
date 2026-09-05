@@ -161,13 +161,10 @@ class _RecipesPageState extends State<RecipesPage> {
   }) {
     return Column(
       children: [
-        TextField(
+        _CatalogSearchField(
           key: const ValueKey('recipes-search'),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            labelText: 'Buscar recetas',
-            hintText: 'Pasta, vegetariana, tomate, cena…',
-          ),
+          label: 'Buscar recetas',
+          hint: 'Pasta, vegetariana, tomate, cena…',
           onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 10),

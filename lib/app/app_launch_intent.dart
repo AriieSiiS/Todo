@@ -4,18 +4,21 @@ enum LaunchEditorTarget { none, task, project, category }
 
 class AppLaunchIntent {
   const AppLaunchIntent({
-    this.section = AppSection.today,
+    this.section,
     this.editorTarget = LaunchEditorTarget.none,
+    this.testNotification = false,
   });
 
-  final AppSection section;
+  final AppSection? section;
   final LaunchEditorTarget editorTarget;
+  final bool testNotification;
 
   bool get opensEditor => editorTarget != LaunchEditorTarget.none;
 
   static AppLaunchIntent fromArgs(List<String> args) {
-    var section = AppSection.today;
+    AppSection? section;
     var editorTarget = LaunchEditorTarget.none;
+    var testNotification = false;
 
     for (final arg in args) {
       if (arg == '--section=today') {
@@ -24,8 +27,12 @@ class AppLaunchIntent {
         section = AppSection.projects;
       } else if (arg == '--section=categories') {
         section = AppSection.categories;
+      } else if (arg == '--section=expenses') {
+        section = AppSection.expenses;
       } else if (arg == '--section=calendar') {
         section = AppSection.calendar;
+      } else if (arg == '--section=library') {
+        section = AppSection.library;
       } else if (arg == '--section=inbox') {
         section = AppSection.inbox;
       } else if (arg == '--section=completed') {
@@ -47,9 +54,15 @@ class AppLaunchIntent {
       } else if (arg == '--new-category') {
         section = AppSection.categories;
         editorTarget = LaunchEditorTarget.category;
+      } else if (arg == '--test-notification') {
+        testNotification = true;
       }
     }
 
-    return AppLaunchIntent(section: section, editorTarget: editorTarget);
+    return AppLaunchIntent(
+      section: section,
+      editorTarget: editorTarget,
+      testNotification: testNotification,
+    );
   }
 }

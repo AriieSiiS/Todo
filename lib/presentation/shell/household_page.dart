@@ -103,13 +103,10 @@ class _HouseholdPageState extends State<HouseholdPage> {
   }) {
     return Column(
       children: [
-        TextField(
+        _CatalogSearchField(
           key: const ValueKey('household-search'),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            labelText: 'Buscar en el hogar',
-            hintText: 'Lavadora, Bosch, cocina, modelo o número de serie…',
-          ),
+          label: 'Buscar en el hogar',
+          hint: 'Lavadora, Bosch, cocina, modelo o número de serie…',
           onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 10),

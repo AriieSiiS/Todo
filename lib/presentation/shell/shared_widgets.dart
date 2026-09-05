@@ -766,6 +766,34 @@ class _HeaderSecondaryButton extends StatelessWidget {
   }
 }
 
+class _CatalogSearchField extends StatelessWidget {
+  const _CatalogSearchField({
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+    this.controller,
+    super.key,
+  });
+
+  final String label;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final TextEditingController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search_rounded),
+        labelText: label,
+        hintText: hint,
+      ),
+    );
+  }
+}
+
 class _PageHeader extends StatelessWidget {
   const _PageHeader({
     required this.title,
@@ -849,14 +877,16 @@ class _PageHeader extends StatelessWidget {
 }
 
 class _SectionTabBar extends StatelessWidget {
-  const _SectionTabBar({required this.labels});
+  const _SectionTabBar({required this.labels, this.onTap});
 
   final List<String> labels;
+  final ValueChanged<int>? onTap;
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     return TabBar(
+      onTap: onTap,
       isScrollable: true,
       tabAlignment: TabAlignment.start,
       dividerColor: Colors.transparent,

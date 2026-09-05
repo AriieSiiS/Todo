@@ -86,8 +86,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth >= 980;
-                          final form = _buildCategoryForm(
-                              context, title, description, tasksCount);
+                          final form = _buildCategoryForm(context);
                           final aside = _buildCategoryAside(
                               context, title, description, tasksCount);
                           if (!wide) {
@@ -133,8 +132,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
     );
   }
 
-  Widget _buildCategoryForm(
-      BuildContext context, String title, String description, int tasksCount) {
+  Widget _buildCategoryForm(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -278,65 +276,6 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
             ],
           ),
         ),
-        const SizedBox(height: 18),
-        _sectionLabel('Vista previa'),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: _softBorderBox(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Color(_colorValue).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(_icon, color: const Color(0xFF233122)),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                        ),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Color(_colorValue),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      style: TextStyle(
-                          color: Theme.of(context)
-                              .extension<TodoVisuals>()!
-                              .textMuted,
-                          height: 1.45),
-                    ),
-                    const SizedBox(height: 10),
-                    Text('$tasksCount tareas'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -352,39 +291,6 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: Color(_colorValue).withValues(alpha: 0.16),
-                      shape: BoxShape.circle,
-                    ),
-                    child:
-                        Icon(_icon, color: const Color(0xFF233122), size: 30),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: Text(title,
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall)),
-                        Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                              color: Color(_colorValue),
-                              shape: BoxShape.circle),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
               _summaryLine(Icons.event_note_outlined, 'Categoría permanente'),
               _summaryLine(Icons.calendar_month_outlined,
                   'Se verá en tareas y calendario'),
@@ -394,7 +300,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
         ),
         const SizedBox(height: 18),
         _AsideCard(
-          title: 'Así se verá',
+          title: 'Vista previa',
           subtitle: 'Ejemplo en tus tareas y proyectos.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,16 +351,6 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                     const SizedBox(height: 10),
                     Text('$tasksCount tareas'),
                   ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () {},
-                  label: const Text('Ver más ejemplos'),
-                  iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                 ),
               ),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +28,97 @@ void main() {
 
     expect(find.text('Hoy'), findsWidgets);
     expect(find.textContaining('Entrada'), findsWidgets);
+  });
+
+  testWidgets('settings only shows controls that are currently functional', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest();
+
+    _configureLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTodoTheme(),
+        home: Scaffold(body: SettingsPage(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Regla del día'), findsOneWidget);
+    expect(find.text('Notificaciones'), findsOneWidget);
+    expect(find.text('Enviar prueba'), findsOneWidget);
+    expect(find.text('Ropa'), findsOneWidget);
+    expect(find.text('Datos'), findsOneWidget);
+    expect(find.text('Estado del sistema'), findsOneWidget);
+    expect(find.text('Consejos y atajos'), findsOneWidget);
+
+    expect(find.text('Cuenta y nube'), findsNothing);
+    expect(find.text('Calendario e integraciones'), findsNothing);
+    expect(find.text('Horas de enfoque (no molestar)'), findsNothing);
+    expect(find.text('Apariencia'), findsNothing);
+    expect(find.text('Phantom'), findsNothing);
+    expect(find.text('Rutinas y comportamiento'), findsNothing);
+
+    tester
+        .widget<DropdownButtonFormField<int>>(
+          find.descendant(
+            of: find.byKey(const ValueKey('settings-day-end-hour')),
+            matching: find.byType(DropdownButtonFormField<int>),
+          ),
+        )
+        .onChanged!(4);
+    await tester.pump();
+    expect(controller.daySettings.dayEndsAtHour, 4);
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pump();
+    expect(controller.wardrobeDisplaySettings.showUsageCount, isTrue);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+  });
+
+  test('legacy Phantom preference is normalized to classic', () {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.settings,
+        todaySort: TodaySort.manual,
+        visualMode: AppVisualMode.phantom,
+      ),
+    );
+
+    expect(controller.visualMode, AppVisualMode.classic);
+  });
+
+  test('legacy automatic notifications are disabled until configured', () {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(
+          notificationsEnabled: true,
+          dayStartReminderEnabled: true,
+          dayEndReminderEnabled: true,
+        ),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.settings,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+
+    expect(controller.notificationSettings.notificationsEnabled, isFalse);
+    expect(controller.notificationSettings.dayStartReminderEnabled, isFalse);
+    expect(controller.notificationSettings.dayEndReminderEnabled, isFalse);
   });
 
   testWidgets('loads persisted snapshot', (WidgetTester tester) async {
@@ -185,6 +277,165 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('library restores and updates its internal tab', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryAreaView: LibraryAreaView.goals,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+    });
+
+    expect(find.text('Añadir propósito'), findsOneWidget);
+    await tester.tap(find.text('Biblioteca').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.libraryAreaView, LibraryAreaView.library);
+    expect(find.text('Añadir a Biblioteca'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('library editor exposes rating and notes for completed items', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: _snapshotForSection(AppSection.library),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Añadir a Biblioteca'));
+      await tester.pump();
+    });
+
+    expect(find.text('Valoración opcional'), findsOneWidget);
+    expect(find.text('Notas opcionales'), findsOneWidget);
+    expect(find.text('Añadir'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('library context menu completes a pending item quickly', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'quick-complete-item',
+            type: LibraryItemType.movieSeries,
+            title: 'Serie terminada',
+            status: LibraryItemStatus.pending,
+            createdAt: DateTime(2026, 9, 1),
+            updatedAt: DateTime(2026, 9, 1),
+          ),
+        ],
+        libraryStatusView: LibraryItemStatus.pending,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.text('Serie terminada').first,
+        buttons: kSecondaryMouseButton,
+      );
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.text('Marcar como completado'), findsOneWidget);
+    await tester.tap(find.text('Marcar como completado'));
+    await tester.pump();
+    expect(controller.libraryItems.single.status, LibraryItemStatus.completed);
+    expect(controller.libraryItems.single.completedDate, isNotNull);
+    expect(find.text('Deshacer'), findsOneWidget);
+
+    tester.widget<SnackBarAction>(find.byType(SnackBarAction)).onPressed();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.libraryItems.single.status, LibraryItemStatus.pending);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('purpose editor shows fields for the selected content type', (
+    WidgetTester tester,
+  ) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryAreaView: LibraryAreaView.goals,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Añadir propósito'));
+      await tester.pump();
+      await tester.tap(find.text('Película / Serie / Anime'));
+      await tester.pump();
+    });
+
+    expect(find.text('Año de estreno'), findsOneWidget);
+    expect(find.text('Director / Creador'), findsOneWidget);
+    expect(find.text('País de origen'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('biblioteca mantiene el filtro de tipo al cambiar de estado', (
     WidgetTester tester,
   ) async {
@@ -270,6 +521,7 @@ void main() {
             type: LibraryItemType.game,
             title: 'Prey',
             targetYear: now.year,
+            status: LibraryGoalStatus.completed,
             platform: 'PC',
             releaseYear: 2017,
             format: 'Digital',
@@ -297,7 +549,26 @@ void main() {
 
     await tester.tap(find.text('Propósitos'));
     await tester.pump();
-    await tester.tap(find.text('Prey').first);
+    await tester.tap(find.text('Juegos').first);
+    await tester.pump();
+
+    final completedCardFinder =
+        find.byKey(const ValueKey('library-goal-card-goal-prey'));
+    final completedCard = tester.widget<AnimatedContainer>(completedCardFinder);
+    final completedDecoration =
+        completedCard.foregroundDecoration! as BoxDecoration;
+    expect(completedDecoration.border, isNotNull);
+
+    tester
+        .widget<InkWell>(
+          find
+              .ancestor(
+                of: completedCardFinder,
+                matching: find.byType(InkWell),
+              )
+              .first,
+        )
+        .onTap!();
     await tester.pumpAndSettle();
 
     final cover = find.byKey(

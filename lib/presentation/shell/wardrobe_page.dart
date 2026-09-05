@@ -124,14 +124,10 @@ class _WardrobePageState extends State<WardrobePage> {
         Row(
           children: [
             Expanded(
-              child: TextField(
+              child: _CatalogSearchField(
                 key: const ValueKey('wardrobe-search'),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
-                  hintText:
-                      'Buscar: pantalón beige, zapatillas, camiseta granate…',
-                  labelText: 'Buscar en el armario',
-                ),
+                label: 'Buscar en el armario',
+                hint: 'Pantalón beige, zapatillas, camiseta granate…',
                 onChanged: (value) => setState(() => _query = value),
               ),
             ),

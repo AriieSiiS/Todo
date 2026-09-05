@@ -27,8 +27,14 @@ class _TodoAppState extends State<TodoApp> {
   @override
   void initState() {
     super.initState();
-    _controllerFuture = TodoWorkspace.create().then((controller) {
-      controller.setSection(widget.launchIntent.section);
+    _controllerFuture = TodoWorkspace.create().then((controller) async {
+      final requestedSection = widget.launchIntent.section;
+      if (requestedSection != null) {
+        controller.setSection(requestedSection);
+      }
+      if (widget.launchIntent.testNotification) {
+        await controller.sendTestNotification();
+      }
       return controller;
     });
   }

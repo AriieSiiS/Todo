@@ -8,7 +8,16 @@ class NotificationServiceRepository implements NotificationRepository {
   final NotificationService _service;
 
   @override
+  Stream<NotificationAction> get actions => _service.actions;
+
+  @override
+  String get permissionIssue => _service.permissionIssue;
+
+  @override
   Future<void> initialize() => _service.initialize();
+
+  @override
+  Future<bool> isAvailable() => _service.isAvailable();
 
   @override
   Future<bool> requestPermissions() => _service.requestPermissions();
@@ -22,4 +31,14 @@ class NotificationServiceRepository implements NotificationRepository {
         plans: plans,
         notificationSettings: notificationSettings,
       );
+
+  @override
+  Future<void> showTest() => _service.showNow(
+        id: 919999,
+        title: 'Todo está listo',
+        body: 'Las notificaciones de Windows funcionan correctamente.',
+      );
+
+  @override
+  Future<int> pendingCount() => _service.pendingCount();
 }

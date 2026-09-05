@@ -35,6 +35,433 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final notificationSettings = controller.notificationSettings;
+    final notificationScheduleLabel =
+        _notificationScheduleLabel(controller, notificationSettings);
+    final contentCount = controller.tasks.length +
+        controller.projects.length +
+        controller.categories.length +
+        controller.notes.length +
+        controller.expenses.length +
+        controller.libraryItems.length +
+        controller.libraryGoals.length +
+        controller.wardrobeItems.length +
+        controller.householdItems.length +
+        controller.recipes.length +
+        controller.weeklyMenus.length;
+    final lastSavedAt = controller.lastSavedAt;
+
+    final dayRules = _SettingsSectionCard(
+      icon: Icons.schedule_rounded,
+      title: 'Regla del día',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Decide cuándo termina tu día en la app, aunque ya haya pasado la medianoche.',
+            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _SettingsHourField(
+                  key: const ValueKey('settings-day-end-hour'),
+                  label: 'El día termina a las',
+                  helper:
+                      'Hasta esta hora, las tareas siguen perteneciendo al día anterior.',
+                  value: controller.daySettings.dayEndsAtHour,
+                  firstHour: 0,
+                  lastHour: 12,
+                  onChanged: (value) => controller.updateSettings(
+                    controller.daySettings.copyWith(dayEndsAtHour: value),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _SettingsHourField(
+                  key: const ValueKey('settings-next-day-hour'),
+                  label: 'Adelantar el próximo día desde',
+                  helper:
+                      'A partir de esta hora, “Pasar día” abre directamente mañana.',
+                  value: controller.daySettings.nextDayVisibleAtHour,
+                  firstHour: 5,
+                  lastHour: 14,
+                  onChanged: (value) => controller.updateSettings(
+                    controller.daySettings
+                        .copyWith(nextDayVisibleAtHour: value),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 34),
+          _settingsActionRow(
+            title: controller.hasManualLogicalDate
+                ? 'Día cambiado manualmente'
+                : 'Cambiar el día actual',
+            subtitle: controller.hasManualLogicalDate
+                ? 'La app está usando una fecha manual. Puedes avanzar, retroceder o volver a la regla automática.'
+                : 'Úsalo cuando quieras cerrar el día antes de la hora configurada.',
+            buttonLabel: 'Día siguiente',
+            icon: Icons.skip_next_rounded,
+            onPressed: controller.advanceToNextLogicalDay,
+            previousButtonLabel: 'Día anterior',
+            previousIcon: Icons.skip_previous_rounded,
+            onPreviousPressed: controller.moveToPreviousLogicalDay,
+            secondaryButtonLabel:
+                controller.hasManualLogicalDate ? 'Volver a automático' : null,
+            secondaryIcon: Icons.undo_rounded,
+            onSecondaryPressed: controller.hasManualLogicalDate
+                ? controller.clearManualLogicalDate
+                : null,
+          ),
+        ],
+      ),
+    );
+
+    final wardrobe = _SettingsSectionCard(
+      icon: Icons.checkroom_outlined,
+      title: 'Ropa',
+      child: _settingsToggleRow(
+        title: 'Mostrar número de usos',
+        subtitle: 'Enseña los usos y el coste por uso en las prendas.',
+        value: controller.wardrobeDisplaySettings.showUsageCount,
+        onChanged: (value) {
+          controller.updateWardrobeDisplaySettings(
+            controller.wardrobeDisplaySettings.copyWith(showUsageCount: value),
+          );
+          setState(() {});
+        },
+      ),
+    );
+
+    final notifications = _SettingsSectionCard(
+      icon: Icons.notifications_active_outlined,
+      title: 'Notificaciones',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _settingsToggleRow(
+            title: 'Activar recordatorios',
+            subtitle:
+                'El dispositivo guarda los avisos y puede mostrarlos aunque Todo esté cerrada.',
+            value: notificationSettings.notificationsEnabled,
+            onChanged: (value) async {
+              if (value) {
+                final granted =
+                    await controller.requestNotificationPermissions();
+                if (!granted || !context.mounted) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          controller.notificationError.isEmpty
+                              ? 'No se han podido activar las notificaciones.'
+                              : controller.notificationError,
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+              await controller.updateNotificationSettings(
+                controller.notificationSettings.copyWith(
+                  notificationsEnabled: value,
+                ),
+              );
+            },
+          ),
+          if (notificationSettings.notificationsEnabled) ...[
+            const Divider(height: 30),
+            _settingsToggleRow(
+              title: 'Comienzo del día',
+              subtitle: 'Un resumen de las tareas activas al empezar tu día.',
+              value: notificationSettings.dayStartReminderEnabled,
+              onChanged: (value) => controller.updateNotificationSettings(
+                controller.notificationSettings.copyWith(
+                  dayStartReminderEnabled: value,
+                ),
+              ),
+            ),
+            const Divider(height: 30),
+            _settingsToggleRow(
+              title: 'Cierre del día',
+              subtitle:
+                  'Un aviso si todavía quedan notas sin procesar antes del cierre.',
+              value: notificationSettings.dayEndReminderEnabled,
+              onChanged: (value) => controller.updateNotificationSettings(
+                controller.notificationSettings.copyWith(
+                  dayEndReminderEnabled: value,
+                ),
+              ),
+            ),
+            const Divider(height: 30),
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recordatorio predeterminado',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Se utilizará al activar un aviso nuevo en una tarea.',
+                        style: TextStyle(
+                          color: Color(0xFF7E7568),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 18),
+                SizedBox(
+                  width: 170,
+                  child: DropdownButtonFormField<int>(
+                    key: const ValueKey('settings-default-reminder'),
+                    isExpanded: true,
+                    initialValue: notificationSettings.defaultMinutesBeforeTask,
+                    items: const [
+                      DropdownMenuItem(value: 5, child: Text('5 minutos')),
+                      DropdownMenuItem(value: 15, child: Text('15 minutos')),
+                      DropdownMenuItem(value: 30, child: Text('30 minutos')),
+                      DropdownMenuItem(value: 60, child: Text('1 hora')),
+                      DropdownMenuItem(value: 1440, child: Text('1 día')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.updateNotificationSettings(
+                          controller.notificationSettings.copyWith(
+                            defaultMinutesBeforeTask: value,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              FilledButton.tonalIcon(
+                key: const ValueKey('settings-test-notification'),
+                onPressed: controller.notificationBusy
+                    ? null
+                    : () async {
+                        final shown = await controller.sendTestNotification();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              shown
+                                  ? 'Notificación de prueba enviada.'
+                                  : 'No se pudo mostrar la notificación.',
+                            ),
+                          ),
+                        );
+                      },
+                icon: const Icon(Icons.send_outlined, size: 18),
+                label: const Text('Enviar prueba'),
+              ),
+              Text(
+                controller.notificationError.isNotEmpty
+                    ? controller.notificationError
+                    : notificationScheduleLabel,
+                style: TextStyle(
+                  color: controller.notificationError.isEmpty
+                      ? context.visuals.textMuted
+                      : const Color(0xFF9D5D3A),
+                  fontSize: 13,
+                ),
+              ),
+              if (controller.notificationError.contains('Windows'))
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(
+                    Uri.parse('ms-settings:notifications'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: const Text('Abrir ajustes de Windows'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final data = _SettingsSectionCard(
+      icon: Icons.storage_rounded,
+      title: 'Datos',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'La app guarda los cambios automáticamente en este equipo. También puedes copiar o restaurar el estado en formato JSON.',
+            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: () => _showExport(context),
+                icon: const Icon(Icons.file_upload_outlined, size: 18),
+                label: const Text('Exportar datos'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: () => _showImport(context),
+                icon: const Icon(Icons.file_download_outlined, size: 18),
+                label: const Text('Importar datos'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _confirmReset(context),
+                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                label: const Text('Reiniciar datos'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final status = _SettingsAsideCard(
+      title: 'Estado del sistema',
+      icon: Icons.shield_outlined,
+      children: [
+        _SettingsStatusItem(
+          icon: Icons.save_outlined,
+          title: 'Guardado local',
+          subtitle: lastSavedAt == null
+              ? 'Guardado automático activo'
+              : 'Último guardado: ${_timeLabel(lastSavedAt)}',
+          active: true,
+        ),
+        _SettingsStatusItem(
+          icon: Icons.inventory_2_outlined,
+          title: 'Contenido cargado',
+          subtitle: '$contentCount elementos en la app',
+          active: true,
+        ),
+        _SettingsStatusItem(
+          icon: Icons.notifications_none_rounded,
+          title: 'Avisos del sistema',
+          subtitle: notificationSettings.notificationsEnabled
+              ? controller.notificationError.isEmpty
+                  ? notificationScheduleLabel
+                  : 'Necesita atención'
+              : 'Desactivados',
+          active: notificationSettings.notificationsEnabled &&
+              controller.notificationError.isEmpty,
+        ),
+      ],
+    );
+
+    const tips = _SettingsAsideCard(
+      title: 'Consejos y atajos',
+      icon: Icons.tips_and_updates_outlined,
+      children: [
+        _SettingsHintRow(
+          icon: Icons.open_with_rounded,
+          text: 'Arrastra las tareas de Hoy para cambiar su orden.',
+        ),
+        _SettingsHintRow(
+          icon: Icons.mouse_outlined,
+          text:
+              'En Biblioteca, usa el clic derecho para editar o completar rápidamente.',
+        ),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: const _PageHeader(
+              title: 'Ajustes',
+              subtitle: '',
+              compact: true,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 1040) {
+                  return ListView(
+                    children: [
+                      dayRules,
+                      const SizedBox(height: 16),
+                      notifications,
+                      const SizedBox(height: 16),
+                      wardrobe,
+                      const SizedBox(height: 16),
+                      data,
+                      const SizedBox(height: 16),
+                      status,
+                      const SizedBox(height: 16),
+                      tips,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          dayRules,
+                          const SizedBox(height: 16),
+                          notifications,
+                          const SizedBox(height: 16),
+                          data,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    SizedBox(
+                      width: 360,
+                      child: ListView(
+                        children: [
+                          wardrobe,
+                          const SizedBox(height: 16),
+                          status,
+                          const SizedBox(height: 16),
+                          tips,
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Conservamos temporalmente el diseño anterior fuera del árbol para que la
+  // retirada de integraciones no afecte a sus modelos persistidos.
+  Widget _buildLegacySettingsPage(BuildContext context) {
     final settings = controller.daySettings;
     final notificationSettings = controller.notificationSettings;
     final calendarSettings = controller.calendarSettings;
@@ -1008,6 +1435,91 @@ class _CloudConflictBox extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SettingsHourField extends StatelessWidget {
+  const _SettingsHourField({
+    required this.label,
+    required this.helper,
+    required this.value,
+    required this.firstHour,
+    required this.lastHour,
+    required this.onChanged,
+    super.key,
+  });
+
+  final String label;
+  final String helper;
+  final int value;
+  final int firstHour;
+  final int lastHour;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [for (var hour = firstHour; hour <= lastHour; hour++) hour];
+    final selected = options.contains(value) ? value : options.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          helper,
+          style: TextStyle(
+            color: context.visuals.textMuted,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<int>(
+          initialValue: selected,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.schedule_rounded),
+          ),
+          items: [
+            for (final hour in options)
+              DropdownMenuItem(
+                value: hour,
+                child: Text('${hour.toString().padLeft(2, '0')}:00'),
+              ),
+          ],
+          onChanged: (next) {
+            if (next != null) {
+              onChanged(next);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+String _notificationScheduleLabel(
+  TodoWorkspace controller,
+  DeviceNotificationSettings settings,
+) {
+  if (!settings.notificationsEnabled) {
+    return 'Desactivados';
+  }
+  final parts = <String>[];
+  final taskCount = controller.scheduledTaskNotificationCount;
+  if (taskCount > 0) {
+    parts.add(
+        taskCount == 1 ? '1 aviso de tarea' : '$taskCount avisos de tareas');
+  }
+  final dailyCount = (settings.dayStartReminderEnabled ? 1 : 0) +
+      (settings.dayEndReminderEnabled ? 1 : 0);
+  if (dailyCount > 0) {
+    parts.add(dailyCount == 1
+        ? '1 aviso diario activo'
+        : '$dailyCount avisos diarios activos');
+  }
+  return parts.isEmpty ? 'No hay avisos programados' : parts.join(' · ');
 }
 
 class _SettingsSectionCard extends StatelessWidget {

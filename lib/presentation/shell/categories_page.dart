@@ -30,12 +30,16 @@ class _CategoriesPageState extends State<CategoriesPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ReferenceCategoriesHeader(
-            query: _query,
-            onQueryChanged: (value) => setState(() => _query = value),
             onCreateCategory: () => showCategoryEditor(context, controller),
-            onReorder: _reorderCategories,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          _CatalogSearchField(
+            key: const ValueKey('categories-search'),
+            onChanged: (value) => setState(() => _query = value),
+            label: 'Buscar categorías',
+            hint: 'Casa, trabajo, salud…',
+          ),
+          const SizedBox(height: 12),
           Expanded(
             child: wide
                 ? Row(
@@ -112,10 +116,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
     return selected ?? categories.first;
   }
 
-  void _reorderCategories() {
-    setState(() {});
-  }
-
   Future<void> _deleteCategory(CategoryModel category) async {
     final tasks = controller.tasksByCategory(category.id).length;
     final confirm = await showDialog<bool>(
@@ -152,73 +152,26 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
 class _ReferenceCategoriesHeader extends StatelessWidget {
   const _ReferenceCategoriesHeader({
-    required this.query,
-    required this.onQueryChanged,
     required this.onCreateCategory,
-    required this.onReorder,
   });
 
-  final String query;
-  final ValueChanged<String> onQueryChanged;
   final VoidCallback onCreateCategory;
-  final VoidCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Categorías',
-                  style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 6),
-              Text(
-                'Organiza tus tareas por áreas de tu vida y tu casa.',
-                style: TextStyle(
-                    color: context.visuals.textMuted,
-                    fontSize: 15,
-                    height: 1.2),
-              ),
-            ],
-          ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: _PageHeader(
+        title: 'Categorías',
+        subtitle: '',
+        compact: true,
+        pinTrailingToEdge: true,
+        trailing: _HeaderActionButton(
+          label: 'Nueva categoría',
+          icon: Icons.add_rounded,
+          onPressed: onCreateCategory,
         ),
-        Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _HeaderActionButton(
-              label: 'Nueva categoría',
-              icon: Icons.add_rounded,
-              onPressed: onCreateCategory,
-            ),
-            _HeaderSecondaryButton(
-              onPressed: onReorder,
-              icon: Icons.swap_vert_rounded,
-              label: 'Ordenar',
-            ),
-            SizedBox(
-              height: 48,
-              width: 270,
-              child: TextField(
-                controller: TextEditingController(text: query)
-                  ..selection = TextSelection.collapsed(offset: query.length),
-                onChanged: onQueryChanged,
-                decoration: const InputDecoration(
-                  hintText: 'Buscar categorías...',
-                  suffixIcon: Icon(Icons.search_rounded),
-                  isDense: true,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }
