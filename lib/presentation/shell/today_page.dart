@@ -29,9 +29,9 @@ class _LegacyTodayPage extends StatelessWidget {
           tone: const Color(0xFF6E835B),
         ),
         _MetricCard(
-          label: 'Notas de entrada',
+          label: 'Notas',
           value: notes.length.toString(),
-          detail: 'Capturas que siguen sin procesar',
+          detail: 'Ideas y recordatorios guardados',
           tone: const Color(0xFFB2705A),
         ),
         _MetricCard(
@@ -155,7 +155,7 @@ class _LegacyTodayPage extends StatelessWidget {
               Row(
                 children: [
                   const Expanded(
-                    child: Text('Entrada de ideas',
+                    child: Text('Notas',
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w700)),
                   ),
@@ -167,7 +167,7 @@ class _LegacyTodayPage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               if (notes.isEmpty)
-                const Text('No tienes notas pendientes.')
+                const Text('No tienes notas guardadas.')
               else
                 ...notes.map(
                   (note) => Padding(
@@ -179,27 +179,44 @@ class _LegacyTodayPage extends StatelessWidget {
                         border: Border.all(color: const Color(0xFFE4D5C2)),
                       ),
                       child: ListTile(
-                        title: Text(note.content),
+                        title: Text(
+                          '${note.emoji} ${_noteTitleFromContent(note.content)}'
+                              .trim(),
+                        ),
                         subtitle: Text(
                           'Capturada a las ${note.createdAt.hour.toString().padLeft(2, '0')}:${note.createdAt.minute.toString().padLeft(2, '0')}',
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) {
                             if (value == 'task') {
-                              controller.convertNoteToTask(note.id);
+                              showTaskEditor(
+                                context,
+                                controller,
+                                initialTitle:
+                                    _noteTitleFromContent(note.content),
+                                initialDescription:
+                                    _noteDescriptionFromContent(note.content),
+                                initialDateOverride: note.scheduledFor,
+                              );
                             } else if (value == 'project') {
-                              controller.convertNoteToProject(note.id);
+                              showProjectEditor(
+                                context,
+                                controller,
+                                initialName:
+                                    _noteTitleFromContent(note.content),
+                                initialDescription:
+                                    _noteDescriptionFromContent(note.content),
+                              );
                             } else {
                               controller.archiveNote(note.id);
                             }
                           },
                           itemBuilder: (context) => const [
                             PopupMenuItem(
-                                value: 'task',
-                                child: Text('Convertir en tarea')),
+                                value: 'task', child: Text('Crear una tarea')),
                             PopupMenuItem(
                                 value: 'project',
-                                child: Text('Convertir en proyecto')),
+                                child: Text('Crear un proyecto')),
                             PopupMenuItem(
                                 value: 'archive', child: Text('Archivar')),
                           ],
@@ -1959,7 +1976,7 @@ class _ReferenceInboxPanel extends StatelessWidget {
           if (visibleNotes.isEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: Text('No tienes notas pendientes.',
+              child: Text('No tienes notas guardadas.',
                   style: TextStyle(color: visuals.textMuted)),
             )
           else
@@ -2016,7 +2033,7 @@ class _ReferenceInboxNoteRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  note.content,
+                  '${note.emoji} ${_noteTitleFromContent(note.content)}'.trim(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: visuals.textStrong),
@@ -2041,7 +2058,7 @@ class _ReferenceInboxNoteRow extends StatelessWidget {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(value: 'open', child: Text('Abrir en Entrada')),
+              PopupMenuItem(value: 'open', child: Text('Abrir en Notas')),
               PopupMenuItem(value: 'edit', child: Text('Editar nota')),
               PopupMenuItem(value: 'archive', child: Text('Archivar')),
             ],

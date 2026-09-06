@@ -191,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _settingsToggleRow(
               title: 'Cierre del día',
               subtitle:
-                  'Un aviso si todavía quedan notas sin procesar antes del cierre.',
+                  'Un aviso si todavía tienes notas guardadas antes del cierre.',
               value: notificationSettings.dayEndReminderEnabled,
               onChanged: (value) => controller.updateNotificationSettings(
                 controller.notificationSettings.copyWith(
@@ -921,7 +921,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           _settingsToggleRow(
                             title: 'Aviso de cierre del día',
                             subtitle:
-                                'Te recuerda revisar la entrada y los pendientes antes del corte.',
+                                'Te recuerda revisar tus notas y pendientes antes del corte.',
                             value: notificationSettings.dayEndReminderEnabled,
                             onChanged: (value) =>
                                 controller.updateNotificationSettings(

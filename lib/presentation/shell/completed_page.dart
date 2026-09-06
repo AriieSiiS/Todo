@@ -11,15 +11,11 @@ class CompletedPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final completed = controller.completedTasks();
     final today = controller.logicalDate();
-    final yesterday = today.subtract(const Duration(days: 1));
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final lastWeekStart = weekStart.subtract(const Duration(days: 7));
-    final lastWeekEnd = weekStart.subtract(const Duration(days: 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
 
     final todayTasks = <TaskModel>[];
-    final yesterdayTasks = <TaskModel>[];
     final thisWeekTasks = <TaskModel>[];
-    final lastWeekTasks = <TaskModel>[];
     final olderTasks = <TaskModel>[];
 
     for (final task in completed) {
@@ -27,12 +23,8 @@ class CompletedPage extends StatelessWidget {
       final day = controller.logicalDate(stamp);
       if (_sameDay(day, today)) {
         todayTasks.add(task);
-      } else if (_sameDay(day, yesterday)) {
-        yesterdayTasks.add(task);
       } else if (!day.isBefore(weekStart) && day.isBefore(today)) {
         thisWeekTasks.add(task);
-      } else if (!day.isBefore(lastWeekStart) && !day.isAfter(lastWeekEnd)) {
-        lastWeekTasks.add(task);
       } else {
         olderTasks.add(task);
       }
@@ -40,21 +32,17 @@ class CompletedPage extends StatelessWidget {
 
     final sections = <_CompletedSectionData>[
       _CompletedSectionData(
-          id: 'today', title: 'Hoy', subtitle: '', tasks: todayTasks),
-      _CompletedSectionData(
-          id: 'yesterday', title: 'Ayer', subtitle: '', tasks: yesterdayTasks),
+        id: 'today',
+        title: 'Hoy',
+        subtitle:
+            '${_weekdayLong(today)}, ${today.day} de ${_monthLong(today.month)} de ${today.year}',
+        tasks: todayTasks,
+      ),
       _CompletedSectionData(
         id: 'this-week',
         title: 'Esta semana',
-        subtitle: '${weekStart.day} - ${today.day} ${_monthLong(today.month)}',
+        subtitle: _completedWeekRangeLabel(weekStart, today),
         tasks: thisWeekTasks,
-      ),
-      _CompletedSectionData(
-        id: 'last-week',
-        title: 'Semana pasada',
-        subtitle:
-            '${lastWeekStart.day} - ${lastWeekEnd.day} ${_monthLong(lastWeekStart.month)}',
-        tasks: lastWeekTasks,
       ),
       _CompletedSectionData(
         id: 'older',
@@ -62,21 +50,39 @@ class CompletedPage extends StatelessWidget {
         subtitle: '',
         tasks: olderTasks,
       ),
-    ].where((section) => section.tasks.isNotEmpty).toList();
+    ];
 
     final completedToday = todayTasks.length;
     final completedThisWeek = completed.where((task) {
       final stamp = task.completedAt ?? task.scheduledAt ?? today;
       final day = controller.logicalDate(stamp);
-      return !day.isBefore(weekStart);
+      return !day.isBefore(weekStart) && day.isBefore(weekEnd);
     }).length;
-    final totalActive = controller.tasks
-        .where((task) => task.status == TaskStatus.active)
-        .length;
-    final denominator = completed.length + totalActive;
-    final progress = completed.isEmpty && totalActive == 0
-        ? 0.0
-        : completed.length / (denominator <= 0 ? 1 : denominator);
+    const weeklyTotal = 7;
+    final weeklyCompleted = min(completedThisWeek, weeklyTotal);
+    final progress = weeklyCompleted / weeklyTotal;
+    final streak = _completedStreak(completed, today);
+    final weeklyActivity = _completedWeeklyActivity(
+      completed,
+      weekStart: weekStart,
+      logicalDate: controller.logicalDate,
+    );
+    final productiveDay = _completedProductiveDay(weeklyActivity);
+    final featuredCategory = _completedFeaturedCategory(controller, completed);
+
+    void showStatistics() {
+      _showCompletedStatisticsDialog(
+        context,
+        weeklyActivity: weeklyActivity,
+        streak: streak,
+        productiveDay: productiveDay,
+        featuredCategory: featuredCategory,
+      );
+    }
+
+    void recoverTask() {
+      _showCompletedRecoveryDialog(context, controller, completed);
+    }
 
     return SizedBox.expand(
       child: Padding(
@@ -97,17 +103,17 @@ class CompletedPage extends StatelessWidget {
                   progress: progress,
                   completedToday: completedToday,
                   completedThisWeek: completedThisWeek,
-                  streak: _completedStreak(completed, today),
+                  streak: streak,
                   totalCompleted: completed.length,
-                  onViewProgress: () {},
+                  weeklyCompleted: weeklyCompleted,
+                  weeklyTotal: weeklyTotal,
+                  onViewProgress: showStatistics,
                 ),
                 const SizedBox(height: 16),
                 for (final section in sections) ...[
                   _CompletedSectionCard(
                     controller: controller,
                     section: section,
-                    expanded: true,
-                    onToggle: () {},
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -130,17 +136,15 @@ class CompletedPage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _CompletedActivityCard(
-                            tasks: completed.take(5).toList(),
-                            fallbackDate: today,
-                            onViewAll: () {},
+                          _CompletedQuickStatsCard(
+                            weeklyActivity: weeklyActivity,
+                            streak: streak,
+                            productiveDay: productiveDay,
+                            featuredCategory: featuredCategory,
                           ),
                           const SizedBox(height: 16),
                           _CompletedRecoverCard(
-                            onRecover: completed.isEmpty
-                                ? null
-                                : () =>
-                                    controller.reopenTask(completed.first.id),
+                            onRecover: completed.isEmpty ? null : recoverTask,
                           ),
                         ],
                       ),
@@ -155,16 +159,16 @@ class CompletedPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   main,
-                  _CompletedActivityCard(
-                    tasks: completed.take(5).toList(),
-                    fallbackDate: today,
-                    onViewAll: () {},
+                  const SizedBox(height: 16),
+                  _CompletedQuickStatsCard(
+                    weeklyActivity: weeklyActivity,
+                    streak: streak,
+                    productiveDay: productiveDay,
+                    featuredCategory: featuredCategory,
                   ),
                   const SizedBox(height: 16),
                   _CompletedRecoverCard(
-                    onRecover: completed.isEmpty
-                        ? null
-                        : () => controller.reopenTask(completed.first.id),
+                    onRecover: completed.isEmpty ? null : recoverTask,
                   ),
                 ],
               ),
@@ -386,129 +390,161 @@ class _CompletedSectionCard extends StatelessWidget {
   const _CompletedSectionCard({
     required this.controller,
     required this.section,
-    required this.expanded,
-    required this.onToggle,
   });
 
   final TodoWorkspace controller;
   final _CompletedSectionData section;
-  final bool expanded;
-  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
-    return _SurfaceCard(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 10),
+    return _CompletedCard(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       child: Column(
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(16),
-            child: Row(
-              children: [
-                Text(section.title,
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(width: 10),
-                _miniBadge(
-                  '${section.tasks.length}',
-                  const Color(0xFFF1ECE4),
-                  const Color(0xFF665E54),
-                ),
-                if (section.subtitle.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Text(section.subtitle,
-                      style: TextStyle(color: visuals.textMuted)),
-                ],
+          Row(
+            children: [
+              Text(
+                section.title,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontSize: 23),
+              ),
+              const SizedBox(width: 9),
+              _miniBadge(
+                '${section.tasks.length}',
+                const Color(0xFFF1ECE4),
+                const Color(0xFF665E54),
+              ),
+              if (section.subtitle.isNotEmpty) ...[
                 const Spacer(),
-                Icon(expanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded),
-              ],
-            ),
-          ),
-          if (expanded) ...[
-            const SizedBox(height: 10),
-            for (final task in section.tasks)
-              Column(
-                children: [
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Reabrir tarea',
-                          onPressed: () => controller.reopenTask(task.id),
-                          icon: const Icon(Icons.check_circle_rounded),
-                          color: const Color(0xFF738B57),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            task.title,
-                            style: TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: visuals.textMuted,
-                              fontSize: 17,
-                            ),
-                          ),
-                        ),
-                        if (task.categoryIds.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 14),
-                            child: Builder(
-                              builder: (context) {
-                                final category = controller
-                                    .categoryById(task.categoryIds.first);
-                                if (category == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return _SoftChip(
-                                  label: category.name,
-                                  color: category.color,
-                                );
-                              },
-                            ),
-                          ),
-                        if (task.projectIds.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 14),
-                            child: Builder(
-                              builder: (context) {
-                                final project = controller
-                                    .projectById(task.projectIds.first);
-                                if (project == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return _SoftChip(label: project.name);
-                              },
-                            ),
-                          ),
-                        Text(
-                          _completedTaskTimeLabel(
-                              task, controller.logicalDate()),
-                          style: const TextStyle(fontSize: 15),
-                        ),
-                        const SizedBox(width: 12),
-                        PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'reopen') {
-                              controller.reopenTask(task.id);
-                            }
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                                value: 'reopen',
-                                child: Text('Recuperar tarea')),
-                          ],
-                        ),
-                      ],
+                Flexible(
+                  child: Text(
+                    section.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: visuals.textMuted,
+                      fontSize: 13,
                     ),
                   ),
-                ],
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          if (section.tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'No hay tareas completadas en este periodo.',
+                  style: TextStyle(color: visuals.textMuted, fontSize: 13),
+                ),
               ),
+            )
+          else
+            for (var index = 0; index < section.tasks.length; index++) ...[
+              _CompletedTaskRow(
+                controller: controller,
+                task: section.tasks[index],
+              ),
+              if (index != section.tasks.length - 1)
+                Divider(
+                  height: 1,
+                  color: visuals.panelBorder.withValues(alpha: 0.72),
+                ),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedTaskRow extends StatelessWidget {
+  const _CompletedTaskRow({
+    required this.controller,
+    required this.task,
+  });
+
+  final TodoWorkspace controller;
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final category = task.categoryIds.isEmpty
+        ? null
+        : controller.categoryById(task.categoryIds.first);
+    final project = task.projectIds.isEmpty
+        ? null
+        : controller.projectById(task.projectIds.first);
+
+    return SizedBox(
+      height: 50,
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Reabrir tarea',
+            onPressed: () => controller.reopenTask(task.id),
+            icon: const Icon(Icons.check_circle_rounded, size: 22),
+            color: const Color(0xFF6F8D5E),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              task.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                decoration: TextDecoration.lineThrough,
+                decorationColor: visuals.textMuted,
+                color: visuals.textMuted,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          if (category != null) ...[
+            const SizedBox(width: 12),
+            _SoftChip(label: category.name, color: category.color),
           ],
+          if (project != null) ...[
+            const SizedBox(width: 10),
+            _SoftChip(label: project.name),
+          ],
+          const SizedBox(width: 14),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 70),
+            child: Text(
+              _completedTaskTimeLabel(task, controller.logicalDate()),
+              textAlign: TextAlign.end,
+              style: TextStyle(fontSize: 13, color: visuals.textMuted),
+            ),
+          ),
+          const SizedBox(width: 4),
+          PopupMenuButton<String>(
+            tooltip: 'Más opciones',
+            iconSize: 20,
+            padding: EdgeInsets.zero,
+            onSelected: (value) {
+              if (value == 'reopen') {
+                controller.reopenTask(task.id);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'reopen',
+                child: Text('Recuperar tarea'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -522,6 +558,8 @@ class _CompletedSummaryCard extends StatelessWidget {
     required this.completedThisWeek,
     required this.streak,
     required this.totalCompleted,
+    required this.weeklyCompleted,
+    required this.weeklyTotal,
     required this.onViewProgress,
   });
 
@@ -530,51 +568,240 @@ class _CompletedSummaryCard extends StatelessWidget {
   final int completedThisWeek;
   final int streak;
   final int totalCompleted;
+  final int weeklyCompleted;
+  final int weeklyTotal;
   final VoidCallback onViewProgress;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final metrics = <_CompletedMetricData>[
+      _CompletedMetricData(
+        icon: Icons.event_available_outlined,
+        value: '$completedToday',
+        label: 'Hoy',
+      ),
+      _CompletedMetricData(
+        icon: Icons.calendar_month_outlined,
+        value: '$completedThisWeek',
+        label: 'Esta semana',
+      ),
+      _CompletedMetricData(
+        icon: Icons.local_fire_department_rounded,
+        value: '$streak ${streak == 1 ? 'día' : 'días'}',
+        label: 'Racha',
+      ),
+      _CompletedMetricData(
+        icon: Icons.check_circle_rounded,
+        value: '$totalCompleted',
+        label: 'Total',
+      ),
+    ];
+
+    return _CompletedCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontal = constraints.maxWidth >= 790;
+          final metricGrid = _CompletedMetricGrid(metrics: metrics);
+          final progressPanel = _CompletedProgressPanel(
+            progress: progress,
+            weeklyCompleted: weeklyCompleted,
+            weeklyTotal: weeklyTotal,
+            onViewProgress: onViewProgress,
+          );
+
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const Text(
+                'Resumen de completadas',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              if (horizontal)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text('Resumen de completadas',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 6),
-                    Text('Buen trabajo, sigue así.',
-                        style: TextStyle(color: context.visuals.textMuted)),
+                    Expanded(flex: 5, child: metricGrid),
+                    Container(
+                      width: 1,
+                      height: 138,
+                      margin: const EdgeInsets.symmetric(horizontal: 18),
+                      color: context.visuals.panelBorder.withValues(alpha: 0.7),
+                    ),
+                    Expanded(flex: 4, child: progressPanel),
                   ],
+                )
+              else ...[
+                metricGrid,
+                const SizedBox(height: 18),
+                Divider(
+                  height: 1,
+                  color: context.visuals.panelBorder.withValues(alpha: 0.7),
+                ),
+                const SizedBox(height: 18),
+                progressPanel,
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CompletedMetricData {
+  const _CompletedMetricData({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+}
+
+class _CompletedMetricGrid extends StatelessWidget {
+  const _CompletedMetricGrid({required this.metrics});
+
+  final List<_CompletedMetricData> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 430 ? 4 : 2;
+        final tileWidth =
+            (constraints.maxWidth - (10 * (columns - 1))) / columns;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: tileWidth,
+                height: 78,
+                child: _CompletedMetricTile(metric: metric),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CompletedMetricTile extends StatelessWidget {
+  const _CompletedMetricTile({required this.metric});
+
+  final _CompletedMetricData metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: visuals.isPhantom
+            ? visuals.panelAlt
+            : Colors.white.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 12),
+        border: Border.all(
+          color: visuals.panelBorder.withValues(alpha: 0.78),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        child: Row(
+          children: [
+            Icon(metric.icon, size: 23, color: visuals.accent),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      metric.value,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    metric.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: visuals.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompletedProgressPanel extends StatelessWidget {
+  const _CompletedProgressPanel({
+    required this.progress,
+    required this.weeklyCompleted,
+    required this.weeklyTotal,
+    required this.onViewProgress,
+  });
+
+  final double progress;
+  final int weeklyCompleted;
+  final int weeklyTotal;
+  final VoidCallback onViewProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 142,
+          height: 142,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox.expand(
+                child: CircularProgressIndicator(
+                  value: progress.clamp(0, 1),
+                  strokeWidth: 11,
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: visuals.accent.withValues(alpha: 0.14),
+                  color: visuals.accent,
                 ),
               ),
-              SizedBox(
-                width: 88,
-                height: 88,
-                child: Stack(
-                  alignment: Alignment.center,
+              Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(
-                      value: progress.clamp(0, 1),
-                      strokeWidth: 5,
-                      backgroundColor: const Color(0xFFEDE6DA),
-                      color: const Color(0xFF70835D),
+                    Text(
+                      '${(progress * 100).round()} %',
+                      style: const TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          '${(progress * 100).round()}%',
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w700),
-                        ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'completado\nesta semana',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: visuals.textMuted,
+                        fontSize: 12,
+                        height: 1.25,
                       ),
                     ),
                   ],
@@ -582,22 +809,96 @@ class _CompletedSummaryCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(width: 18),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                weeklyCompleted == 0
+                    ? 'Tu progreso empieza aquí'
+                    : '¡Vas muy bien!',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Has completado $weeklyCompleted de $weeklyTotal tareas esta semana.',
+                style: TextStyle(
+                  color: visuals.textMuted,
+                  fontSize: 12,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: onViewProgress,
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                label: const Text('Ver estadísticas'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 38),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  backgroundColor: visuals.accent,
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(visuals.isPhantom ? 0 : 999),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompletedQuickStatsCard extends StatelessWidget {
+  const _CompletedQuickStatsCard({
+    required this.weeklyActivity,
+    required this.streak,
+    required this.productiveDay,
+    required this.featuredCategory,
+  });
+
+  final List<int> weeklyActivity;
+  final int streak;
+  final String productiveDay;
+  final _CompletedFeaturedCategory featuredCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CompletedCard(
+      elevated: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Estadísticas rápidas',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+              ),
+              _CompletedPeriodLabel(label: 'Esta semana'),
+            ],
+          ),
           const SizedBox(height: 18),
-          _settingsMetricRow(Icons.event_available_outlined, '$completedToday',
-              'Completadas hoy'),
-          _settingsMetricRow(Icons.calendar_today_outlined,
-              '$completedThisWeek', 'Completadas esta semana'),
-          _settingsMetricRow(Icons.local_fire_department_outlined, '$streak',
-              'Racha de días activos'),
-          _settingsMetricRow(Icons.track_changes_outlined, '$totalCompleted',
-              'Total completadas'),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onViewProgress,
-              child: const Text('Ver mi progreso'),
-            ),
+          _CompletedStatisticsBody(
+            weeklyActivity: weeklyActivity,
+            streak: streak,
+            productiveDay: productiveDay,
+            featuredCategory: featuredCategory,
           ),
         ],
       ),
@@ -605,72 +906,417 @@ class _CompletedSummaryCard extends StatelessWidget {
   }
 }
 
-class _CompletedActivityCard extends StatelessWidget {
-  const _CompletedActivityCard({
-    required this.tasks,
-    required this.fallbackDate,
-    required this.onViewAll,
-  });
+class _CompletedPeriodLabel extends StatelessWidget {
+  const _CompletedPeriodLabel({required this.label});
 
-  final List<TaskModel> tasks;
-  final DateTime fallbackDate;
-  final VoidCallback onViewAll;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final items = tasks;
-    return _SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final visuals = context.visuals;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 10),
+        border: Border.all(
+          color: visuals.panelBorder.withValues(alpha: 0.82),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Actividad reciente',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 14),
-          for (final task in items.take(4))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          style: TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            color: context.visuals.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _completedActivityTime(task,
-                              fallbackDate: fallbackDate),
-                          style: TextStyle(color: context.visuals.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _miniBadge(
-                    _activityBadgeLabel(
-                        task.completedAt ?? task.scheduledAt ?? fallbackDate,
-                        fallbackDate),
-                    const Color(0xFFE8F1DD),
-                    const Color(0xFF6A8254),
-                  ),
-                ],
-              ),
-            ),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onViewAll,
-              child: const Text('Ver toda la actividad'),
+          Text(
+            label,
+            style: TextStyle(
+              color: visuals.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(width: 5),
+          Icon(Icons.keyboard_arrow_down_rounded,
+              size: 15, color: visuals.accent),
         ],
       ),
     );
+  }
+}
+
+class _CompletedStatisticsBody extends StatelessWidget {
+  const _CompletedStatisticsBody({
+    required this.weeklyActivity,
+    required this.streak,
+    required this.productiveDay,
+    required this.featuredCategory,
+  });
+
+  final List<int> weeklyActivity;
+  final int streak;
+  final String productiveDay;
+  final _CompletedFeaturedCategory featuredCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _CompletedWeeklyChart(values: weeklyActivity),
+        const SizedBox(height: 18),
+        Divider(
+          height: 1,
+          color: visuals.panelBorder.withValues(alpha: 0.72),
+        ),
+        const SizedBox(height: 10),
+        _CompletedStatLine(
+          icon: Icons.local_fire_department_rounded,
+          label: 'Racha actual',
+          value: '$streak ${streak == 1 ? 'día' : 'días'}',
+        ),
+        _CompletedStatLine(
+          icon: Icons.bar_chart_rounded,
+          label: 'Día más productivo',
+          value: productiveDay,
+        ),
+        _CompletedStatLine(
+          icon: Icons.sell_outlined,
+          label: 'Categoría destacada',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _SoftChip(
+                label: featuredCategory.name,
+                color: featuredCategory.color,
+              ),
+              if (featuredCategory.count > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '${featuredCategory.count}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompletedWeeklyChart extends StatelessWidget {
+  const _CompletedWeeklyChart({required this.values});
+
+  final List<int> values;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = <String>['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final visuals = context.visuals;
+    final peak = values.isEmpty ? 1 : max(1, values.reduce(max));
+
+    return SizedBox(
+      height: 122,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < labels.length; index++)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Column(
+                  children: [
+                    Text(
+                      '${index < values.length ? values[index] : 0}',
+                      style: TextStyle(
+                        color: visuals.textStrong,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: FractionallySizedBox(
+                          heightFactor:
+                              index < values.length && values[index] > 0
+                                  ? max(0.18, values[index] / peak)
+                                  : 0.04,
+                          widthFactor: 0.58,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: index < values.length &&
+                                      values[index] == peak &&
+                                      values[index] > 0
+                                  ? visuals.accent
+                                  : visuals.accent.withValues(alpha: 0.38),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8),
+                                bottom: Radius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      labels[index],
+                      style: TextStyle(
+                        color: visuals.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedStatLine extends StatelessWidget {
+  const _CompletedStatLine({
+    required this.icon,
+    required this.label,
+    this.value,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? value;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: visuals.accent),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: visuals.textMuted, fontSize: 12),
+            ),
+          ),
+          if (trailing != null)
+            Flexible(child: trailing!)
+          else
+            Text(
+              value ?? '',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedFeaturedCategory {
+  const _CompletedFeaturedCategory({
+    required this.name,
+    required this.count,
+    this.color,
+  });
+
+  final String name;
+  final int count;
+  final Color? color;
+}
+
+class _CompletedCard extends StatelessWidget {
+  const _CompletedCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+    this.elevated = false,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final bool elevated;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: visuals.isPhantom
+            ? visuals.panel
+            : Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 18),
+        border: Border.all(
+          color: visuals.panelBorder.withValues(alpha: 0.82),
+          width: visuals.isPhantom ? 1.5 : 1,
+        ),
+        boxShadow: elevated && !visuals.isPhantom
+            ? const [
+                BoxShadow(
+                  blurRadius: 16,
+                  color: Color(0x0C000000),
+                  offset: Offset(0, 8),
+                ),
+              ]
+            : null,
+      ),
+      child: Padding(padding: padding, child: child),
+    );
+  }
+}
+
+String _completedWeekRangeLabel(DateTime start, DateTime end) {
+  if (start.month == end.month) {
+    return '${start.day} – ${end.day} de ${_monthLong(end.month)}';
+  }
+  return '${start.day} de ${_monthLong(start.month)} – '
+      '${end.day} de ${_monthLong(end.month)}';
+}
+
+List<int> _completedWeeklyActivity(
+  List<TaskModel> tasks, {
+  required DateTime weekStart,
+  required DateTime Function([DateTime?]) logicalDate,
+}) {
+  final activity = List<int>.filled(7, 0);
+  final weekEnd = weekStart.add(const Duration(days: 7));
+  for (final task in tasks) {
+    final stamp = task.completedAt ?? task.scheduledAt;
+    if (stamp == null) {
+      continue;
+    }
+    final day = logicalDate(stamp);
+    if (!day.isBefore(weekStart) && day.isBefore(weekEnd)) {
+      activity[day.weekday - 1] += 1;
+    }
+  }
+  return activity;
+}
+
+String _completedProductiveDay(List<int> weeklyActivity) {
+  if (weeklyActivity.isEmpty) {
+    return 'Sin datos';
+  }
+  final peak = weeklyActivity.reduce(max);
+  if (peak == 0) {
+    return 'Sin datos';
+  }
+  final latestPeakIndex = weeklyActivity.lastIndexOf(peak);
+  return _weekdayLong(DateTime(2026, 1, 5 + latestPeakIndex));
+}
+
+_CompletedFeaturedCategory _completedFeaturedCategory(
+  TodoWorkspace controller,
+  List<TaskModel> completed,
+) {
+  final counts = <String, int>{};
+  for (final task in completed) {
+    if (task.categoryIds.isEmpty) {
+      continue;
+    }
+    final categoryId = task.categoryIds.first;
+    if (controller.categoryById(categoryId) != null) {
+      counts.update(categoryId, (value) => value + 1, ifAbsent: () => 1);
+    }
+  }
+  if (counts.isEmpty) {
+    return const _CompletedFeaturedCategory(
+      name: 'Sin categoría',
+      count: 0,
+    );
+  }
+  final featuredId = counts.entries.reduce((left, right) {
+    return right.value > left.value ? right : left;
+  }).key;
+  final category = controller.categoryById(featuredId)!;
+  return _CompletedFeaturedCategory(
+    name: category.name,
+    count: counts[featuredId]!,
+    color: category.color,
+  );
+}
+
+Future<void> _showCompletedStatisticsDialog(
+  BuildContext context, {
+  required List<int> weeklyActivity,
+  required int streak,
+  required String productiveDay,
+  required _CompletedFeaturedCategory featuredCategory,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Estadísticas rápidas'),
+      content: SizedBox(
+        width: 420,
+        child: _CompletedStatisticsBody(
+          weeklyActivity: weeklyActivity,
+          streak: streak,
+          productiveDay: productiveDay,
+          featuredCategory: featuredCategory,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Cerrar'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _showCompletedRecoveryDialog(
+  BuildContext context,
+  TodoWorkspace controller,
+  List<TaskModel> completed,
+) async {
+  final selected = await showDialog<TaskModel>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Recuperar una tarea'),
+      content: SizedBox(
+        width: 480,
+        height: min(420, 68.0 * completed.length),
+        child: ListView.separated(
+          itemCount: completed.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final task = completed[index];
+            return ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              leading: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF6F8D5E),
+              ),
+              title: Text(
+                task.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                _completedTaskTimeLabel(task, controller.logicalDate()),
+              ),
+              trailing: const Icon(Icons.restore_rounded),
+              onTap: () => Navigator.of(dialogContext).pop(task),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    ),
+  );
+  if (selected != null) {
+    controller.reopenTask(selected.id);
   }
 }
 
@@ -756,23 +1402,74 @@ class _CompletedRecoverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceCard(
+    final visuals = context.visuals;
+    return _CompletedCard(
+      elevated: true,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Recuperar tarea',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Text(
-            '¿Necesitas recuperar algo?\nRestaura una completada a tu lista de hoy.',
-            style: TextStyle(color: context.visuals.textMuted, height: 1.4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: visuals.accent.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.restore_rounded,
+                    size: 21, color: visuals.accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '¿Completaste algo por error?',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Restaura una completada a tu lista de hoy en pocos segundos.',
+                      style: TextStyle(
+                        color: visuals.textMuted,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
+            child: OutlinedButton.icon(
               onPressed: onRecover,
-              child: const Text('Ir a recuperar'),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+              label: const Text('Recuperar una tarea'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(38),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                foregroundColor: visuals.accent,
+                side: BorderSide(color: visuals.accent.withValues(alpha: 0.8)),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(visuals.isPhantom ? 0 : 999),
+                ),
+              ),
             ),
           ),
         ],

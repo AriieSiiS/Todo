@@ -410,7 +410,7 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
     AppSection.inbox => const _SidebarDestination(
         section: AppSection.inbox,
         icon: Icons.note_alt_outlined,
-        label: 'Entrada',
+        label: 'Notas',
       ),
     AppSection.projects => const _SidebarDestination(
         section: AppSection.projects,

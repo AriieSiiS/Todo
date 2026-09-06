@@ -27,7 +27,7 @@ void main() {
     });
 
     expect(find.text('Hoy'), findsWidgets);
-    expect(find.textContaining('Entrada'), findsWidgets);
+    expect(find.textContaining('Notas'), findsWidgets);
   });
 
   testWidgets('settings only shows controls that are currently functional', (
@@ -121,6 +121,37 @@ void main() {
     expect(controller.notificationSettings.dayEndReminderEnabled, isFalse);
   });
 
+  test(
+      'las notas convertidas antiguas se recuperan y las nuevas no desaparecen',
+      () {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: [
+          QuickNote(
+            id: 'nota-recuperada',
+            content: 'Idea importante\nCon más detalles',
+            createdAt: DateTime(2026, 9, 6),
+            status: NoteStatus.converted,
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.inbox,
+        todaySort: TodaySort.manual,
+        schemaVersion: 4,
+      ),
+    );
+
+    expect(controller.inboxNotes().single.id, 'nota-recuperada');
+    controller.convertNoteToTask('nota-recuperada');
+    expect(controller.inboxNotes().single.id, 'nota-recuperada');
+    expect(controller.tasks.single.title, 'Idea importante');
+  });
+
   testWidgets('loads persisted snapshot', (WidgetTester tester) async {
     final snapshot = AppStateSnapshot(
       tasks: const [
@@ -153,9 +184,169 @@ void main() {
     expect(find.text('Persisted task'), findsOneWidget);
   });
 
+  testWidgets('el editor de notas ofrece formato, emoji, categorías y fijado',
+      (WidgetTester tester) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: _snapshotForSection(AppSection.inbox),
+    );
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+
+    await tester.tap(find.text('Nueva nota'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Título de la nota'), findsOneWidget);
+    expect(find.byTooltip('Elegir emoji'), findsOneWidget);
+    expect(find.byTooltip('Fijar nota'), findsOneWidget);
+    expect(find.byTooltip('Negrita'), findsOneWidget);
+    expect(find.byTooltip('Cursiva'), findsOneWidget);
+    expect(find.byTooltip('Estilo de texto'), findsOneWidget);
+    expect(find.byTooltip('Lista de tareas'), findsOneWidget);
+    expect(find.text('Añadir categoría'), findsOneWidget);
+    expect(find.text('Añadir fecha'), findsNothing);
+    expect(find.text('Guardar nota'), findsOneWidget);
+  });
+
+  testWidgets('el editor de notas permite escribir y guardar contenido',
+      (WidgetTester tester) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: _snapshotForSection(AppSection.inbox),
+    );
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+
+    await tester.tap(find.text('Nueva nota'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Título de la nota'),
+      'Nota de prueba',
+    );
+
+    final editor = find.byKey(const ValueKey('editorContenidoNota'));
+    expect(editor, findsOneWidget);
+    await tester.tapAt(tester.getTopLeft(editor) + const Offset(40, 30));
+    await tester.pump();
+    tester.testTextInput.enterText('Contenido escrito desde el editor.');
+    await tester.pump();
+
+    await tester.tap(find.text('Guardar nota'));
+    await tester.pumpAndSettle();
+
+    expect(controller.notes, hasLength(1));
+    expect(
+      controller.notes.single.content,
+      'Nota de prueba\nContenido escrito desde el editor.',
+    );
+  });
+
+  testWidgets('Notas filtra por categoría y cambia de vista',
+      (WidgetTester tester) async {
+    const category = CategoryModel(
+      id: 'producto',
+      name: 'Producto',
+      colorValue: 0xFF6D815A,
+      icon: Icons.sell_outlined,
+    );
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [category],
+        projects: const [],
+        notes: [
+          QuickNote(
+            id: 'idea-producto',
+            content: 'Ideas para la app\nMejorar el editor de notas.',
+            createdAt: DateTime(2026, 9, 6, 11, 20),
+            categoryIds: const ['producto'],
+          ),
+          QuickNote(
+            id: 'nota-personal',
+            content: 'Lista de objetivos\nPreparar la semana.',
+            createdAt: DateTime(2026, 9, 6, 10),
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.inbox,
+        todaySort: TodaySort.manual,
+      ),
+    );
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Las grandes ideas empiezan'), findsOneWidget);
+    expect(find.byTooltip('Vista de lista'), findsOneWidget);
+    expect(find.byTooltip('Vista de cuadrícula'), findsOneWidget);
+    expect(find.text('Ideas para la app'), findsWidgets);
+    expect(find.text('Lista de objetivos'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Filtrar por categoría'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Producto').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ideas para la app'), findsWidgets);
+    expect(find.text('Lista de objetivos'), findsNothing);
+
+    await tester.tap(find.byTooltip('Vista de cuadrícula'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ideas para la app'), findsWidgets);
+  });
+
+  testWidgets('las notas separan título y contenido y ofrecen clic derecho',
+      (WidgetTester tester) async {
+    const title = 'Idea para revisar más adelante';
+    const body = 'Este es el contenido completo de la nota.';
+    const content = '$title\n$body';
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: [
+          QuickNote(
+            id: 'nota-contextual',
+            content: content,
+            createdAt: DateTime(2026, 9, 6),
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.inbox,
+        todaySort: TodaySort.manual,
+      ),
+    );
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+    await tester.pumpAndSettle();
+
+    expect(find.text(content), findsNothing);
+    final note = find.text(title).first;
+
+    await tester.tap(note, buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fijar nota'), findsOneWidget);
+    expect(find.text('Editar nota'), findsWidgets);
+    expect(find.text('Crear una tarea'), findsOneWidget);
+    expect(find.text('Crear un proyecto'), findsOneWidget);
+    expect(find.text('Crear un evento'), findsOneWidget);
+    expect(find.text('Archivar'), findsWidgets);
+    expect(find.text('Eliminar'), findsWidgets);
+
+    await tester.tap(find.text('Fijar nota'));
+    await tester.pumpAndSettle();
+    expect(controller.noteById('nota-contextual')?.isPinned, isTrue);
+    expect(find.text('Fijadas'), findsOneWidget);
+  });
+
   for (final entry in <AppSection, String>{
     AppSection.today: 'Hoy',
     AppSection.projects: 'Proyectos',
+    AppSection.inbox: 'Notas',
     AppSection.categories: 'Categorías',
     AppSection.calendar: 'Calendario',
     AppSection.completed: 'Completadas',
@@ -336,7 +527,93 @@ void main() {
 
     expect(find.text('Valoración opcional'), findsOneWidget);
     expect(find.text('Notas opcionales'), findsOneWidget);
+    expect(find.text('Saga / colección'), findsOneWidget);
+    expect(find.text('Número de entrega'), findsOneWidget);
+    expect(find.text('Mostrar etiquetas'), findsOneWidget);
     expect(find.text('Añadir'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Biblioteca muestra etiquetas cuando una saga tiene entregas', (
+    WidgetTester tester,
+  ) async {
+    final date = DateTime(2026, 9, 6);
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'carl-1',
+            type: LibraryItemType.book,
+            title: 'Carl el mazmorrero',
+            status: LibraryItemStatus.pending,
+            collectionName: 'Carl el mazmorrero',
+            collectionNumber: 1,
+            createdAt: date,
+            updatedAt: date,
+          ),
+          LibraryItem(
+            id: 'carl-2',
+            type: LibraryItemType.book,
+            title: 'El juicio final de Carl',
+            status: LibraryItemStatus.pending,
+            collectionName: 'Carl el mazmorrero',
+            collectionNumber: 2,
+            createdAt: date,
+            updatedAt: date,
+          ),
+          LibraryItem(
+            id: 'unico',
+            type: LibraryItemType.book,
+            title: 'Entrega única',
+            status: LibraryItemStatus.pending,
+            collectionName: 'Otra saga',
+            collectionNumber: 1,
+            createdAt: date,
+            updatedAt: date,
+          ),
+          LibraryItem(
+            id: 'forzado',
+            type: LibraryItemType.game,
+            title: 'Prólogo jugable',
+            status: LibraryItemStatus.pending,
+            collectionName: 'Saga futura',
+            collectionNumber: 1,
+            showCollectionNumber: true,
+            createdAt: date,
+            updatedAt: date,
+          ),
+        ],
+        libraryStatusView: LibraryItemStatus.pending,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+    });
+
+    expect(find.text('Saga Carl el mazmorrero'), findsNWidgets(2));
+    expect(find.text('Libro 1'), findsOneWidget);
+    expect(find.text('Libro 2'), findsOneWidget);
+    expect(find.text('Entrega única'), findsOneWidget);
+    expect(find.text('Saga Otra saga'), findsNothing);
+    expect(find.text('Saga futura'), findsOneWidget);
+    expect(find.text('Juego 1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -631,7 +908,7 @@ void main() {
     });
 
     expect(find.text('Hoy'), findsWidgets);
-    expect(find.text('Entrada'), findsWidgets);
+    expect(find.text('Notas'), findsWidgets);
     expect(find.text('Calendario'), findsWidgets);
     expect(find.text('Proyectos'), findsWidgets);
     expect(find.text('Más'), findsOneWidget);
@@ -693,7 +970,18 @@ void main() {
       ],
       categories: const [],
       projects: const [],
-      notes: const [],
+      notes: [
+        QuickNote(
+          id: 'rich-note',
+          content: 'Idea\n**Texto importante**',
+          createdAt: DateTime(2026, 9, 6),
+          emoji: '💡',
+          colorValue: 0xFFBFD8B8,
+          isPinned: true,
+          updatedAt: DateTime(2026, 9, 6, 12),
+          categoryIds: const ['producto', 'ideas'],
+        ),
+      ],
       daySettings: const DaySettings(dayEndsAtHour: 4),
       notificationSettings: const DeviceNotificationSettings(
         defaultMinutesBeforeTask: 20,
@@ -734,6 +1022,11 @@ void main() {
     expect(decoded.todaySort, TodaySort.priority);
     expect(decoded.visualMode, AppVisualMode.phantom);
     expect(decoded.lastModifiedBy, 'test@example.com');
+    expect(decoded.notes.single.emoji, '💡');
+    expect(decoded.notes.single.colorValue, 0xFFBFD8B8);
+    expect(decoded.notes.single.isPinned, isTrue);
+    expect(decoded.notes.single.effectiveUpdatedAt.hour, 12);
+    expect(decoded.notes.single.categoryIds, ['producto', 'ideas']);
   });
 
   test('riverpod workspace provider exposes the application state', () {

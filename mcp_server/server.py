@@ -1168,6 +1168,11 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "duration": string,
         "pages": string,
         "country": string,
+        "collection_name": string,
+        "collection_number": integer,
+        "show_collection_number": boolean,
+        "clear_collection_name": boolean,
+        "clear_collection_number": boolean,
         "confirm": boolean,
     }
     wardrobe_fields = {
@@ -2136,6 +2141,18 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
         "duration": (arguments.get("duration") or "").strip() or None,
         "pages": (arguments.get("pages") or "").strip() or None,
         "country": (arguments.get("country") or "").strip() or None,
+        "collectionName": (arguments.get("collection_name") or "").strip()
+        or None,
+        "collectionNumber": (
+            int(arguments["collection_number"])
+            if arguments.get("collection_number") is not None
+            and int(arguments["collection_number"]) > 0
+            else None
+        ),
+        "showCollectionNumber": bool(arguments.get("show_collection_number", False))
+        and bool((arguments.get("collection_name") or "").strip())
+        and arguments.get("collection_number") is not None
+        and int(arguments["collection_number"]) > 0,
         "linkedGoalId": arguments.get("linked_goal_id") or None,
         "createdAt": now,
         "updatedAt": now,
@@ -2216,6 +2233,21 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["country"] = (arguments.get("country") or "").strip() or None
     if arguments.get("clear_country"):
         updated["country"] = None
+    if "collection_name" in arguments:
+        updated["collectionName"] = (
+            arguments.get("collection_name") or ""
+        ).strip() or None
+    if arguments.get("clear_collection_name"):
+        updated["collectionName"] = None
+    if "collection_number" in arguments:
+        value = arguments.get("collection_number")
+        updated["collectionNumber"] = int(value) if value is not None and int(value) > 0 else None
+    if arguments.get("clear_collection_number"):
+        updated["collectionNumber"] = None
+    if "show_collection_number" in arguments:
+        updated["showCollectionNumber"] = bool(arguments["show_collection_number"])
+    if not updated.get("collectionName") or not updated.get("collectionNumber"):
+        updated["showCollectionNumber"] = False
     if "linked_goal_id" in arguments:
         updated["linkedGoalId"] = arguments.get("linked_goal_id") or None
     if arguments.get("clear_linked_goal_id"):
@@ -3401,6 +3433,9 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
         "duration",
         "pages",
         "country",
+        "collectionName",
+        "collectionNumber",
+        "showCollectionNumber",
         "linkedGoalId",
     ):
         merged[key] = primary.get(key) or secondary.get(key)

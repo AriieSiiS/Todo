@@ -206,23 +206,6 @@ Widget _summaryLine(IconData icon, String text) {
   );
 }
 
-Widget _appearanceRow(String left, String right) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFBF7F0),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      children: [
-        Expanded(child: Text(left, style: const TextStyle(fontSize: 13))),
-        const SizedBox(width: 8),
-        _tagChip(right, const Color(0xFFE7EEFF), const Color(0xFF6F90D8)),
-      ],
-    ),
-  );
-}
-
 Widget _sectionLabel(String text) {
   return Text(text,
       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
@@ -407,26 +390,3 @@ String _priorityLabel(TaskPriority priority) => switch (priority) {
       TaskPriority.high => 'Alta prioridad',
       TaskPriority.urgent => 'Urgente',
     };
-
-String _recurrenceLabelFor(
-        RecurrenceType type, DateTime date, TimeOfDay time, int interval) =>
-    switch (type) {
-      RecurrenceType.none => 'Sin repetición',
-      RecurrenceType.daily => 'Diaria',
-      RecurrenceType.weekly =>
-        'Semanal · ${_weekdayLong(date)} a las ${_formatTime24(time)}',
-      RecurrenceType.everyXDays => 'Cada $interval días',
-      RecurrenceType.yearly => 'Anual',
-    };
-
-ProjectModel? _findProject(List<ProjectModel> projects, String? id) {
-  if (id == null) {
-    return null;
-  }
-  for (final project in projects) {
-    if (project.id == id) {
-      return project;
-    }
-  }
-  return null;
-}

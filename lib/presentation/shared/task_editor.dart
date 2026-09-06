@@ -87,14 +87,6 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     final projects = controller.projects
         .where((item) => item.status == ProjectStatus.active)
         .toList();
-    final selectedCategories =
-        categories.where((item) => _categoryIds.contains(item.id)).toList();
-    final selectedProject = _findProject(projects, _projectId);
-    final title = _titleController.text.trim().isEmpty
-        ? 'Tu tarea'
-        : _titleController.text.trim();
-    final wide = MediaQuery.sizeOf(context).width >= 1180;
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.fromLTRB(
@@ -111,7 +103,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           ),
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1280, maxHeight: 920),
+          constraints: const BoxConstraints(maxWidth: 980, maxHeight: 920),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
             child: Column(
@@ -121,7 +113,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   title: widget.initialTask == null
                       ? 'Nueva tarea'
                       : 'Editar tarea',
-                  subtitle: 'Crea una tarea y organízala para tu día real.',
+                  subtitle: 'Añade solo la información que necesites.',
                 ),
                 const SizedBox(height: 14),
                 Expanded(
@@ -129,210 +121,25 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                     behavior: const MaterialScrollBehavior()
                         .copyWith(scrollbars: false),
                     child: SingleChildScrollView(
-                      child: wide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  flex: 7,
-                                  child: _buildTaskForm(
-                                      context, categories, projects),
-                                ),
-                                const SizedBox(width: 18),
-                                SizedBox(
-                                  width: 320,
-                                  child: Column(
-                                    children: [
-                                      _AsideCard(
-                                        title: 'Resumen',
-                                        subtitle: 'Así se verá tu tarea.',
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(14),
-                                              decoration: _softBorderBox(),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                          Icons
-                                                              .check_box_outline_blank_rounded,
-                                                          size: 18),
-                                                      const SizedBox(width: 10),
-                                                      Expanded(
-                                                        child: Text(
-                                                          title,
-                                                          style: const TextStyle(
-                                                              fontSize: 18,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  if (selectedCategories
-                                                      .isNotEmpty) ...[
-                                                    const SizedBox(height: 10),
-                                                    Wrap(
-                                                      spacing: 8,
-                                                      runSpacing: 8,
-                                                      children:
-                                                          selectedCategories
-                                                              .map(
-                                                                (category) =>
-                                                                    _tagChip(
-                                                                  category.name,
-                                                                  category.color
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              0.16),
-                                                                  category
-                                                                      .color,
-                                                                ),
-                                                              )
-                                                              .toList(),
-                                                    ),
-                                                  ],
-                                                  const SizedBox(height: 14),
-                                                  if (selectedProject != null)
-                                                    _summaryLine(
-                                                        Icons
-                                                            .home_work_outlined,
-                                                        selectedProject.name),
-                                                  _summaryLine(
-                                                    Icons
-                                                        .calendar_today_outlined,
-                                                    _hasVisibleTimeOfDay(_time)
-                                                        ? '${_weekdayLong(_date)} · ${_formatTime24(_time)}'
-                                                        : _weekdayLong(_date),
-                                                  ),
-                                                  if (_recurrenceType !=
-                                                      RecurrenceType.none)
-                                                    _summaryLine(
-                                                        Icons.autorenew_rounded,
-                                                        _recurrenceLabel()),
-                                                  _summaryLine(
-                                                      Icons.flag_outlined,
-                                                      _priorityLabel(
-                                                          _priority)),
-                                                  _summaryLine(
-                                                      Icons.timelapse_rounded,
-                                                      '$_estimatedDurationMinutes min'),
-                                                  if (_subtasks
-                                                      .where((item) => item
-                                                          .trim()
-                                                          .isNotEmpty)
-                                                      .isNotEmpty)
-                                                    _summaryLine(
-                                                      Icons
-                                                          .format_list_bulleted_rounded,
-                                                      '${_subtasks.where((item) => item.trim().isNotEmpty).length} subtareas',
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      _AsideCard(
-                                        title: 'Dónde aparecerá',
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Text('Hoy',
-                                                style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.w700)),
-                                            Text(_dateLabel(_date),
-                                                style: TextStyle(
-                                                    color: visuals.textMuted)),
-                                            const SizedBox(height: 10),
-                                            _appearanceRow(
-                                              _hasVisibleTimeOfDay(_time)
-                                                  ? _formatTime24(_time)
-                                                  : 'Sin hora',
-                                              title,
-                                            ),
-                                            const SizedBox(height: 16),
-                                            const Text('Esta semana',
-                                                style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.w700)),
-                                            const SizedBox(height: 8),
-                                            _appearanceRow(
-                                              _hasVisibleTimeOfDay(_time)
-                                                  ? '${_weekdayShort(_date)} ${_date.day} ${_monthShort(_date.month)} · ${_formatTime24(_time)}'
-                                                  : '${_weekdayShort(_date)} ${_date.day} ${_monthShort(_date.month)}',
-                                              title,
-                                            ),
-                                            if (_recurrenceType ==
-                                                RecurrenceType.weekly) ...[
-                                              const SizedBox(height: 8),
-                                              _appearanceRow(
-                                                  _hasVisibleTimeOfDay(_time)
-                                                      ? 'Dom 10 may · ${_formatTime24(_time)}'
-                                                      : 'Dom 10 may',
-                                                  title),
-                                              const SizedBox(height: 8),
-                                              _appearanceRow(
-                                                  _hasVisibleTimeOfDay(_time)
-                                                      ? 'Dom 17 may · ${_formatTime24(_time)}'
-                                                      : 'Dom 17 may',
-                                                  title),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      _AsideCard(
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Icon(Icons.event_note_rounded,
-                                                color: Color(0xFF70835D),
-                                                size: 18),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                _syncToGoogle
-                                                    ? 'Se creará también en tu Google Calendar.'
-                                                    : 'Solo se guardará dentro de la app.',
-                                                style: TextStyle(
-                                                    color: visuals.textMuted,
-                                                    height: 1.35),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            )
-                          : _buildTaskForm(context, categories, projects),
+                      child: _buildTaskForm(context, categories, projects),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                _dialogFooter(
-                  primaryLabel: widget.initialTask == null
-                      ? 'Guardar tarea'
-                      : 'Guardar cambios',
-                  secondaryLabel: 'Guardar y crear otra',
-                  onPrimary: _saveTask,
-                  onSecondary: _saveTaskAndReset,
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: _saveTask,
+                      child: Text(widget.initialTask == null
+                          ? 'Guardar tarea'
+                          : 'Guardar cambios'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -352,10 +159,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         const SizedBox(height: 6),
         TextField(
           controller: _titleController,
-          decoration: InputDecoration(
-            hintText: 'Limpiar baño',
-            suffixText: '${_titleController.text.length}/80',
-          ),
+          minLines: 1,
+          maxLines: 2,
+          decoration: const InputDecoration(hintText: 'Limpiar baño'),
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 18),
@@ -485,7 +291,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel('Duracion estimada (opcional)'),
+                  _sectionLabel('Duración estimada (opcional)'),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<int>(
                     initialValue: _estimatedDurationMinutes,
@@ -782,14 +588,6 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     }
   }
 
-  Future<void> _saveTaskAndReset() async {
-    final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      return;
-    }
-    await _saveTask();
-  }
-
   void _ensureSeedCategory() {
     if (controller.categories.isEmpty) {
       controller.createCategory(
@@ -818,11 +616,6 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
       icon: Icons.label_outline_rounded,
     );
     return <String>[created.id];
-  }
-
-  String _recurrenceLabel() {
-    return _recurrenceLabelFor(
-        _recurrenceType, _date, _time, _recurrenceInterval);
   }
 
   String _reminderPresetLabel(int minutes) {

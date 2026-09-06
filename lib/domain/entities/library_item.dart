@@ -22,6 +22,9 @@ class LibraryItem {
     this.duration,
     this.pages,
     this.country,
+    this.collectionName,
+    this.collectionNumber,
+    this.showCollectionNumber = false,
     this.linkedGoalId,
     required this.createdAt,
     required this.updatedAt,
@@ -46,6 +49,9 @@ class LibraryItem {
   final String? duration;
   final String? pages;
   final String? country;
+  final String? collectionName;
+  final int? collectionNumber;
+  final bool showCollectionNumber;
   final String? linkedGoalId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -87,6 +93,11 @@ class LibraryItem {
     bool clearPages = false,
     String? country,
     bool clearCountry = false,
+    String? collectionName,
+    bool clearCollectionName = false,
+    int? collectionNumber,
+    bool clearCollectionNumber = false,
+    bool? showCollectionNumber,
     String? linkedGoalId,
     bool clearLinkedGoalId = false,
     DateTime? createdAt,
@@ -115,6 +126,12 @@ class LibraryItem {
       duration: clearDuration ? null : duration ?? this.duration,
       pages: clearPages ? null : pages ?? this.pages,
       country: clearCountry ? null : country ?? this.country,
+      collectionName:
+          clearCollectionName ? null : collectionName ?? this.collectionName,
+      collectionNumber: clearCollectionNumber
+          ? null
+          : collectionNumber ?? this.collectionNumber,
+      showCollectionNumber: showCollectionNumber ?? this.showCollectionNumber,
       linkedGoalId:
           clearLinkedGoalId ? null : linkedGoalId ?? this.linkedGoalId,
       createdAt: createdAt ?? this.createdAt,
@@ -144,6 +161,9 @@ class LibraryItem {
       'duration': duration,
       'pages': pages,
       'country': country,
+      'collectionName': collectionName,
+      'collectionNumber': collectionNumber,
+      'showCollectionNumber': showCollectionNumber,
       'linkedGoalId': linkedGoalId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -188,6 +208,9 @@ class LibraryItem {
       duration: json['duration'] as String?,
       pages: json['pages'] as String?,
       country: json['country'] as String?,
+      collectionName: json['collectionName'] as String?,
+      collectionNumber: (json['collectionNumber'] as num?)?.toInt(),
+      showCollectionNumber: json['showCollectionNumber'] as bool? ?? false,
       linkedGoalId: json['linkedGoalId'] as String?,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           completed ??

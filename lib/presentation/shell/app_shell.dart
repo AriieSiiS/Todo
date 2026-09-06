@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' show max, min;
 import 'dart:io';
 
+import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';

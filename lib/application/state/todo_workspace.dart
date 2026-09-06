@@ -2250,15 +2250,37 @@ class TodoWorkspace extends ChangeNotifier {
         );
       }
     }
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      if (note.categoryIds.contains(categoryId)) {
+        _notes[i] = note.copyWith(
+          categoryIds:
+              note.categoryIds.where((id) => id != categoryId).toList(),
+          updatedAt: now,
+        );
+      }
+    }
     _commit();
   }
 
-  QuickNote createNote(String content, {DateTime? scheduledFor}) {
+  QuickNote createNote(
+    String content, {
+    DateTime? scheduledFor,
+    String emoji = '',
+    int? colorValue,
+    bool isPinned = false,
+    List<String> categoryIds = const <String>[],
+  }) {
     final note = QuickNote(
       id: _id('note'),
       content: content.trim(),
       createdAt: now,
       scheduledFor: scheduledFor,
+      emoji: emoji,
+      colorValue: colorValue,
+      isPinned: isPinned,
+      updatedAt: now,
+      categoryIds: List<String>.from(categoryIds),
     );
     _notes.insert(0, note);
     _commit();
@@ -2269,6 +2291,11 @@ class TodoWorkspace extends ChangeNotifier {
     String noteId, {
     required String content,
     DateTime? scheduledFor,
+    String? emoji,
+    int? colorValue,
+    bool clearColor = false,
+    bool? isPinned,
+    List<String>? categoryIds,
   }) {
     final index = _notes.indexWhere((note) => note.id == noteId);
     if (index == -1) {
@@ -2278,6 +2305,23 @@ class TodoWorkspace extends ChangeNotifier {
       content: content.trim(),
       scheduledFor: scheduledFor,
       clearScheduledFor: scheduledFor == null,
+      emoji: emoji,
+      colorValue: colorValue,
+      clearColor: clearColor,
+      isPinned: isPinned,
+      updatedAt: now,
+      categoryIds: categoryIds == null ? null : List<String>.from(categoryIds),
+    );
+    _commit();
+  }
+
+  void toggleNotePinned(String noteId) {
+    final index = _notes.indexWhere((note) => note.id == noteId);
+    if (index == -1) return;
+    final note = _notes[index];
+    _notes[index] = note.copyWith(
+      isPinned: !note.isPinned,
+      updatedAt: now,
     );
     _commit();
   }
@@ -2294,8 +2338,6 @@ class TodoWorkspace extends ChangeNotifier {
         minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
       ),
     );
-    _markNoteConverted(noteId, persist: false);
-    _commit();
     return task;
   }
 
@@ -2307,8 +2349,6 @@ class TodoWorkspace extends ChangeNotifier {
       colorValue: const Color(0xFF607A5A).toARGB32(),
       icon: Icons.folder_open_rounded,
     );
-    _markNoteConverted(noteId, persist: false);
-    _commit();
     return project;
   }
 
@@ -2330,7 +2370,6 @@ class TodoWorkspace extends ChangeNotifier {
       description: _noteDescription(note),
     );
     _calendarEvents.add(event);
-    _markNoteConverted(noteId, persist: false);
     _commit();
     return event;
   }
@@ -2341,6 +2380,18 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     _notes[index] = _notes[index].copyWith(status: NoteStatus.archived);
+    _commit();
+  }
+
+  void restoreNote(String noteId) {
+    final index = _notes.indexWhere((note) => note.id == noteId);
+    if (index == -1) return;
+    _notes[index] = _notes[index].copyWith(status: NoteStatus.inbox);
+    _commit();
+  }
+
+  void deleteNote(String noteId) {
+    _notes.removeWhere((note) => note.id == noteId);
     _commit();
   }
 
@@ -3115,6 +3166,9 @@ class TodoWorkspace extends ChangeNotifier {
     String? duration,
     String? pages,
     String? country,
+    String? collectionName,
+    int? collectionNumber,
+    bool showCollectionNumber = false,
   }) {
     final now = DateTime.now();
     final normalizedCompletedDate = status == LibraryItemStatus.completed
@@ -3142,6 +3196,13 @@ class TodoWorkspace extends ChangeNotifier {
       duration: duration?.trim().isEmpty == true ? null : duration?.trim(),
       pages: pages?.trim().isEmpty == true ? null : pages?.trim(),
       country: country?.trim().isEmpty == true ? null : country?.trim(),
+      collectionName: collectionName?.trim().isEmpty == true
+          ? null
+          : collectionName?.trim(),
+      collectionNumber: collectionNumber != null && collectionNumber > 0
+          ? collectionNumber
+          : null,
+      showCollectionNumber: showCollectionNumber,
       createdAt: now,
       updatedAt: now,
     );
@@ -3663,6 +3724,10 @@ class TodoWorkspace extends ChangeNotifier {
       duration: primary.duration ?? secondary.duration,
       pages: primary.pages ?? secondary.pages,
       country: primary.country ?? secondary.country,
+      collectionName: primary.collectionName ?? secondary.collectionName,
+      collectionNumber: primary.collectionNumber ?? secondary.collectionNumber,
+      showCollectionNumber:
+          primary.showCollectionNumber || secondary.showCollectionNumber,
       linkedGoalId: primary.linkedGoalId ?? secondary.linkedGoalId,
       createdAt: keeper.createdAt.isBefore(incoming.createdAt)
           ? keeper.createdAt
@@ -3782,7 +3847,7 @@ class TodoWorkspace extends ChangeNotifier {
       _loadedFromPersistence = true;
       final normalized = _normalizeLoadedSpanishText();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
-      if (persisted.schemaVersion < 4 || normalized || syncedLibraryGoals) {
+      if (persisted.schemaVersion < 6 || normalized || syncedLibraryGoals) {
         await _persist();
       }
     } else {
@@ -3859,7 +3924,15 @@ class TodoWorkspace extends ChangeNotifier {
       ..addAll(snapshot.projects);
     _notes
       ..clear()
-      ..addAll(snapshot.notes);
+      ..addAll(
+        snapshot.schemaVersion < 5
+            ? snapshot.notes.map(
+                (note) => note.status == NoteStatus.converted
+                    ? note.copyWith(status: NoteStatus.inbox)
+                    : note,
+              )
+            : snapshot.notes,
+      );
     _expenses
       ..clear()
       ..addAll(snapshot.expenses);
@@ -4299,7 +4372,7 @@ class TodoWorkspace extends ChangeNotifier {
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 4,
+      schemaVersion: 6,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -4319,8 +4392,7 @@ class TodoWorkspace extends ChangeNotifier {
         return false;
       }
       if (task.recurrence.isRecurring) {
-        if (!isToday &&
-            task.recurrence.type == RecurrenceType.daily) {
+        if (!isToday && task.recurrence.type == RecurrenceType.daily) {
           return false;
         }
         return _recursOnDay(task, day);
@@ -4510,17 +4582,6 @@ class TodoWorkspace extends ChangeNotifier {
       return null;
     }
     return lines.skip(1).join('\n');
-  }
-
-  void _markNoteConverted(String noteId, {bool persist = true}) {
-    final index = _notes.indexWhere((note) => note.id == noteId);
-    if (index == -1) {
-      return;
-    }
-    _notes[index] = _notes[index].copyWith(status: NoteStatus.converted);
-    if (persist) {
-      _commit();
-    }
   }
 
   void _clearStateToDefaults() {

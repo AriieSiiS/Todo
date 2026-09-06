@@ -42,7 +42,7 @@ class _QuickCaptureBar extends StatelessWidget {
         children: [
           const Icon(Icons.edit_note_rounded, size: 18),
           const SizedBox(width: 8),
-          Text(compact ? 'Abrir nota rápida' : 'Nueva nota rápida'),
+          Text(compact ? 'Escribir nota' : 'Nueva nota'),
         ],
       ),
     );
@@ -88,28 +88,60 @@ class _QuickNoteComposerDialog extends StatefulWidget {
 }
 
 class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
-  late final TextEditingController _contentController;
-  DateTime? _scheduledFor;
+  static const _emojis = <String>[
+    '💡',
+    '📌',
+    '📝',
+    '🎯',
+    '✨',
+    '❤️',
+    '🏠',
+    '🎬',
+    '📚',
+    '💻',
+    '🛒',
+    '🌱',
+  ];
+
+  late final TextEditingController _titleController;
+  late final EditorState _editorState;
+  late String _emoji;
+  late bool _isPinned;
+  late List<String> _categoryIds;
 
   bool get _isEditing => widget.initialNote != null;
 
   @override
   void initState() {
     super.initState();
-    _contentController =
-        TextEditingController(text: widget.initialNote?.content ?? '');
-    _scheduledFor = widget.initialNote?.scheduledFor;
+    final parts = _splitNoteContent(widget.initialNote?.content ?? '');
+    _titleController = TextEditingController(
+      text: widget.initialNote == null ? '' : parts.title,
+    );
+    final initialBody = parts.body ?? '';
+    _editorState = initialBody.trim().isEmpty
+        ? EditorState.blank()
+        : EditorState(document: markdownToDocument(initialBody));
+    _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
+    _emoji = widget.initialNote?.emoji ?? '';
+    _isPinned = widget.initialNote?.isPinned ?? false;
+    _categoryIds = List<String>.from(
+      widget.initialNote?.categoryIds ?? const <String>[],
+    );
   }
 
   @override
   void dispose() {
-    _contentController.dispose();
+    _titleController.dispose();
+    _editorState.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
+    final dialogHeight =
+        (MediaQuery.sizeOf(context).height - 44).clamp(360.0, 720.0).toDouble();
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.fromLTRB(
@@ -120,7 +152,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: visuals.isPhantom ? visuals.panel : const Color(0xFFFFFCF8),
+          color: visuals.panel,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
             color: visuals.isPhantom
@@ -128,48 +160,31 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                 : const Color(0xFFE2D5C4),
           ),
         ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 790),
+        child: SizedBox(
+          width: 900,
+          height: dialogHeight,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F0E7),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(
-                        Icons.edit_outlined,
-                        color: Color(0xFF607A5A),
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _isEditing ? 'Editar nota' : 'Nota',
-                              style: Theme.of(context).textTheme.headlineMedium,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Apunta algo rápido y lo revisas después.',
-                              style: TextStyle(color: visuals.textMuted),
-                            ),
-                          ],
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isEditing ? 'Editar nota' : 'Nueva nota',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Escribe libremente. Puedes decidir qué hacer con ella más adelante.',
+                            style: TextStyle(color: visuals.textMuted),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
@@ -179,40 +194,139 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                TextField(
-                  controller: _contentController,
-                  maxLines: 9,
-                  minLines: 9,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Escribe una nota rápida...',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                Row(
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: _pickDate,
-                      icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                      label: Text(
-                        _scheduledFor == null
-                            ? 'Añadir fecha'
-                            : _formatInboxDate(_scheduledFor!),
+                    PopupMenuButton<String>(
+                      tooltip: 'Elegir emoji',
+                      onSelected: (value) => setState(() {
+                        _emoji = value == 'none' ? '' : value;
+                      }),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'none',
+                          child: Text('Sin emoji'),
+                        ),
+                        for (final emoji in _emojis)
+                          PopupMenuItem(
+                            value: emoji,
+                            child: Text(emoji,
+                                style: const TextStyle(fontSize: 24)),
+                          ),
+                      ],
+                      child: Container(
+                        width: 58,
+                        height: 58,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F0E8),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE2D5C4)),
+                        ),
+                        child: Text(
+                          _emoji.isEmpty ? '＋' : _emoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
                       ),
                     ),
-                    if (_scheduledFor != null)
-                      OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _scheduledFor = null;
-                          });
-                        },
-                        child: const Text('Quitar fecha'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _titleController,
+                        autofocus: true,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Título de la nota',
+                        ),
                       ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton.filledTonal(
+                      tooltip: _isPinned ? 'Desfijar nota' : 'Fijar nota',
+                      onPressed: () => setState(() => _isPinned = !_isPinned),
+                      icon: Icon(
+                        _isPinned
+                            ? Icons.push_pin_rounded
+                            : Icons.push_pin_outlined,
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Categorías',
+                      style: TextStyle(color: visuals.textMuted),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final category
+                              in widget.controller.categories.where(
+                            (category) => _categoryIds.contains(category.id),
+                          ))
+                            InputChip(
+                              label: Text(category.name),
+                              avatar: Icon(category.icon, size: 16),
+                              backgroundColor:
+                                  category.color.withValues(alpha: 0.16),
+                              side: BorderSide(
+                                color: category.color.withValues(alpha: 0.38),
+                              ),
+                              onDeleted: () => setState(
+                                () => _categoryIds.remove(category.id),
+                              ),
+                            ),
+                          ActionChip(
+                            avatar: const Icon(Icons.add_rounded, size: 17),
+                            label: const Text('Añadir categoría'),
+                            onPressed: _pickCategories,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _NoteFormattingToolbar(editorState: _editorState),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFCF8),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2D5C4)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: AppFlowyEditor(
+                      key: const ValueKey('editorContenidoNota'),
+                      editorState: _editorState,
+                      editable: true,
+                      blockComponentBuilders: standardBlockComponentBuilderMap,
+                      commandShortcutEvents: standardCommandShortcutEvents,
+                      characterShortcutEvents: standardCharacterShortcutEvents,
+                      editorStyle: EditorStyle.desktop(
+                        padding: const EdgeInsets.all(18),
+                        cursorColor: const Color(0xFF607A4D),
+                        selectionColor: const Color(0xFFD8E4CF),
+                        textStyleConfiguration: const TextStyleConfiguration(
+                          text: TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                            color: Color(0xFF2D2A25),
+                          ),
+                          bold: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 22),
                 const Divider(height: 1),
@@ -227,7 +341,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                     const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: _save,
-                      icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                      icon: const Icon(Icons.save_outlined, size: 18),
                       label:
                           Text(_isEditing ? 'Guardar cambios' : 'Guardar nota'),
                     ),
@@ -241,37 +355,222 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
     );
   }
 
-  Future<void> _pickDate() async {
-    final now = widget.controller.logicalDate();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _scheduledFor ?? now,
-      firstDate: now.subtract(const Duration(days: 365)),
-      lastDate: now.add(const Duration(days: 3650)),
-    );
-    if (picked == null) {
-      return;
-    }
-    setState(() {
-      _scheduledFor = DateTime(picked.year, picked.month, picked.day, 10);
-    });
-  }
-
   void _save() {
-    final content = _contentController.text.trim();
-    if (content.isEmpty) {
-      return;
-    }
+    final title = _titleController.text.trim();
+    final body = documentToMarkdown(_editorState.document).trim();
+    if (title.isEmpty && body.isEmpty) return;
+    final resolvedTitle = title.isEmpty ? 'Sin título' : title;
+    final content = body.isEmpty ? resolvedTitle : '$resolvedTitle\n$body';
     if (_isEditing) {
       widget.controller.updateNote(
         widget.initialNote!.id,
         content: content,
-        scheduledFor: _scheduledFor,
+        scheduledFor: widget.initialNote!.scheduledFor,
+        emoji: _emoji,
+        isPinned: _isPinned,
+        categoryIds: _categoryIds,
       );
     } else {
-      widget.controller.createNote(content, scheduledFor: _scheduledFor);
+      widget.controller.createNote(
+        content,
+        emoji: _emoji,
+        isPinned: _isPinned,
+        categoryIds: _categoryIds,
+      );
     }
     Navigator.of(context).pop();
+  }
+
+  Future<void> _pickCategories() async {
+    final categories = widget.controller.categories
+        .where((category) => category.active)
+        .toList();
+    final draft = _categoryIds.toSet();
+    final selected = await showDialog<Set<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Categorías de la nota'),
+          content: SizedBox(
+            width: 480,
+            child: categories.isEmpty
+                ? const Text(
+                    'Todavía no hay categorías activas. Puedes crearlas desde la sección Categorías.',
+                  )
+                : Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final category in categories)
+                        FilterChip(
+                          selected: draft.contains(category.id),
+                          avatar: Icon(category.icon, size: 17),
+                          label: Text(category.name),
+                          selectedColor: category.color.withValues(alpha: 0.22),
+                          checkmarkColor: category.color,
+                          onSelected: (value) => setDialogState(() {
+                            if (value) {
+                              draft.add(category.id);
+                            } else {
+                              draft.remove(category.id);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(draft),
+              child: const Text('Aplicar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _categoryIds = selected.toList());
+  }
+}
+
+class _NoteFormattingToolbar extends StatelessWidget {
+  const _NoteFormattingToolbar({required this.editorState});
+
+  final EditorState editorState;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Selection?>(
+      valueListenable: editorState.selectionNotifier,
+      builder: (context, selection, _) {
+        return Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F0E8),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              _NoteFormatButton(
+                icon: Icons.format_bold_rounded,
+                tooltip: 'Negrita',
+                active: _isTextStyleActive(
+                  selection,
+                  AppFlowyRichTextKeys.bold,
+                ),
+                onPressed: () =>
+                    editorState.toggleAttribute(AppFlowyRichTextKeys.bold),
+              ),
+              _NoteFormatButton(
+                icon: Icons.format_italic_rounded,
+                tooltip: 'Cursiva',
+                active: _isTextStyleActive(
+                  selection,
+                  AppFlowyRichTextKeys.italic,
+                ),
+                onPressed: () =>
+                    editorState.toggleAttribute(AppFlowyRichTextKeys.italic),
+              ),
+              const VerticalDivider(indent: 9, endIndent: 9),
+              PopupMenuButton<int>(
+                tooltip: 'Estilo de texto',
+                onSelected: _setHeading,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 0, child: Text('Texto normal')),
+                  PopupMenuItem(value: 1, child: Text('Título grande')),
+                  PopupMenuItem(value: 2, child: Text('Título mediano')),
+                  PopupMenuItem(value: 3, child: Text('Título pequeño')),
+                ],
+                icon: const Icon(Icons.title_rounded),
+              ),
+              _NoteFormatButton(
+                icon: Icons.check_box_outlined,
+                tooltip: 'Lista de tareas',
+                onPressed: () => _toggleBlock(TodoListBlockKeys.type),
+              ),
+              _NoteFormatButton(
+                icon: Icons.format_list_bulleted_rounded,
+                tooltip: 'Lista con viñetas',
+                onPressed: () => _toggleBlock(BulletedListBlockKeys.type),
+              ),
+              _NoteFormatButton(
+                icon: Icons.format_list_numbered_rounded,
+                tooltip: 'Lista numerada',
+                onPressed: () => _toggleBlock(NumberedListBlockKeys.type),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  bool _isTextStyleActive(Selection? selection, String key) {
+    if (selection == null) return editorState.toggledStyle.containsKey(key);
+    if (selection.isCollapsed) return editorState.toggledStyle.containsKey(key);
+    final nodes = editorState.getNodesInSelection(selection);
+    return nodes.allSatisfyInSelection(
+      selection,
+      (delta) => delta.everyAttributes(
+        (attributes) => attributes[key] == true,
+      ),
+    );
+  }
+
+  void _setHeading(int level) {
+    editorState.formatNode(null, (node) {
+      if (level == 0) return node.copyWith(type: ParagraphBlockKeys.type);
+      return node.copyWith(
+        type: HeadingBlockKeys.type,
+        attributes: {...node.attributes, HeadingBlockKeys.level: level},
+      );
+    });
+  }
+
+  void _toggleBlock(String type) {
+    editorState.formatNode(null, (node) {
+      final nextType = node.type == type ? ParagraphBlockKeys.type : type;
+      return node.copyWith(
+        type: nextType,
+        attributes: {
+          ...node.attributes,
+          if (nextType == TodoListBlockKeys.type)
+            TodoListBlockKeys.checked: false,
+        },
+      );
+    });
+  }
+}
+
+class _NoteFormatButton extends StatelessWidget {
+  const _NoteFormatButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: active ? const Color(0xFFDCE8D3) : Colors.transparent,
+        foregroundColor: const Color(0xFF31472F),
+      ),
+      icon: Icon(icon, size: 20),
+    );
   }
 }
 

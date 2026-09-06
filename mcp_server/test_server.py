@@ -346,6 +346,26 @@ class McpServerTest(unittest.TestCase):
         item = self.call("create_library_item", {"type": "game", "title": "Prey", "platform": "PC"})["created"]
         self.call("update_library_item", {"item_id": item["id"], "rating": 9})
 
+        collection_item = self.call(
+            "create_library_item",
+            {
+                "type": "book",
+                "title": "Carl el mazmorrero",
+                "collection_name": "Carl el mazmorrero",
+                "collection_number": 1,
+                "show_collection_number": True,
+            },
+        )["created"]
+        self.assertEqual(collection_item["collectionName"], "Carl el mazmorrero")
+        self.assertEqual(collection_item["collectionNumber"], 1)
+        self.assertTrue(collection_item["showCollectionNumber"])
+        collection_item = self.call(
+            "update_library_item",
+            {"item_id": collection_item["id"], "clear_collection_number": True},
+        )["updated"]
+        self.assertIsNone(collection_item["collectionNumber"])
+        self.assertFalse(collection_item["showCollectionNumber"])
+
         note = self.call("create_note", {"content": "Evento"})["created"]
         event = self.call(
             "convert_note_to_calendar_event",

@@ -8,6 +8,11 @@ class QuickNote {
     required this.createdAt,
     this.status = NoteStatus.inbox,
     this.scheduledFor,
+    this.emoji = '',
+    this.colorValue,
+    this.isPinned = false,
+    this.updatedAt,
+    this.categoryIds = const <String>[],
   });
 
   final String id;
@@ -15,6 +20,13 @@ class QuickNote {
   final DateTime createdAt;
   final NoteStatus status;
   final DateTime? scheduledFor;
+  final String emoji;
+  final int? colorValue;
+  final bool isPinned;
+  final DateTime? updatedAt;
+  final List<String> categoryIds;
+
+  DateTime get effectiveUpdatedAt => updatedAt ?? createdAt;
 
   QuickNote copyWith({
     String? id,
@@ -23,6 +35,12 @@ class QuickNote {
     NoteStatus? status,
     DateTime? scheduledFor,
     bool clearScheduledFor = false,
+    String? emoji,
+    int? colorValue,
+    bool clearColor = false,
+    bool? isPinned,
+    DateTime? updatedAt,
+    List<String>? categoryIds,
   }) {
     return QuickNote(
       id: id ?? this.id,
@@ -31,6 +49,11 @@ class QuickNote {
       status: status ?? this.status,
       scheduledFor:
           clearScheduledFor ? null : scheduledFor ?? this.scheduledFor,
+      emoji: emoji ?? this.emoji,
+      colorValue: clearColor ? null : colorValue ?? this.colorValue,
+      isPinned: isPinned ?? this.isPinned,
+      updatedAt: updatedAt ?? this.updatedAt,
+      categoryIds: categoryIds ?? this.categoryIds,
     );
   }
 
@@ -41,6 +64,11 @@ class QuickNote {
       'createdAt': createdAt.toIso8601String(),
       'status': status.name,
       'scheduledFor': scheduledFor?.toIso8601String(),
+      'emoji': emoji,
+      'colorValue': colorValue,
+      'isPinned': isPinned,
+      'updatedAt': updatedAt?.toIso8601String(),
+      'categoryIds': categoryIds,
     };
   }
 
@@ -55,6 +83,15 @@ class QuickNote {
       scheduledFor: json['scheduledFor'] == null
           ? null
           : DateTime.tryParse(json['scheduledFor'] as String),
+      emoji: json['emoji'] as String? ?? '',
+      colorValue: (json['colorValue'] as num?)?.toInt(),
+      isPinned: json['isPinned'] as bool? ?? false,
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'] as String),
+      categoryIds: (json['categoryIds'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(),
     );
   }
 }
