@@ -126,6 +126,7 @@ class McpServerTest(unittest.TestCase):
             "list_wardrobe_batches",
             "get_wardrobe_batch",
             "list_wardrobe_items",
+            "import_wardrobe_item",
             "create_wardrobe_item",
             "update_wardrobe_item",
             "delete_wardrobe_item",
@@ -508,6 +509,37 @@ class McpServerTest(unittest.TestCase):
                 "source_directory": str(source),
                 "manifest_path": str(Path(self.temp_dir.name) / "outside.json"),
             })
+
+    def test_import_wardrobe_item_is_direct_canonical_and_idempotent(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        image = Path(self.temp_dir.name) / "camiseta.png"
+        image.write_bytes(transparent_png())
+        arguments = {
+            "request_id": "peticion-camiseta-1",
+            "source_file": str(image),
+            "name": "Camiseta de prueba",
+            "category": "t-shirt",
+            "colors": ["burdeos", "azul marino"],
+            "seasons": ["verano"],
+            "occasions": ["diario"],
+            "tags": ["retro"],
+        }
+
+        first = self.call("import_wardrobe_item", arguments)
+        second = self.call("import_wardrobe_item", arguments)
+
+        self.assertTrue(first["savedLocally"])
+        self.assertEqual(first["item"]["category"], "Camisetas")
+        self.assertEqual(first["item"]["colors"], ["granate", "azul marino"])
+        self.assertEqual(second["item"]["id"], first["item"]["id"])
+        self.assertEqual(len(self.server.read_local_state()["wardrobeItems"]), 1)
+        root = Path(self.temp_dir.name) / "wardrobe"
+        self.assertTrue((root / first["item"]["imagePath"]).is_file())
+        self.assertTrue((root / first["item"]["thumbnailPath"]).is_file())
+        metadata = json.loads(
+            (Path(self.temp_dir.name) / "sync_metadata.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(metadata["pendingLocalChanges"])
 
     def test_household_crud_saves_catalog_image_manual_and_invoice(self) -> None:
         self.call("reset_state", {"confirm": True})

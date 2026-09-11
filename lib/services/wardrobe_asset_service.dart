@@ -22,6 +22,18 @@ class WardrobeApprovedAsset {
   final String sha256;
 }
 
+class WardrobeStoredAsset {
+  const WardrobeStoredAsset({
+    required this.imagePath,
+    required this.thumbnailPath,
+    required this.sha256,
+  });
+
+  final String imagePath;
+  final String thumbnailPath;
+  final String sha256;
+}
+
 class WardrobeAssetService {
   WardrobeAssetService({Directory? rootOverride})
       : _rootOverride = rootOverride;
@@ -133,6 +145,81 @@ class WardrobeAssetService {
       blend: img.BlendMode.direct,
     );
     return Uint8List.fromList(img.encodePng(canvas));
+  }
+
+  Future<WardrobeStoredAsset> importItemImage({
+    required String itemId,
+    required String sourcePath,
+    required String category,
+  }) async {
+    final source = File(sourcePath);
+    if (!await source.exists()) {
+      throw const FileSystemException('No se encuentra la imagen.');
+    }
+    final sourceBytes = await source.readAsBytes();
+    final decoded = img.decodeImage(sourceBytes);
+    if (decoded == null) {
+      throw const FormatException('El archivo seleccionado no es una imagen.');
+    }
+
+    late final Uint8List imageBytes;
+    late final img.Image storedImage;
+    if (_hasTransparency(decoded)) {
+      imageBytes = normalizeCatalogPng(
+        Uint8List.fromList(img.encodePng(decoded)),
+        category,
+      );
+      storedImage = img.decodePng(imageBytes)!;
+    } else {
+      final longest = max(decoded.width, decoded.height);
+      final scale = longest > 2000 ? 2000 / longest : 1.0;
+      storedImage = scale < 1
+          ? img.copyResize(
+              decoded,
+              width: max(1, (decoded.width * scale).round()),
+              height: max(1, (decoded.height * scale).round()),
+              interpolation: img.Interpolation.average,
+            )
+          : decoded;
+      imageBytes = Uint8List.fromList(img.encodePng(storedImage));
+    }
+
+    final digest = sha256.convert(imageBytes).toString();
+    final fileStem = '${_safeId(itemId)}-${digest.substring(0, 12)}';
+    final wardrobe = await wardrobeDirectory();
+    final itemsDirectory = Directory(
+      '${wardrobe.path}${Platform.pathSeparator}items',
+    );
+    final thumbnailsDirectory = Directory(
+      '${wardrobe.path}${Platform.pathSeparator}thumbnails',
+    );
+    await itemsDirectory.create(recursive: true);
+    await thumbnailsDirectory.create(recursive: true);
+    final imageFile = File(
+      '${itemsDirectory.path}${Platform.pathSeparator}$fileStem.png',
+    );
+    final thumbnailFile = File(
+      '${thumbnailsDirectory.path}${Platform.pathSeparator}$fileStem.png',
+    );
+    final thumbnail = img.copyResize(
+      storedImage,
+      width: storedImage.width >= storedImage.height ? 420 : null,
+      height: storedImage.height > storedImage.width ? 420 : null,
+      interpolation: img.Interpolation.average,
+    );
+
+    await _atomicWrite(imageFile, imageBytes);
+    try {
+      await _atomicWrite(thumbnailFile, img.encodePng(thumbnail));
+    } catch (_) {
+      if (await imageFile.exists()) await imageFile.delete();
+      rethrow;
+    }
+    return WardrobeStoredAsset(
+      imagePath: 'items/$fileStem.png',
+      thumbnailPath: 'thumbnails/$fileStem.png',
+      sha256: digest,
+    );
   }
 
   Future<void> deleteAsset(String relativePath) async {
@@ -332,6 +419,18 @@ class WardrobeAssetService {
         final file = File(path);
         if (await file.exists()) await file.delete();
       }
+    }
+  }
+
+  Future<void> _atomicWrite(File destination, List<int> bytes) async {
+    final temporary = File('${destination.path}.tmp');
+    try {
+      await temporary.writeAsBytes(bytes, flush: true);
+      if (await destination.exists()) await destination.delete();
+      await temporary.rename(destination.path);
+    } catch (_) {
+      if (await temporary.exists()) await temporary.delete();
+      rethrow;
     }
   }
 

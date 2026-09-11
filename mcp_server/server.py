@@ -1,6 +1,7 @@
 import copy
 import datetime as dt
 import hashlib
+import io
 import json
 import os
 import random
@@ -16,11 +17,17 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+try:
+    from PIL import Image, ImageOps
+except ImportError:  # La importación PNG básica sigue disponible sin Pillow.
+    Image = None
+    ImageOps = None
+
 from knowledge_repository import KnowledgeRepository
 
 
 PROTOCOL_VERSION = "2025-03-26"
-SERVER_INFO = {"name": "todo-mcp", "version": "0.2.0"}
+SERVER_INFO = {"name": "todo-mcp", "version": "0.3.0"}
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MCP_DIR = REPO_ROOT / "mcp_server"
 
@@ -1189,6 +1196,11 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "archived": boolean,
         "laundry_status": string,
     }
+    wardrobe_import_fields = {
+        **wardrobe_fields,
+        "source_file": string,
+        "request_id": string,
+    }
     household_fields = {
         "item_id": string,
         "name": string,
@@ -1281,6 +1293,7 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("list_wardrobe_batches", "Lista las importaciones de Ropa.", {"status": string}, []),
         tool("get_wardrobe_batch", "Devuelve una importación de Ropa.", {"batch_id": string}, ["batch_id"]),
         tool("list_wardrobe_items", "Lista las prendas del armario.", {"include_archived": boolean}, []),
+        tool("import_wardrobe_item", "Añade directamente una prenda con su imagen, sin lote ni aprobación manual.", wardrobe_import_fields, ["source_file", "request_id", "name", "category"]),
         tool("create_wardrobe_item", "Crea una prenda manual.", wardrobe_fields, ["name", "category"]),
         tool("update_wardrobe_item", "Actualiza los metadatos de una prenda.", wardrobe_fields, ["item_id"]),
         tool("delete_wardrobe_item", "Elimina una prenda y limpia sus referencias activas.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
@@ -3669,6 +3682,11 @@ def wardrobe_directory() -> Path:
 def wardrobe_import_contract_impl() -> dict[str, Any]:
     return {
         "version": 1,
+        "direct_tool": "import_wardrobe_item",
+        "categories": WARDROBE_CATEGORIES,
+        "colors": WARDROBE_COLORS,
+        "seasons": WARDROBE_SEASONS,
+        "occasions": WARDROBE_OCCASIONS,
         "manifest": "manifest.json",
         "image_format": "PNG RGBA con al menos un píxel transparente",
         "shape": {
@@ -4044,6 +4062,275 @@ def household_directory() -> Path:
     directory = Path(override) if override else documents_todo_dir() / "household"
     directory.mkdir(parents=True, exist_ok=True)
     return directory
+
+
+WARDROBE_CATEGORIES = [
+    "Camisetas", "Camisas", "Pantalones", "Vaqueros", "Pantalones cortos",
+    "Calzado", "Sudaderas", "Jerséis y cárdigans", "Chaquetas", "Abrigos",
+    "Polos", "Vestidos", "Faldas", "Ropa interior", "Pijamas", "Bañadores",
+    "Trajes y americanas", "Chalecos", "Monos", "Accesorios", "Otros",
+]
+WARDROBE_COLORS = [
+    "negro", "blanco", "gris", "azul", "azul marino", "celeste", "verde",
+    "verde oliva", "rojo", "granate", "rosa", "morado", "lila", "amarillo",
+    "naranja", "beige", "crema", "marrón", "dorado", "plateado", "multicolor",
+]
+WARDROBE_SEASONS = ["todo el año", "primavera", "verano", "otoño", "invierno"]
+WARDROBE_OCCASIONS = [
+    "diario", "informal", "trabajo", "formal", "fiesta", "deporte", "casa",
+    "viaje", "playa",
+]
+WARDROBE_CATEGORY_ALIASES = {
+    "camiseta": "Camisetas", "t-shirt": "Camisetas", "t-shirts": "Camisetas",
+    "tee": "Camisetas", "camisa": "Camisas", "pantalón": "Pantalones",
+    "jean": "Vaqueros", "jeans": "Vaqueros", "vaquero": "Vaqueros",
+    "bermuda": "Pantalones cortos", "bermudas": "Pantalones cortos",
+    "short": "Pantalones cortos", "shorts": "Pantalones cortos",
+    "zapatilla": "Calzado", "zapatillas": "Calzado", "zapato": "Calzado",
+    "zapatos": "Calzado", "bota": "Calzado", "botas": "Calzado",
+    "sudadera": "Sudaderas", "hoodie": "Sudaderas",
+    "jersey": "Jerséis y cárdigans", "jerseys": "Jerséis y cárdigans",
+    "suéter": "Jerséis y cárdigans", "cárdigan": "Jerséis y cárdigans",
+    "chaqueta": "Chaquetas", "jacket": "Chaquetas", "jackets": "Chaquetas",
+    "cazadora": "Chaquetas", "bomber": "Chaquetas", "abrigo": "Abrigos",
+    "parka": "Abrigos", "polo": "Polos", "vestido": "Vestidos",
+    "falda": "Faldas", "pijama": "Pijamas", "bañador": "Bañadores",
+    "traje": "Trajes y americanas", "americana": "Trajes y americanas",
+    "chaleco": "Chalecos", "mono": "Monos", "accesorio": "Accesorios",
+    "otro": "Otros",
+}
+WARDROBE_COLOR_ALIASES = {
+    "burdeos": "granate", "borgoña": "granate", "lavanda": "lila",
+    "oliva": "verde oliva", "gris carbón": "gris", "gris carbon": "gris",
+    "caramelo": "marrón", "taupe": "marrón",
+}
+
+
+def _wardrobe_key(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _canonical_wardrobe_category(value: Any) -> str:
+    key = _wardrobe_key(value)
+    for category in WARDROBE_CATEGORIES:
+        if _wardrobe_key(category) == key:
+            return category
+    singular = WARDROBE_CATEGORY_ALIASES.get(key)
+    if singular:
+        return singular
+    if key.endswith("s"):
+        singular = WARDROBE_CATEGORY_ALIASES.get(key[:-1])
+        if singular:
+            return singular
+    raise ValueError(
+        f"Categoría no reconocida: {value}. Usa una categoría canónica o 'Otros'."
+    )
+
+
+def _canonical_wardrobe_values(
+    values: Any,
+    allowed: list[str],
+    aliases: dict[str, str] | None = None,
+) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in values or []:
+        key = _wardrobe_key(raw)
+        canonical = (aliases or {}).get(key)
+        if canonical is None:
+            canonical = next((item for item in allowed if _wardrobe_key(item) == key), None)
+        if canonical is None:
+            raise ValueError(f"Valor de clasificación no reconocido: {raw}.")
+        if canonical not in seen:
+            seen.add(canonical)
+            result.append(canonical)
+    return result
+
+
+def _wardrobe_catalog_target(category: str) -> tuple[float, float]:
+    if category == "Calzado":
+        return 0.86, 0.52
+    if category == "Pantalones cortos":
+        return 0.92, 0.72
+    if category in {"Pantalones", "Vaqueros", "Faldas"}:
+        return 0.76, 0.86
+    if category == "Accesorios":
+        return 0.68, 0.62
+    return 0.90, 0.80
+
+
+def _prepare_direct_wardrobe_asset(
+    source: Path,
+    item_id: str,
+    category: str,
+) -> tuple[str, str, str, list[Path]]:
+    if not source.is_file() or source.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        raise ValueError("La imagen debe ser PNG, JPG, JPEG o WebP.")
+    if Image is None or ImageOps is None:
+        if source.suffix.lower() != ".png" or not _png_has_transparency(source):
+            raise RuntimeError("Esta instalación necesita Pillow para procesar la imagen.")
+        image_bytes = source.read_bytes()
+        thumbnail_bytes = image_bytes
+    else:
+        with Image.open(source) as opened:
+            prepared = ImageOps.exif_transpose(opened).convert("RGBA")
+        alpha = prepared.getchannel("A")
+        if alpha.getextrema()[0] < 255:
+            visible = alpha.point(lambda value: 255 if value > 8 else 0)
+            bounds = visible.getbbox()
+            if bounds is None:
+                raise ValueError("La imagen no contiene píxeles visibles.")
+            prepared = prepared.crop(bounds)
+            target_width, target_height = _wardrobe_catalog_target(category)
+            scale = min(1200 * target_width / prepared.width, 1200 * target_height / prepared.height)
+            size = (max(1, round(prepared.width * scale)), max(1, round(prepared.height * scale)))
+            prepared = prepared.resize(size, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", (1200, 1200), (0, 0, 0, 0))
+            canvas.alpha_composite(prepared, ((1200 - size[0]) // 2, (1200 - size[1]) // 2))
+            prepared = canvas
+        else:
+            longest = max(prepared.size)
+            if longest > 2000:
+                scale = 2000 / longest
+                prepared = prepared.resize(
+                    (max(1, round(prepared.width * scale)), max(1, round(prepared.height * scale))),
+                    Image.Resampling.LANCZOS,
+                )
+        image_buffer = io.BytesIO()
+        prepared.save(image_buffer, format="PNG", compress_level=6)
+        image_bytes = image_buffer.getvalue()
+        thumbnail = prepared.copy()
+        thumbnail.thumbnail((420, 420), Image.Resampling.LANCZOS)
+        thumbnail_buffer = io.BytesIO()
+        thumbnail.save(thumbnail_buffer, format="PNG", compress_level=6)
+        thumbnail_bytes = thumbnail_buffer.getvalue()
+
+    digest = hashlib.sha256(image_bytes).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", item_id)
+    stem = f"{safe_id}-{digest[:12]}"
+    root = wardrobe_directory()
+    items = root / "items"
+    thumbnails = root / "thumbnails"
+    items.mkdir(parents=True, exist_ok=True)
+    thumbnails.mkdir(parents=True, exist_ok=True)
+    image_file = items / f"{stem}.png"
+    thumbnail_file = thumbnails / f"{stem}.png"
+    created: list[Path] = []
+    for destination, contents in ((image_file, image_bytes), (thumbnail_file, thumbnail_bytes)):
+        temporary = destination.with_suffix(".tmp")
+        temporary.write_bytes(contents)
+        temporary.replace(destination)
+        created.append(destination)
+    return f"items/{stem}.png", f"thumbnails/{stem}.png", digest, created
+
+
+def _mark_mcp_changes_pending() -> None:
+    path = RUNTIME_DIR / "sync_metadata.json"
+    try:
+        metadata = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except (OSError, json.JSONDecodeError):
+        metadata = {}
+    metadata.setdefault("deviceId", "")
+    metadata.setdefault("lastSeenCloudRevision", 0)
+    metadata.setdefault("lastCloudHash", "")
+    metadata["pendingLocalChanges"] = True
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(path)
+
+
+def import_wardrobe_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    request_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(arguments["request_id"]).strip())
+    if not request_id:
+        raise ValueError("request_id no puede estar vacío.")
+    receipts = RUNTIME_DIR / "wardrobe_import_receipts"
+    receipts.mkdir(parents=True, exist_ok=True)
+    receipt_path = receipts / f"{request_id}.json"
+    if receipt_path.exists():
+        return json.loads(receipt_path.read_text(encoding="utf-8"))
+
+    initial_state = read_local_state()
+    repeated = next(
+        (
+            item
+            for item in initial_state.get("wardrobeItems", [])
+            if item.get("importRequestId") == request_id
+        ),
+        None,
+    )
+    if repeated is not None:
+        return {
+            "requestId": request_id,
+            "created": False,
+            "item": repeated,
+            "savedLocally": True,
+            "syncPending": True,
+        }
+
+    category = _canonical_wardrobe_category(arguments["category"])
+    colors = _canonical_wardrobe_values(
+        arguments.get("colors", []), WARDROBE_COLORS, WARDROBE_COLOR_ALIASES
+    )
+    seasons = _canonical_wardrobe_values(arguments.get("seasons", []), WARDROBE_SEASONS)
+    occasions = _canonical_wardrobe_values(arguments.get("occasions", []), WARDROBE_OCCASIONS)
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    item_id = make_id("wardrobe-item")
+    created_files: list[Path] = []
+    state_saved = False
+    try:
+        image_path, thumbnail_path, digest, created_files = _prepare_direct_wardrobe_asset(
+            source, item_id, category
+        )
+        state = read_local_state()
+        instant = now_iso()
+        item = {
+            "id": item_id,
+            "name": str(arguments["name"]).strip() or "Prenda sin nombre",
+            "category": category,
+            "imagePath": image_path,
+            "thumbnailPath": thumbnail_path,
+            "imageSha256": digest,
+            "colors": colors,
+            "material": str(arguments.get("material") or "").strip(),
+            "seasons": seasons,
+            "occasions": occasions,
+            "tags": list(dict.fromkeys(str(value).strip() for value in arguments.get("tags", []) if str(value).strip())),
+            "favorite": bool(arguments.get("favorite", False)),
+            "archived": False,
+            "laundryStatus": str(arguments.get("laundry_status") or "available"),
+            "useCount": 0,
+            "lastUsedAt": None,
+            "price": arguments.get("price"),
+            "createdAt": instant,
+            "updatedAt": instant,
+            "importRequestId": request_id,
+        }
+        state.setdefault("wardrobeItems", []).append(item)
+        touch_state(state)
+        if STATE_PATH.exists():
+            shutil.copy2(STATE_PATH, STATE_PATH.with_suffix(".previous"))
+        write_local_state(state)
+        state_saved = True
+        write_app_snapshot(state)
+        _mark_mcp_changes_pending()
+        receipt = {
+            "requestId": request_id,
+            "created": True,
+            "item": item,
+            "savedLocally": True,
+            "syncPending": True,
+        }
+        temporary_receipt = receipt_path.with_suffix(".tmp")
+        temporary_receipt.write_text(
+            json.dumps(receipt, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        temporary_receipt.replace(receipt_path)
+        return receipt
+    except Exception:
+        if not state_saved:
+            for path in created_files:
+                path.unlink(missing_ok=True)
+        raise
 
 
 def list_household_items_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
@@ -4983,6 +5270,8 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(get_wardrobe_batch_impl(arguments))
     if name == "list_wardrobe_items":
         return json_result(list_wardrobe_items_impl(arguments))
+    if name == "import_wardrobe_item":
+        return json_result(import_wardrobe_item_impl(arguments))
     if name == "create_wardrobe_item":
         return json_result(create_wardrobe_item_impl(arguments))
     if name == "update_wardrobe_item":

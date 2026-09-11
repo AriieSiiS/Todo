@@ -1,4 +1,4 @@
 interface:
   display_name: "Extraer ropa para Todo"
   short_description: "Convierte fotos en prendas para el armario"
-  default_prompt: "Usa $extract-clothing-to-todo para extraer prendas de mis fotos y preparar un lote revisable en Todo."
+  default_prompt: "Usa $extract-clothing-to-todo para extraer la prenda de mis fotos y añadirla directamente a mi armario de Todo."

@@ -220,6 +220,45 @@ void main() {
     expect(compactVisible.$2, closeTo(864, 2));
   });
 
+  test('la taxonomía normaliza alias y mantiene el orden canónico', () {
+    expect(WardrobeTaxonomy.normalizeCategory('t-shirt'), 'Camisetas');
+    expect(WardrobeTaxonomy.normalizeCategory('jackets'), 'Chaquetas');
+    expect(WardrobeTaxonomy.normalizeCategory('bermudas'), 'Pantalones cortos');
+    expect(WardrobeTaxonomy.normalizeColors(const ['burdeos', 'lavanda']),
+        const ['granate', 'lila']);
+    expect(WardrobeTaxonomy.compareCategories('Camisetas', 'Calzado'),
+        lessThan(0));
+  });
+
+  test('el servicio admite una foto opaca y genera su miniatura', () async {
+    final temp = await Directory.systemTemp.createTemp('todo-wardrobe-photo-');
+    addTearDown(() => temp.delete(recursive: true));
+    final source = File('${temp.path}${Platform.pathSeparator}foto.jpg');
+    final picture = img.Image(width: 640, height: 480);
+    img.fill(picture, color: img.ColorRgb8(120, 80, 40));
+    source.writeAsBytesSync(img.encodeJpg(picture));
+    final service = WardrobeAssetService(
+      rootOverride: Directory('${temp.path}${Platform.pathSeparator}wardrobe'),
+    );
+
+    final imported = await service.importItemImage(
+      itemId: 'prenda-foto',
+      sourcePath: source.path,
+      category: 'Camisas',
+    );
+
+    final stored = img.decodePng(
+      File(await service.absolutePath(imported.imagePath)).readAsBytesSync(),
+    );
+    expect(stored, isNotNull);
+    expect(stored!.width, 640);
+    expect(stored.height, 480);
+    expect(
+      File(await service.absolutePath(imported.thumbnailPath)).existsSync(),
+      isTrue,
+    );
+  });
+
   test('el servicio importa renders de conjuntos como PNG', () async {
     final temp = await Directory.systemTemp.createTemp('todo-outfit-test-');
     addTearDown(() => temp.delete(recursive: true));
@@ -352,7 +391,7 @@ void main() {
 
     await tester.tap(find.text('Todo (2)'));
     await tester.enterText(
-        find.byKey(const ValueKey('wardrobe-search')), 'burdeos');
+        find.byKey(const ValueKey('wardrobe-search')), 'granate');
     await tester.pump();
     expect(find.text('Puma Palermo'), findsOneWidget);
     expect(find.text('Pantalón beige'), findsNothing);
@@ -399,11 +438,73 @@ void main() {
         find.byKey(const ValueKey('wardrobe-editor-category')), findsOneWidget);
     await tester.drag(
       find.byKey(const ValueKey('wardrobe-editor-form')),
-      const Offset(0, -600),
+      const Offset(0, -1100),
     );
     await tester.pumpAndSettle();
     expect(find.text('Estado y valor'), findsOneWidget);
     expect(find.text('Prenda favorita'), findsOneWidget);
+  });
+
+  testWidgets('añadir prenda usa la ficha completa sin separar por comas',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(body: WardrobePage(controller: controller)),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Añadir prenda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Información básica'), findsOneWidget);
+    expect(find.text('Añadir imagen'), findsOneWidget);
+    expect(find.text('Separa varios valores con comas'), findsNothing);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nombre'),
+      'Camiseta nueva',
+    );
+    await tester.tap(find.text('Elegir colores'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('granate'));
+    await tester.tap(find.text('Aplicar'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Elegir temporadas'));
+    await tester.tap(find.text('Elegir temporadas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('verano'));
+    await tester.tap(find.text('Aplicar'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Elegir ocasiones'));
+    await tester.tap(find.text('Elegir ocasiones'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('diario'));
+    await tester.tap(find.text('Aplicar'));
+    await tester.pumpAndSettle();
+    await tester
+        .ensureVisible(find.widgetWithText(TextField, 'Añadir etiqueta'));
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Añadir etiqueta'), 'favorita');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.drag(
+      find.byKey(const ValueKey('wardrobe-editor-form')),
+      const Offset(0, -700),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Añadir prenda').last);
+    await tester.pumpAndSettle();
+
+    final saved = controller.wardrobeItems.single;
+    expect(saved.name, 'Camiseta nueva');
+    expect(saved.category, 'Camisetas');
+    expect(saved.colors, contains('granate'));
+    expect(saved.seasons, contains('verano'));
+    expect(saved.occasions, contains('diario'));
+    expect(saved.tags, contains('favorita'));
   });
 
   testWidgets('las prendas favoritas se pueden mostrar por separado',

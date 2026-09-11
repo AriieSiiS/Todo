@@ -89,7 +89,7 @@ class _WardrobePageState extends State<WardrobePage> {
         .where((category) => category.isNotEmpty)
         .toSet()
         .toList()
-      ..sort();
+      ..sort(WardrobeTaxonomy.compareCategories);
     final selectedCategory =
         categories.contains(_category) ? _category : 'Todo';
     final normalizedQuery = _query.trim().toLowerCase();
@@ -113,9 +113,10 @@ class _WardrobePageState extends State<WardrobePage> {
     }).toList()
       ..sort((left, right) {
         if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
-        final categoryOrder = left.category.toLowerCase().compareTo(
-              right.category.toLowerCase(),
-            );
+        final categoryOrder = WardrobeTaxonomy.compareCategories(
+          left.category,
+          right.category,
+        );
         if (categoryOrder != 0) return categoryOrder;
         return left.name.toLowerCase().compareTo(right.name.toLowerCase());
       });
@@ -989,36 +990,12 @@ class _MissingWardrobeImage extends StatelessWidget {
 
 Future<void> _showCreateWardrobeItem(
     BuildContext context, TodoWorkspace controller) async {
-  final name = TextEditingController();
-  final category = TextEditingController();
-  final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-              title: const Text('Añadir prenda manualmente'),
-              content: SizedBox(
-                  width: 420,
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    TextField(
-                        controller: name,
-                        autofocus: true,
-                        decoration: const InputDecoration(labelText: 'Nombre')),
-                    const SizedBox(height: 10),
-                    TextField(
-                        controller: category,
-                        decoration:
-                            const InputDecoration(labelText: 'Categoría'))
-                  ])),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar')),
-                FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Añadir'))
-              ]));
-  if (result == true) {
-    controller.createWardrobeItem(name: name.text, category: category.text);
-  }
+  await showDialog<_WardrobeEditAction>(
+    context: context,
+    builder: (context) => _WardrobeItemEditorDialog(
+      controller: controller,
+    ),
+  );
 }
 
 Future<void> _showWardrobeItemDetail(
@@ -1228,11 +1205,11 @@ enum _WardrobeEditAction { saved, delete }
 class _WardrobeItemEditorDialog extends StatefulWidget {
   const _WardrobeItemEditorDialog({
     required this.controller,
-    required this.item,
+    this.item,
   });
 
   final TodoWorkspace controller;
-  final WardrobeItem item;
+  final WardrobeItem? item;
 
   @override
   State<_WardrobeItemEditorDialog> createState() =>
@@ -1243,40 +1220,43 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late String _category;
-  late final TextEditingController _material;
-  late final TextEditingController _colors;
-  late final TextEditingController _seasons;
-  late final TextEditingController _occasions;
-  late final TextEditingController _tags;
+  late String _material;
+  late List<String> _colors;
+  late List<String> _seasons;
+  late List<String> _occasions;
+  late List<String> _tags;
+  final TextEditingController _tagInput = TextEditingController();
   late final TextEditingController _price;
   late WardrobeLaundryStatus _laundryStatus;
   late bool _favorite;
+  XFile? _selectedImage;
+  bool _removeImage = false;
+  bool _saving = false;
 
-  WardrobeItem get item => widget.item;
+  WardrobeItem? get item => widget.item;
 
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: item.name);
-    _category = item.category;
-    _material = TextEditingController(text: item.material);
-    _colors = TextEditingController(text: item.colors.join(', '));
-    _seasons = TextEditingController(text: item.seasons.join(', '));
-    _occasions = TextEditingController(text: item.occasions.join(', '));
-    _tags = TextEditingController(text: item.tags.join(', '));
-    _price = TextEditingController(text: item.price?.toString() ?? '');
-    _laundryStatus = item.laundryStatus;
-    _favorite = item.favorite;
+    _name = TextEditingController(text: item?.name ?? '');
+    _category = WardrobeTaxonomy.normalizeCategory(
+      item?.category ?? WardrobeTaxonomy.categories.first,
+    );
+    _material = item?.material ?? '';
+    _colors = WardrobeTaxonomy.normalizeColors(item?.colors ?? const []);
+    _seasons = WardrobeTaxonomy.normalizeSeasons(item?.seasons ?? const []);
+    _occasions =
+        WardrobeTaxonomy.normalizeOccasions(item?.occasions ?? const []);
+    _tags = List<String>.of(item?.tags ?? const []);
+    _price = TextEditingController(text: item?.price?.toString() ?? '');
+    _laundryStatus = item?.laundryStatus ?? WardrobeLaundryStatus.available;
+    _favorite = item?.favorite ?? false;
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _material.dispose();
-    _colors.dispose();
-    _seasons.dispose();
-    _occasions.dispose();
-    _tags.dispose();
+    _tagInput.dispose();
     _price.dispose();
     super.dispose();
   }
@@ -1302,12 +1282,14 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Editar prenda',
+                          Text(item == null ? 'Añadir prenda' : 'Editar prenda',
                               style:
                                   Theme.of(context).textTheme.headlineMedium),
                           const SizedBox(height: 5),
                           Text(
-                            'Actualiza la ficha completa sin perder de vista la prenda.',
+                            item == null
+                                ? 'Completa la ficha y añade una imagen si quieres.'
+                                : 'Actualiza la ficha completa sin perder de vista la prenda.',
                             style: TextStyle(color: visuals.textMuted),
                           ),
                         ],
@@ -1350,26 +1332,37 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
                 padding: const EdgeInsets.fromLTRB(22, 15, 22, 17),
                 child: Row(
                   children: [
-                    TextButton.icon(
-                      onPressed: () => Navigator.pop(
-                        context,
-                        _WardrobeEditAction.delete,
+                    if (item != null)
+                      TextButton.icon(
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.pop(
+                                  context,
+                                  _WardrobeEditAction.delete,
+                                ),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        label: const Text('Eliminar prenda'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: visuals.danger,
+                        ),
                       ),
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      label: const Text('Eliminar prenda'),
-                      style:
-                          TextButton.styleFrom(foregroundColor: visuals.danger),
-                    ),
                     const Spacer(),
                     OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _saving ? null : () => Navigator.pop(context),
                       child: const Text('Cancelar'),
                     ),
                     const SizedBox(width: 10),
                     FilledButton.icon(
-                      onPressed: _save,
-                      icon: const Icon(Icons.check_rounded),
-                      label: const Text('Guardar cambios'),
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_rounded),
+                      label: Text(
+                        item == null ? 'Añadir prenda' : 'Guardar cambios',
+                      ),
                     ),
                   ],
                 ),
@@ -1386,24 +1379,74 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
       color: const Color(0xFFF3EEE5),
       child: Padding(
         padding: const EdgeInsets.all(22),
-        child: FutureBuilder<String>(
-          future: widget.controller.wardrobeImageAbsolutePath(
-            item,
-            thumbnail: false,
-          ),
-          builder: (context, snapshot) {
-            final path = snapshot.data ?? '';
-            if (path.isEmpty || !File(path).existsSync()) {
-              return const _MissingWardrobeImage();
-            }
-            return Image.file(
-              File(path),
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
-            );
-          },
+        child: Column(
+          children: [
+            Expanded(child: _imageContent()),
+            const SizedBox(height: 14),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _saving ? null : _selectImage,
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(
+                    _selectedImage != null ||
+                            (item != null && item!.imagePath.isNotEmpty)
+                        ? 'Cambiar imagen'
+                        : 'Añadir imagen',
+                  ),
+                ),
+                if (_selectedImage != null ||
+                    (!_removeImage &&
+                        item != null &&
+                        item!.imagePath.isNotEmpty))
+                  OutlinedButton.icon(
+                    onPressed: _saving
+                        ? null
+                        : () => setState(() {
+                              _selectedImage = null;
+                              _removeImage = true;
+                            }),
+                    icon: const Icon(Icons.hide_image_outlined),
+                    label: const Text('Quitar imagen'),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _imageContent() {
+    if (_selectedImage != null) {
+      return Image.file(
+        File(_selectedImage!.path),
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
+      );
+    }
+    if (_removeImage || item == null || item!.imagePath.isEmpty) {
+      return const _MissingWardrobeImage();
+    }
+    return FutureBuilder<String>(
+      future: widget.controller.wardrobeImageAbsolutePath(
+        item!,
+        thumbnail: false,
+      ),
+      builder: (context, snapshot) {
+        final path = snapshot.data ?? '';
+        if (path.isEmpty || !File(path).existsSync()) {
+          return const _MissingWardrobeImage();
+        }
+        return Image.file(
+          File(path),
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
+        );
+      },
     );
   }
 
@@ -1428,7 +1471,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
             key: const ValueKey('wardrobe-editor-category'),
             initialValue: _category,
             decoration: const InputDecoration(labelText: 'Categoría'),
-            items: _availableCategories
+            items: WardrobeTaxonomy.categoriesWithLegacy(item?.category)
                 .map(
                   (category) => DropdownMenuItem(
                     value: category,
@@ -1441,23 +1484,32 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
             }),
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _material,
-            decoration: const InputDecoration(
-              labelText: 'Material',
-              hintText: 'Algodón, cuero, lino…',
-            ),
-          ),
+          _materialField(),
           const SizedBox(height: 22),
           Text('Clasificación', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 14),
-          _listField(_colors, 'Colores', 'Crema, burdeos, caramelo…'),
-          const SizedBox(height: 12),
-          _listField(_seasons, 'Temporadas', 'Primavera, verano…'),
-          const SizedBox(height: 12),
-          _listField(_occasions, 'Ocasiones', 'Diario, trabajo, formal…'),
-          const SizedBox(height: 12),
-          _listField(_tags, 'Etiquetas', 'Puma, perfil bajo, limpias…'),
+          _multiChoiceField(
+            label: 'Colores',
+            options: WardrobeTaxonomy.colors,
+            selected: _colors,
+            onChanged: (values) => setState(() => _colors = values),
+          ),
+          const SizedBox(height: 16),
+          _multiChoiceField(
+            label: 'Temporadas',
+            options: WardrobeTaxonomy.seasons,
+            selected: _seasons,
+            onChanged: (values) => setState(() => _seasons = values),
+          ),
+          const SizedBox(height: 16),
+          _multiChoiceField(
+            label: 'Ocasiones',
+            options: WardrobeTaxonomy.occasions,
+            selected: _occasions,
+            onChanged: (values) => setState(() => _occasions = values),
+          ),
+          const SizedBox(height: 16),
+          _tagsField(),
           const SizedBox(height: 22),
           Text('Estado y valor',
               style: Theme.of(context).textTheme.titleMedium),
@@ -1507,17 +1559,170 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
     );
   }
 
-  TextFormField _listField(
-    TextEditingController controller,
-    String label,
-    String hint,
-  ) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        helperText: 'Separa varios valores con comas',
+  Widget _materialField() {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: _material),
+      optionsBuilder: (value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return WardrobeTaxonomy.materialSuggestions;
+        return WardrobeTaxonomy.materialSuggestions.where(
+          (option) => option.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (value) => _material = value,
+      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          onChanged: (value) => _material = value,
+          onFieldSubmitted: (_) => onSubmitted(),
+          decoration: const InputDecoration(
+            labelText: 'Material',
+            hintText: 'Algodón, cuero, lino…',
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _multiChoiceField({
+    required String label,
+    required List<String> options,
+    required List<String> selected,
+    required ValueChanged<List<String>> onChanged,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (selected.isNotEmpty) ...[
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: selected
+                  .map(
+                    (value) => InputChip(
+                      label: Text(value),
+                      onDeleted: () {
+                        final next = List<String>.of(selected)..remove(value);
+                        onChanged(next);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 6),
+          ],
+          TextButton.icon(
+            onPressed: () => _showMultiChoiceDialog(
+              label: label,
+              options: options,
+              selected: selected,
+              onChanged: onChanged,
+            ),
+            icon: const Icon(Icons.tune_rounded),
+            label: Text('Elegir ${label.toLowerCase()}'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMultiChoiceDialog({
+    required String label,
+    required List<String> options,
+    required List<String> selected,
+    required ValueChanged<List<String>> onChanged,
+  }) async {
+    final draft = List<String>.of(selected);
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Elegir ${label.toLowerCase()}'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: options
+                    .map(
+                      (option) => FilterChip(
+                        label: Text(option),
+                        selected: draft.contains(option),
+                        onSelected: (value) => setDialogState(() {
+                          if (value) {
+                            draft.add(option);
+                          } else {
+                            draft.remove(option);
+                          }
+                        }),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, draft),
+              child: const Text('Aplicar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result != null && mounted) onChanged(result);
+  }
+
+  Widget _tagsField() {
+    return InputDecorator(
+      decoration: const InputDecoration(labelText: 'Etiquetas'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_tags.isNotEmpty) ...[
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: _tags
+                  .map(
+                    (tag) => InputChip(
+                      label: Text(tag),
+                      onDeleted: () => setState(() => _tags.remove(tag)),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _tagInput,
+                  decoration: const InputDecoration(
+                    hintText: 'Añadir etiqueta',
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _addTag(),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Añadir etiqueta',
+                onPressed: _addTag,
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1525,34 +1730,60 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
   String? _requiredField(String? value) =>
       (value?.trim().isEmpty ?? true) ? 'Este campo es obligatorio' : null;
 
-  List<String> get _availableCategories {
-    final categories = widget.controller.wardrobeItems
-        .where((wardrobeItem) => !wardrobeItem.archived)
-        .map((wardrobeItem) => wardrobeItem.category.trim())
-        .where((category) => category.isNotEmpty)
-        .toSet();
-    categories.add(item.category);
-    return categories.toList()..sort();
+  void _addTag() {
+    final value = _tagInput.text.trim();
+    if (value.isEmpty) return;
+    if (!_tags.any((tag) => tag.toLowerCase() == value.toLowerCase())) {
+      setState(() => _tags.add(value));
+    }
+    _tagInput.clear();
   }
 
-  void _save() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    final priceText = _price.text.trim();
-    widget.controller.updateWardrobeItem(
-      item.id,
-      name: _name.text,
-      category: _category,
-      material: _material.text,
-      colors: _splitTags(_colors.text),
-      seasons: _splitTags(_seasons.text),
-      occasions: _splitTags(_occasions.text),
-      tags: _splitTags(_tags.text),
-      favorite: _favorite,
-      laundryStatus: _laundryStatus,
-      price: double.tryParse(priceText.replaceAll(',', '.')),
-      clearPrice: priceText.isEmpty,
+  Future<void> _selectImage() async {
+    final selected = await openFile(
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'Imágenes',
+          extensions: ['png', 'jpg', 'jpeg', 'webp'],
+        ),
+      ],
     );
-    Navigator.pop(context, _WardrobeEditAction.saved);
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedImage = selected;
+      _removeImage = false;
+    });
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    _addTag();
+    setState(() => _saving = true);
+    final priceText = _price.text.trim();
+    try {
+      await widget.controller.saveWardrobeItem(
+        existing: item,
+        name: _name.text,
+        category: _category,
+        material: _material,
+        colors: _colors,
+        seasons: _seasons,
+        occasions: _occasions,
+        tags: _tags,
+        favorite: _favorite,
+        laundryStatus: _laundryStatus,
+        price: double.tryParse(priceText.replaceAll(',', '.')),
+        sourceImagePath: _selectedImage?.path,
+        removeImage: _removeImage,
+      );
+      if (mounted) Navigator.pop(context, _WardrobeEditAction.saved);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar la prenda: $error')),
+      );
+    }
   }
 }
 
@@ -1836,7 +2067,7 @@ Future<void> _showEditOutfit(BuildContext context, TodoWorkspace controller,
       .where((category) => category.trim().isNotEmpty)
       .toSet()
       .toList()
-    ..sort();
+    ..sort(WardrobeTaxonomy.compareCategories);
   categories.insert(0, 'Todas');
   var category = 'Todas';
   var query = '';

@@ -167,6 +167,8 @@ class TodoWorkspace extends ChangeNotifier {
   LocalSyncMetadata _syncMetadata = const LocalSyncMetadata();
   SyncConflict? _syncConflict;
   Timer? _saveDebounce;
+  Timer? _externalWardrobePoll;
+  bool _checkingExternalWardrobe = false;
 
   bool get _isFlutterTest {
     try {
@@ -586,20 +588,24 @@ class TodoWorkspace extends ChangeNotifier {
     List<String> occasions = const <String>[],
     List<String> tags = const <String>[],
     double? price,
+    bool favorite = false,
+    WardrobeLaundryStatus laundryStatus = WardrobeLaundryStatus.available,
   }) {
     final instant = DateTime.now();
     final item = WardrobeItem(
       id: _id('wardrobe-item'),
       name: name.trim().isEmpty ? 'Prenda sin nombre' : name.trim(),
-      category: category.trim().isEmpty ? 'Sin categoría' : category.trim(),
+      category: WardrobeTaxonomy.normalizeCategory(category),
       imagePath: imagePath,
       thumbnailPath: thumbnailPath,
       imageSha256: imageSha256,
-      colors: colors,
+      colors: WardrobeTaxonomy.normalizeColors(colors),
       material: material.trim(),
-      seasons: seasons,
-      occasions: occasions,
+      seasons: WardrobeTaxonomy.normalizeSeasons(seasons),
+      occasions: WardrobeTaxonomy.normalizeOccasions(occasions),
       tags: tags,
+      favorite: favorite,
+      laundryStatus: laundryStatus,
       price: price,
       createdAt: instant,
       updatedAt: instant,
@@ -627,11 +633,16 @@ class TodoWorkspace extends ChangeNotifier {
     if (index == -1) return;
     _wardrobeItems[index] = _wardrobeItems[index].copyWith(
       name: name?.trim(),
-      category: category?.trim(),
-      colors: colors,
+      category: category == null
+          ? null
+          : WardrobeTaxonomy.normalizeCategory(category),
+      colors: colors == null ? null : WardrobeTaxonomy.normalizeColors(colors),
       material: material?.trim(),
-      seasons: seasons,
-      occasions: occasions,
+      seasons:
+          seasons == null ? null : WardrobeTaxonomy.normalizeSeasons(seasons),
+      occasions: occasions == null
+          ? null
+          : WardrobeTaxonomy.normalizeOccasions(occasions),
       tags: tags,
       favorite: favorite,
       laundryStatus: laundryStatus,
@@ -640,6 +651,132 @@ class TodoWorkspace extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _commit();
+  }
+
+  Future<WardrobeItem> saveWardrobeItem({
+    WardrobeItem? existing,
+    required String name,
+    required String category,
+    required String material,
+    required List<String> colors,
+    required List<String> seasons,
+    required List<String> occasions,
+    required List<String> tags,
+    required WardrobeLaundryStatus laundryStatus,
+    required bool favorite,
+    double? price,
+    String? sourceImagePath,
+    bool removeImage = false,
+  }) async {
+    final instant = DateTime.now();
+    final itemId = existing?.id ?? _id('wardrobe-item');
+    WardrobeStoredAsset? imported;
+    if (sourceImagePath != null && sourceImagePath.trim().isNotEmpty) {
+      imported = await _wardrobeAssets.importItemImage(
+        itemId: itemId,
+        sourcePath: sourceImagePath,
+        category: category,
+      );
+    }
+
+    final previousIndex = existing == null
+        ? -1
+        : _wardrobeItems.indexWhere((item) => item.id == existing.id);
+    if (existing != null && previousIndex == -1) {
+      if (imported != null) {
+        await _deleteWardrobeStoredAsset(imported);
+      }
+      throw StateError('No se encuentra la prenda.');
+    }
+
+    final normalizedTags = tags
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty)
+        .toSet()
+        .toList();
+    final imagePath =
+        imported?.imagePath ?? (removeImage ? '' : existing?.imagePath ?? '');
+    final thumbnailPath = imported?.thumbnailPath ??
+        (removeImage ? '' : existing?.thumbnailPath ?? '');
+    final imageSha256 =
+        imported?.sha256 ?? (removeImage ? '' : existing?.imageSha256 ?? '');
+    final saved = WardrobeItem(
+      id: itemId,
+      name: name.trim(),
+      category: WardrobeTaxonomy.normalizeCategory(category),
+      imagePath: imagePath,
+      thumbnailPath: thumbnailPath,
+      imageSha256: imageSha256,
+      colors: WardrobeTaxonomy.normalizeColors(colors),
+      material: material.trim(),
+      seasons: WardrobeTaxonomy.normalizeSeasons(seasons),
+      occasions: WardrobeTaxonomy.normalizeOccasions(occasions),
+      tags: normalizedTags,
+      favorite: favorite,
+      archived: existing?.archived ?? false,
+      laundryStatus: laundryStatus,
+      useCount: existing?.useCount ?? 0,
+      lastUsedAt: existing?.lastUsedAt,
+      price: price,
+      createdAt: existing?.createdAt ?? instant,
+      updatedAt: instant,
+    );
+
+    if (existing == null) {
+      _wardrobeItems.add(saved);
+    } else {
+      _wardrobeItems[previousIndex] = saved;
+    }
+    notifyListeners();
+    try {
+      await _persistWardrobeLocally();
+    } catch (_) {
+      if (existing == null) {
+        _wardrobeItems.removeWhere((item) => item.id == itemId);
+      } else {
+        _wardrobeItems[previousIndex] = existing;
+      }
+      if (imported != null) await _deleteWardrobeStoredAsset(imported);
+      notifyListeners();
+      rethrow;
+    }
+
+    if (existing != null && (imported != null || removeImage)) {
+      for (final path in <String>[
+        existing.imagePath,
+        existing.thumbnailPath,
+      ]) {
+        if (path.isNotEmpty &&
+            path != saved.imagePath &&
+            path != saved.thumbnailPath) {
+          await _wardrobeAssets.deleteAsset(path);
+        }
+      }
+    }
+    return saved;
+  }
+
+  Future<void> _deleteWardrobeStoredAsset(WardrobeStoredAsset asset) async {
+    await _wardrobeAssets.deleteAsset(asset.imagePath);
+    await _wardrobeAssets.deleteAsset(asset.thumbnailPath);
+  }
+
+  Future<void> _persistWardrobeLocally() async {
+    _saveDebounce?.cancel();
+    _saveDebounce = null;
+    await _store.save(_buildSnapshot());
+    _syncMetadata = _syncMetadata.copyWith(
+      deviceId: _syncMetadata.deviceId.isNotEmpty
+          ? _syncMetadata.deviceId
+          : _cloudService.currentDeviceId,
+      pendingLocalChanges: true,
+    );
+    await _store.saveSyncMetadata(_syncMetadata);
+    _lastSavedAt = DateTime.now();
+    notifyListeners();
+    if (_cloudService.isAuthenticated && _syncConflict == null) {
+      unawaited(syncWithCloud());
+    }
   }
 
   void toggleWardrobeFavorite(String id) {
@@ -3869,6 +4006,35 @@ class TodoWorkspace extends ChangeNotifier {
     }
     if (!_isFlutterTest) {
       unawaited(_initializeStartupIntegrations());
+      _externalWardrobePoll = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => unawaited(_mergeExternalWardrobeItems()),
+      );
+    }
+  }
+
+  Future<void> _mergeExternalWardrobeItems() async {
+    if (_checkingExternalWardrobe) return;
+    _checkingExternalWardrobe = true;
+    try {
+      final snapshot = await _store.load();
+      if (snapshot == null) return;
+      final knownIds = _wardrobeItems.map((item) => item.id).toSet();
+      final additions = snapshot.wardrobeItems
+          .where((item) => !knownIds.contains(item.id))
+          .toList();
+      if (additions.isEmpty) return;
+      _wardrobeItems.addAll(additions);
+      _syncMetadata = _syncMetadata.copyWith(pendingLocalChanges: true);
+      await _store.saveSyncMetadata(_syncMetadata);
+      notifyListeners();
+      if (_cloudService.isAuthenticated && _syncConflict == null) {
+        unawaited(syncWithCloud());
+      }
+    } catch (_) {
+      // Una lectura externa incompleta se reintentará en el siguiente ciclo.
+    } finally {
+      _checkingExternalWardrobe = false;
     }
   }
 
@@ -4164,11 +4330,19 @@ class TodoWorkspace extends ChangeNotifier {
       final item = _wardrobeItems[i];
       final cleaned = item.copyWith(
         name: _cleanSpanishText(item.name),
-        category: _cleanSpanishText(item.category),
-        colors: item.colors.map(_cleanSpanishText).toList(),
+        category: WardrobeTaxonomy.normalizeCategory(
+          _cleanSpanishText(item.category),
+        ),
+        colors: WardrobeTaxonomy.normalizeColors(
+          item.colors.map(_cleanSpanishText),
+        ),
         material: _cleanSpanishText(item.material),
-        seasons: item.seasons.map(_cleanSpanishText).toList(),
-        occasions: item.occasions.map(_cleanSpanishText).toList(),
+        seasons: WardrobeTaxonomy.normalizeSeasons(
+          item.seasons.map(_cleanSpanishText),
+        ),
+        occasions: WardrobeTaxonomy.normalizeOccasions(
+          item.occasions.map(_cleanSpanishText),
+        ),
         tags: item.tags.map(_cleanSpanishText).toList(),
       );
       if (cleaned.toJson().toString() != item.toJson().toString()) {
@@ -4335,6 +4509,12 @@ class TodoWorkspace extends ChangeNotifier {
     }
     _lastSavedAt = DateTime.now();
     notifyListeners();
+  }
+
+  Future<void> flushPendingChanges() async {
+    _saveDebounce?.cancel();
+    _saveDebounce = null;
+    await _persist();
   }
 
   AppStateSnapshot _buildSnapshot() {
@@ -4876,6 +5056,7 @@ class TodoWorkspace extends ChangeNotifier {
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _externalWardrobePoll?.cancel();
     unawaited(_notificationActionSubscription.cancel());
     _feedback.dispose();
     unawaited(_isaacSaveSync.dispose());

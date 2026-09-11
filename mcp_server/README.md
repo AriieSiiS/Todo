@@ -77,15 +77,15 @@ documental anterior. Las pruebas del contrato se ejecutan con
 
 ## Ropa y Codex
 
-La herramienta `get_wardrobe_import_contract` devuelve el formato vigente del
-`manifest.json`. Codex debe crear una carpeta temporal con ese manifiesto y los
-PNG transparentes finales y llamar a `stage_wardrobe_batch`. El MCP copia el
-lote a `Documents/Todo/wardrobe/imports` y lo registra como pendiente.
+La herramienta `get_wardrobe_import_contract` devuelve las categorías y valores
+canónicos. Para una prenda, Codex llama a `import_wardrobe_item`: la imagen se
+normaliza, se genera su miniatura y la ficha queda guardada directamente, sin
+lote ni aprobación manual. `request_id` hace que un reintento no duplique la
+prenda y la sincronización remota no bloquea el guardado local.
 
-La aprobación se realiza dentro de Todo. La app mueve los recursos aceptados a
-`wardrobe/items`, genera miniaturas en `wardrobe/thumbnails` y conserva en el
-snapshot únicamente rutas relativas y metadatos. Las fotografías originales no
-se copian al armario.
+`stage_wardrobe_batch` se conserva para varias prendas o cuando el usuario pida
+una revisión previa. En ese caso usa `manifest.json`, copia el lote a
+`Documents/Todo/wardrobe/imports` y deja la aprobación dentro de Todo.
 
 ## Inventario visual de Hogar
 

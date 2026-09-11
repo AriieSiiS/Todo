@@ -3,9 +3,14 @@
 part of 'app_shell.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({required this.controller, super.key});
+  const SettingsPage({
+    required this.controller,
+    this.backupService,
+    super.key,
+  });
 
   final TodoWorkspace controller;
+  final FullBackupService? backupService;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -14,16 +19,21 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _desktopClientController;
   late final TextEditingController _desktopSecretController;
+  late final FullBackupService _backupService;
+  FullBackupOverview? _backupOverview;
+  bool _backupBusy = false;
 
   TodoWorkspace get controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
+    _backupService = widget.backupService ?? FullBackupService();
     _desktopClientController = TextEditingController(
         text: controller.calendarSettings.desktopClientId);
     _desktopSecretController = TextEditingController(
         text: controller.calendarSettings.desktopClientSecret);
+    unawaited(_loadBackupOverview());
   }
 
   @override
@@ -340,6 +350,64 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
+    final backup = _SettingsSectionCard(
+      icon: Icons.backup_outlined,
+      title: 'Copias de seguridad',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Guarda una copia completa y recuperable de tareas, imágenes, documentos, ropa, hogar, recetas y Biblioteca.',
+            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
+          ),
+          const SizedBox(height: 16),
+          _BackupStatusPanel(
+            overview: _backupOverview,
+            destinationPath: _backupService.destinationRoot.path,
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                key: const ValueKey('settings-create-full-backup'),
+                onPressed: !_backupService.isSupported || _backupBusy
+                    ? null
+                    : _confirmFullBackup,
+                icon: _backupBusy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_to_drive_outlined, size: 18),
+                label: Text(_backupBusy ? 'Preparando…' : 'Crear copia ahora'),
+              ),
+              OutlinedButton.icon(
+                key: const ValueKey('settings-open-backup-folder'),
+                onPressed: _backupService.isSupported && !_backupBusy
+                    ? _openBackupFolder
+                    : null,
+                icon: const Icon(Icons.folder_open_outlined, size: 18),
+                label: const Text('Abrir carpeta'),
+              ),
+            ],
+          ),
+          if (_backupService.isSupported) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Para garantizar una copia coherente, Todo se cerrará durante el proceso y volverá a abrirse al terminar.',
+              style: TextStyle(
+                color: context.visuals.textMuted,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
     final status = _SettingsAsideCard(
       title: 'Estado del sistema',
       icon: Icons.shield_outlined,
@@ -357,6 +425,13 @@ class _SettingsPageState extends State<SettingsPage> {
           title: 'Contenido cargado',
           subtitle: '$contentCount elementos en la app',
           active: true,
+        ),
+        _SettingsStatusItem(
+          icon: Icons.backup_outlined,
+          title: 'Copia completa',
+          subtitle: _backupStatusSubtitle(_backupOverview),
+          active: _backupOverview?.latest != null &&
+              _backupOverview?.errorMessage == null,
         ),
         _SettingsStatusItem(
           icon: Icons.notifications_none_rounded,
@@ -414,6 +489,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       wardrobe,
                       const SizedBox(height: 16),
+                      backup,
+                      const SizedBox(height: 16),
                       data,
                       const SizedBox(height: 16),
                       status,
@@ -431,6 +508,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           dayRules,
                           const SizedBox(height: 16),
                           notifications,
+                          const SizedBox(height: 16),
+                          backup,
                           const SizedBox(height: 16),
                           data,
                         ],
@@ -457,6 +536,69 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadBackupOverview() async {
+    final overview = await _backupService.loadOverview();
+    if (!mounted) return;
+    setState(() => _backupOverview = overview);
+  }
+
+  Future<void> _confirmFullBackup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Crear copia de seguridad'),
+        content: const Text(
+          'Todo guardará los cambios pendientes, se cerrará y creará una copia completa verificada. La aplicación volverá a abrirse en Ajustes cuando termine.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.backup_outlined, size: 18),
+            label: const Text('Cerrar y crear copia'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _backupBusy = true);
+    try {
+      await controller.flushPendingChanges();
+      await _backupService.scheduleAfterAppCloses();
+      await SystemNavigator.pop();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _backupBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo iniciar la copia: ${_friendlyBackupError(error)}',
+          ),
+        ),
+      );
+      await _loadBackupOverview();
+    }
+  }
+
+  Future<void> _openBackupFolder() async {
+    try {
+      await _backupService.openBackupFolder();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo abrir la carpeta: ${_friendlyBackupError(error)}',
+          ),
+        ),
+      );
+    }
   }
 
   // Conservamos temporalmente el diseño anterior fuera del árbol para que la
@@ -1520,6 +1662,137 @@ String _notificationScheduleLabel(
         : '$dailyCount avisos diarios activos');
   }
   return parts.isEmpty ? 'No hay avisos programados' : parts.join(' · ');
+}
+
+class _BackupStatusPanel extends StatelessWidget {
+  const _BackupStatusPanel({
+    required this.overview,
+    required this.destinationPath,
+  });
+
+  final FullBackupOverview? overview;
+  final String destinationPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = overview;
+    final summary = current?.latest;
+    final loading = current == null;
+    final hasError = current?.errorMessage != null;
+    final color = hasError ? const Color(0xFF9D5D3A) : const Color(0xFF5E6B50);
+    final background =
+        hasError ? const Color(0xFFFFF3EA) : const Color(0xFFF5F8F0);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasError ? const Color(0xFFE8C7AF) : const Color(0xFFD9E4CC),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (loading)
+            const SizedBox.square(
+              dimension: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(
+              hasError
+                  ? Icons.warning_amber_rounded
+                  : summary == null
+                      ? Icons.cloud_off_outlined
+                      : Icons.verified_outlined,
+              color: color,
+              size: 23,
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  loading
+                      ? 'Consultando las copias…'
+                      : current.inProgress
+                          ? 'Copia en curso'
+                          : hasError
+                              ? 'La última copia necesita atención'
+                              : summary == null
+                                  ? 'Todavía no hay una copia completa'
+                                  : 'Última copia verificada',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  loading
+                      ? destinationPath
+                      : hasError
+                          ? current.errorMessage!
+                          : summary == null
+                              ? 'Se guardará en $destinationPath'
+                              : '${_backupDateLabel(summary.createdAt)} · '
+                                  '${summary.verifiedFiles} archivos · '
+                                  '${_backupSizeLabel(summary.totalBytes)}',
+                  style: TextStyle(
+                    color: hasError ? color : context.visuals.textMuted,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _backupStatusSubtitle(FullBackupOverview? overview) {
+  if (overview == null) return 'Consultando…';
+  if (overview.inProgress) return 'Copia en curso';
+  if (overview.errorMessage != null) return 'Necesita atención';
+  final latest = overview.latest;
+  if (latest == null) return 'Todavía no creada';
+  return _backupDateLabel(latest.createdAt);
+}
+
+String _backupDateLabel(DateTime value) {
+  final local = value.toLocal();
+  final date = '${local.day.toString().padLeft(2, '0')}/'
+      '${local.month.toString().padLeft(2, '0')}/${local.year}';
+  return '$date a las ${_timeLabel(local)}';
+}
+
+String _backupSizeLabel(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  final kibibytes = bytes / 1024;
+  if (kibibytes < 1024) return '${kibibytes.toStringAsFixed(1)} KB';
+  final mebibytes = kibibytes / 1024;
+  if (mebibytes < 1024) return '${mebibytes.toStringAsFixed(1)} MB';
+  return '${(mebibytes / 1024).toStringAsFixed(1)} GB';
+}
+
+String _friendlyBackupError(Object error) {
+  final message = error.toString();
+  const prefixes = <String>[
+    'Bad state: ',
+    'Unsupported operation: ',
+    'FileSystemException: ',
+  ];
+  for (final prefix in prefixes) {
+    if (message.startsWith(prefix)) return message.substring(prefix.length);
+  }
+  return message;
 }
 
 class _SettingsSectionCard extends StatelessWidget {

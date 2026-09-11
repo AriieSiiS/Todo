@@ -37,9 +37,10 @@ Este repositorio contiene:
 
 La sección `Ropa` es local y prioritaria para Windows. Los PNG se guardan en
 `Documents/Todo/wardrobe`; el snapshot y Supabase conservan solamente sus
-metadatos. La skill `skills/extract-clothing-to-todo` guía a Codex para convertir
-un lote de fotografías en prendas transparentes y enviarlas al área de revisión
-mediante el MCP local, sin claves de IA dentro de la aplicación.
+metadatos. La habilidad `skills/extract-clothing-to-todo` guía a Codex para convertir
+una foto en una prenda transparente e insertarla directamente mediante el MCP
+local. Los lotes revisables quedan para varias prendas o cuando se pidan
+expresamente, sin claves de IA dentro de la aplicación.
 
 ## Hogar
 
@@ -197,3 +198,8 @@ La recuperación completa está documentada en
 La restauración valida todos los hashes, crea primero una copia preventiva y
 recupera el snapshot junto con imágenes, documentos, recetas, ropa, hogar,
 portadas y conocimiento.
+
+En Windows, `Ajustes > Copias de seguridad` muestra la última copia completa
+verificada y permite crear otra. Para mantener coherente la base de Biblioteca,
+la app guarda los cambios, se cierra durante la copia y vuelve a abrirse en
+Ajustes cuando termina. Las copias se guardan en `Documents/Todo Backups`.
