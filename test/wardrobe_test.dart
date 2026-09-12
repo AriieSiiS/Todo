@@ -259,6 +259,31 @@ void main() {
     );
   });
 
+  test('el servicio guarda directamente una imagen pegada', () async {
+    final temp = await Directory.systemTemp.createTemp('todo-wardrobe-paste-');
+    addTearDown(() => temp.delete(recursive: true));
+    final picture = img.Image(width: 40, height: 30, numChannels: 4);
+    img.fill(picture, color: img.ColorRgba8(30, 80, 150, 255));
+    final service = WardrobeAssetService(
+      rootOverride: Directory('${temp.path}${Platform.pathSeparator}wardrobe'),
+    );
+
+    final imported = await service.importItemImageBytes(
+      itemId: 'prenda-pegada',
+      bytes: Uint8List.fromList(img.encodePng(picture)),
+      category: 'Camisas',
+    );
+
+    expect(
+      File(await service.absolutePath(imported.imagePath)).existsSync(),
+      isTrue,
+    );
+    expect(
+      File(await service.absolutePath(imported.thumbnailPath)).existsSync(),
+      isTrue,
+    );
+  });
+
   test('el servicio importa renders de conjuntos como PNG', () async {
     final temp = await Directory.systemTemp.createTemp('todo-outfit-test-');
     addTearDown(() => temp.delete(recursive: true));
@@ -463,7 +488,18 @@ void main() {
 
     expect(find.text('Información básica'), findsOneWidget);
     expect(find.text('Añadir imagen'), findsOneWidget);
+    expect(find.text('Pegar imagen'), findsOneWidget);
+    expect(find.textContaining('Ctrl+V'), findsOneWidget);
     expect(find.text('Separa varios valores con comas'), findsNothing);
+    final categoryButton = tester.widget<DropdownButton<String>>(
+      find.descendant(
+        of: find.byKey(const ValueKey('wardrobe-editor-category')),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is DropdownButton<String>,
+        ),
+      ),
+    );
+    expect(categoryButton.style?.fontWeight, FontWeight.w400);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nombre'),
       'Camiseta nueva',

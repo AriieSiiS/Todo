@@ -1230,6 +1230,10 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
   late WardrobeLaundryStatus _laundryStatus;
   late bool _favorite;
   XFile? _selectedImage;
+  Uint8List? _pastedImageBytes;
+  final FocusNode _imagePasteFocus = FocusNode(
+    debugLabel: 'Pegar imagen de prenda',
+  );
   bool _removeImage = false;
   bool _saving = false;
 
@@ -1258,8 +1262,15 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
     _name.dispose();
     _tagInput.dispose();
     _price.dispose();
+    _imagePasteFocus.dispose();
     super.dispose();
   }
+
+  TextStyle get _normalFieldStyle =>
+      Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w400,
+          ) ??
+      const TextStyle(fontWeight: FontWeight.w400);
 
   @override
   Widget build(BuildContext context) {
@@ -1375,52 +1386,89 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
   }
 
   Widget _imagePreview() {
-    return ColoredBox(
-      color: const Color(0xFFF3EEE5),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            Expanded(child: _imageContent()),
-            const SizedBox(height: 14),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: _saving ? null : _selectImage,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  label: Text(
-                    _selectedImage != null ||
-                            (item != null && item!.imagePath.isNotEmpty)
-                        ? 'Cambiar imagen'
-                        : 'Añadir imagen',
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            _pasteImage,
+      },
+      child: Focus(
+        focusNode: _imagePasteFocus,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _imagePasteFocus.requestFocus,
+          child: ColoredBox(
+            color: const Color(0xFFF3EEE5),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  Expanded(child: _imageContent()),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.tonalIcon(
+                        onPressed: _saving ? null : _selectImage,
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        label: Text(
+                          _selectedImage != null ||
+                                  _pastedImageBytes != null ||
+                                  (item != null && item!.imagePath.isNotEmpty)
+                              ? 'Cambiar imagen'
+                              : 'Añadir imagen',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : _pasteImage,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('Pegar imagen'),
+                      ),
+                      if (_selectedImage != null ||
+                          _pastedImageBytes != null ||
+                          (!_removeImage &&
+                              item != null &&
+                              item!.imagePath.isNotEmpty))
+                        OutlinedButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() {
+                                    _selectedImage = null;
+                                    _pastedImageBytes = null;
+                                    _removeImage = true;
+                                  }),
+                          icon: const Icon(Icons.hide_image_outlined),
+                          label: const Text('Quitar imagen'),
+                        ),
+                    ],
                   ),
-                ),
-                if (_selectedImage != null ||
-                    (!_removeImage &&
-                        item != null &&
-                        item!.imagePath.isNotEmpty))
-                  OutlinedButton.icon(
-                    onPressed: _saving
-                        ? null
-                        : () => setState(() {
-                              _selectedImage = null;
-                              _removeImage = true;
-                            }),
-                    icon: const Icon(Icons.hide_image_outlined),
-                    label: const Text('Quitar imagen'),
+                  const SizedBox(height: 9),
+                  Text(
+                    'También puedes hacer clic aquí y pulsar Ctrl+V.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.visuals.textMuted,
+                          fontWeight: FontWeight.w400,
+                        ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _imageContent() {
+    if (_pastedImageBytes != null) {
+      return Image.memory(
+        _pastedImageBytes!,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
+      );
+    }
     if (_selectedImage != null) {
       return Image.file(
         File(_selectedImage!.path),
@@ -1463,6 +1511,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
           TextFormField(
             controller: _name,
             autofocus: true,
+            style: _normalFieldStyle,
             decoration: const InputDecoration(labelText: 'Nombre'),
             validator: _requiredField,
           ),
@@ -1470,6 +1519,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
           DropdownButtonFormField<String>(
             key: const ValueKey('wardrobe-editor-category'),
             initialValue: _category,
+            style: _normalFieldStyle,
             decoration: const InputDecoration(labelText: 'Categoría'),
             items: WardrobeTaxonomy.categoriesWithLegacy(item?.category)
                 .map(
@@ -1516,6 +1566,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
           const SizedBox(height: 14),
           DropdownButtonFormField<WardrobeLaundryStatus>(
             initialValue: _laundryStatus,
+            style: _normalFieldStyle,
             decoration: const InputDecoration(labelText: 'Lavandería'),
             items: WardrobeLaundryStatus.values
                 .map((value) => DropdownMenuItem(
@@ -1530,6 +1581,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
           const SizedBox(height: 12),
           TextFormField(
             controller: _price,
+            style: _normalFieldStyle,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Precio',
@@ -1549,7 +1601,10 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
             onChanged: (value) => setState(() => _favorite = value),
             contentPadding: const EdgeInsets.symmetric(horizontal: 4),
             secondary: const Icon(Icons.favorite_outline_rounded),
-            title: const Text('Prenda favorita'),
+            title: const Text(
+              'Prenda favorita',
+              style: TextStyle(fontWeight: FontWeight.w400),
+            ),
             subtitle: const Text(
               'Aparecerá primero y podrá mostrarse con el filtro de favoritas.',
             ),
@@ -1574,6 +1629,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
+          style: _normalFieldStyle,
           onChanged: (value) => _material = value,
           onFieldSubmitted: (_) => onSubmitted(),
           decoration: const InputDecoration(
@@ -1604,6 +1660,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
                   .map(
                     (value) => InputChip(
                       label: Text(value),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w400),
                       onDeleted: () {
                         final next = List<String>.of(selected)..remove(value);
                         onChanged(next);
@@ -1651,6 +1708,8 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
                     .map(
                       (option) => FilterChip(
                         label: Text(option),
+                        labelStyle:
+                            const TextStyle(fontWeight: FontWeight.w400),
                         selected: draft.contains(option),
                         onSelected: (value) => setDialogState(() {
                           if (value) {
@@ -1695,6 +1754,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
                   .map(
                     (tag) => InputChip(
                       label: Text(tag),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w400),
                       onDeleted: () => setState(() => _tags.remove(tag)),
                     ),
                   )
@@ -1707,6 +1767,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
               Expanded(
                 child: TextField(
                   controller: _tagInput,
+                  style: _normalFieldStyle,
                   decoration: const InputDecoration(
                     hintText: 'Añadir etiqueta',
                     border: InputBorder.none,
@@ -1751,8 +1812,69 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
     if (selected == null || !mounted) return;
     setState(() {
       _selectedImage = selected;
+      _pastedImageBytes = null;
       _removeImage = false;
     });
+  }
+
+  Future<void> _pasteImage() async {
+    if (_saving) return;
+    final clipboard = SystemClipboard.instance;
+    if (clipboard == null) {
+      _showImageMessage('No se puede acceder al portapapeles en este equipo.');
+      return;
+    }
+    try {
+      final reader = await clipboard.read();
+      if (!reader.canProvide(Formats.png)) {
+        _showImageMessage('El portapapeles no contiene una imagen.');
+        return;
+      }
+      final completer = Completer<Uint8List>();
+      final progress = reader.getFile(
+        Formats.png,
+        (file) async {
+          try {
+            final bytes = await file.readAll();
+            if (!completer.isCompleted) completer.complete(bytes);
+          } catch (error, stackTrace) {
+            if (!completer.isCompleted) {
+              completer.completeError(error, stackTrace);
+            }
+          }
+        },
+        onError: (error) {
+          if (!completer.isCompleted) completer.completeError(error);
+        },
+      );
+      if (progress == null) {
+        _showImageMessage('El portapapeles no contiene una imagen.');
+        return;
+      }
+      final bytes = await completer.future;
+      if (!mounted) return;
+      if (bytes.isEmpty) {
+        _showImageMessage('La imagen copiada está vacía.');
+        return;
+      }
+      setState(() {
+        _pastedImageBytes = bytes;
+        _selectedImage = null;
+        _removeImage = false;
+      });
+      _showImageMessage('Imagen pegada.');
+    } catch (_) {
+      if (mounted) {
+        _showImageMessage('No se pudo pegar la imagen del portapapeles.');
+      }
+    }
+  }
+
+  void _showImageMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _save() async {
@@ -1774,6 +1896,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
         laundryStatus: _laundryStatus,
         price: double.tryParse(priceText.replaceAll(',', '.')),
         sourceImagePath: _selectedImage?.path,
+        sourceImageBytes: _pastedImageBytes,
         removeImage: _removeImage,
       );
       if (mounted) Navigator.pop(context, _WardrobeEditAction.saved);

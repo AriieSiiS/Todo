@@ -5,9 +5,11 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   file_selector_windows
+  irondash_engine_context
   just_audio_windows
   media_kit_libs_windows_video
   media_kit_video
+  super_native_extensions
   url_launcher_windows
 )
 

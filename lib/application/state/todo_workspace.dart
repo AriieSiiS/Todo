@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -666,12 +667,19 @@ class TodoWorkspace extends ChangeNotifier {
     required bool favorite,
     double? price,
     String? sourceImagePath,
+    Uint8List? sourceImageBytes,
     bool removeImage = false,
   }) async {
     final instant = DateTime.now();
     final itemId = existing?.id ?? _id('wardrobe-item');
     WardrobeStoredAsset? imported;
-    if (sourceImagePath != null && sourceImagePath.trim().isNotEmpty) {
+    if (sourceImageBytes != null && sourceImageBytes.isNotEmpty) {
+      imported = await _wardrobeAssets.importItemImageBytes(
+        itemId: itemId,
+        bytes: sourceImageBytes,
+        category: category,
+      );
+    } else if (sourceImagePath != null && sourceImagePath.trim().isNotEmpty) {
       imported = await _wardrobeAssets.importItemImage(
         itemId: itemId,
         sourcePath: sourceImagePath,

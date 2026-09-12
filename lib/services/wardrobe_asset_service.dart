@@ -156,8 +156,19 @@ class WardrobeAssetService {
     if (!await source.exists()) {
       throw const FileSystemException('No se encuentra la imagen.');
     }
-    final sourceBytes = await source.readAsBytes();
-    final decoded = img.decodeImage(sourceBytes);
+    return importItemImageBytes(
+      itemId: itemId,
+      bytes: await source.readAsBytes(),
+      category: category,
+    );
+  }
+
+  Future<WardrobeStoredAsset> importItemImageBytes({
+    required String itemId,
+    required Uint8List bytes,
+    required String category,
+  }) async {
+    final decoded = img.decodeImage(bytes);
     if (decoded == null) {
       throw const FormatException('El archivo seleccionado no es una imagen.');
     }
