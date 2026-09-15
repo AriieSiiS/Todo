@@ -1,11 +1,14 @@
 ---
 name: extract-clothing-to-todo
-description: Extraer una prenda de fotografías personales en las que el usuario lleva un outfit, reconstruirla como imagen de catálogo sin fondo e insertarla directamente en la sección Ropa de Todo. Usar cuando el usuario entregue fotos llevando ropa y pida añadir una prenda a su armario; usar lotes solo para varias prendas o cuando solicite revisión previa.
+description: Extraer una o varias prendas de fotografías personales en las que el usuario lleva un outfit, reconstruir cada una como imagen de catálogo sin fondo e insertarlas directamente en la sección Ropa de Todo. Usar cuando el usuario entregue fotos llevando ropa y pida añadir prendas a su armario; usar lotes únicamente cuando solicite revisión previa.
 ---
 
 # Extraer ropa para Todo
 
 Convertir la prenda visible en una imagen de catálogo fiel e incorporarla a Todo sin pedir al usuario que importe ni apruebe nada.
+
+Trabajar como una línea de producción: **foto → render → aplicación**. Evitar
+exploraciones, comprobaciones y artefactos que no cambien el resultado.
 
 ## Modelo de entrada y artefactos
 
@@ -15,18 +18,24 @@ Convertir la prenda visible en una imagen de catálogo fiel e incorporarla a Tod
 - Si el usuario ya ha aceptado un render de catálogo correcto, reutilizar exactamente ese archivo. No volver a generarlo porque aún tenga fondo.
 - Si ese render ya tiene transparencia válida, importarlo directamente. Si conserva un fondo plano, eliminar solo ese fondo y continuar.
 
-## Camino rápido para una prenda
+## Camino rápido
 
-1. Identificar en las fotos la prenda solicitada y resolver nombre, categoría, material, colores, temporadas, ocasiones y etiquetas. Consultar `get_wardrobe_import_contract` solo si hace falta confirmar valores canónicos.
-2. Buscar primero un render de catálogo ya generado durante la tarea. Si es correcto, conservarlo y saltar la generación.
-3. Cuando no exista un render válido, leer y seguir la habilidad `imagegen`, elegir una vista principal y, como máximo, una complementaria, y generar una sola imagen con una única prenda completa. Excluir persona, piel, pelo, móvil, percha, maniquí, escena y sombras.
+1. Identificar las prendas solicitadas y resolver sus metadatos. Consultar `get_wardrobe_import_contract` solo cuando exista una duda real sobre un valor canónico.
+2. Buscar primero cualquier render de catálogo ya generado durante la tarea. Si el usuario lo considera correcto, conservar exactamente ese archivo y saltar la generación.
+3. Cuando no exista un render válido, leer y seguir la habilidad `imagegen` y generar una sola imagen por prenda. Excluir persona, piel, pelo, móvil, percha, maniquí, escena y sombras.
 4. Generar sobre un fondo croma completamente uniforme cuyo color no aparezca en la prenda. Elegirlo después de revisar colores, cuello, estampados, escudos y texto; no usar automáticamente verde o blanco.
 5. Eliminar el croma localmente una sola vez para obtener PNG RGBA. La máscara debe eliminar únicamente el fondo conectado a los bordes, no píxeles interiores de la prenda que tengan un color parecido.
-6. Comparar brevemente el render anterior y el PNG resultante. Cuello, mangas o perneras, silueta, colores, patrón, logotipos y texto deben permanecer iguales. La importación posterior solo puede recortar margen transparente y ajustar escala.
+6. Realizar una única comprobación visual breve antes de importar. Cuello, mangas o perneras, silueta, colores, patrón, logotipos y texto deben coincidir y el fondo debe ser transparente. No encadenar comprobaciones técnicas que no puedan descubrir un defecto concreto.
 7. Si la transparencia daña una parte de la prenda, repetir una sola vez la eliminación con un umbral más conservador usando el mismo render. No regenerar la prenda para corregir una máscara.
-8. Llamar a `import_wardrobe_item` con ese PNG exacto, todos los metadatos y un `request_id` estable. Confirmar el identificador devuelto y terminar.
+8. Llamar a `import_wardrobe_item` por cada prenda con su PNG exacto, todos sus metadatos y un `request_id` estable. Cuando responda `savedLocally: true`, confirmar el identificador y pasar a la siguiente prenda o terminar.
 
-No crear una copia completa, carpeta de lote ni manifiesto para una prenda individual. No pedir que el usuario pulse `Importar` o `Aprobar lote`. La operación directa es local e idempotente; la sincronización remota puede completarse después.
+No crear una copia completa, carpeta de lote ni manifiesto durante una importación normal, aunque haya varias prendas. No pedir que el usuario pulse `Importar` o `Aprobar lote`. La operación directa es local e idempotente; la sincronización remota puede completarse después y no debe esperarse para dar la tarea por terminada.
+
+No recontar el armario antes y después de cada inserción, no volver a abrir la app
+y no comprobar repetidamente snapshot, miniatura, recursos y sincronización. La
+revisión visual única y la respuesta atómica de importación son la validación del
+camino normal. Ampliar las comprobaciones solo si la operación falla, devuelve un
+resultado incoherente o el usuario informa de un defecto.
 
 ## Criterios de fidelidad
 
@@ -44,9 +53,23 @@ Usar `import_wardrobe_item` para una prenda individual. Si la herramienta no apa
 
 No sustituir este camino por el importador por lotes, la interfaz gráfica, la edición manual del snapshot ni scripts improvisados. La ausencia de la herramienta no es una razón para repetir la generación. Después de obtener una respuesta con `savedLocally: true`, confirmar el identificador y terminar.
 
-## Varias prendas o revisión solicitada
+## Varias prendas en una foto
 
-Usar `stage_wardrobe_batch` únicamente cuando el usuario entregue varias prendas a la vez o pida expresamente revisar antes de guardar. En ese caso, preparar `manifest.json` según [manifest.md](references/manifest.md) y comunicar el resultado del lote. La aprobación seguirá correspondiendo al usuario.
+Una sola foto es suficiente cuando todas las prendas solicitadas aparecen
+completas, separadas entre sí, sin solaparse y con luz y detalle suficientes. Es
+el formato más rápido porque evita gestionar varias referencias. Crear un render
+independiente y una inserción directa independiente para cada prenda.
+
+Pedir o aprovechar fotos separadas cuando una prenda esté tapada, doblada,
+demasiado pequeña, solo muestre parte delantera insuficiente o contenga texto,
+logotipos o detalles que no puedan leerse con seguridad.
+
+## Revisión solicitada
+
+Usar `stage_wardrobe_batch` únicamente cuando el usuario pida expresamente
+revisar antes de guardar. En ese caso, preparar `manifest.json` según
+[manifest.md](references/manifest.md) y comunicar el resultado del lote. La
+aprobación seguirá correspondiendo al usuario.
 
 ## Renderizar un conjunto guardado
 

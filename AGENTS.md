@@ -134,6 +134,27 @@ MCP:
 - `mcp_server/server.py`
 - `mcp_server/start_mcp.ps1`
 
+## Flujo rápido para añadir ropa
+
+Cuando el usuario entregue fotos y pida añadir ropa, hay que leer y seguir
+`skills/extract-clothing-to-todo/SKILL.md`. El camino normal funciona como una
+línea de producción: foto, un render por prenda, retirada local del fondo e
+inserción directa en la aplicación.
+
+- Si varias prendas se ven completas, separadas y con detalle suficiente en una
+  misma foto, esa única foto sirve como referencia para todas. Cada prenda sigue
+  teniendo su propio render y su propia inserción.
+- No usar lotes, manifiestos, aprobaciones ni clics del usuario salvo que pida
+  expresamente revisar antes de guardar.
+- No crear copias completas por cada prenda. Las copias completas se reservan
+  para una petición expresa, recuperación o una operación destructiva de datos.
+- Hacer una sola comprobación visual breve del render final antes de insertarlo.
+  Tras recibir `savedLocally: true`, confirmar el identificador y terminar: no
+  recontar repetidamente el armario, esperar la sincronización, reabrir la app ni
+  repetir verificaciones que no puedan descubrir un fallo concreto.
+- Un render que el usuario haya aprobado se reutiliza tal cual; nunca se vuelve
+  a generar solo para retirar el fondo o introducirlo en Todo.
+
 ## Validación recomendada
 
 Para cambios generales:
