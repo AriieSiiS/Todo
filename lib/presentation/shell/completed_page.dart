@@ -701,10 +701,8 @@ class _CompletedMetricTile extends StatelessWidget {
     final visuals = context.visuals;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? visuals.panelAlt
-            : Colors.white.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 12),
+        color: Colors.white.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: visuals.panelBorder.withValues(alpha: 0.78),
         ),
@@ -849,8 +847,7 @@ class _CompletedProgressPanel extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(visuals.isPhantom ? 0 : 999),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
               ),
@@ -917,7 +914,7 @@ class _CompletedPeriodLabel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 10),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: visuals.panelBorder.withValues(alpha: 0.82),
         ),
@@ -1146,15 +1143,13 @@ class _CompletedCard extends StatelessWidget {
     final visuals = context.visuals;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? visuals.panel
-            : Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 18),
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: visuals.panelBorder.withValues(alpha: 0.82),
-          width: visuals.isPhantom ? 1.5 : 1,
+          width: 1,
         ),
-        boxShadow: elevated && !visuals.isPhantom
+        boxShadow: elevated
             ? const [
                 BoxShadow(
                   blurRadius: 16,
@@ -1466,8 +1461,7 @@ class _CompletedRecoverCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(visuals.isPhantom ? 0 : 999),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),

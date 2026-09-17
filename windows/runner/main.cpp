@@ -181,12 +181,33 @@ HRESULT EnsureNotificationShortcut() {
   return S_OK;
 }
 
-bool FocusExistingInstance() {
+std::string ImportantAlarmIdFromArguments(
+    const std::vector<std::string>& arguments) {
+  constexpr char prefix[] = "--important-alarm=";
+  for (const auto& argument : arguments) {
+    if (argument.rfind(prefix, 0) == 0) {
+      return argument.substr(sizeof(prefix) - 1);
+    }
+  }
+  return std::string();
+}
+
+bool FocusExistingInstance(const std::string& important_alarm_id) {
   HWND window = ::FindWindowW(kTodoWindowClass, kTodoWindowTitle);
   if (window == nullptr) {
     return false;
   }
-  ::ShowWindow(window, SW_MAXIMIZE);
+  if (!important_alarm_id.empty()) {
+    COPYDATASTRUCT data{};
+    data.dwData = 0x544F444F;
+    data.cbData = static_cast<DWORD>(important_alarm_id.size() + 1);
+    data.lpData = const_cast<char*>(important_alarm_id.c_str());
+    ::SendMessageW(window, WM_COPYDATA, 0,
+                   reinterpret_cast<LPARAM>(&data));
+    ::ShowWindow(window, SW_RESTORE);
+  } else {
+    ::ShowWindow(window, SW_MAXIMIZE);
+  }
   ::SetForegroundWindow(window);
   return true;
 }
@@ -195,11 +216,16 @@ bool FocusExistingInstance() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  std::vector<std::string> command_line_arguments =
+      GetCommandLineArguments();
+  const std::string important_alarm_id =
+      ImportantAlarmIdFromArguments(command_line_arguments);
+
   HANDLE single_instance_mutex =
       ::CreateMutexW(nullptr, TRUE, kTodoSingleInstanceMutex);
   if (single_instance_mutex != nullptr &&
       ::GetLastError() == ERROR_ALREADY_EXISTS) {
-    FocusExistingInstance();
+    FocusExistingInstance(important_alarm_id);
     ::CloseHandle(single_instance_mutex);
     return EXIT_SUCCESS;
   }
@@ -215,14 +241,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
-
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
   Win32Window::Point origin(36, 28);
-  Win32Window::Size size(1660, 960);
+  Win32Window::Size size = important_alarm_id.empty()
+                              ? Win32Window::Size(1660, 960)
+                              : Win32Window::Size(520, 340);
   if (!window.Create(L"todo", origin, size)) {
     return EXIT_FAILURE;
   }

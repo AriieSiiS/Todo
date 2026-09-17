@@ -17,27 +17,35 @@ class TaskSchedulerService {
     final plans = <NotificationPlan>[];
 
     for (final task in tasks) {
-      final reminder = task.reminderRule;
       final scheduledAt = task.scheduledAt;
       if (task.status != TaskStatus.active ||
           scheduledAt == null ||
-          reminder == null ||
-          !reminder.enabled) {
+          task.reminderRules.isEmpty) {
         continue;
       }
-      final trigger = reminder.triggerMode == ReminderTriggerMode.minutesBefore
-          ? scheduledAt.subtract(Duration(minutes: reminder.minutesBefore))
-          : scheduledAt;
-      if (trigger.isAfter(now)) {
-        plans.add(
-          NotificationPlan(
-            id: task.id.hashCode,
-            title: task.title,
-            body: _taskBody(task),
-            when: trigger,
-            taskId: task.id,
-          ),
-        );
+      final seenTriggers = <DateTime>{};
+      for (final reminder in task.reminderRules.where((rule) => rule.enabled)) {
+        final trigger = reminder.triggerMode ==
+                ReminderTriggerMode.minutesBefore
+            ? scheduledAt.subtract(Duration(minutes: reminder.minutesBefore))
+            : scheduledAt;
+        if (trigger.isAfter(now) && seenTriggers.add(trigger)) {
+          plans.add(
+            NotificationPlan(
+              id: '${task.id}:${trigger.toIso8601String()}'.hashCode &
+                  0x7fffffff,
+              title: task.title,
+              body: _taskBody(task),
+              when: trigger,
+              taskId: task.id,
+              deliveryMode: reminder.deliveryMode,
+              alarmId: reminder.isImportant
+                  ? '${task.id}_${scheduledAt.millisecondsSinceEpoch}_${reminder.minutesBefore}'
+                  : null,
+              minutesBefore: reminder.minutesBefore,
+            ),
+          );
+        }
       }
     }
 

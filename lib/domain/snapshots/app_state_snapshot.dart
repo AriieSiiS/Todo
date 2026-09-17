@@ -46,7 +46,6 @@ class AppStateSnapshot {
     required this.todaySort,
     this.navOrder = const <AppSection>[],
     this.calendarEvents = const <CalendarEventModel>[],
-    this.visualMode = AppVisualMode.classic,
     this.manualLogicalDate,
     this.manualLogicalDateStartedAt,
     this.updatedAt,
@@ -83,7 +82,6 @@ class AppStateSnapshot {
   final AppSection section;
   final TodaySort todaySort;
   final List<AppSection> navOrder;
-  final AppVisualMode visualMode;
   final DateTime? manualLogicalDate;
   final DateTime? manualLogicalDateStartedAt;
   final DateTime? updatedAt;
@@ -131,7 +129,6 @@ class AppStateSnapshot {
       'section': section.name,
       'todaySort': todaySort.name,
       'navOrder': navOrder.map((section) => section.name).toList(),
-      'visualMode': visualMode.name,
       'manualLogicalDate': manualLogicalDate?.toIso8601String(),
       'manualLogicalDateStartedAt':
           manualLogicalDateStartedAt?.toIso8601String(),
@@ -275,8 +272,6 @@ class AppStateSnapshot {
           .map((item) =>
               enumByName(AppSection.values, item as String?, AppSection.today))
           .toList(),
-      visualMode: enumByName(AppVisualMode.values,
-          json['visualMode'] as String?, AppVisualMode.classic),
       manualLogicalDate: json['manualLogicalDate'] == null
           ? null
           : DateTime.tryParse(json['manualLogicalDate'] as String),

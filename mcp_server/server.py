@@ -27,7 +27,7 @@ from knowledge_repository import KnowledgeRepository
 
 
 PROTOCOL_VERSION = "2025-03-26"
-SERVER_INFO = {"name": "todo-mcp", "version": "0.3.0"}
+SERVER_INFO = {"name": "todo-mcp", "version": "0.4.0"}
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MCP_DIR = REPO_ROOT / "mcp_server"
 
@@ -182,7 +182,6 @@ def default_state() -> dict[str, Any]:
         },
         "section": "today",
         "todaySort": "manual",
-        "visualMode": "classic",
         "navOrder": [
             "today",
             "projects",
@@ -197,7 +196,7 @@ def default_state() -> dict[str, Any]:
             "settings",
         ],
         "updatedAt": now_iso(),
-        "schemaVersion": 3,
+        "schemaVersion": 9,
         "lastModifiedBy": "mcp",
     }
 
@@ -316,6 +315,8 @@ def load_state() -> dict[str, Any]:
     else:
         state = read_local_state()
     migrated = migrate_library_state(state)
+    migrated = migrate_task_reminders(state) or migrated
+    migrated = migrate_removed_visual_mode(state) or migrated
     if migrated:
         touch_state(state)
     write_local_state(state)
@@ -335,7 +336,7 @@ def save_state(state: dict[str, Any]) -> None:
 
 def touch_state(state: dict[str, Any]) -> None:
     state["updatedAt"] = now_iso()
-    state["schemaVersion"] = max(3, int(state.get("schemaVersion", 1) or 1))
+    state["schemaVersion"] = max(9, int(state.get("schemaVersion", 1) or 1))
     credentials = remote_credentials() if remote_enabled() else None
     state["lastModifiedBy"] = credentials[2] if credentials is not None else "mcp"
 
@@ -393,6 +394,12 @@ def tool_definitions() -> list[dict[str, Any]]:
                     "checklist": {"type": "array", "items": {"type": "string"}},
                     "reminder_enabled": {"type": "boolean"},
                     "reminder_minutes_before": {"type": "integer"},
+                    "reminder_delivery_mode": {"type": "string", "enum": ["normal", "important"]},
+                    "reminder_minutes_before_values": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Todos los avisos que se acumularán en la tarea.",
+                    },
                     "recurrence_type": {"type": "string"},
                     "recurrence_interval": {"type": "integer"},
                     "recurrence_weekdays": {"type": "array", "items": {"type": "integer"}},
@@ -425,6 +432,12 @@ def tool_definitions() -> list[dict[str, Any]]:
                     "collapsed": {"type": "boolean"},
                     "reminder_enabled": {"type": "boolean"},
                     "reminder_minutes_before": {"type": "integer"},
+                    "reminder_delivery_mode": {"type": "string", "enum": ["normal", "important"]},
+                    "reminder_minutes_before_values": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Lista completa de avisos que debe conservar la tarea.",
+                    },
                 },
             },
         },
@@ -1146,7 +1159,9 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "recurrence_weekdays": integers,
         "reminder_enabled": boolean,
         "reminder_minutes_before": integer,
+        "reminder_minutes_before_values": integers,
         "reminder_trigger_mode": string,
+        "reminder_delivery_mode": {"type": "string", "enum": ["normal", "important"]},
         "reminder_fires_at_day_start": boolean,
         "reminder_fires_at_day_end": boolean,
         "confirm": boolean,
@@ -1245,8 +1260,8 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("bulk_move_tasks_to_day", "Mueve varias tareas a un día.", {"task_ids": strings, "date": string}, ["task_ids", "date"]),
         tool("reorder_tasks", "Actualiza el orden manual de una lista de tareas.", {"ordered_ids": strings}, ["ordered_ids"]),
         tool("create_subtask", "Crea una subtarea vinculada a una tarea padre.", {"parent_task_id": string, "title": string}, ["parent_task_id", "title"]),
-        tool("set_task_reminder", "Configura el recordatorio de una tarea.", task_fields, ["task_id"]),
-        tool("clear_task_reminder", "Elimina el recordatorio de una tarea.", {"task_id": string}, ["task_id"]),
+        tool("set_task_reminder", "Añade un aviso a una tarea sin sustituir los que ya tenga.", task_fields, ["task_id"]),
+        tool("clear_task_reminder", "Elimina un aviso concreto o, si no se indica cuál, todos los avisos de una tarea.", task_fields, ["task_id"]),
         tool("update_project", "Actualiza un proyecto.", {"project_id": string, "name": string, "description": string, "color_value": integer, "icon_code_point": integer, "status": string, "category_ids": strings}, ["project_id"]),
         tool("set_project_status", "Cambia el estado de un proyecto.", {"project_id": string, "status": string}, ["project_id", "status"]),
         tool("complete_project", "Marca un proyecto como completado.", {"project_id": string}, ["project_id"]),
@@ -1269,12 +1284,11 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("link_task_to_calendar_event", "Enlaza una tarea a un evento de calendario.", {"task_id": string, "calendar_id": string, "event_id": string, "sync_status": string}, ["task_id", "calendar_id", "event_id"]),
         tool("unlink_task_from_calendar_event", "Quita el enlace calendario de una tarea.", {"task_id": string}, ["task_id"]),
         tool("disconnect_calendar", "Desconecta calendario y limpia eventos/enlaces.", {"confirm": boolean}, ["confirm"]),
-        tool("get_settings", "Devuelve ajustes de app, día, notificaciones, calendario, navegación y modo visual.", {}, []),
+        tool("get_settings", "Devuelve ajustes de app, día, notificaciones, calendario y navegación.", {}, []),
         tool("update_day_settings", "Actualiza ajustes de día.", {"day_ends_at_hour": integer, "next_day_visible_at_hour": integer}, []),
         tool("update_notification_settings", "Actualiza ajustes de notificaciones.", {"notifications_enabled": boolean, "web_permission_granted": boolean, "windows_permission_granted": boolean, "day_start_reminder_enabled": boolean, "day_end_reminder_enabled": boolean, "default_minutes_before_task": integer}, []),
         tool("update_calendar_settings", "Actualiza ajustes de integracion de calendario.", {"web_client_id": string, "desktop_client_id": string, "desktop_client_secret": string, "selected_calendar_id": string, "selected_calendar_name": string, "connected_email": string, "connected": boolean, "last_error": string}, []),
         tool("set_today_sort", "Cambia el orden de Hoy.", {"today_sort": string}, ["today_sort"]),
-        tool("set_visual_mode", "Cambia el modo visual.", {"visual_mode": string}, ["visual_mode"]),
         tool("reorder_navigation", "Actualiza el orden de navegación lateral.", {"sections": strings}, ["sections"]),
         tool("sync_with_cloud", "Fuerza sincronización con nube si hay credenciales.", {}, []),
         tool("disconnect_cloud", "Desconecta la nube en el snapshot local.", {"confirm": boolean}, ["confirm"]),
@@ -1294,6 +1308,7 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("get_wardrobe_batch", "Devuelve una importación de Ropa.", {"batch_id": string}, ["batch_id"]),
         tool("list_wardrobe_items", "Lista las prendas del armario.", {"include_archived": boolean}, []),
         tool("import_wardrobe_item", "Añade directamente una prenda con su imagen, sin lote ni aprobación manual.", wardrobe_import_fields, ["source_file", "request_id", "name", "category"]),
+        tool("set_wardrobe_item_image", "Sustituye de forma atómica e idempotente la imagen de una prenda sin alterar su ficha.", {"item_id": string, "source_file": string, "request_id": string}, ["item_id", "source_file", "request_id"]),
         tool("create_wardrobe_item", "Crea una prenda manual.", wardrobe_fields, ["name", "category"]),
         tool("update_wardrobe_item", "Actualiza los metadatos de una prenda.", wardrobe_fields, ["item_id"]),
         tool("delete_wardrobe_item", "Elimina una prenda y limpia sus referencias activas.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
@@ -1412,6 +1427,108 @@ def find_category(state: dict[str, Any], category_id: str) -> tuple[int, dict[st
     raise ValueError(f"No existe la categoría '{category_id}'.")
 
 
+def task_reminder_rules(task: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_rules = task.get("reminderRules")
+    if isinstance(raw_rules, list):
+        return [
+            copy.deepcopy(rule)
+            for rule in raw_rules
+            if isinstance(rule, dict) and bool(rule.get("enabled", True))
+        ]
+    legacy = task.get("reminderRule")
+    if isinstance(legacy, dict) and bool(legacy.get("enabled", True)):
+        return [copy.deepcopy(legacy)]
+    return []
+
+
+def reminder_rule_from_arguments(
+    arguments: dict[str, Any],
+    default_minutes: int,
+) -> dict[str, Any]:
+    delivery_mode = arguments.get("reminder_delivery_mode", "normal")
+    if delivery_mode not in {"normal", "important"}:
+        raise ValueError("reminder_delivery_mode debe ser 'normal' o 'important'.")
+    return {
+        "triggerMode": arguments.get("reminder_trigger_mode", "minutesBefore"),
+        "minutesBefore": max(0, int(arguments.get("reminder_minutes_before", default_minutes))),
+        "firesAtDayStart": bool(arguments.get("reminder_fires_at_day_start", False)),
+        "firesAtDayEnd": bool(arguments.get("reminder_fires_at_day_end", False)),
+        "deliveryMode": delivery_mode,
+        "enabled": True,
+    }
+
+
+def reminder_rule_key(rule: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        rule.get("triggerMode", "minutesBefore"),
+        int(rule.get("minutesBefore", 0)),
+        bool(rule.get("firesAtDayStart", False)),
+        bool(rule.get("firesAtDayEnd", False)),
+    )
+
+
+def write_task_reminder_rules(
+    task: dict[str, Any],
+    rules: list[dict[str, Any]],
+) -> None:
+    normalized: list[dict[str, Any]] = []
+    seen: set[tuple[Any, ...]] = set()
+    for source in rules:
+        if not isinstance(source, dict) or not bool(source.get("enabled", True)):
+            continue
+        rule = {
+            "triggerMode": source.get("triggerMode", "minutesBefore"),
+            "minutesBefore": max(0, int(source.get("minutesBefore", 0))),
+            "firesAtDayStart": bool(source.get("firesAtDayStart", False)),
+            "firesAtDayEnd": bool(source.get("firesAtDayEnd", False)),
+            "deliveryMode": (
+                source.get("deliveryMode")
+                if source.get("deliveryMode") in {"normal", "important"}
+                else "normal"
+            ),
+            "enabled": True,
+        }
+        key = reminder_rule_key(rule)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(rule)
+    normalized.sort(key=lambda rule: int(rule.get("minutesBefore", 0)))
+    task["reminderRules"] = normalized
+    # Compatibilidad temporal con versiones que solo admiten un aviso.
+    task["reminderRule"] = copy.deepcopy(normalized[0]) if normalized else None
+
+
+def migrate_task_reminders(state: dict[str, Any]) -> bool:
+    changed = False
+    for task in state.get("tasks", []):
+        rules = task_reminder_rules(task)
+        expected_legacy = copy.deepcopy(rules[0]) if rules else None
+        requires_delivery_migration = any(
+            rule.get("deliveryMode") not in {"normal", "important"}
+            for rule in rules
+        )
+        if (
+            task.get("reminderRules") != rules
+            or task.get("reminderRule") != expected_legacy
+            or requires_delivery_migration
+        ):
+            write_task_reminder_rules(task, rules)
+            changed = True
+    if int(state.get("schemaVersion", 1) or 1) < 9:
+        state["schemaVersion"] = 9
+        changed = True
+    return changed
+
+
+def migrate_removed_visual_mode(state: dict[str, Any]) -> bool:
+    changed = state.pop("visualMode", None) is not None
+    if int(state.get("schemaVersion", 1) or 1) < 8:
+        state["schemaVersion"] = 8
+        changed = True
+    return changed
+
+
 def create_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     ensure_core_lists(state)
@@ -1422,12 +1539,12 @@ def create_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         parent_index, parent_task = find_task(state, parent_task_id)
     else:
         parent_index, parent_task = None, None
-    reminder_enabled = bool(arguments.get("reminder_enabled", False))
-    reminder_minutes = int(
-        arguments.get(
-            "reminder_minutes_before",
-            state["notificationSettings"].get("defaultMinutesBeforeTask", 30),
-        )
+    default_reminder_minutes = int(
+        state["notificationSettings"].get("defaultMinutesBeforeTask", 30)
+    )
+    reminder_values = arguments.get("reminder_minutes_before_values")
+    reminder_enabled = bool(
+        arguments.get("reminder_enabled", isinstance(reminder_values, list))
     )
     task = {
         "id": make_id("task"),
@@ -1451,16 +1568,22 @@ def create_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         "parentTaskId": parent_task_id,
         "collapsed": bool(arguments.get("collapsed", False)),
         "calendarLink": None,
-        "reminderRule": {
-            "triggerMode": "minutesBefore",
-            "minutesBefore": reminder_minutes,
-            "firesAtDayStart": False,
-            "firesAtDayEnd": False,
-            "enabled": reminder_enabled,
-        }
-        if reminder_enabled
-        else None,
     }
+    reminder_rules: list[dict[str, Any]] = []
+    if reminder_enabled:
+        if isinstance(reminder_values, list):
+            reminder_rules = [
+                reminder_rule_from_arguments(
+                    {**arguments, "reminder_minutes_before": minutes},
+                    default_reminder_minutes,
+                )
+                for minutes in reminder_values
+            ]
+        else:
+            reminder_rules = [
+                reminder_rule_from_arguments(arguments, default_reminder_minutes)
+            ]
+    write_task_reminder_rules(task, reminder_rules)
     tasks.append(task)
     if parent_task is not None and parent_index is not None:
         updated_parent = copy.deepcopy(parent_task)
@@ -1522,23 +1645,31 @@ def update_task_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         if "recurrence_weekdays" in arguments:
             recurrence["weekdays"] = arguments["recurrence_weekdays"]
         updated["recurrence"] = recurrence
-    if "reminder_enabled" in arguments:
-        if arguments["reminder_enabled"]:
-            current = updated.get("reminderRule") or {
-                "triggerMode": "minutesBefore",
-                "minutesBefore": state["notificationSettings"].get("defaultMinutesBeforeTask", 30),
-                "firesAtDayStart": False,
-                "firesAtDayEnd": False,
-                "enabled": True,
-            }
-            current["enabled"] = True
-            if "reminder_minutes_before" in arguments:
-                current["minutesBefore"] = int(arguments["reminder_minutes_before"])
-            updated["reminderRule"] = current
-        else:
-            updated["reminderRule"] = None
-    elif "reminder_minutes_before" in arguments and updated.get("reminderRule"):
-        updated["reminderRule"]["minutesBefore"] = int(arguments["reminder_minutes_before"])
+    if "reminder_minutes_before_values" in arguments:
+        values = arguments.get("reminder_minutes_before_values") or []
+        rules = (
+            []
+            if arguments.get("reminder_enabled") is False
+            else [
+                reminder_rule_from_arguments(
+                    {**arguments, "reminder_minutes_before": minutes},
+                    int(state["notificationSettings"].get("defaultMinutesBeforeTask", 30)),
+                )
+                for minutes in values
+            ]
+        )
+        write_task_reminder_rules(updated, rules)
+    elif arguments.get("reminder_enabled") is False:
+        write_task_reminder_rules(updated, [])
+    elif arguments.get("reminder_enabled") is True or "reminder_minutes_before" in arguments:
+        rules = task_reminder_rules(updated)
+        rules.append(
+            reminder_rule_from_arguments(
+                arguments,
+                int(state["notificationSettings"].get("defaultMinutesBeforeTask", 30)),
+            )
+        )
+        write_task_reminder_rules(updated, rules)
 
     state["tasks"][index] = updated
     save_state(state)
@@ -2605,7 +2736,6 @@ VALID_PROJECT_STATUSES = {"active", "paused", "completed", "cancelled"}
 VALID_NOTE_STATUSES = {"inbox", "converted", "archived"}
 VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "yearly"}
 VALID_TODAY_SORTS = {"manual", "category", "time", "project", "priority"}
-VALID_VISUAL_MODES = {"classic", "phantom"}
 VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "recipes", "completed", "settings"}
 
 
@@ -2755,13 +2885,19 @@ def set_task_reminder_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     index, task = find_task(state, arguments["task_id"])
     updated = copy.deepcopy(task)
-    updated["reminderRule"] = {
-        "triggerMode": arguments.get("reminder_trigger_mode", "minutesBefore"),
-        "minutesBefore": int(arguments.get("reminder_minutes_before", state.get("notificationSettings", {}).get("defaultMinutesBeforeTask", 30))),
-        "firesAtDayStart": bool(arguments.get("reminder_fires_at_day_start", False)),
-        "firesAtDayEnd": bool(arguments.get("reminder_fires_at_day_end", False)),
-        "enabled": bool(arguments.get("reminder_enabled", True)),
-    }
+    rules = task_reminder_rules(updated)
+    new_rule = reminder_rule_from_arguments(
+        arguments,
+        int(state.get("notificationSettings", {}).get("defaultMinutesBeforeTask", 30)),
+    )
+    if arguments.get("reminder_enabled", True):
+        key = reminder_rule_key(new_rule)
+        rules = [rule for rule in rules if reminder_rule_key(rule) != key]
+        rules.append(new_rule)
+    else:
+        key = reminder_rule_key(new_rule)
+        rules = [rule for rule in rules if reminder_rule_key(rule) != key]
+    write_task_reminder_rules(updated, rules)
     state["tasks"][index] = updated
     save_state(state)
     return {"updated": updated}
@@ -2771,7 +2907,24 @@ def clear_task_reminder_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     index, task = find_task(state, arguments["task_id"])
     updated = copy.deepcopy(task)
-    updated["reminderRule"] = None
+    selector_fields = {
+        "reminder_minutes_before",
+        "reminder_trigger_mode",
+        "reminder_fires_at_day_start",
+        "reminder_fires_at_day_end",
+        "reminder_delivery_mode",
+    }
+    if selector_fields.intersection(arguments):
+        selected = reminder_rule_from_arguments(arguments, 0)
+        selected_key = reminder_rule_key(selected)
+        rules = [
+            rule
+            for rule in task_reminder_rules(updated)
+            if reminder_rule_key(rule) != selected_key
+        ]
+    else:
+        rules = []
+    write_task_reminder_rules(updated, rules)
     state["tasks"][index] = updated
     save_state(state)
     return {"updated": updated}
@@ -3023,6 +3176,7 @@ def import_calendar_events_as_tasks_impl(arguments: dict[str, Any]) -> dict[str,
             "parentTaskId": None,
             "collapsed": False,
             "calendarLink": {"provider": "google", "calendarId": event.get("calendarId", "local"), "eventId": event.get("id"), "syncStatus": "synced", "lastSyncedAt": now_iso()},
+            "reminderRules": [],
             "reminderRule": None,
         }
         state["tasks"].append(task)
@@ -3096,7 +3250,6 @@ def get_settings_impl() -> dict[str, Any]:
         "calendarSettings": state.get("calendarSettings", {}),
         "section": state.get("section", "today"),
         "todaySort": state.get("todaySort", "manual"),
-        "visualMode": state.get("visualMode", "classic"),
         "navOrder": state.get("navOrder", []),
     }
 
@@ -3158,13 +3311,6 @@ def set_today_sort_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     state["todaySort"] = ensure_value(arguments["today_sort"], VALID_TODAY_SORTS, "today_sort")
     save_state(state)
     return {"todaySort": state["todaySort"]}
-
-
-def set_visual_mode_impl(arguments: dict[str, Any]) -> dict[str, Any]:
-    state = load_state()
-    state["visualMode"] = ensure_value(arguments["visual_mode"], VALID_VISUAL_MODES, "visual_mode")
-    save_state(state)
-    return {"visualMode": state["visualMode"]}
 
 
 def reorder_navigation_impl(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -3681,14 +3827,24 @@ def wardrobe_directory() -> Path:
 
 def wardrobe_import_contract_impl() -> dict[str, Any]:
     return {
-        "version": 1,
+        "version": 2,
         "direct_tool": "import_wardrobe_item",
+        "replace_image_tool": "set_wardrobe_item_image",
         "categories": WARDROBE_CATEGORIES,
         "colors": WARDROBE_COLORS,
         "seasons": WARDROBE_SEASONS,
         "occasions": WARDROBE_OCCASIONS,
         "manifest": "manifest.json",
         "image_format": "PNG RGBA con al menos un píxel transparente",
+        "catalog_presets": {
+            "Calzado": {
+                "name": "calzado-perfil",
+                "canvas": [1200, 1200],
+                "visibleWidth": 1032,
+                "visibleAspectRatio": [1.85, 2.70],
+                "orientation": "una pieza en perfil lateral elevado con la puntera hacia la izquierda",
+            },
+        },
         "shape": {
             "version": 1,
             "batchId": "identificador-opcional",
@@ -4330,6 +4486,99 @@ def import_wardrobe_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         if not state_saved:
             for path in created_files:
                 path.unlink(missing_ok=True)
+        raise
+
+
+def _delete_wardrobe_asset(relative_path: str) -> None:
+    if not relative_path:
+        return
+    root = wardrobe_directory().resolve()
+    candidate = (root / relative_path).resolve()
+    if root not in candidate.parents:
+        return
+    try:
+        candidate.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def set_wardrobe_item_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    request_id = re.sub(
+        r"[^a-zA-Z0-9_-]", "-", str(arguments["request_id"]).strip()
+    )
+    if not request_id:
+        raise ValueError("request_id no puede estar vacío.")
+    item_id = str(arguments["item_id"]).strip()
+    receipts = RUNTIME_DIR / "wardrobe_image_update_receipts"
+    receipts.mkdir(parents=True, exist_ok=True)
+    receipt_path = receipts / f"{request_id}.json"
+    if receipt_path.exists():
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if receipt.get("item", {}).get("id") != item_id:
+            raise ValueError("request_id ya pertenece a otra prenda.")
+        return receipt
+
+    initial_state = read_local_state()
+    _initial_index, initial_item = find_by_id(
+        initial_state.setdefault("wardrobeItems", []), item_id, "prenda"
+    )
+    previous_paths = {
+        str(initial_item.get("imagePath") or ""),
+        str(initial_item.get("thumbnailPath") or ""),
+    }
+    previous_files = {
+        (wardrobe_directory() / path).resolve()
+        for path in previous_paths
+        if path
+    }
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    created_files: list[Path] = []
+    state_saved = False
+    try:
+        image_path, thumbnail_path, digest, created_files = (
+            _prepare_direct_wardrobe_asset(
+                source,
+                item_id,
+                _canonical_wardrobe_category(initial_item.get("category", "Otros")),
+            )
+        )
+        state = read_local_state()
+        index, item = find_by_id(
+            state.setdefault("wardrobeItems", []), item_id, "prenda"
+        )
+        item = copy.deepcopy(item)
+        item["imagePath"] = image_path
+        item["thumbnailPath"] = thumbnail_path
+        item["imageSha256"] = digest
+        item["updatedAt"] = now_iso()
+        state["wardrobeItems"][index] = item
+        touch_state(state)
+        if STATE_PATH.exists():
+            shutil.copy2(STATE_PATH, STATE_PATH.with_suffix(".previous"))
+        write_local_state(state)
+        state_saved = True
+        write_app_snapshot(state)
+        _mark_mcp_changes_pending()
+        receipt = {
+            "requestId": request_id,
+            "item": item,
+            "savedLocally": True,
+            "syncPending": True,
+        }
+        temporary_receipt = receipt_path.with_suffix(".tmp")
+        temporary_receipt.write_text(
+            json.dumps(receipt, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        temporary_receipt.replace(receipt_path)
+        for previous_path in previous_paths:
+            if previous_path not in {image_path, thumbnail_path}:
+                _delete_wardrobe_asset(previous_path)
+        return receipt
+    except Exception:
+        if not state_saved:
+            for path in created_files:
+                if path.resolve() not in previous_files:
+                    path.unlink(missing_ok=True)
         raise
 
 
@@ -5134,8 +5383,6 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(update_calendar_settings_impl(arguments))
     if name == "set_today_sort":
         return json_result(set_today_sort_impl(arguments))
-    if name == "set_visual_mode":
-        return json_result(set_visual_mode_impl(arguments))
     if name == "reorder_navigation":
         return json_result(reorder_navigation_impl(arguments))
     if name == "sync_with_cloud":
@@ -5272,6 +5519,8 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(list_wardrobe_items_impl(arguments))
     if name == "import_wardrobe_item":
         return json_result(import_wardrobe_item_impl(arguments))
+    if name == "set_wardrobe_item_image":
+        return json_result(set_wardrobe_item_image_impl(arguments))
     if name == "create_wardrobe_item":
         return json_result(create_wardrobe_item_impl(arguments))
     if name == "update_wardrobe_item":

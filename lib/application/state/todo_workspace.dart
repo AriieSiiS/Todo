@@ -22,6 +22,7 @@ import '../../services/notification_service.dart';
 import '../../services/knowledge_service.dart';
 import '../../services/isaac_save_service.dart';
 import '../../services/household_asset_service.dart';
+import '../../services/important_alarm_service.dart';
 import '../../services/recipe_asset_service.dart';
 import '../../services/recipe_import_service.dart';
 import '../../services/supabase_cloud_service.dart';
@@ -35,6 +36,7 @@ class TodoWorkspace extends ChangeNotifier {
     this._cloudService,
     this._calendarService,
     this._notificationService,
+    this._importantAlarmService,
     this._scheduler,
     this._feedback,
     this._knowledgeService,
@@ -42,19 +44,31 @@ class TodoWorkspace extends ChangeNotifier {
     _isaacSaveSync = IsaacSaveSyncService(_knowledgeService);
     _notificationActionSubscription =
         _notificationService.actions.listen(_handleNotificationAction);
+    _importantAlarmService.addListener(_handleImportantAlarmChange);
   }
 
-  static Future<TodoWorkspace> create() async {
+  static Future<TodoWorkspace> create({String? initialImportantAlarmId}) async {
     final controller = TodoWorkspace._(
       LocalTodoStateRepository(LocalStore()),
       SupabaseCloudSyncRepository(SupabaseCloudService()),
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
+      ImportantAlarmService(),
       TaskSchedulerService(),
       TaskFeedbackService(),
       KnowledgeService(),
     );
     await controller._load();
+    await controller._importantAlarmService.initialize(
+      initialAlarmId: initialImportantAlarmId,
+    );
+    if (!controller._isFlutterTest) {
+      unawaited(controller._initializeStartupIntegrations());
+      controller._externalWardrobePoll = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => unawaited(controller._mergeExternalWardrobeItems()),
+      );
+    }
     return controller;
   }
 
@@ -80,12 +94,14 @@ class TodoWorkspace extends ChangeNotifier {
       SupabaseCloudSyncRepository(SupabaseCloudService()),
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
+      ImportantAlarmService(enabled: false),
       TaskSchedulerService(),
       TaskFeedbackService(enabled: false),
       KnowledgeService.inMemory(),
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
+      controller._migrateLegacyChecklistsToSubtasks();
       controller._loadedFromPersistence = true;
     } else {
       controller._clearStateToDefaults();
@@ -100,6 +116,7 @@ class TodoWorkspace extends ChangeNotifier {
   final CloudSyncRepository _cloudService;
   final CalendarRepository _calendarService;
   final NotificationRepository _notificationService;
+  final ImportantAlarmService _importantAlarmService;
   final TaskSchedulerService _scheduler;
   final TaskFeedbackService _feedback;
   final KnowledgeService _knowledgeService;
@@ -150,7 +167,6 @@ class TodoWorkspace extends ChangeNotifier {
   TodaySort _todaySort = TodaySort.manual;
   LibraryItemStatus _libraryStatusView = LibraryItemStatus.completed;
   LibraryAreaView _libraryAreaView = LibraryAreaView.library;
-  AppVisualMode _visualMode = AppVisualMode.classic;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   DateTime? _manualLogicalDate;
   DateTime? _manualLogicalDateStartedAt;
@@ -228,7 +244,6 @@ class TodoWorkspace extends ChangeNotifier {
   TodaySort get todaySort => _todaySort;
   LibraryItemStatus get libraryStatusView => _libraryStatusView;
   LibraryAreaView get libraryAreaView => _libraryAreaView;
-  AppVisualMode get visualMode => _visualMode;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
   bool get hasManualLogicalDate => manualLogicalDate != null;
@@ -241,6 +256,10 @@ class TodoWorkspace extends ChangeNotifier {
   int get scheduledTaskNotificationCount => _scheduledTaskNotificationCount;
   String get notificationError => _notificationError;
   String? get pendingNotificationTaskId => _pendingNotificationTaskId;
+  ImportantAlarmOccurrence? get currentImportantAlarm =>
+      _importantAlarmService.current;
+  int get importantAlarmCount => _importantAlarmService.remainingCount;
+  String get importantAlarmError => _importantAlarmService.lastError;
   bool get cloudBusy => _cloudBusy;
   bool get cloudConfigured => _cloudService.isConfigured;
   bool get cloudInitialized => _cloudService.isInitialized;
@@ -345,14 +364,6 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     _libraryAreaView = value;
-    _commit();
-  }
-
-  void setVisualMode(AppVisualMode value) {
-    if (_visualMode == value) {
-      return;
-    }
-    _visualMode = value;
     _commit();
   }
 
@@ -554,7 +565,6 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobeDisplaySettings: wardrobeDisplaySettings,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
-      visualMode: visualMode,
       navOrder: navOrder,
     );
   }
@@ -1934,7 +1944,7 @@ class TodoWorkspace extends ChangeNotifier {
     RecurrenceRule recurrence = const RecurrenceRule(),
     TaskOrigin origin = TaskOrigin.manual,
     String? parentTaskId,
-    ReminderRule? reminderRule,
+    List<ReminderRule> reminderRules = const <ReminderRule>[],
     CalendarLink? calendarLink,
   }) {
     final task = TaskModel(
@@ -1950,7 +1960,7 @@ class TodoWorkspace extends ChangeNotifier {
       origin: origin,
       manualOrder: _nextManualOrder(parentTaskId: parentTaskId),
       parentTaskId: parentTaskId,
-      reminderRule: reminderRule,
+      reminderRules: List<ReminderRule>.from(reminderRules),
       calendarLink: calendarLink,
     );
     _tasks.add(task);
@@ -2122,6 +2132,65 @@ class TodoWorkspace extends ChangeNotifier {
       origin: TaskOrigin.manual,
       scheduledAt: taskById(parentTaskId)?.scheduledAt,
     );
+  }
+
+  void replaceTaskSubtasks(String parentTaskId, Iterable<String> titles) {
+    final parentIndex = _tasks.indexWhere((task) => task.id == parentTaskId);
+    if (parentIndex == -1) return;
+
+    final normalizedTitles = titles
+        .map((title) => title.trim())
+        .where((title) => title.isNotEmpty)
+        .toList();
+    final parent = _tasks[parentIndex];
+    final existing = subtasksOf(parent);
+    final retainedIds = <String>[];
+
+    for (var index = 0; index < normalizedTitles.length; index++) {
+      if (index < existing.length) {
+        final subtask = existing[index];
+        final updated = subtask.copyWith(
+          title: normalizedTitles[index],
+          scheduledAt: parent.scheduledAt,
+          clearScheduledAt: parent.scheduledAt == null,
+        );
+        final taskIndex = _tasks.indexWhere((task) => task.id == subtask.id);
+        if (taskIndex != -1) _tasks[taskIndex] = updated;
+        retainedIds.add(subtask.id);
+        continue;
+      }
+
+      final subtask = TaskModel(
+        id: _id('task'),
+        title: normalizedTitles[index],
+        scheduledAt: parent.scheduledAt,
+        origin: TaskOrigin.manual,
+        manualOrder: _nextManualOrder(parentTaskId: parentTaskId),
+        parentTaskId: parentTaskId,
+      );
+      _tasks.add(subtask);
+      retainedIds.add(subtask.id);
+    }
+
+    final removedIds = existing
+        .skip(normalizedTitles.length)
+        .map((subtask) => subtask.id)
+        .toSet();
+    _tasks.removeWhere(
+      (task) =>
+          removedIds.contains(task.id) ||
+          (task.parentTaskId != null && removedIds.contains(task.parentTaskId)),
+    );
+
+    final refreshedParentIndex =
+        _tasks.indexWhere((task) => task.id == parentTaskId);
+    if (refreshedParentIndex != -1) {
+      _tasks[refreshedParentIndex] = _tasks[refreshedParentIndex].copyWith(
+        checklist: const <String>[],
+        subtaskIds: retainedIds,
+      );
+    }
+    _commit();
   }
 
   void _setSubtasksCompletion(
@@ -2478,10 +2547,12 @@ class TodoWorkspace extends ChangeNotifier {
       description: _noteDescription(note),
       origin: TaskOrigin.note,
       scheduledAt: scheduledAt ?? note.scheduledFor ?? _defaultNoteDate(),
-      reminderRule: ReminderRule(
-        enabled: true,
-        minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
-      ),
+      reminderRules: <ReminderRule>[
+        ReminderRule(
+          enabled: true,
+          minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
+        ),
+      ],
     );
     return task;
   }
@@ -2936,10 +3007,12 @@ class TodoWorkspace extends ChangeNotifier {
         imported.copyWith(
           id: _id('task'),
           manualOrder: _nextManualOrder(),
-          reminderRule: ReminderRule(
-            enabled: true,
-            minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
-          ),
+          reminderRules: <ReminderRule>[
+            ReminderRule(
+              enabled: true,
+              minutesBefore: _notificationSettings.defaultMinutesBeforeTask,
+            ),
+          ],
         ),
       );
     }
@@ -2998,17 +3071,37 @@ class TodoWorkspace extends ChangeNotifier {
     if (index == -1) {
       return;
     }
-    _tasks[index] = _tasks[index].copyWith(reminderRule: reminder);
+    final task = _tasks[index];
+    final rules = task.reminderRules
+        .where((rule) => !_sameReminder(rule, reminder))
+        .toList()
+      ..add(reminder);
+    _tasks[index] = task.copyWith(reminderRules: rules);
     _commit();
   }
 
-  void clearTaskReminder(String taskId) {
+  void clearTaskReminder(String taskId, {ReminderRule? reminder}) {
     final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
       return;
     }
-    _tasks[index] = _tasks[index].copyWith(clearReminderRule: true);
+    final task = _tasks[index];
+    _tasks[index] = task.copyWith(
+      reminderRules: reminder == null
+          ? const <ReminderRule>[]
+          : task.reminderRules
+              .where((rule) => !_sameReminder(rule, reminder))
+              .toList(),
+    );
     _commit();
+  }
+
+  bool _sameReminder(ReminderRule left, ReminderRule right) {
+    return left.triggerMode == right.triggerMode &&
+        left.minutesBefore == right.minutesBefore &&
+        left.firesAtDayStart == right.firesAtDayStart &&
+        left.firesAtDayEnd == right.firesAtDayEnd &&
+        left.deliveryMode == right.deliveryMode;
   }
 
   Future<void> rescheduleTaskReminders() async {
@@ -3019,6 +3112,7 @@ class TodoWorkspace extends ChangeNotifier {
       notificationSettings: notificationSettings,
       now: DateTime.now(),
     );
+    await _importantAlarmService.syncPlans(plans);
     try {
       _notificationAvailable = await _notificationService.isAvailable();
       if (!_notificationAvailable) {
@@ -3078,10 +3172,28 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void _handleNotificationAction(NotificationAction action) {
+    if (action.alarmId != null) {
+      unawaited(_importantAlarmService.activate(action.alarmId!));
+      return;
+    }
     _section = AppSection.today;
     _pendingNotificationTaskId = action.taskId;
     notifyListeners();
   }
+
+  void _handleImportantAlarmChange() => notifyListeners();
+
+  Future<void> showImportantAlarmTest() => _importantAlarmService.showTest();
+
+  Future<void> stopImportantAlarm({bool keepApplicationOpen = false}) =>
+      _importantAlarmService.stopCurrent(
+        keepApplicationOpen: keepApplicationOpen,
+      );
+
+  Future<void> snoozeImportantAlarm() => _importantAlarmService.snoozeCurrent();
+
+  void reportImportantAlarmAudioError(Object error) =>
+      _importantAlarmService.reportAudioError(error);
 
   bool importStateFromJson(String rawJson) {
     try {
@@ -3991,8 +4103,12 @@ class TodoWorkspace extends ChangeNotifier {
       _applySnapshot(persisted);
       _loadedFromPersistence = true;
       final normalized = _normalizeLoadedSpanishText();
+      final migratedChecklists = _migrateLegacyChecklistsToSubtasks();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
-      if (persisted.schemaVersion < 6 || normalized || syncedLibraryGoals) {
+      if (persisted.schemaVersion < 9 ||
+          normalized ||
+          migratedChecklists ||
+          syncedLibraryGoals) {
         await _persist();
       }
     } else {
@@ -4012,13 +4128,6 @@ class TodoWorkspace extends ChangeNotifier {
         connectedEmail: _calendarAccount!.email,
       );
     }
-    if (!_isFlutterTest) {
-      unawaited(_initializeStartupIntegrations());
-      _externalWardrobePoll = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) => unawaited(_mergeExternalWardrobeItems()),
-      );
-    }
   }
 
   Future<void> _mergeExternalWardrobeItems() async {
@@ -4027,12 +4136,7 @@ class TodoWorkspace extends ChangeNotifier {
     try {
       final snapshot = await _store.load();
       if (snapshot == null) return;
-      final knownIds = _wardrobeItems.map((item) => item.id).toSet();
-      final additions = snapshot.wardrobeItems
-          .where((item) => !knownIds.contains(item.id))
-          .toList();
-      if (additions.isEmpty) return;
-      _wardrobeItems.addAll(additions);
+      if (!_mergeExternalWardrobeSnapshot(snapshot.wardrobeItems)) return;
       _syncMetadata = _syncMetadata.copyWith(pendingLocalChanges: true);
       await _store.saveSyncMetadata(_syncMetadata);
       notifyListeners();
@@ -4044,6 +4148,36 @@ class TodoWorkspace extends ChangeNotifier {
     } finally {
       _checkingExternalWardrobe = false;
     }
+  }
+
+  bool _mergeExternalWardrobeSnapshot(List<WardrobeItem> externalItems) {
+    var changed = false;
+    final indexesById = <String, int>{
+      for (var index = 0; index < _wardrobeItems.length; index++)
+        _wardrobeItems[index].id: index,
+    };
+    for (final external in externalItems) {
+      final index = indexesById[external.id];
+      if (index == null) {
+        indexesById[external.id] = _wardrobeItems.length;
+        _wardrobeItems.add(external);
+        changed = true;
+        continue;
+      }
+      if (!external.updatedAt.isAfter(_wardrobeItems[index].updatedAt)) {
+        continue;
+      }
+      _wardrobeItems[index] = external;
+      changed = true;
+    }
+    return changed;
+  }
+
+  @visibleForTesting
+  bool mergeExternalWardrobeItemsForTest(List<WardrobeItem> externalItems) {
+    final changed = _mergeExternalWardrobeSnapshot(externalItems);
+    if (changed) notifyListeners();
+    return changed;
   }
 
   Future<void> _initializeStartupIntegrations() async {
@@ -4167,13 +4301,58 @@ class TodoWorkspace extends ChangeNotifier {
     _todaySort = snapshot.todaySort;
     _libraryStatusView = snapshot.libraryStatusView;
     _libraryAreaView = snapshot.libraryAreaView;
-    // Phantom ya no forma parte de la interfaz. Los snapshots antiguos siguen
-    // siendo compatibles, pero la aplicación vuelve siempre al tema clásico.
-    _visualMode = AppVisualMode.classic;
     _manualLogicalDate = snapshot.manualLogicalDate;
     _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
     _syncCompletedLibraryGoalsIntoItems();
+  }
+
+  bool _migrateLegacyChecklistsToSubtasks() {
+    final parents = _tasks.where((task) => task.checklist.isNotEmpty).toList();
+    if (parents.isEmpty) return false;
+
+    final migratedSubtasks = <TaskModel>[];
+    for (final parent in parents) {
+      final existing =
+          _tasks.where((task) => task.parentTaskId == parent.id).toList()
+            ..sort(
+              (left, right) => left.manualOrder.compareTo(right.manualOrder),
+            );
+      final existingTitles =
+          existing.map((task) => task.title.trim().toLowerCase()).toSet();
+      final subtaskIds = existing.map((task) => task.id).toList();
+      var manualOrder = existing.isEmpty
+          ? 0.0
+          : existing.map((task) => task.manualOrder).reduce(max) + 1;
+
+      for (final rawTitle in parent.checklist) {
+        final title = rawTitle.trim();
+        if (title.isEmpty || existingTitles.contains(title.toLowerCase())) {
+          continue;
+        }
+        final subtask = TaskModel(
+          id: _id('task'),
+          title: title,
+          scheduledAt: parent.scheduledAt,
+          origin: TaskOrigin.manual,
+          manualOrder: manualOrder++,
+          parentTaskId: parent.id,
+        );
+        migratedSubtasks.add(subtask);
+        subtaskIds.add(subtask.id);
+        existingTitles.add(title.toLowerCase());
+      }
+
+      final parentIndex = _tasks.indexWhere((task) => task.id == parent.id);
+      if (parentIndex != -1) {
+        _tasks[parentIndex] = parent.copyWith(
+          checklist: const <String>[],
+          subtaskIds: subtaskIds,
+        );
+      }
+    }
+    _tasks.addAll(migratedSubtasks);
+    return true;
   }
 
   bool _normalizeLoadedSpanishText() {
@@ -4555,12 +4734,11 @@ class TodoWorkspace extends ChangeNotifier {
       todaySort: todaySort,
       libraryStatusView: libraryStatusView,
       libraryAreaView: libraryAreaView,
-      visualMode: visualMode,
       manualLogicalDate: _manualLogicalDate,
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 6,
+      schemaVersion: 9,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -4803,7 +4981,6 @@ class TodoWorkspace extends ChangeNotifier {
     _todaySort = TodaySort.manual;
     _libraryStatusView = LibraryItemStatus.completed;
     _libraryAreaView = LibraryAreaView.library;
-    _visualMode = AppVisualMode.classic;
     _manualLogicalDate = null;
     _manualLogicalDateStartedAt = null;
     _navOrder = List<AppSection>.of(defaultNavOrder);
@@ -5066,6 +5243,8 @@ class TodoWorkspace extends ChangeNotifier {
     _saveDebounce?.cancel();
     _externalWardrobePoll?.cancel();
     unawaited(_notificationActionSubscription.cancel());
+    _importantAlarmService.removeListener(_handleImportantAlarmChange);
+    _importantAlarmService.dispose();
     _feedback.dispose();
     unawaited(_isaacSaveSync.dispose());
     _knowledgeService.dispose();

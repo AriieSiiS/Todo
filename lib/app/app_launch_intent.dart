@@ -7,11 +7,13 @@ class AppLaunchIntent {
     this.section,
     this.editorTarget = LaunchEditorTarget.none,
     this.testNotification = false,
+    this.importantAlarmId,
   });
 
   final AppSection? section;
   final LaunchEditorTarget editorTarget;
   final bool testNotification;
+  final String? importantAlarmId;
 
   bool get opensEditor => editorTarget != LaunchEditorTarget.none;
 
@@ -19,6 +21,7 @@ class AppLaunchIntent {
     AppSection? section;
     var editorTarget = LaunchEditorTarget.none;
     var testNotification = false;
+    String? importantAlarmId;
 
     for (final arg in args) {
       if (arg == '--section=today') {
@@ -56,6 +59,8 @@ class AppLaunchIntent {
         editorTarget = LaunchEditorTarget.category;
       } else if (arg == '--test-notification') {
         testNotification = true;
+      } else if (arg.startsWith('--important-alarm=')) {
+        importantAlarmId = arg.substring('--important-alarm='.length).trim();
       }
     }
 
@@ -63,6 +68,8 @@ class AppLaunchIntent {
       section: section,
       editorTarget: editorTarget,
       testNotification: testNotification,
+      importantAlarmId:
+          importantAlarmId?.isEmpty ?? true ? null : importantAlarmId,
     );
   }
 }

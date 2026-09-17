@@ -20,6 +20,9 @@ class _AppShellState extends ConsumerState<AppShell>
   late final bool _shouldInitializeMusic;
   bool _launchIntentHandled = false;
   bool _openingNotificationTask = false;
+  final AudioPlayer _alarmPlayer = AudioPlayer();
+  String? _playingAlarmId;
+  bool _musicWasPlaying = false;
 
   TodoWorkspace get controller => ref.read(todoWorkspaceProvider);
 
@@ -38,6 +41,7 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_alarmPlayer.dispose());
     _musicController.dispose();
     super.dispose();
   }
@@ -62,8 +66,14 @@ class _AppShellState extends ConsumerState<AppShell>
     final wide = MediaQuery.sizeOf(context).width >= 1100;
     final visuals = context.visuals;
     final knowledgeItem = controller.openKnowledgeLibraryItem;
+    final alarm = controller.currentImportantAlarm;
+    if (_playingAlarmId != alarm?.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_syncAlarmPlayback(alarm));
+      });
+    }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -89,19 +99,13 @@ class _AppShellState extends ConsumerState<AppShell>
                     visuals: visuals,
                     child: knowledgeItem == null
                         ? AnimatedSwitcher(
-                            duration: Duration(
-                                milliseconds: visuals.isPhantom ? 180 : 220),
-                            switchInCurve: visuals.isPhantom
-                                ? Curves.easeOutExpo
-                                : Curves.easeOutCubic,
-                            switchOutCurve: visuals.isPhantom
-                                ? Curves.easeInExpo
-                                : Curves.easeInCubic,
+                            duration: const Duration(milliseconds: 220),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
                             child: _sectionView(context),
                           )
                         : ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                                visuals.isPhantom ? 0 : 30),
+                            borderRadius: BorderRadius.circular(30),
                             child: KnowledgeWorkspacePage(
                               key: ValueKey(
                                   'knowledge-workspace-${knowledgeItem.id}'),
@@ -128,6 +132,59 @@ class _AppShellState extends ConsumerState<AppShell>
           : null,
       bottomNavigationBar: wide ? null : _MobileNav(controller: controller),
     );
+    return Stack(
+      children: [
+        scaffold,
+        if (alarm != null)
+          Positioned.fill(
+            child: _ImportantAlarmOverlay(
+              alarm: alarm,
+              remainingCount: controller.importantAlarmCount,
+              error: controller.importantAlarmError,
+              onStop: controller.stopImportantAlarm,
+              onSnooze: controller.snoozeImportantAlarm,
+              onOpenTask: () => _openImportantAlarmTask(alarm),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _syncAlarmPlayback(ImportantAlarmOccurrence? alarm) async {
+    if (_isWidgetTest()) {
+      _playingAlarmId = alarm?.id;
+      return;
+    }
+    if (alarm == null) {
+      _playingAlarmId = null;
+      await _alarmPlayer.stop();
+      if (_musicWasPlaying) await _musicController.play();
+      _musicWasPlaying = false;
+      return;
+    }
+    _playingAlarmId = alarm.id;
+    _musicWasPlaying = _musicController.isPlaying;
+    if (_musicWasPlaying) await _musicController.pause();
+    try {
+      await _alarmPlayer.setAsset('resources/important-alarm.wav');
+      await _alarmPlayer.setLoopMode(LoopMode.one);
+      unawaited(_alarmPlayer.play());
+    } catch (error) {
+      controller.reportImportantAlarmAudioError(error);
+    }
+  }
+
+  Future<void> _openImportantAlarmTask(
+    ImportantAlarmOccurrence alarm,
+  ) async {
+    final task = controller.tasks.cast<TaskModel?>().firstWhere(
+          (candidate) => candidate?.id == alarm.taskId,
+          orElse: () => null,
+        );
+    await controller.stopImportantAlarm(keepApplicationOpen: true);
+    if (mounted && task != null) {
+      await showTaskEditor(context, controller, initialTask: task);
+    }
   }
 
   Future<void> _openTaskFromNotification() async {
@@ -192,6 +249,127 @@ class _AppShellState extends ConsumerState<AppShell>
   }
 }
 
+class _ImportantAlarmOverlay extends StatelessWidget {
+  const _ImportantAlarmOverlay({
+    required this.alarm,
+    required this.remainingCount,
+    required this.error,
+    required this.onStop,
+    required this.onSnooze,
+    required this.onOpenTask,
+  });
+
+  final ImportantAlarmOccurrence alarm;
+  final int remainingCount;
+  final String error;
+  final Future<void> Function({bool keepApplicationOpen}) onStop;
+  final Future<void> Function() onSnooze;
+  final Future<void> Function() onOpenTask;
+
+  @override
+  Widget build(BuildContext context) {
+    final hour = alarm.originalTriggerAt.hour.toString().padLeft(2, '0');
+    final minute = alarm.originalTriggerAt.minute.toString().padLeft(2, '0');
+    return Material(
+      color: const Color(0xA6000000),
+      child: Center(
+        child: SizedBox(
+          width: 520,
+          height: 340,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBF4),
+              borderRadius: BorderRadius.zero,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x52000000),
+                  blurRadius: 40,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.alarm_rounded,
+                        color: Color(0xFFB4422D), size: 34),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Alarma importante · $hour:$minute',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (remainingCount > 1) Text('$remainingCount pendientes'),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  alarm.taskTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w700,
+                    height: 1.12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'El sonido continuará hasta que confirmes esta alarma.',
+                  style: TextStyle(color: Color(0xFF756D62)),
+                ),
+                if (error.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(error,
+                      maxLines: 2,
+                      style: const TextStyle(
+                          color: Color(0xFF9D3F2C), fontSize: 12)),
+                ],
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const ValueKey('important-alarm-stop'),
+                        onPressed: () => onStop(),
+                        child: const Text('Detener'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.tonal(
+                        key: const ValueKey('important-alarm-snooze'),
+                        onPressed: onSnooze,
+                        child: const Text('Posponer 5 min'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton(
+                        key: const ValueKey('important-alarm-open-task'),
+                        onPressed: onOpenTask,
+                        child: const Text('Abrir tarea'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.controller,
@@ -218,11 +396,8 @@ class _Sidebar extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: visuals.sidebar,
-            borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 30),
-            border: Border.all(
-                color:
-                    visuals.isPhantom ? visuals.pageBorder : Colors.transparent,
-                width: visuals.isPhantom ? 1.6 : 0),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.transparent, width: 0),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
@@ -242,12 +417,10 @@ class _Sidebar extends StatelessWidget {
                             child: Text(
                               'Todo',
                               style: TextStyle(
-                                color: visuals.isPhantom
-                                    ? visuals.textStrong
-                                    : const Color(0xFFF5E9D8),
-                                fontSize: visuals.isPhantom ? 34 : 20,
+                                color: const Color(0xFFF5E9D8),
+                                fontSize: 20,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: visuals.isPhantom ? 1.2 : 0,
+                                letterSpacing: 0,
                               ),
                             ),
                           ),
@@ -255,29 +428,14 @@ class _Sidebar extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        visuals.isPhantom ? 'Todo' : 'Un lugar, todo en orden.',
+                        'Un lugar, todo en orden.',
                         style: TextStyle(
-                          color: visuals.isPhantom
-                              ? visuals.textStrong
-                              : const Color(0xFFB9C1B6),
-                          fontSize: visuals.isPhantom ? 44 : 14,
-                          fontWeight: visuals.isPhantom
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          letterSpacing: visuals.isPhantom ? 1.2 : 0,
+                          color: const Color(0xFFB9C1B6),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0,
                         ),
                       ),
-                      if (visuals.isPhantom) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          'Casa, autocuidado y calendario en un solo lugar.',
-                          style: TextStyle(
-                            color: visuals.textMuted,
-                            fontSize: 13.5,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -308,29 +466,18 @@ class _Sidebar extends StatelessWidget {
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.fromLTRB(9, 13, 7, 13),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                  visuals.isPhantom ? 0 : 18),
+                              borderRadius: BorderRadius.circular(18),
                               color: selected
                                   ? visuals.sidebarAccent
                                   : Colors.transparent,
-                              border: visuals.isPhantom && selected
-                                  ? Border(
-                                      left: BorderSide(
-                                          color: visuals.accentAlt, width: 5),
-                                      bottom: BorderSide(
-                                          color: visuals.textStrong,
-                                          width: 1.2),
-                                    )
-                                  : null,
+                              border: null,
                             ),
                             child: Row(
                               children: [
                                 Icon(item.icon,
                                     color: selected
                                         ? Colors.white
-                                        : (visuals.isPhantom
-                                            ? visuals.textMuted
-                                            : const Color(0xFFC6CEBD))),
+                                        : const Color(0xFFC6CEBD)),
                                 const SizedBox(width: 9),
                                 Expanded(
                                   child: Text(
@@ -339,12 +486,9 @@ class _Sidebar extends StatelessWidget {
                                     style: TextStyle(
                                       color: selected
                                           ? Colors.white
-                                          : (visuals.isPhantom
-                                              ? visuals.textStrong
-                                              : const Color(0xFFF1EADC)),
+                                          : const Color(0xFFF1EADC),
                                       fontWeight: FontWeight.w600,
-                                      letterSpacing:
-                                          visuals.isPhantom ? 0.5 : 0,
+                                      letterSpacing: 0,
                                     ),
                                   ),
                                 ),
@@ -756,18 +900,8 @@ class _ShellFrame extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: visuals.pageSurface,
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 30),
-        border: Border.all(
-            color: visuals.pageBorder, width: visuals.isPhantom ? 2 : 1),
-        boxShadow: visuals.isPhantom
-            ? const [
-                BoxShadow(
-                  blurRadius: 0,
-                  offset: Offset(14, 14),
-                  color: Color(0xFF030303),
-                ),
-              ]
-            : null,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: visuals.pageBorder),
       ),
       child: child,
     );

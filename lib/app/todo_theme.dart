@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui' show lerpDouble;
 import 'package:google_fonts/google_fonts.dart';
 
-import '../domain/models.dart';
-
 class TodoVisuals extends ThemeExtension<TodoVisuals> {
   const TodoVisuals({
-    required this.mode,
     required this.backgroundStart,
     required this.backgroundEnd,
     required this.pageSurface,
@@ -25,7 +22,6 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
     required this.cut,
   });
 
-  final AppVisualMode mode;
   final Color backgroundStart;
   final Color backgroundEnd;
   final Color pageSurface;
@@ -43,11 +39,8 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
   final Color danger;
   final double cut;
 
-  bool get isPhantom => mode == AppVisualMode.phantom;
-
   @override
   TodoVisuals copyWith({
-    AppVisualMode? mode,
     Color? backgroundStart,
     Color? backgroundEnd,
     Color? pageSurface,
@@ -66,7 +59,6 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
     double? cut,
   }) {
     return TodoVisuals(
-      mode: mode ?? this.mode,
       backgroundStart: backgroundStart ?? this.backgroundStart,
       backgroundEnd: backgroundEnd ?? this.backgroundEnd,
       pageSurface: pageSurface ?? this.pageSurface,
@@ -92,7 +84,6 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
       return this;
     }
     return TodoVisuals(
-      mode: t < 0.5 ? mode : other.mode,
       backgroundStart: Color.lerp(backgroundStart, other.backgroundStart, t)!,
       backgroundEnd: Color.lerp(backgroundEnd, other.backgroundEnd, t)!,
       pageSurface: Color.lerp(pageSurface, other.pageSurface, t)!,
@@ -113,12 +104,7 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
   }
 }
 
-ThemeData buildTodoTheme([AppVisualMode mode = AppVisualMode.classic]) {
-  return switch (mode) {
-    AppVisualMode.classic => _buildClassicTheme(),
-    AppVisualMode.phantom => _buildPhantomTheme(),
-  };
-}
+ThemeData buildTodoTheme() => _buildClassicTheme();
 
 ThemeData _buildClassicTheme() {
   const bone = Color(0xFFF5EEE3);
@@ -172,7 +158,6 @@ ThemeData _buildClassicTheme() {
     textTheme: textTheme,
     extensions: const <ThemeExtension<dynamic>>[
       TodoVisuals(
-        mode: AppVisualMode.classic,
         backgroundStart: Color(0xFFF6F1E8),
         backgroundEnd: Color(0xFFECE3D7),
         pageSurface: Color(0xC2FFFFFF),
@@ -236,146 +221,6 @@ ThemeData _buildClassicTheme() {
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: clay,
       foregroundColor: Colors.white,
-    ),
-  );
-}
-
-ThemeData _buildPhantomTheme() {
-  const bg = Color(0xFF080808);
-  const bg2 = Color(0xFF181111);
-  const panel = Color(0xFF101010);
-  const panelAlt = Color(0xFF1B1B1B);
-  const border = Color(0xFFF4F1E9);
-  const white = Color(0xFFF8F6F1);
-  const offWhite = Color(0xFFD8D4CC);
-  const red = Color(0xFFE3172D);
-  const gold = Color(0xFFFFC942);
-
-  final base = ThemeData(
-    brightness: Brightness.dark,
-    colorScheme: const ColorScheme.dark(
-      primary: red,
-      secondary: gold,
-      surface: panel,
-    ),
-    useMaterial3: true,
-  );
-
-  final textTheme =
-      GoogleFonts.barlowCondensedTextTheme(base.textTheme).copyWith(
-    displaySmall: GoogleFonts.bebasNeue(
-      fontSize: 62,
-      letterSpacing: 1.8,
-      fontWeight: FontWeight.w700,
-      color: white,
-      height: 0.9,
-    ),
-    headlineMedium: GoogleFonts.bebasNeue(
-      fontSize: 30,
-      letterSpacing: 1.0,
-      fontWeight: FontWeight.w700,
-      color: white,
-    ),
-    titleMedium: GoogleFonts.barlowCondensed(
-      fontSize: 19,
-      fontWeight: FontWeight.w700,
-      color: white,
-      letterSpacing: 0.4,
-    ),
-    bodyMedium: GoogleFonts.barlowCondensed(
-      fontSize: 16,
-      height: 1.35,
-      color: white,
-      letterSpacing: 0.2,
-    ),
-    bodySmall: GoogleFonts.barlowCondensed(
-      fontSize: 13,
-      height: 1.25,
-      color: offWhite,
-      letterSpacing: 0.2,
-    ),
-    labelLarge: GoogleFonts.bebasNeue(
-      fontSize: 18,
-      color: white,
-      letterSpacing: 0.9,
-    ),
-  );
-
-  return base.copyWith(
-    scaffoldBackgroundColor: bg,
-    textTheme: textTheme,
-    extensions: const <ThemeExtension<dynamic>>[
-      TodoVisuals(
-        mode: AppVisualMode.phantom,
-        backgroundStart: bg,
-        backgroundEnd: bg2,
-        pageSurface: Color(0xE6111111),
-        pageBorder: border,
-        sidebar: Color(0xFF050505),
-        sidebarAccent: red,
-        panel: panel,
-        panelAlt: panelAlt,
-        panelBorder: border,
-        textStrong: white,
-        textMuted: offWhite,
-        accent: red,
-        accentAlt: gold,
-        success: Color(0xFF25C15D),
-        danger: red,
-        cut: 28,
-      ),
-    ],
-    dividerColor: border,
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: panelAlt,
-      labelStyle: GoogleFonts.barlowCondensed(color: offWhite, fontSize: 14),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(0),
-        borderSide: const BorderSide(color: border, width: 1.6),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(0),
-        borderSide: const BorderSide(color: border, width: 1.2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(0),
-        borderSide: const BorderSide(color: red, width: 2.4),
-      ),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: red,
-        foregroundColor: white,
-        elevation: 0,
-        shape: const BeveledRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(3),
-            bottomRight: Radius.circular(22),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: white,
-        side: const BorderSide(color: border, width: 1.4),
-        shape: const BeveledRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topRight: Radius.circular(22),
-            bottomLeft: Radius.circular(3),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      ),
-    ),
-    navigationBarTheme: const NavigationBarThemeData(
-      backgroundColor: Color(0xFF050505),
-      indicatorColor: red,
-      labelTextStyle: WidgetStatePropertyAll(TextStyle(color: white)),
-      iconTheme: WidgetStatePropertyAll(IconThemeData(color: white)),
     ),
   );
 }

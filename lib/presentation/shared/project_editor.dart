@@ -71,7 +71,6 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final visuals = Theme.of(context).extension<TodoVisuals>()!;
     final categories =
         controller.categories.where((item) => item.active).toList();
     final selectedCategories =
@@ -87,13 +86,11 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
           32, 22, 32, MediaQuery.of(context).viewInsets.bottom + 22),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: visuals.isPhantom ? visuals.panel : const Color(0xFFFFFCF8),
-          borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 28),
+          color: const Color(0xFFFFFCF8),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.textStrong
-                : const Color(0xFFE2D5C4),
-            width: visuals.isPhantom ? 1.8 : 1,
+            color: const Color(0xFFE2D5C4),
+            width: 1,
           ),
         ),
         child: ConstrainedBox(
@@ -768,11 +765,13 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
               : DateTime(task.dueDate!.year, task.dueDate!.month,
                   task.dueDate!.day, 10),
           priority: _priority,
-          reminderRule: ReminderRule(
-            enabled: true,
-            minutesBefore: _reminderMinutes,
-            triggerMode: ReminderTriggerMode.minutesBefore,
-          ),
+          reminderRules: <ReminderRule>[
+            ReminderRule(
+              enabled: true,
+              minutesBefore: _reminderMinutes,
+              triggerMode: ReminderTriggerMode.minutesBefore,
+            ),
+          ],
         );
         if (_syncToGoogle && controller.isCalendarConnected) {
           await controller.syncTaskToCalendar(createdTask.id);

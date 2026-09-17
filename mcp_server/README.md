@@ -25,6 +25,7 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - listar tareas
 - crear tareas
 - actualizar tareas
+- añadir varios avisos a una tarea y retirarlos de forma individual
 - completar tareas
 - mover tareas de día
 - listar proyectos
@@ -34,6 +35,13 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - preparar lotes de prendas PNG para revisarlos en la sección Ropa
 - gestionar prendas, conjuntos, usos, lavandería, planificación y maletas
 - gestionar recetas, sus imágenes y su conversión en tareas de compra o cocina
+
+Cada tarea admite varios avisos simultáneos. `set_task_reminder` añade uno sin
+sustituir los anteriores; `clear_task_reminder` elimina el aviso indicado o
+todos si solo recibe `task_id`. `create_task` y `update_task` aceptan la lista
+completa mediante `reminder_minutes_before_values`.
+Cada aviso acepta `reminder_delivery_mode: "normal" | "important"`. Volver a
+configurar el mismo momento actualiza su modo de entrega; no crea un duplicado.
 
 ## Páginas de conocimiento
 
@@ -83,8 +91,18 @@ normaliza, se genera su miniatura y la ficha queda guardada directamente, sin
 lote ni aprobación manual. `request_id` hace que un reintento no duplique la
 prenda y la sincronización remota no bloquea el guardado local.
 
-`stage_wardrobe_batch` se conserva para varias prendas o cuando el usuario pida
-una revisión previa. En ese caso usa `manifest.json`, copia el lote a
+`set_wardrobe_item_image` sustituye la imagen y la miniatura de una ficha
+existente mediante `item_id`, `source_file` y un `request_id` idempotente. La
+operación conserva todos los metadatos y referencias de la prenda, guarda el
+nuevo estado antes de retirar los recursos anteriores y responde con
+`savedLocally: true` cuando el cambio local ha quedado confirmado.
+
+El contrato de importación expone el preset `calzado-perfil`: lienzo RGBA de
+`1200 × 1200`, una sola pieza en perfil lateral elevado, caja visible de
+`1032 px` de ancho y relación horizontal entre `1,85:1` y `2,70:1`.
+
+`stage_wardrobe_batch` se conserva únicamente cuando el usuario pide una
+revisión previa. En ese caso usa `manifest.json`, copia el lote a
 `Documents/Todo/wardrobe/imports` y deja la aprobación dentro de Todo.
 
 ## Inventario visual de Hogar

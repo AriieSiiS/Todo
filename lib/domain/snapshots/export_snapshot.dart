@@ -39,7 +39,6 @@ class ExportSnapshot {
     this.wardrobeDisplaySettings = const WardrobeDisplaySettings(),
     required this.notificationSettings,
     required this.calendarSettings,
-    this.visualMode = AppVisualMode.classic,
     this.navOrder = const <AppSection>[],
   });
 
@@ -66,7 +65,6 @@ class ExportSnapshot {
   final WardrobeDisplaySettings wardrobeDisplaySettings;
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
-  final AppVisualMode visualMode;
   final List<AppSection> navOrder;
 
   String toPrettyJson() {
@@ -100,7 +98,6 @@ class ExportSnapshot {
       'wardrobeDisplaySettings': wardrobeDisplaySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
-      'visualMode': visualMode.name,
       'navOrder': navOrder.map((section) => section.name).toList(),
     });
   }

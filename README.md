@@ -89,6 +89,21 @@ El MCP expone el mismo flujo mediante `create_recipe`, `update_recipe`,
 Los menús semanales se consultan con `list_weekly_menus` y su lista completa se
 convierte en tarea mediante `create_weekly_menu_task`.
 
+## Alarmas importantes en Windows
+
+Cada aviso de una tarea puede marcarse como `Importante`. Además del aviso de
+Windows, Todo programa una tarea local bajo `\Todo\Alarmas` y, cuando llega la
+hora, abre una ventana compacta siempre visible con sonido en bucle. La alarma
+permite detener, posponer cinco minutos o abrir la tarea. Si la aplicación ya
+estaba abierta, conserva y restaura su posición, tamaño y estado anteriores.
+
+El estado recuperable de alarmas programadas, activas y pospuestas se guarda en
+`Documents/Todo/runtime/important_alarm_state.json`, por lo que las copias
+completas lo incluyen automáticamente. Este flujo es local y no depende de
+Supabase. No puede avisar con el equipo apagado o sin una sesión de Windows,
+pero `StartWhenAvailable` hace que los avisos perdidos reaparezcan al reanudar o
+iniciar sesión.
+
 ## Supabase compartido
 
 La sincronización nueva usa un snapshot único por cuenta. Eso encaja bien con una app de uso personal porque simplifica mucho la coherencia entre dispositivos y también deja el MCP hablando con la misma fuente de verdad.

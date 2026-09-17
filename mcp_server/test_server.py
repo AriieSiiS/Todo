@@ -9,6 +9,7 @@ import zlib
 import binascii
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 
 def transparent_png() -> bytes:
@@ -107,7 +108,6 @@ class McpServerTest(unittest.TestCase):
             "update_notification_settings",
             "update_calendar_settings",
             "set_today_sort",
-            "set_visual_mode",
             "reorder_navigation",
             "sync_with_cloud",
             "disconnect_cloud",
@@ -127,6 +127,7 @@ class McpServerTest(unittest.TestCase):
             "get_wardrobe_batch",
             "list_wardrobe_items",
             "import_wardrobe_item",
+            "set_wardrobe_item_image",
             "create_wardrobe_item",
             "update_wardrobe_item",
             "delete_wardrobe_item",
@@ -169,6 +170,114 @@ class McpServerTest(unittest.TestCase):
             "export_knowledge_repository",
         }
         self.assertTrue(expected.issubset(names), expected - names)
+
+    def test_legacy_visual_field_is_removed_from_local_state(self) -> None:
+        state = self.server.default_state()
+        state["schemaVersion"] = 7
+        state["visualMode"] = "phantom"
+        self.server.STATE_PATH.write_text(
+            json.dumps(state, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        loaded = self.call("get_app_state")
+        persisted = json.loads(self.server.STATE_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual(loaded["schemaVersion"], 9)
+        self.assertNotIn("visualMode", loaded)
+        self.assertNotIn("visualMode", persisted)
+
+    def test_task_reminders_accumulate_and_can_be_removed_individually(self) -> None:
+        task = self.call(
+            "create_task",
+            {
+                "title": "Fisio",
+                "scheduled_at": "2026-09-14T18:55:00",
+                "reminder_minutes_before_values": [0, 5, 15],
+            },
+        )["created"]
+        self.assertEqual(
+            [rule["minutesBefore"] for rule in task["reminderRules"]],
+            [0, 5, 15],
+        )
+        self.assertTrue(
+            all(rule["deliveryMode"] == "normal" for rule in task["reminderRules"])
+        )
+
+        updated = self.call(
+            "set_task_reminder",
+            {"task_id": task["id"], "reminder_minutes_before": 30},
+        )["updated"]
+        self.assertEqual(
+            [rule["minutesBefore"] for rule in updated["reminderRules"]],
+            [0, 5, 15, 30],
+        )
+
+        deduplicated = self.call(
+            "set_task_reminder",
+            {"task_id": task["id"], "reminder_minutes_before": 5},
+        )["updated"]
+        self.assertEqual(
+            [rule["minutesBefore"] for rule in deduplicated["reminderRules"]],
+            [0, 5, 15, 30],
+        )
+
+        important = self.call(
+            "set_task_reminder",
+            {
+                "task_id": task["id"],
+                "reminder_minutes_before": 5,
+                "reminder_delivery_mode": "important",
+            },
+        )["updated"]
+        five_minute_rules = [
+            rule for rule in important["reminderRules"] if rule["minutesBefore"] == 5
+        ]
+        self.assertEqual(len(five_minute_rules), 1)
+        self.assertEqual(five_minute_rules[0]["deliveryMode"], "important")
+
+        without_five = self.call(
+            "clear_task_reminder",
+            {"task_id": task["id"], "reminder_minutes_before": 5},
+        )["updated"]
+        self.assertEqual(
+            [rule["minutesBefore"] for rule in without_five["reminderRules"]],
+            [0, 15, 30],
+        )
+
+        cleared = self.call("clear_task_reminder", {"task_id": task["id"]})[
+            "updated"
+        ]
+        self.assertEqual(cleared["reminderRules"], [])
+        self.assertIsNone(cleared["reminderRule"])
+
+    def test_version_8_reminders_migrate_to_delivery_modes(self) -> None:
+        state = self.server.default_state()
+        state["schemaVersion"] = 8
+        state["tasks"] = [
+            {
+                "id": "horno",
+                "title": "Horno",
+                "reminderRules": [
+                    {"minutesBefore": 5, "enabled": True},
+                    {
+                        "minutesBefore": 0,
+                        "enabled": True,
+                        "deliveryMode": "important",
+                    },
+                ],
+                "reminderRule": {"minutesBefore": 5, "enabled": True},
+            }
+        ]
+        self.server.STATE_PATH.write_text(json.dumps(state), encoding="utf-8")
+
+        loaded = self.call("get_app_state")
+        rules = loaded["tasks"][0]["reminderRules"]
+        self.assertEqual(loaded["schemaVersion"], 9)
+        self.assertEqual(
+            {rule["minutesBefore"]: rule["deliveryMode"] for rule in rules},
+            {0: "important", 5: "normal"},
+        )
 
     def test_local_knowledge_pages_search_links_collections_and_trash(self) -> None:
         contract = self.call("get_knowledge_contract")
@@ -307,7 +416,6 @@ class McpServerTest(unittest.TestCase):
         self.call("update_day_settings", {"day_ends_at_hour": 4, "next_day_visible_at_hour": 9})
         self.call("update_notification_settings", {"default_minutes_before_task": 20})
         self.call("set_today_sort", {"today_sort": "priority"})
-        self.call("set_visual_mode", {"visual_mode": "phantom"})
         self.call("reorder_navigation", {"sections": ["today", "library", "expenses"]})
 
         expense_category = self.call("create_expense_category", {"name": "Casa"})["created"]
@@ -540,6 +648,114 @@ class McpServerTest(unittest.TestCase):
             (Path(self.temp_dir.name) / "sync_metadata.json").read_text(encoding="utf-8")
         )
         self.assertTrue(metadata["pendingLocalChanges"])
+
+    def test_set_wardrobe_item_image_preserves_the_complete_record(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        item = self.call("create_wardrobe_item", {
+            "name": "Zapatos de prueba",
+            "category": "Calzado",
+            "colors": ["negro"],
+            "material": "Cuero",
+            "seasons": ["todo el año"],
+            "occasions": ["trabajo"],
+            "tags": ["cordones"],
+            "favorite": True,
+        })
+        root = Path(self.temp_dir.name) / "wardrobe"
+        old_image = root / "items" / "anterior.png"
+        old_thumbnail = root / "thumbnails" / "anterior.png"
+        old_image.parent.mkdir(parents=True, exist_ok=True)
+        old_thumbnail.parent.mkdir(parents=True, exist_ok=True)
+        old_image.write_bytes(transparent_png())
+        old_thumbnail.write_bytes(transparent_png())
+        state = self.server.read_local_state()
+        state["wardrobeItems"][0].update({
+            "imagePath": "items/anterior.png",
+            "thumbnailPath": "thumbnails/anterior.png",
+            "imageSha256": "anterior",
+            "useCount": 7,
+            "lastUsedAt": "2026-09-14T18:00:00+00:00",
+        })
+        state["wardrobeOutfits"] = [{
+            "id": "conjunto-1",
+            "name": "Trabajo",
+            "itemIds": [item["id"]],
+            "occasion": "trabajo",
+            "tags": [],
+            "renderImagePath": "",
+            "createdAt": "2026-09-14T18:00:00+00:00",
+        }]
+        self.server.write_local_state(state)
+        replacement = Path(self.temp_dir.name) / "reemplazo.png"
+        replacement.write_bytes(transparent_png())
+        arguments = {
+            "item_id": item["id"],
+            "source_file": str(replacement),
+            "request_id": "reemplazo-calzado-1",
+        }
+
+        first = self.call("set_wardrobe_item_image", arguments)
+        second = self.call("set_wardrobe_item_image", arguments)
+
+        self.assertTrue(first["savedLocally"])
+        self.assertEqual(second, first)
+        stored = self.server.read_local_state()["wardrobeItems"][0]
+        self.assertEqual(stored["id"], item["id"])
+        self.assertEqual(stored["name"], "Zapatos de prueba")
+        self.assertEqual(stored["colors"], ["negro"])
+        self.assertEqual(stored["material"], "Cuero")
+        self.assertEqual(stored["useCount"], 7)
+        self.assertEqual(stored["lastUsedAt"], "2026-09-14T18:00:00+00:00")
+        self.assertEqual(
+            self.server.read_local_state()["wardrobeOutfits"][0]["itemIds"],
+            [item["id"]],
+        )
+        self.assertTrue((root / stored["imagePath"]).is_file())
+        self.assertTrue((root / stored["thumbnailPath"]).is_file())
+        self.assertFalse(old_image.exists())
+        self.assertFalse(old_thumbnail.exists())
+
+    def test_set_wardrobe_item_image_rolls_back_new_assets_on_save_failure(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        item = self.call("create_wardrobe_item", {
+            "name": "Zapatos de prueba",
+            "category": "Calzado",
+        })
+        root = Path(self.temp_dir.name) / "wardrobe"
+        old_image = root / "items" / "anterior.png"
+        old_thumbnail = root / "thumbnails" / "anterior.png"
+        old_image.parent.mkdir(parents=True, exist_ok=True)
+        old_thumbnail.parent.mkdir(parents=True, exist_ok=True)
+        old_image.write_bytes(transparent_png())
+        old_thumbnail.write_bytes(transparent_png())
+        state = self.server.read_local_state()
+        state["wardrobeItems"][0].update({
+            "imagePath": "items/anterior.png",
+            "thumbnailPath": "thumbnails/anterior.png",
+            "imageSha256": "anterior",
+        })
+        self.server.write_local_state(state)
+        replacement = Path(self.temp_dir.name) / "reemplazo.png"
+        replacement.write_bytes(transparent_png())
+
+        with patch.object(
+            self.server,
+            "write_local_state",
+            side_effect=OSError("fallo simulado"),
+        ):
+            with self.assertRaises(OSError):
+                self.call("set_wardrobe_item_image", {
+                    "item_id": item["id"],
+                    "source_file": str(replacement),
+                    "request_id": "reemplazo-calzado-fallido",
+                })
+
+        self.assertTrue(old_image.is_file())
+        self.assertTrue(old_thumbnail.is_file())
+        self.assertEqual(
+            sorted(path.name for path in (root / "items").iterdir()),
+            ["anterior.png"],
+        )
 
     def test_household_crud_saves_catalog_image_manual_and_invoice(self) -> None:
         self.call("reset_state", {"confirm": True})

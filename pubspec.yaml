@@ -2,7 +2,7 @@ name: todo
 description: Aplicación personal de tareas para Windows.
 publish_to: none
 
-version: 0.2.1+3
+version: 0.2.2+4
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -52,4 +52,5 @@ flutter:
     - resources/Persona 5 but it's Lofi ~ Chill Lofi Mix for Study_Work (1 Hour) [aM9dxd2nRwE] (1).mp3
     - resources/task-complete.wav
     - resources/task-complete-pencil-check.mp3
+    - resources/important-alarm.wav
     - tooling/backup_todo_data_full.ps1

@@ -47,6 +47,7 @@ void main() {
     expect(find.text('Regla del día'), findsOneWidget);
     expect(find.text('Notificaciones'), findsOneWidget);
     expect(find.text('Enviar prueba'), findsOneWidget);
+    expect(find.text('Probar alarma importante'), findsOneWidget);
     expect(find.text('Ropa'), findsOneWidget);
     expect(find.text('Copias de seguridad'), findsOneWidget);
     expect(find.text('Crear copia ahora'), findsOneWidget);
@@ -59,7 +60,6 @@ void main() {
     expect(find.text('Calendario e integraciones'), findsNothing);
     expect(find.text('Horas de enfoque (no molestar)'), findsNothing);
     expect(find.text('Apariencia'), findsNothing);
-    expect(find.text('Phantom'), findsNothing);
     expect(find.text('Rutinas y comportamiento'), findsNothing);
 
     tester
@@ -80,23 +80,46 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('legacy Phantom preference is normalized to classic', () {
-    final controller = TodoWorkspace.createForTest(
-      snapshot: AppStateSnapshot(
-        tasks: const [],
-        categories: const [],
-        projects: const [],
-        notes: const [],
-        daySettings: const DaySettings(),
-        notificationSettings: const DeviceNotificationSettings(),
-        calendarSettings: const CalendarIntegrationSettings(),
-        section: AppSection.settings,
-        todaySort: TodaySort.manual,
-        visualMode: AppVisualMode.phantom,
-      ),
-    );
+  testWidgets('la alarma importante muestra las tres decisiones',
+      (WidgetTester tester) async {
+    final controller = TodoWorkspace.createForTest();
+    await controller.showImportantAlarmTest();
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await _pumpShell(tester, controller);
+      await tester.pump();
+    });
 
-    expect(controller.visualMode, AppVisualMode.classic);
+    expect(find.text('Prueba de alarma importante'), findsOneWidget);
+    expect(find.byKey(const ValueKey('important-alarm-stop')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('important-alarm-snooze')), findsOneWidget);
+    expect(find.byKey(const ValueKey('important-alarm-open-task')),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('important-alarm-snooze')));
+    await tester.pump();
+    expect(find.text('Prueba de alarma importante'), findsNothing);
+  });
+
+  test('un snapshot antiguo ignora el campo visual retirado', () {
+    final legacyJson = AppStateSnapshot(
+      tasks: const [],
+      categories: const [],
+      projects: const [],
+      notes: const [],
+      daySettings: const DaySettings(),
+      notificationSettings: const DeviceNotificationSettings(),
+      calendarSettings: const CalendarIntegrationSettings(),
+      section: AppSection.settings,
+      todaySort: TodaySort.manual,
+      schemaVersion: 7,
+    ).toJson()
+      ..['visualMode'] = 'phantom';
+
+    final decoded = AppStateSnapshot.fromJson(legacyJson);
+
+    expect(decoded.toJson(), isNot(contains('visualMode')));
   });
 
   test('legacy automatic notifications are disabled until configured', () {
@@ -344,6 +367,53 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.noteById('nota-contextual')?.isPinned, isTrue);
     expect(find.text('Fijadas'), findsOneWidget);
+  });
+
+  testWidgets('editar una nota usa el panel derecho sin abrir un modal',
+      (WidgetTester tester) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: [
+          QuickNote(
+            id: 'nota-edicion-en-panel',
+            content: 'Idea inicial\nContenido que debe conservarse.',
+            createdAt: DateTime(2026, 9, 15),
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.inbox,
+        todaySort: TodaySort.manual,
+      ),
+    );
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Editar nota').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('tituloNotaEnPanel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('contenidoNotaEnPanel')), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tituloNotaEnPanel')),
+      'Idea editada',
+    );
+    await tester.tap(find.byKey(const ValueKey('guardarEdicionNota')));
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.noteById('nota-edicion-en-panel')?.content,
+      'Idea editada\nContenido que debe conservarse.',
+    );
+    expect(find.byKey(const ValueKey('tituloNotaEnPanel')), findsNothing);
+    expect(find.text('Idea editada'), findsWidgets);
   });
 
   for (final entry in <AppSection, String>{
@@ -994,7 +1064,6 @@ void main() {
       ),
       section: AppSection.calendar,
       todaySort: TodaySort.priority,
-      visualMode: AppVisualMode.phantom,
       updatedAt: DateTime.utc(2026, 4, 29, 10),
       schemaVersion: 1,
       lastModifiedBy: 'test@example.com',
@@ -1015,7 +1084,6 @@ void main() {
           'calendarSettings',
           'section',
           'todaySort',
-          'visualMode',
           'updatedAt',
           'schemaVersion',
           'lastModifiedBy',
@@ -1023,7 +1091,7 @@ void main() {
     expect(decoded.tasks.single.title, 'JSON task');
     expect(decoded.section, AppSection.calendar);
     expect(decoded.todaySort, TodaySort.priority);
-    expect(decoded.visualMode, AppVisualMode.phantom);
+    expect(json, isNot(contains('visualMode')));
     expect(decoded.lastModifiedBy, 'test@example.com');
     expect(decoded.notes.single.emoji, '💡');
     expect(decoded.notes.single.colorValue, 0xFFBFD8B8);
@@ -1066,7 +1134,9 @@ void main() {
       title: 'Recurring sample',
       scheduledAt: DateTime.now().add(const Duration(hours: 2)),
       recurrence: const RecurrenceRule(type: RecurrenceType.daily),
-      reminderRule: const ReminderRule(enabled: true, minutesBefore: 15),
+      reminderRules: const <ReminderRule>[
+        ReminderRule(enabled: true, minutesBefore: 15),
+      ],
     );
 
     await controller.completeTask(task.id);
@@ -1081,8 +1151,41 @@ void main() {
     expect(recurringTask.status, TaskStatus.active);
     expect(controller.isTaskCompletedOnDay(recurringTask, today), isTrue);
     expect(
-      recurringTask.reminderRule?.enabled,
+      recurringTask.reminderRules.any((rule) => rule.enabled),
       isTrue,
+    );
+  });
+
+  test('controller accumulates reminders and removes only the selected one',
+      () {
+    final controller = TodoWorkspace.createForTest();
+    final task = controller.createTask(
+      title: 'Fisio',
+      scheduledAt: DateTime(2026, 9, 14, 18, 55),
+    );
+    const exact = ReminderRule(enabled: true, minutesBefore: 0);
+    const fiveMinutes = ReminderRule(enabled: true, minutesBefore: 5);
+
+    controller.setTaskReminder(task.id, exact);
+    controller.setTaskReminder(task.id, fiveMinutes);
+    controller.setTaskReminder(task.id, fiveMinutes);
+
+    expect(
+      controller
+          .taskById(task.id)!
+          .reminderRules
+          .map((rule) => rule.minutesBefore),
+      <int>[0, 5],
+    );
+
+    controller.clearTaskReminder(task.id, reminder: fiveMinutes);
+
+    expect(
+      controller
+          .taskById(task.id)!
+          .reminderRules
+          .map((rule) => rule.minutesBefore),
+      <int>[0],
     );
   });
 }

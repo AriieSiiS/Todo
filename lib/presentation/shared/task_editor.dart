@@ -22,7 +22,7 @@ class _TaskEditorDialog extends StatefulWidget {
 }
 
 class _TaskEditorDialogState extends State<_TaskEditorDialog> {
-  static const List<int> _quickReminderMinutes = <int>[5, 30, 60, 1440];
+  static const List<int> _quickReminderMinutes = <int>[0, 5, 15, 30, 60, 1440];
 
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
@@ -32,10 +32,12 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
   late TaskPriority _priority;
   late RecurrenceType _recurrenceType;
   late int _recurrenceInterval;
+  late final TextEditingController _recurrenceIntervalController;
+  String? _recurrenceIntervalError;
   late String? _projectId;
   late List<String> _categoryIds;
-  late bool _reminderEnabled;
-  late int _minutesBefore;
+  late Map<int, ReminderDeliveryMode> _reminderModes;
+  late bool _reminderSelectionMade;
   late bool _syncToGoogle;
   late int _estimatedDurationMinutes;
 
@@ -55,19 +57,33 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     _notesController = TextEditingController(
       text: initial?.description ?? widget.initialDescription ?? '',
     );
-    _subtasks = [...(initial?.checklist ?? const <String>[])];
+    final linkedSubtasks =
+        initial == null ? const <TaskModel>[] : controller.subtasksOf(initial);
+    _subtasks = linkedSubtasks.isNotEmpty
+        ? linkedSubtasks.map((task) => task.title).toList()
+        : [...(initial?.checklist ?? const <String>[])];
     _date = DateTime(scheduledAt.year, scheduledAt.month, scheduledAt.day);
     _time = TimeOfDay(hour: scheduledAt.hour, minute: scheduledAt.minute);
     _priority = initial?.priority ?? TaskPriority.medium;
     _recurrenceType = initial?.recurrence.type ?? RecurrenceType.none;
     _recurrenceInterval = initial?.recurrence.interval ?? 1;
+    if (_recurrenceType == RecurrenceType.everyXDays &&
+        _recurrenceInterval < 2) {
+      _recurrenceInterval = 2;
+    }
+    _recurrenceIntervalController = TextEditingController(
+      text: _recurrenceInterval.toString(),
+    );
     _projectId = initial?.projectIds.isNotEmpty == true
         ? initial!.projectIds.first
         : null;
     _categoryIds = [...(initial?.categoryIds ?? const <String>[])];
-    _reminderEnabled = initial?.reminderRule?.enabled ?? false;
-    _minutesBefore = initial?.reminderRule?.minutesBefore ??
-        controller.notificationSettings.defaultMinutesBeforeTask;
+    _reminderModes = <int, ReminderDeliveryMode>{
+      for (final rule in (initial?.reminderRules ?? const <ReminderRule>[])
+          .where((rule) => rule.enabled))
+        rule.minutesBefore: rule.deliveryMode,
+    };
+    _reminderSelectionMade = initial?.reminderRules.isNotEmpty ?? false;
     _syncToGoogle = initial?.calendarLink != null;
     _estimatedDurationMinutes = 30;
   }
@@ -76,12 +92,12 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _recurrenceIntervalController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final visuals = Theme.of(context).extension<TodoVisuals>()!;
     final categories =
         controller.categories.where((item) => item.active).toList();
     final projects = controller.projects
@@ -93,13 +109,11 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           32, 22, 32, MediaQuery.of(context).viewInsets.bottom + 22),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: visuals.isPhantom ? visuals.panel : const Color(0xFFFFFCF8),
-          borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 28),
+          color: const Color(0xFFFFFCF8),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.textStrong
-                : const Color(0xFFE2D5C4),
-            width: visuals.isPhantom ? 1.8 : 1,
+            color: const Color(0xFFE2D5C4),
+            width: 1,
           ),
         ),
         child: ConstrainedBox(
@@ -128,16 +142,20 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancelar'),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancelar'),
+                      ),
                     ),
-                    const Spacer(),
-                    FilledButton(
-                      onPressed: _saveTask,
-                      child: Text(widget.initialTask == null
-                          ? 'Guardar tarea'
-                          : 'Guardar cambios'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _saveTask,
+                        child: Text(widget.initialTask == null
+                            ? 'Guardar tarea'
+                            : 'Guardar cambios'),
+                      ),
                     ),
                   ],
                 ),
@@ -261,7 +279,15 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 onTap: () async {
                   final picked = await _showTodoTimePicker(context, _time);
                   if (picked != null) {
-                    setState(() => _time = picked);
+                    setState(() {
+                      _time = picked;
+                      if (!_hasVisibleTimeOfDay(picked)) {
+                        _reminderModes.clear();
+                        _reminderSelectionMade = true;
+                      } else if (!_reminderSelectionMade) {
+                        _reminderModes[0] = ReminderDeliveryMode.normal;
+                      }
+                    });
                   }
                 },
               ),
@@ -294,6 +320,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   _sectionLabel('Duración estimada (opcional)'),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<int>(
+                    isExpanded: true,
                     initialValue: _estimatedDurationMinutes,
                     style:
                         fieldTextStyle.copyWith(color: const Color(0xFF2D2A25)),
@@ -336,77 +363,114 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 value: RecurrenceType.yearly,
                 child: Text('Anual', style: fieldTextStyle)),
           ],
-          onChanged: (value) =>
-              setState(() => _recurrenceType = value ?? _recurrenceType),
+          onChanged: (value) => setState(() {
+            _recurrenceType = value ?? _recurrenceType;
+            if (_recurrenceType == RecurrenceType.everyXDays &&
+                _recurrenceInterval < 2) {
+              _recurrenceInterval = 2;
+              _recurrenceIntervalController.text = '2';
+            }
+            _recurrenceIntervalError = null;
+          }),
           decoration:
               const InputDecoration(prefixIcon: Icon(Icons.autorenew_rounded)),
         ),
+        if (_recurrenceType == RecurrenceType.everyXDays) ...[
+          const SizedBox(height: 10),
+          TextField(
+            key: const ValueKey('recurrence-interval-input'),
+            controller: _recurrenceIntervalController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Número de días',
+              prefixText: 'Cada ',
+              suffixText: ' días',
+              helperText: 'La tarea se repetirá con este intervalo.',
+              errorText: _recurrenceIntervalError,
+              prefixIcon: const Icon(Icons.event_repeat_rounded),
+            ),
+            onChanged: (value) {
+              final parsed = int.tryParse(value.trim());
+              setState(() {
+                if (parsed != null && parsed >= 2) {
+                  _recurrenceInterval = parsed;
+                  _recurrenceIntervalError = null;
+                } else {
+                  _recurrenceIntervalError =
+                      'Introduce un número de días igual o superior a 2.';
+                }
+              });
+            },
+          ),
+        ],
         const SizedBox(height: 18),
         Row(
           children: [
             _sectionLabel('Subtareas'),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => setState(() => _subtasks.add('')),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Añadir subtarea'),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                  ),
+                  onPressed: () => setState(() => _subtasks.add('')),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Añadir subtarea'),
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 6),
-        Container(
-          decoration: _softBorderBox(),
-          child: Column(
-            children: [
-              for (var index = 0; index < _subtasks.length; index++)
-                Column(
-                  children: [
-                    if (index > 0) const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.drag_indicator_rounded,
-                              color: Color(0xFFB6ADA0)),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.check_box_outline_blank_rounded,
-                              size: 18, color: Color(0xFF8D8477)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextFormField(
-                              initialValue: _subtasks[index],
-                              decoration: const InputDecoration.collapsed(
-                                  hintText: 'Subtarea'),
-                              onChanged: (value) => _subtasks[index] = value,
+        if (_subtasks.isNotEmpty)
+          Container(
+            decoration: _softBorderBox(),
+            child: Column(
+              children: [
+                for (var index = 0; index < _subtasks.length; index++)
+                  Column(
+                    children: [
+                      if (index > 0) const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.drag_indicator_rounded,
+                                color: Color(0xFFB6ADA0)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check_box_outline_blank_rounded,
+                                size: 18, color: Color(0xFF8D8477)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextFormField(
+                                key: ValueKey('subtask-input-$index'),
+                                initialValue: _subtasks[index],
+                                decoration: const InputDecoration.collapsed(
+                                    hintText: 'Subtarea'),
+                                onChanged: (value) => _subtasks[index] = value,
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () =>
-                                setState(() => _subtasks.removeAt(index)),
-                            icon: const Icon(Icons.delete_outline_rounded,
-                                size: 18),
-                          ),
-                        ],
+                            IconButton(
+                              onPressed: () =>
+                                  setState(() => _subtasks.removeAt(index)),
+                              icon: const Icon(Icons.delete_outline_rounded,
+                                  size: 18),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              if (_subtasks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Sin subtareas todavía.',
-                        style: TextStyle(
-                            color: Theme.of(context)
-                                .extension<TodoVisuals>()!
-                                .textMuted)),
+                    ],
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 18),
         _sectionLabel('Notas'),
         const SizedBox(height: 6),
@@ -415,7 +479,6 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           minLines: 3,
           maxLines: 5,
           decoration: InputDecoration(
-            hintText: 'Usar limpiador multiusos y dejar todo ordenado.',
             suffixText: '${_notesController.text.length}/300',
           ),
           onChanged: (_) => setState(() {}),
@@ -435,36 +498,39 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                     runSpacing: 8,
                     children: [
                       FilterChip(
-                        selected: !_reminderEnabled,
+                        selected: _reminderModes.isEmpty,
                         label: const Text('Sin aviso'),
-                        onSelected: (_) =>
-                            setState(() => _reminderEnabled = false),
+                        onSelected: (_) => setState(() {
+                          _reminderModes.clear();
+                          _reminderSelectionMade = true;
+                        }),
                       ),
                       for (final minutes in _quickReminderMinutes)
                         FilterChip(
-                          selected:
-                              _reminderEnabled && _minutesBefore == minutes,
+                          selected: _reminderModes.containsKey(minutes),
                           label: Text(_reminderPresetLabelGlobal(minutes)),
                           avatar: const Icon(Icons.notifications_none_rounded,
                               size: 16),
-                          onSelected: (_) => setState(() {
-                            _reminderEnabled = true;
-                            _minutesBefore = minutes;
+                          onSelected: (selected) => setState(() {
+                            if (selected) {
+                              _reminderModes[minutes] =
+                                  ReminderDeliveryMode.normal;
+                            } else {
+                              _reminderModes.remove(minutes);
+                            }
+                            _reminderSelectionMade = true;
                           }),
                         ),
                       ActionChip(
-                        label: Text(
-                          _reminderEnabled &&
-                                  !_quickReminderMinutes
-                                      .contains(_minutesBefore)
-                              ? _reminderPresetLabel(_minutesBefore)
-                              : 'Personalizar',
-                        ),
+                        label: const Text('Personalizar'),
                         avatar: const Icon(Icons.add_rounded, size: 16),
                         onPressed: () async {
                           final custom = await _showReminderSettingsDialog(
                             context,
-                            currentMinutes: _minutesBefore,
+                            currentMinutes: _reminderModes.isEmpty
+                                ? controller.notificationSettings
+                                    .defaultMinutesBeforeTask
+                                : _reminderModes.keys.last,
                             title: 'Recordatorio',
                             subtitle:
                                 'Elige cuándo quieres que te avise antes de esta tarea.',
@@ -473,13 +539,108 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                             return;
                           }
                           setState(() {
-                            _reminderEnabled = true;
-                            _minutesBefore = custom;
+                            _reminderModes.putIfAbsent(
+                              custom,
+                              () => ReminderDeliveryMode.normal,
+                            );
+                            _reminderSelectionMade = true;
                           });
                         },
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        _reminderModes.isNotEmpty
+                            ? Icons.notifications_active_outlined
+                            : Icons.notifications_off_outlined,
+                        size: 17,
+                        color: Theme.of(context)
+                            .extension<TodoVisuals>()!
+                            .textMuted,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          _reminderModes.isEmpty
+                              ? 'Avisos activos: ninguno'
+                              : 'Avisos activos (${_reminderModes.length})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_reminderModes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Column(
+                      children: [
+                        for (final minutes in _sortedReminderMinutes())
+                          Container(
+                            key: ValueKey<String>('active-reminder-$minutes'),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.fromLTRB(12, 7, 5, 7),
+                            decoration: _softBorderBox(),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _reminderModes[minutes] ==
+                                          ReminderDeliveryMode.important
+                                      ? Icons.notification_important_rounded
+                                      : Icons.notifications_active_outlined,
+                                  size: 19,
+                                  color: _reminderModes[minutes] ==
+                                          ReminderDeliveryMode.important
+                                      ? const Color(0xFFB05C22)
+                                      : const Color(0xFF70835D),
+                                ),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    _activeReminderLabel(minutes),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const Text(
+                                  'Importante',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Switch(
+                                  key: ValueKey<String>(
+                                    'important-reminder-$minutes',
+                                  ),
+                                  value: _reminderModes[minutes] ==
+                                      ReminderDeliveryMode.important,
+                                  onChanged: (important) => setState(() {
+                                    _reminderModes[minutes] = important
+                                        ? ReminderDeliveryMode.important
+                                        : ReminderDeliveryMode.normal;
+                                    _reminderSelectionMade = true;
+                                  }),
+                                ),
+                                IconButton(
+                                  tooltip: 'Quitar este aviso',
+                                  onPressed: () => setState(() {
+                                    _reminderModes.remove(minutes);
+                                    _reminderSelectionMade = true;
+                                  }),
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -523,6 +684,17 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     if (title.isEmpty) {
       return;
     }
+    if (_recurrenceType == RecurrenceType.everyXDays) {
+      final interval = int.tryParse(_recurrenceIntervalController.text.trim());
+      if (interval == null || interval < 2) {
+        setState(() {
+          _recurrenceIntervalError =
+              'Introduce un número de días igual o superior a 2.';
+        });
+        return;
+      }
+      _recurrenceInterval = interval;
+    }
     final scheduledAt =
         DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
     final recurrence = RecurrenceRule(
@@ -530,11 +702,16 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
       interval:
           _recurrenceType == RecurrenceType.none ? 1 : _recurrenceInterval,
     );
-    final reminderRule = ReminderRule(
-      enabled: _reminderEnabled,
-      minutesBefore: _minutesBefore,
-      triggerMode: ReminderTriggerMode.minutesBefore,
-    );
+    final reminderRules = _sortedReminderMinutes()
+        .map(
+          (minutes) => ReminderRule(
+            enabled: true,
+            minutesBefore: minutes,
+            triggerMode: ReminderTriggerMode.minutesBefore,
+            deliveryMode: _reminderModes[minutes]!,
+          ),
+        )
+        .toList();
     final categoryIds = _effectiveTaskCategoryIds();
     final checklist =
         _subtasks.where((item) => item.trim().isNotEmpty).toList();
@@ -552,11 +729,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         priority: _priority,
         recurrence: recurrence,
         parentTaskId: widget.parentTaskId,
-        reminderRule: _reminderEnabled ? reminderRule : null,
+        reminderRules: reminderRules,
       );
-      if (checklist.isNotEmpty) {
-        controller.updateTask(task.copyWith(checklist: checklist));
-      }
+      controller.replaceTaskSubtasks(task.id, checklist);
       if (_syncToGoogle && controller.isCalendarConnected) {
         await controller.syncTaskToCalendar(task.id);
       }
@@ -572,11 +747,11 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         scheduledAt: scheduledAt,
         priority: _priority,
         recurrence: recurrence,
-        checklist: checklist,
-        reminderRule: _reminderEnabled ? reminderRule : null,
-        clearReminderRule: !_reminderEnabled,
+        checklist: const <String>[],
+        reminderRules: reminderRules,
       );
       controller.updateTask(updated);
+      controller.replaceTaskSubtasks(updated.id, checklist);
       if (_syncToGoogle && controller.isCalendarConnected) {
         await controller.syncTaskToCalendar(updated.id);
       } else if (!_syncToGoogle && widget.initialTask!.calendarLink != null) {
@@ -618,7 +793,16 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     return <String>[created.id];
   }
 
-  String _reminderPresetLabel(int minutes) {
-    return _reminderPresetLabelGlobal(minutes);
+  List<int> _sortedReminderMinutes() {
+    final values = _reminderModes.keys.toList()..sort();
+    return values;
+  }
+
+  String _activeReminderLabel(int minutes) {
+    final scheduledAt =
+        DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
+    final reminderAt = scheduledAt.subtract(Duration(minutes: minutes));
+    return '${_reminderPresetLabelGlobal(minutes)} · ${_dateLabel(reminderAt)} a las '
+        '${_formatTime24(TimeOfDay.fromDateTime(reminderAt))}';
   }
 }

@@ -39,7 +39,7 @@ enum CalendarSyncStatus { idle, synced, pending, error }
 
 enum ReminderTriggerMode { minutesBefore, atTime }
 
-enum AppVisualMode { classic, phantom }
+enum ReminderDeliveryMode { normal, important }
 
 enum FixedPaymentFrequency { weekly, monthly, yearly, custom }
 

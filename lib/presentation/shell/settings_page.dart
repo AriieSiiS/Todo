@@ -242,6 +242,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     isExpanded: true,
                     initialValue: notificationSettings.defaultMinutesBeforeTask,
                     items: const [
+                      DropdownMenuItem(
+                          value: 0, child: Text('A la hora exacta')),
                       DropdownMenuItem(value: 5, child: Text('5 minutos')),
                       DropdownMenuItem(value: 15, child: Text('15 minutos')),
                       DropdownMenuItem(value: 30, child: Text('30 minutos')),
@@ -287,6 +289,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                 icon: const Icon(Icons.send_outlined, size: 18),
                 label: const Text('Enviar prueba'),
+              ),
+              FilledButton.icon(
+                key: const ValueKey('settings-test-important-alarm'),
+                onPressed: controller.notificationBusy
+                    ? null
+                    : () async {
+                        await controller.showImportantAlarmTest();
+                        if (!context.mounted ||
+                            controller.importantAlarmError.isEmpty) {
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(controller.importantAlarmError),
+                          ),
+                        );
+                      },
+                icon: const Icon(Icons.alarm_rounded, size: 18),
+                label: const Text('Probar alarma importante'),
               ),
               Text(
                 controller.notificationError.isNotEmpty
@@ -1147,88 +1168,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 18),
                     _SettingsSectionCard(
-                      icon: Icons.palette_outlined,
-                      title: 'Apariencia',
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _settingsSelectTile(
-                                  label: 'Modo de color',
-                                  helper: controller.visualMode ==
-                                          AppVisualMode.classic
-                                      ? 'Cálido (recomendado)'
-                                      : 'Phantom',
-                                  value: controller.visualMode ==
-                                          AppVisualMode.classic
-                                      ? 'Clásico'
-                                      : 'Phantom',
-                                ),
-                              ),
-                              const SizedBox(width: 18),
-                              Expanded(
-                                child: _settingsSelectTile(
-                                  label: 'Densidad',
-                                  helper: 'Cómoda',
-                                  value: 'Cómoda',
-                                ),
-                              ),
-                              const SizedBox(width: 18),
-                              Expanded(
-                                child: _settingsSelectTile(
-                                  label: 'Idioma',
-                                  helper: 'Español',
-                                  value: 'Español',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: controller.visualMode ==
-                                        AppVisualMode.classic
-                                    ? FilledButton.icon(
-                                        onPressed: () {},
-                                        icon: const Icon(Icons.layers_rounded),
-                                        label: const Text('Clásico'),
-                                      )
-                                    : OutlinedButton.icon(
-                                        onPressed: () =>
-                                            controller.setVisualMode(
-                                          AppVisualMode.classic,
-                                        ),
-                                        icon: const Icon(Icons.layers_rounded),
-                                        label: const Text('Clásico'),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: controller.visualMode ==
-                                        AppVisualMode.phantom
-                                    ? FilledButton.icon(
-                                        onPressed: () {},
-                                        icon: const Icon(Icons.bolt_rounded),
-                                        label: const Text('Phantom'),
-                                      )
-                                    : OutlinedButton.icon(
-                                        onPressed: () =>
-                                            controller.setVisualMode(
-                                          AppVisualMode.phantom,
-                                        ),
-                                        icon: const Icon(Icons.bolt_rounded),
-                                        label: const Text('Phantom'),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _SettingsSectionCard(
                       icon: Icons.checkroom_outlined,
                       title: 'Ropa',
                       child: _settingsToggleRow(
@@ -1478,7 +1417,7 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context) => AlertDialog(
         title: const Text('Reiniciar datos'),
         content: const Text(
-            'Esto sustituira tu estado actual por la base inicial de la app.'),
+            'Esto sustituirá tu estado actual por la base inicial de la app.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

@@ -2297,7 +2297,7 @@ class _ReferenceTaskStateGlyph extends StatelessWidget {
       return const Icon(Icons.autorenew_rounded,
           size: 18, color: Color(0xFF8B7D68));
     }
-    if (task.reminderRule?.enabled ?? false) {
+    if (task.reminderRules.any((rule) => rule.enabled)) {
       return const Icon(Icons.notifications_active_outlined,
           size: 18, color: Color(0xFF8B7D68));
     }

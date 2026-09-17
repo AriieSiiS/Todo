@@ -17,6 +17,7 @@ class _InboxPageState extends State<InboxPage> {
   late final TextEditingController _searchController;
   String _query = '';
   String? _selectedNoteId;
+  String? _editingNoteId;
   String? _selectedCategoryId;
   _InboxSort _sort = _InboxSort.newest;
   _InboxViewMode _viewMode = _InboxViewMode.list;
@@ -94,10 +95,8 @@ class _InboxPageState extends State<InboxPage> {
                   categories: controller.categories,
                   viewMode: _viewMode,
                   selectedNoteId: showDetail ? selectedNote?.id : null,
-                  onSelect: showDetail
-                      ? (note) => setState(() => _selectedNoteId = note.id)
-                      : _editNote,
-                  onOpen: _editNote,
+                  onSelect: showDetail ? _selectNote : _editNoteInDialog,
+                  onOpen: showDetail ? _startEditingNote : _editNoteInDialog,
                   onCreateTask: _createTaskFromNote,
                   onCreateProject: _createProjectFromNote,
                   onCreateEvent: _createEventFromNote,
@@ -112,18 +111,29 @@ class _InboxPageState extends State<InboxPage> {
                     SizedBox(width: constraints.maxWidth * 0.43, child: list),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: _InboxNoteDetail(
-                        note: selectedNote,
-                        categories: controller.categories,
-                        onEdit: _editNote,
-                        onEditCategories: _editNoteCategories,
-                        onCreateTask: _createTaskFromNote,
-                        onCreateProject: _createProjectFromNote,
-                        onCreateEvent: _createEventFromNote,
-                        onArchive: _archiveNote,
-                        onDelete: _deleteNote,
-                        onTogglePin: _togglePinned,
-                      ),
+                      child: selectedNote != null &&
+                              _editingNoteId == selectedNote.id
+                          ? _InboxNoteInlineEditor(
+                              key: ValueKey(
+                                'editorNotaEnPanel-${selectedNote.id}',
+                              ),
+                              controller: controller,
+                              note: selectedNote,
+                              onCancel: _stopEditingNote,
+                              onSaved: _finishEditingNote,
+                            )
+                          : _InboxNoteDetail(
+                              note: selectedNote,
+                              categories: controller.categories,
+                              onEdit: _startEditingNote,
+                              onEditCategories: _editNoteCategories,
+                              onCreateTask: _createTaskFromNote,
+                              onCreateProject: _createProjectFromNote,
+                              onCreateEvent: _createEventFromNote,
+                              onArchive: _archiveNote,
+                              onDelete: _deleteNote,
+                              onTogglePin: _togglePinned,
+                            ),
                     ),
                   ],
                 );
@@ -143,7 +153,29 @@ class _InboxPageState extends State<InboxPage> {
     return notes.first;
   }
 
-  Future<void> _editNote(QuickNote note) async {
+  void _selectNote(QuickNote note) {
+    setState(() {
+      _selectedNoteId = note.id;
+      if (_editingNoteId != note.id) _editingNoteId = null;
+    });
+  }
+
+  Future<void> _startEditingNote(QuickNote note) async {
+    setState(() {
+      _selectedNoteId = note.id;
+      _editingNoteId = note.id;
+    });
+  }
+
+  void _stopEditingNote() {
+    setState(() => _editingNoteId = null);
+  }
+
+  void _finishEditingNote() {
+    setState(() => _editingNoteId = null);
+  }
+
+  Future<void> _editNoteInDialog(QuickNote note) async {
     await showQuickNoteComposer(context, controller, initialNote: note);
     if (mounted) setState(() {});
   }
@@ -208,6 +240,7 @@ class _InboxPageState extends State<InboxPage> {
     controller.archiveNote(note.id);
     setState(() {
       if (_selectedNoteId == note.id) _selectedNoteId = null;
+      if (_editingNoteId == note.id) _editingNoteId = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -242,6 +275,7 @@ class _InboxPageState extends State<InboxPage> {
     controller.deleteNote(note.id);
     setState(() {
       if (_selectedNoteId == note.id) _selectedNoteId = null;
+      if (_editingNoteId == note.id) _editingNoteId = null;
     });
   }
 
@@ -1176,6 +1210,334 @@ class _InboxListSection {
   final String label;
   final int count;
   final IconData icon;
+}
+
+class _InboxNoteInlineEditor extends StatefulWidget {
+  const _InboxNoteInlineEditor({
+    required this.controller,
+    required this.note,
+    required this.onCancel,
+    required this.onSaved,
+    super.key,
+  });
+
+  final TodoWorkspace controller;
+  final QuickNote note;
+  final VoidCallback onCancel;
+  final VoidCallback onSaved;
+
+  @override
+  State<_InboxNoteInlineEditor> createState() => _InboxNoteInlineEditorState();
+}
+
+class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
+  static const _emojis = <String>[
+    '💡',
+    '📌',
+    '📝',
+    '🎯',
+    '✨',
+    '❤️',
+    '🏠',
+    '🎬',
+    '📚',
+    '💻',
+    '🛒',
+    '🌱',
+  ];
+
+  late final TextEditingController _titleController;
+  late final EditorState _editorState;
+  late String _emoji;
+  late bool _isPinned;
+  late List<String> _categoryIds;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = _splitNoteContent(widget.note.content);
+    _titleController = TextEditingController(text: parts.title);
+    final body = parts.body ?? '';
+    _editorState = body.trim().isEmpty
+        ? EditorState.blank()
+        : EditorState(document: markdownToDocument(body));
+    _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
+    _emoji = widget.note.emoji;
+    _isPinned = widget.note.isPinned;
+    _categoryIds = List<String>.from(widget.note.categoryIds);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _editorState.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return _SurfaceCard(
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.edit_note_rounded,
+                size: 19,
+                color: Color(0xFF607A5A),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Editando nota',
+                style: TextStyle(
+                  color: Color(0xFF607A5A),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                key: const ValueKey('cancelarEdicionNotaSuperior'),
+                tooltip: 'Cancelar edición',
+                onPressed: widget.onCancel,
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              PopupMenuButton<String>(
+                tooltip: 'Elegir emoji',
+                onSelected: (value) => setState(() {
+                  _emoji = value == 'none' ? '' : value;
+                }),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'none',
+                    child: Text('Sin emoji'),
+                  ),
+                  for (final emoji in _emojis)
+                    PopupMenuItem(
+                      value: emoji,
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ),
+                ],
+                child: Container(
+                  width: 54,
+                  height: 54,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F0E8),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2D5C4)),
+                  ),
+                  child: Text(
+                    _emoji.isEmpty ? '＋' : _emoji,
+                    style: const TextStyle(fontSize: 23),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('tituloNotaEnPanel'),
+                  controller: _titleController,
+                  autofocus: true,
+                  maxLines: 2,
+                  minLines: 1,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Título de la nota',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton.filledTonal(
+                tooltip: _isPinned ? 'Desfijar nota' : 'Fijar nota',
+                onPressed: () => setState(() => _isPinned = !_isPinned),
+                icon: Icon(
+                  _isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Categorías',
+                style: TextStyle(color: visuals.textMuted),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final category in widget.controller.categories.where(
+                      (category) => _categoryIds.contains(category.id),
+                    ))
+                      InputChip(
+                        label: Text(category.name),
+                        avatar: Icon(category.icon, size: 16),
+                        backgroundColor: category.color.withValues(alpha: 0.16),
+                        side: BorderSide(
+                          color: category.color.withValues(alpha: 0.38),
+                        ),
+                        onDeleted: () => setState(
+                          () => _categoryIds.remove(category.id),
+                        ),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add_rounded, size: 17),
+                      label: const Text('Añadir categoría'),
+                      onPressed: _pickCategories,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _NoteFormattingToolbar(editorState: _editorState),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFCF8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE2D5C4)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: AppFlowyEditor(
+                key: const ValueKey('contenidoNotaEnPanel'),
+                editorState: _editorState,
+                editable: true,
+                blockComponentBuilders: standardBlockComponentBuilderMap,
+                commandShortcutEvents: standardCommandShortcutEvents,
+                characterShortcutEvents: standardCharacterShortcutEvents,
+                editorStyle: EditorStyle.desktop(
+                  padding: const EdgeInsets.all(18),
+                  cursorColor: const Color(0xFF607A4D),
+                  selectionColor: const Color(0xFFD8E4CF),
+                  textStyleConfiguration: const TextStyleConfiguration(
+                    text: TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Color(0xFF2D2A25),
+                    ),
+                    bold: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton(
+                key: const ValueKey('cancelarEdicionNota'),
+                onPressed: widget.onCancel,
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                key: const ValueKey('guardarEdicionNota'),
+                onPressed: _save,
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Guardar cambios'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _save() {
+    final title = _titleController.text.trim();
+    final body = documentToMarkdown(_editorState.document).trim();
+    if (title.isEmpty && body.isEmpty) return;
+    final resolvedTitle = title.isEmpty ? 'Sin título' : title;
+    final content = body.isEmpty ? resolvedTitle : '$resolvedTitle\n$body';
+    widget.controller.updateNote(
+      widget.note.id,
+      content: content,
+      scheduledFor: widget.note.scheduledFor,
+      emoji: _emoji,
+      isPinned: _isPinned,
+      categoryIds: _categoryIds,
+    );
+    widget.onSaved();
+  }
+
+  Future<void> _pickCategories() async {
+    final categories = widget.controller.categories
+        .where((category) => category.active)
+        .toList();
+    final draft = _categoryIds.toSet();
+    final selected = await showDialog<Set<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Categorías de la nota'),
+          content: SizedBox(
+            width: 480,
+            child: categories.isEmpty
+                ? const Text(
+                    'Todavía no hay categorías activas. Puedes crearlas desde la sección Categorías.',
+                  )
+                : Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final category in categories)
+                        FilterChip(
+                          selected: draft.contains(category.id),
+                          avatar: Icon(category.icon, size: 17),
+                          label: Text(category.name),
+                          selectedColor: category.color.withValues(alpha: 0.22),
+                          checkmarkColor: category.color,
+                          onSelected: (value) => setDialogState(() {
+                            if (value) {
+                              draft.add(category.id);
+                            } else {
+                              draft.remove(category.id);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(draft),
+              child: const Text('Aplicar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _categoryIds = selected.toList());
+  }
 }
 
 class _InboxNoteDetail extends StatelessWidget {

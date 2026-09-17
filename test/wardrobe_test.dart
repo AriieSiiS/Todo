@@ -68,6 +68,68 @@ void main() {
     expect(legacy.wardrobeDisplaySettings.showUsageCount, isFalse);
   });
 
+  test('el refresco incorpora imágenes sustituidas sin reiniciar la app', () {
+    final initial = DateTime.utc(2026, 9, 17, 10);
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        wardrobeItems: [
+          WardrobeItem(
+            id: 'prenda-actualizada',
+            name: 'Camiseta negra',
+            category: 'Camisetas',
+            imagePath: 'items/imagen-anterior.png',
+            thumbnailPath: 'thumbnails/imagen-anterior.png',
+            imageSha256: 'hash-anterior',
+            createdAt: initial,
+            updatedAt: initial,
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.wardrobe,
+        todaySort: TodaySort.manual,
+      ),
+    );
+    final replacement = WardrobeItem(
+      id: 'prenda-actualizada',
+      name: 'Camiseta negra',
+      category: 'Camisetas',
+      imagePath: 'items/imagen-nueva.png',
+      thumbnailPath: 'thumbnails/imagen-nueva.png',
+      imageSha256: 'hash-nuevo',
+      createdAt: initial,
+      updatedAt: initial.add(const Duration(minutes: 1)),
+    );
+
+    expect(
+      controller.mergeExternalWardrobeItemsForTest([replacement]),
+      isTrue,
+    );
+    expect(
+      controller.wardrobeItemById('prenda-actualizada')?.imagePath,
+      'items/imagen-nueva.png',
+    );
+    expect(
+      controller.wardrobeItemById('prenda-actualizada')?.imageSha256,
+      'hash-nuevo',
+    );
+
+    final stale = replacement.copyWith(
+      imagePath: 'items/imagen-obsoleta.png',
+      updatedAt: initial.subtract(const Duration(minutes: 1)),
+    );
+    expect(controller.mergeExternalWardrobeItemsForTest([stale]), isFalse);
+    expect(
+      controller.wardrobeItemById('prenda-actualizada')?.imagePath,
+      'items/imagen-nueva.png',
+    );
+  });
+
   test('el workspace gestiona conjuntos, usos, lavado, planes y maletas', () {
     final controller = TodoWorkspace.createForTest();
     final shirt = controller.createWardrobeItem(
@@ -409,7 +471,32 @@ void main() {
     expect(find.text('Calzado (1)'), findsOneWidget);
     expect(find.text('Pantalones (1)'), findsOneWidget);
 
+    await tester.tap(find.text('Todo (2)'));
+    await tester.pump();
+    expect(find.text('Puma Palermo'), findsNothing);
+    expect(find.text('Pantalón beige'), findsNothing);
+
+    await tester.tap(find.text('Pantalones (1)'));
+    await tester.pump();
+    expect(find.text('Puma Palermo'), findsNothing);
+    expect(find.text('Pantalón beige'), findsOneWidget);
+
+    await tester.tap(find.text('Todo (2)'));
+    await tester.pump();
+    expect(find.text('Puma Palermo'), findsOneWidget);
+    expect(find.text('Pantalón beige'), findsOneWidget);
+
     await tester.tap(find.text('Calzado (1)'));
+    await tester.pump();
+    expect(find.text('Puma Palermo'), findsNothing);
+    expect(find.text('Pantalón beige'), findsOneWidget);
+
+    await tester.tap(find.text('Calzado (1)'));
+    await tester.pump();
+    expect(find.text('Puma Palermo'), findsOneWidget);
+    expect(find.text('Pantalón beige'), findsOneWidget);
+
+    await tester.tap(find.text('Pantalones (1)'));
     await tester.pump();
     expect(find.text('Puma Palermo'), findsOneWidget);
     expect(find.text('Pantalón beige'), findsNothing);

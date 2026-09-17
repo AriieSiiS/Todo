@@ -23,7 +23,7 @@ class TaskModel {
     this.parentTaskId,
     this.collapsed = false,
     this.calendarLink,
-    this.reminderRule,
+    this.reminderRules = const <ReminderRule>[],
     this.completedAt,
     this.recurrenceCompletions = const <String, DateTime>{},
   });
@@ -45,7 +45,7 @@ class TaskModel {
   final String? parentTaskId;
   final bool collapsed;
   final CalendarLink? calendarLink;
-  final ReminderRule? reminderRule;
+  final List<ReminderRule> reminderRules;
   final DateTime? completedAt;
   final Map<String, DateTime> recurrenceCompletions;
 
@@ -73,8 +73,8 @@ class TaskModel {
     bool? collapsed,
     CalendarLink? calendarLink,
     bool clearCalendarLink = false,
-    ReminderRule? reminderRule,
-    bool clearReminderRule = false,
+    List<ReminderRule>? reminderRules,
+    bool clearReminderRules = false,
     DateTime? completedAt,
     bool clearCompletedAt = false,
     Map<String, DateTime>? recurrenceCompletions,
@@ -99,8 +99,9 @@ class TaskModel {
       collapsed: collapsed ?? this.collapsed,
       calendarLink:
           clearCalendarLink ? null : calendarLink ?? this.calendarLink,
-      reminderRule:
-          clearReminderRule ? null : reminderRule ?? this.reminderRule,
+      reminderRules: clearReminderRules
+          ? const <ReminderRule>[]
+          : reminderRules ?? this.reminderRules,
       completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
       recurrenceCompletions:
           recurrenceCompletions ?? this.recurrenceCompletions,
@@ -126,7 +127,10 @@ class TaskModel {
       'parentTaskId': parentTaskId,
       'collapsed': collapsed,
       'calendarLink': calendarLink?.toJson(),
-      'reminderRule': reminderRule?.toJson(),
+      'reminderRules': reminderRules.map((rule) => rule.toJson()).toList(),
+      // Compatibilidad temporal con versiones que solo admiten un aviso.
+      'reminderRule':
+          reminderRules.isEmpty ? null : reminderRules.first.toJson(),
       'completedAt': completedAt?.toIso8601String(),
       'recurrenceCompletions': recurrenceCompletions.map(
         (key, value) => MapEntry(key, value.toIso8601String()),
@@ -165,11 +169,7 @@ class TaskModel {
           : CalendarLink.fromJson(
               (json['calendarLink'] as Map<dynamic, dynamic>)
                   .cast<String, dynamic>()),
-      reminderRule: json['reminderRule'] == null
-          ? null
-          : ReminderRule.fromJson(
-              (json['reminderRule'] as Map<dynamic, dynamic>)
-                  .cast<String, dynamic>()),
+      reminderRules: _reminderRulesFromJson(json),
       completedAt: json['completedAt'] == null
           ? null
           : DateTime.tryParse(json['completedAt'] as String),
@@ -177,6 +177,21 @@ class TaskModel {
           _recurrenceCompletionsFromJson(json['recurrenceCompletions']),
     );
   }
+}
+
+List<ReminderRule> _reminderRulesFromJson(Map<String, dynamic> json) {
+  if (json.containsKey('reminderRules')) {
+    final values = json['reminderRules'] as List<dynamic>? ?? const <dynamic>[];
+    return values
+        .whereType<Map<dynamic, dynamic>>()
+        .map((value) => ReminderRule.fromJson(value.cast<String, dynamic>()))
+        .where((rule) => rule.enabled)
+        .toList();
+  }
+  final legacy = json['reminderRule'];
+  if (legacy is! Map<dynamic, dynamic>) return const <ReminderRule>[];
+  final rule = ReminderRule.fromJson(legacy.cast<String, dynamic>());
+  return rule.enabled ? <ReminderRule>[rule] : const <ReminderRule>[];
 }
 
 Map<String, DateTime> _recurrenceCompletionsFromJson(Object? value) {

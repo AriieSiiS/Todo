@@ -23,11 +23,14 @@ exploraciones, comprobaciones y artefactos que no cambien el resultado.
 1. Identificar las prendas solicitadas y resolver sus metadatos. Consultar `get_wardrobe_import_contract` solo cuando exista una duda real sobre un valor canónico.
 2. Buscar primero cualquier render de catálogo ya generado durante la tarea. Si el usuario lo considera correcto, conservar exactamente ese archivo y saltar la generación.
 3. Cuando no exista un render válido, leer y seguir la habilidad `imagegen` y generar una sola imagen por prenda. Excluir persona, piel, pelo, móvil, percha, maniquí, escena y sombras.
-4. Generar sobre un fondo croma completamente uniforme cuyo color no aparezca en la prenda. Elegirlo después de revisar colores, cuello, estampados, escudos y texto; no usar automáticamente verde o blanco.
-5. Eliminar el croma localmente una sola vez para obtener PNG RGBA. La máscara debe eliminar únicamente el fondo conectado a los bordes, no píxeles interiores de la prenda que tengan un color parecido.
-6. Realizar una única comprobación visual breve antes de importar. Cuello, mangas o perneras, silueta, colores, patrón, logotipos y texto deben coincidir y el fondo debe ser transparente. No encadenar comprobaciones técnicas que no puedan descubrir un defecto concreto.
-7. Si la transparencia daña una parte de la prenda, repetir una sola vez la eliminación con un umbral más conservador usando el mismo render. No regenerar la prenda para corregir una máscara.
-8. Llamar a `import_wardrobe_item` por cada prenda con su PNG exacto, todos sus metadatos y un `request_id` estable. Cuando responda `savedLocally: true`, confirmar el identificador y pasar a la siguiente prenda o terminar.
+4. Si la categoría es `Calzado`, leer y aplicar el estándar
+   [calzado-catalogo.md](references/calzado-catalogo.md), incluida su guía visual.
+   Para las demás categorías, mantener la composición adecuada a la prenda.
+5. Generar sobre un fondo croma completamente uniforme cuyo color no aparezca en la prenda. Elegirlo después de revisar colores, cuello, estampados, escudos y texto; no usar automáticamente verde o blanco.
+6. Eliminar el croma localmente una sola vez para obtener PNG RGBA. La máscara debe eliminar únicamente el fondo conectado a los bordes, no píxeles interiores de la prenda que tengan un color parecido. Para `Calzado`, usar [prepare_catalog_png.py](scripts/prepare_catalog_png.py), que además fija lienzo y escala.
+7. Realizar una única comprobación visual breve antes de importar. Cuello, mangas o perneras, silueta, colores, patrón, logotipos y texto deben coincidir y el fondo debe ser transparente. En `Calzado`, comprobar también que haya una sola pieza, en perfil lateral elevado, con la puntera hacia la izquierda. No encadenar comprobaciones técnicas que no puedan descubrir un defecto concreto.
+8. Si la transparencia daña una parte de la prenda, repetir una sola vez la eliminación con un umbral más conservador usando el mismo render. No regenerar la prenda para corregir una máscara. Si el normalizador de `Calzado` rechaza únicamente la composición, hacer una sola regeneración dirigida; no rotar el render.
+9. Llamar a `import_wardrobe_item` por cada prenda con su PNG exacto, todos sus metadatos y un `request_id` estable. Cuando responda `savedLocally: true`, confirmar el identificador y pasar a la siguiente prenda o terminar.
 
 No crear una copia completa, carpeta de lote ni manifiesto durante una importación normal, aunque haya varias prendas. No pedir que el usuario pulse `Importar` o `Aprobar lote`. La operación directa es local e idempotente; la sincronización remota puede completarse después y no debe esperarse para dar la tarea por terminada.
 
@@ -43,6 +46,7 @@ resultado incoherente o el usuario informa de un defecto.
 - Mantener separadas prendas parecidas cuando no esté demostrado que sean el mismo objeto.
 - Omitir detalles inciertos antes que inventar bolsillos, cierres, logos, costuras o adornos.
 - Mantener toda la prenda dentro del encuadre y no añadir márgenes artificiales: Todo normaliza automáticamente el tamaño visual.
+- En `Calzado`, no depender solo de esa normalización: mostrar una sola pieza en perfil lateral elevado, con puntera a la izquierda, y preparar el PNG final con el preset `calzado-perfil`.
 - Rechazar cuerpo residual, capas fusionadas, recortes, fondo opaco, texto falso o halo croma.
 - No aceptar que la retirada del fondo cambie o elimine cuello, puños, mangas, bajos, cordones, escudos, logotipos o texto.
 - Una vez aceptado el render, no sustituirlo por otra generación ni importar un archivo intermedio distinto.
@@ -50,6 +54,11 @@ resultado incoherente o el usuario informa de un defecto.
 ## Inserción sin desvíos
 
 Usar `import_wardrobe_item` para una prenda individual. Si la herramienta no aparece en la sesión, comprobar primero que el MCP local de Todo está conectado o recargarlo. Si sigue sin estar disponible, ejecutar el fallback oficial [scripts/import_wardrobe_item.py](scripts/import_wardrobe_item.py), que llama a la misma operación atómica y acepta los valores múltiples repitiendo `--color`, `--season`, `--occasion` o `--tag`.
+
+Para sustituir la imagen de una ficha existente sin alterar sus metadatos ni sus
+referencias, usar `set_wardrobe_item_image`. Su fallback oficial es
+[scripts/set_wardrobe_item_image.py](scripts/set_wardrobe_item_image.py). No
+recrear la prenda con otro identificador.
 
 No sustituir este camino por el importador por lotes, la interfaz gráfica, la edición manual del snapshot ni scripts improvisados. La ausencia de la herramienta no es una razón para repetir la generación. Después de obtener una respuesta con `savedLocally: true`, confirmar el identificador y terminar.
 

@@ -11,7 +11,7 @@ class WardrobePage extends StatefulWidget {
 
 class _WardrobePageState extends State<WardrobePage> {
   String _query = '';
-  String _category = 'Todo';
+  final Set<String> _excludedCategories = <String>{};
   bool _favoritesOnly = false;
 
   TodoWorkspace get controller => widget.controller;
@@ -90,13 +90,15 @@ class _WardrobePageState extends State<WardrobePage> {
         .toSet()
         .toList()
       ..sort(WardrobeTaxonomy.compareCategories);
-    final selectedCategory =
-        categories.contains(_category) ? _category : 'Todo';
+    final categorySet = categories.toSet();
+    final excludedCategories =
+        _excludedCategories.where(categorySet.contains).toSet();
+    final allCategoriesSelected = excludedCategories.isEmpty;
     final normalizedQuery = _query.trim().toLowerCase();
     final items = controller.wardrobeItems.where((item) {
       if (item.archived) return false;
       if (_favoritesOnly && !item.favorite) return false;
-      if (selectedCategory != 'Todo' && item.category != selectedCategory) {
+      if (!_favoritesOnly && excludedCategories.contains(item.category)) {
         return false;
       }
       if (normalizedQuery.isEmpty) return true;
@@ -148,10 +150,17 @@ class _WardrobePageState extends State<WardrobePage> {
                     .where((item) => !item.archived)
                     .length;
                 return _FilterPill(
+                  key: const ValueKey('wardrobe-all-filter'),
                   label: 'Todo ($count)',
-                  selected: selectedCategory == 'Todo' && !_favoritesOnly,
+                  selected: allCategoriesSelected && !_favoritesOnly,
                   onTap: () => setState(() {
-                    _category = 'Todo';
+                    if (allCategoriesSelected && !_favoritesOnly) {
+                      _excludedCategories
+                        ..clear()
+                        ..addAll(categories);
+                    } else {
+                      _excludedCategories.clear();
+                    }
                     _favoritesOnly = false;
                   }),
                 );
@@ -166,7 +175,6 @@ class _WardrobePageState extends State<WardrobePage> {
                   icon: Icons.favorite_rounded,
                   selected: _favoritesOnly,
                   onTap: () => setState(() {
-                    _category = 'Todo';
                     _favoritesOnly = true;
                   }),
                 );
@@ -176,11 +184,17 @@ class _WardrobePageState extends State<WardrobePage> {
                   .where((item) => !item.archived && item.category == value)
                   .length;
               return _FilterPill(
+                key: ValueKey('wardrobe-category-filter-$value'),
                 label: '$value ($count)',
-                selected: selectedCategory == value && !_favoritesOnly,
+                selected:
+                    !excludedCategories.contains(value) && !_favoritesOnly,
                 onTap: () => setState(() {
-                  _category = value;
                   _favoritesOnly = false;
+                  if (_excludedCategories.contains(value)) {
+                    _excludedCategories.remove(value);
+                  } else {
+                    _excludedCategories.add(value);
+                  }
                 }),
               );
             },
@@ -191,17 +205,17 @@ class _WardrobePageState extends State<WardrobePage> {
           child: items.isEmpty
               ? _WardrobeEmpty(
                   icon: normalizedQuery.isEmpty &&
-                          selectedCategory == 'Todo' &&
+                          allCategoriesSelected &&
                           !_favoritesOnly
                       ? Icons.checkroom_outlined
                       : Icons.search_off_rounded,
                   title: normalizedQuery.isEmpty &&
-                          selectedCategory == 'Todo' &&
+                          allCategoriesSelected &&
                           !_favoritesOnly
                       ? 'Tu armario está vacío'
                       : 'No hay prendas con estos filtros',
                   subtitle: normalizedQuery.isEmpty &&
-                          selectedCategory == 'Todo' &&
+                          allCategoriesSelected &&
                           !_favoritesOnly
                       ? 'Añade una prenda o importa un lote preparado por Codex.'
                       : 'Prueba otra categoría o cambia la búsqueda.',

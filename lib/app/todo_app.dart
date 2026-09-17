@@ -27,7 +27,9 @@ class _TodoAppState extends State<TodoApp> {
   @override
   void initState() {
     super.initState();
-    _controllerFuture = TodoWorkspace.create().then((controller) async {
+    _controllerFuture = TodoWorkspace.create(
+      initialImportantAlarmId: widget.launchIntent.importantAlarmId,
+    ).then((controller) async {
       final requestedSection = widget.launchIntent.section;
       if (requestedSection != null) {
         controller.setSection(requestedSection);
@@ -81,13 +83,10 @@ class _TodoMaterialApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visualMode = ref.watch(
-      todoWorkspaceProvider.select((workspace) => workspace.visualMode),
-    );
     return MaterialApp(
       title: 'Todo',
       debugShowCheckedModeBanner: false,
-      theme: buildTodoTheme(visualMode),
+      theme: buildTodoTheme(),
       locale: const Locale('es', 'ES'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

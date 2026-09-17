@@ -124,9 +124,9 @@ class IoNotificationService implements NotificationService {
           title: plan.title,
           body: plan.body,
           scheduledDate: tz.TZDateTime.from(plan.when, tz.UTC),
-          notificationDetails: _notificationDetails(),
+          notificationDetails: _notificationDetails(plan: plan),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: _payloadFor(plan.taskId),
+          payload: _payloadFor(plan.taskId, alarmId: plan.alarmId),
         );
       }
     }
@@ -178,38 +178,60 @@ class IoNotificationService implements NotificationService {
     }
   }
 
-  NotificationDetails _notificationDetails() {
-    return const NotificationDetails(
-      android: AndroidNotificationDetails(
+  NotificationDetails _notificationDetails({NotificationPlan? plan}) {
+    final important = plan?.isImportant ?? false;
+    return NotificationDetails(
+      android: const AndroidNotificationDetails(
         'todo_task_reminders',
         'Recordatorios de tareas',
         channelDescription: 'Avisos de tareas programadas en Todo.',
         importance: Importance.high,
         priority: Priority.high,
       ),
-      iOS: DarwinNotificationDetails(),
+      iOS: const DarwinNotificationDetails(),
       windows: WindowsNotificationDetails(
-        duration: WindowsNotificationDuration.short,
+        duration: important
+            ? WindowsNotificationDuration.long
+            : WindowsNotificationDuration.short,
+        scenario: important ? WindowsNotificationScenario.urgent : null,
+        actions: important
+            ? const <WindowsAction>[
+                WindowsAction(
+                  content: 'Abrir alarma',
+                  arguments: 'open_alarm',
+                ),
+              ]
+            : const <WindowsAction>[],
       ),
     );
   }
 
-  String _payloadFor(String? taskId) =>
-      taskId == null ? 'section:today' : 'task:$taskId';
-
-  void _handleResponse(NotificationResponse response) {
-    _emitPayload(response.payload);
+  String _payloadFor(String? taskId, {String? alarmId}) {
+    if (alarmId != null) {
+      return 'alarm:$alarmId${taskId == null ? '' : '|task:$taskId'}';
+    }
+    return taskId == null ? 'section:today' : 'task:$taskId';
   }
 
-  void _emitPayload(String? payload) {
+  void _handleResponse(NotificationResponse response) {
+    _emitPayload(response.payload, actionId: response.actionId);
+  }
+
+  void _emitPayload(String? payload, {String? actionId}) {
     if (payload == null || payload.isEmpty) {
       return;
     }
-    _actions.add(
-      NotificationAction(
-        taskId: payload.startsWith('task:') ? payload.substring(5) : null,
-      ),
-    );
+    String? taskId;
+    String? alarmId;
+    for (final part in payload.split('|')) {
+      if (part.startsWith('task:')) taskId = part.substring(5);
+      if (part.startsWith('alarm:')) alarmId = part.substring(6);
+    }
+    _actions.add(NotificationAction(
+      taskId: taskId,
+      alarmId: alarmId,
+      actionId: actionId,
+    ));
   }
 
   bool _windowsToastsEnabled() {

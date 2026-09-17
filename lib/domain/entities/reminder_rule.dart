@@ -7,6 +7,7 @@ class ReminderRule {
     this.minutesBefore = 30,
     this.firesAtDayStart = false,
     this.firesAtDayEnd = false,
+    this.deliveryMode = ReminderDeliveryMode.normal,
     this.enabled = false,
   });
 
@@ -14,13 +15,17 @@ class ReminderRule {
   final int minutesBefore;
   final bool firesAtDayStart;
   final bool firesAtDayEnd;
+  final ReminderDeliveryMode deliveryMode;
   final bool enabled;
+
+  bool get isImportant => deliveryMode == ReminderDeliveryMode.important;
 
   ReminderRule copyWith({
     ReminderTriggerMode? triggerMode,
     int? minutesBefore,
     bool? firesAtDayStart,
     bool? firesAtDayEnd,
+    ReminderDeliveryMode? deliveryMode,
     bool? enabled,
   }) {
     return ReminderRule(
@@ -28,6 +33,7 @@ class ReminderRule {
       minutesBefore: minutesBefore ?? this.minutesBefore,
       firesAtDayStart: firesAtDayStart ?? this.firesAtDayStart,
       firesAtDayEnd: firesAtDayEnd ?? this.firesAtDayEnd,
+      deliveryMode: deliveryMode ?? this.deliveryMode,
       enabled: enabled ?? this.enabled,
     );
   }
@@ -38,6 +44,7 @@ class ReminderRule {
       'minutesBefore': minutesBefore,
       'firesAtDayStart': firesAtDayStart,
       'firesAtDayEnd': firesAtDayEnd,
+      'deliveryMode': deliveryMode.name,
       'enabled': enabled,
     };
   }
@@ -49,6 +56,11 @@ class ReminderRule {
       minutesBefore: (json['minutesBefore'] as num?)?.toInt() ?? 30,
       firesAtDayStart: json['firesAtDayStart'] as bool? ?? false,
       firesAtDayEnd: json['firesAtDayEnd'] as bool? ?? false,
+      deliveryMode: enumByName(
+        ReminderDeliveryMode.values,
+        json['deliveryMode'] as String?,
+        ReminderDeliveryMode.normal,
+      ),
       enabled: json['enabled'] as bool? ?? false,
     );
   }

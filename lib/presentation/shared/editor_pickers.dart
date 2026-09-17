@@ -32,32 +32,471 @@ Future<DateTime?> _showTodoDatePicker(
 
 Future<TimeOfDay?> _showTodoTimePicker(
     BuildContext context, TimeOfDay initialTime) {
-  return showTimePicker(
+  final hasTime = _hasVisibleTimeOfDay(initialTime);
+  return showDialog<TimeOfDay>(
     context: context,
-    initialTime: initialTime,
-    builder: (context, child) {
-      return Localizations.override(
-        context: context,
-        locale: const Locale('es'),
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF70835D),
-              onPrimary: Colors.white,
-              surface: Color(0xFFFFFCF8),
-              onSurface: Color(0xFF2D2A25),
-            ),
-            dialogTheme:
-                const DialogThemeData(backgroundColor: Color(0xFFFFFCF8)),
+    barrierColor: Colors.black.withValues(alpha: 0.38),
+    builder: (context) => _TodoTimePickerDialog(
+      initialTime:
+          hasTime ? initialTime : TimeOfDay.fromDateTime(DateTime.now()),
+      startsWithoutTime: !hasTime,
+    ),
+  );
+}
+
+class _TodoTimePickerDialog extends StatefulWidget {
+  const _TodoTimePickerDialog({
+    required this.initialTime,
+    required this.startsWithoutTime,
+  });
+
+  final TimeOfDay initialTime;
+  final bool startsWithoutTime;
+
+  @override
+  State<_TodoTimePickerDialog> createState() => _TodoTimePickerDialogState();
+}
+
+class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
+  static const _loopAnchor = 6000;
+
+  late int _hour;
+  late int _minute;
+  late bool _withoutTime;
+  late final FixedExtentScrollController _hourController;
+  late final FixedExtentScrollController _minuteController;
+
+  @override
+  void initState() {
+    super.initState();
+    _hour = widget.initialTime.hour;
+    _minute = widget.initialTime.minute;
+    _withoutTime = widget.startsWithoutTime;
+    _hourController = FixedExtentScrollController(
+      initialItem: _initialItem(24, _hour),
+    );
+    _minuteController = FixedExtentScrollController(
+      initialItem: _initialItem(60, _minute),
+    );
+  }
+
+  int _initialItem(int count, int value) =>
+      _loopAnchor - (_loopAnchor % count) + value;
+
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _minuteController.dispose();
+    super.dispose();
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  void _setTime(DateTime value) {
+    setState(() {
+      _hour = value.hour;
+      _minute = value.minute;
+      _withoutTime = false;
+    });
+    _moveWheel(_hourController, 24, _hour);
+    _moveWheel(_minuteController, 60, _minute);
+  }
+
+  void _moveWheel(
+    FixedExtentScrollController controller,
+    int count,
+    int value,
+  ) {
+    final current = controller.hasClients
+        ? controller.selectedItem
+        : _initialItem(count, value);
+    final cycleStart = current - (current % count);
+    final candidates = <int>[
+      cycleStart + value,
+      cycleStart + value - count,
+      cycleStart + value + count,
+    ];
+    candidates.sort(
+      (a, b) => (a - current).abs().compareTo((b - current).abs()),
+    );
+    controller.animateToItem(
+      candidates.first,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _stepWheel(
+    FixedExtentScrollController controller,
+    int delta,
+  ) {
+    if (!controller.hasClients) return;
+    controller.animateToItem(
+      controller.selectedItem + delta,
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _wheel({
+    required String label,
+    required int count,
+    required int selectedValue,
+    required FixedExtentScrollController controller,
+    required ValueChanged<int> onChanged,
+    required String keyPrefix,
+    required double height,
+  }) {
+    const itemExtent = 47.0;
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-            child: child!,
+          const SizedBox(height: 8),
+          Container(
+            height: height,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F2EC),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              children: [
+                IconButton(
+                  key: ValueKey('$keyPrefix-decrementar'),
+                  tooltip: 'Valor anterior',
+                  onPressed: () => _stepWheel(controller, -1),
+                  icon: const Icon(Icons.arrow_drop_up_rounded, size: 30),
+                ),
+                Expanded(
+                  child: Listener(
+                    onPointerSignal: (event) {
+                      if (event is PointerScrollEvent &&
+                          event.scrollDelta.dy != 0) {
+                        _stepWheel(
+                          controller,
+                          event.scrollDelta.dy > 0 ? 1 : -1,
+                        );
+                      }
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned.fill(
+                          child: Center(
+                            child: Container(
+                              height: itemExtent,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF70835D),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                          ),
+                        ),
+                        ListWheelScrollView.useDelegate(
+                          key: ValueKey('$keyPrefix-rueda'),
+                          controller: controller,
+                          itemExtent: itemExtent,
+                          diameterRatio: 2.15,
+                          perspective: 0.0025,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            final value = index % count;
+                            if (value == selectedValue && !_withoutTime) return;
+                            setState(() {
+                              onChanged(value);
+                              _withoutTime = false;
+                            });
+                          },
+                          childDelegate: ListWheelChildLoopingListDelegate(
+                            children: [
+                              for (var value = 0; value < count; value++)
+                                Center(
+                                  child: Text(
+                                    _twoDigits(value),
+                                    style: TextStyle(
+                                      color: value == selectedValue
+                                          ? Colors.white
+                                          : const Color(0xFF6E6961),
+                                      fontSize:
+                                          value == selectedValue ? 28 : 22,
+                                      fontWeight: value == selectedValue
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: ValueKey('$keyPrefix-incrementar'),
+                  tooltip: 'Valor siguiente',
+                  onPressed: () => _stepWheel(controller, 1),
+                  icon: const Icon(Icons.arrow_drop_down_rounded, size: 30),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickAction({
+    required Key key,
+    required String label,
+    required VoidCallback onPressed,
+    IconData? icon,
+    bool selected = false,
+  }) {
+    return SizedBox(
+      height: 48,
+      child: FilledButton.tonalIcon(
+        key: key,
+        onPressed: onPressed,
+        icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 19),
+        label: Text(label),
+        style: FilledButton.styleFrom(
+          backgroundColor:
+              selected ? const Color(0xFFDCE7D0) : const Color(0xFFF3F0E9),
+          foregroundColor: const Color(0xFF3E4934),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final compact = screen.width < 520;
+    final wheelHeight = compact ? 228.0 : 286.0;
+    final now = DateTime.now;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 24,
+        vertical: 16,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 610,
+          maxHeight: screen.height - 32,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFCF8),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0xFFE2D5C4)),
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 30,
+                color: Color(0x26000000),
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              compact ? 18 : 34,
+              compact ? 18 : 28,
+              compact ? 18 : 34,
+              compact ? 18 : 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Seleccionar hora',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Elige una hora para esta tarea',
+                            style: TextStyle(
+                              color: Color(0xFF7A7369),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      key: const ValueKey('selector-hora-cerrar'),
+                      tooltip: 'Cerrar',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 18 : 26),
+                Center(
+                  child: AnimatedContainer(
+                    key: const ValueKey('selector-hora-valor'),
+                    duration: const Duration(milliseconds: 160),
+                    width: compact ? double.infinity : 410,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF1E7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _withoutTime
+                          ? 'Sin hora'
+                          : '${_twoDigits(_hour)}:${_twoDigits(_minute)}',
+                      style: TextStyle(
+                        color: const Color(0xFF263E20),
+                        fontSize: compact ? 44 : 62,
+                        height: 1,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _wheel(
+                      label: 'Hora',
+                      count: 24,
+                      selectedValue: _hour,
+                      controller: _hourController,
+                      onChanged: (value) => _hour = value,
+                      keyPrefix: 'selector-hora',
+                      height: wheelHeight,
+                    ),
+                    SizedBox(width: compact ? 10 : 24),
+                    Container(
+                      width: 1,
+                      height: wheelHeight - 24,
+                      color: const Color(0xFFE6DED2),
+                    ),
+                    SizedBox(width: compact ? 10 : 24),
+                    _wheel(
+                      label: 'Minutos',
+                      count: 60,
+                      selectedValue: _minute,
+                      controller: _minuteController,
+                      onChanged: (value) => _minute = value,
+                      keyPrefix: 'selector-minutos',
+                      height: wheelHeight,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Divider(color: Color(0xFFE4DACE)),
+                const SizedBox(height: 16),
+                if (compact)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _quickAction(
+                        key: const ValueKey('selector-hora-ahora'),
+                        label: 'Ahora',
+                        icon: Icons.schedule_rounded,
+                        onPressed: () => _setTime(now()),
+                      ),
+                      _quickAction(
+                        key: const ValueKey('selector-hora-mas-30'),
+                        label: '+30 min',
+                        onPressed: () =>
+                            _setTime(now().add(const Duration(minutes: 30))),
+                      ),
+                      _quickAction(
+                        key: const ValueKey('selector-hora-sin-hora'),
+                        label: 'Sin hora',
+                        selected: _withoutTime,
+                        onPressed: () => setState(() => _withoutTime = true),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _quickAction(
+                          key: const ValueKey('selector-hora-ahora'),
+                          label: 'Ahora',
+                          icon: Icons.schedule_rounded,
+                          onPressed: () => _setTime(now()),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _quickAction(
+                          key: const ValueKey('selector-hora-mas-30'),
+                          label: '+30 min',
+                          onPressed: () => _setTime(
+                            now().add(const Duration(minutes: 30)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _quickAction(
+                          key: const ValueKey('selector-hora-sin-hora'),
+                          label: 'Sin hora',
+                          selected: _withoutTime,
+                          onPressed: () => setState(() => _withoutTime = true),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      key: const ValueKey('selector-hora-cancelar'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      key: const ValueKey('selector-hora-aceptar'),
+                      onPressed: () => Navigator.of(context).pop(
+                        _withoutTime
+                            ? const TimeOfDay(hour: 0, minute: 0)
+                            : TimeOfDay(hour: _hour, minute: _minute),
+                      ),
+                      child: const Text('Aceptar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Future<int?> _showReminderSettingsDialog(
@@ -137,6 +576,7 @@ Future<int?> _showReminderSettingsDialog(
                         runSpacing: 10,
                         children: [
                           for (final minutes in const <int>[
+                            0,
                             5,
                             15,
                             30,
@@ -237,7 +677,9 @@ Future<int?> _showReminderSettingsDialog(
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Si la tarea es a las 09:00, el aviso llegará antes según esta configuración.',
+                                    effectiveMinutes == 0
+                                        ? 'El aviso coincidirá con la hora programada de la tarea.'
+                                        : 'Si la tarea es a las 09:00, el aviso llegará antes según esta configuración.',
                                     style: const TextStyle(
                                         color: Color(0xFF7A7369)),
                                   ),
@@ -266,7 +708,7 @@ Future<int?> _showReminderSettingsDialog(
                                         TextStyle(fontWeight: FontWeight.w600)),
                                 SizedBox(height: 4),
                                 Text(
-                                  'Se aplicara a las nuevas tareas que crees.',
+                                  'Se aplicará a las nuevas tareas que crees.',
                                   style: TextStyle(color: Color(0xFF7A7369)),
                                 ),
                               ],
@@ -592,6 +1034,9 @@ Widget _projectStatusBadge(ProjectStatus status) {
 }
 
 String _reminderPresetLabelGlobal(int minutes) {
+  if (minutes == 0) {
+    return 'A la hora exacta';
+  }
   if (minutes == 60) {
     return '1 hora antes';
   }

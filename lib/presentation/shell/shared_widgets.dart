@@ -30,10 +30,8 @@ class _QuickCaptureBar extends StatelessWidget {
     final action = FilledButton.tonal(
       onPressed: () => showQuickNoteComposer(context, controller),
       style: FilledButton.styleFrom(
-        backgroundColor:
-            visuals.isPhantom ? visuals.panelAlt : const Color(0xFFF7F1E8),
-        foregroundColor:
-            visuals.isPhantom ? visuals.textStrong : const Color(0xFF243127),
+        backgroundColor: const Color(0xFFF7F1E8),
+        foregroundColor: const Color(0xFF243127),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
@@ -155,9 +153,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
           color: visuals.panel,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.textStrong
-                : const Color(0xFFE2D5C4),
+            color: const Color(0xFFE2D5C4),
           ),
         ),
         child: SizedBox(
@@ -602,35 +598,18 @@ class _TaskCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: visuals.isPhantom
-              ? (task.priority == TaskPriority.urgent
-                  ? visuals.accent.withValues(alpha: 0.18)
-                  : visuals.panelAlt)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 22),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: visuals.isPhantom
-                ? (task.priority.index >= TaskPriority.high.index
-                    ? visuals.accent
-                    : visuals.textStrong)
-                : const Color(0xFFE5D8C7),
-            width: visuals.isPhantom ? 1.5 : 1,
+            color: const Color(0xFFE5D8C7),
           ),
-          boxShadow: visuals.isPhantom
-              ? const [
-                  BoxShadow(
-                    blurRadius: 0,
-                    color: Color(0xFF0A0A0A),
-                    offset: Offset(8, 8),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    blurRadius: 18,
-                    color: Color(0x12000000),
-                    offset: Offset(0, 8),
-                  ),
-                ],
+          boxShadow: const [
+            BoxShadow(
+              blurRadius: 18,
+              color: Color(0x12000000),
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -664,10 +643,10 @@ class _TaskCard extends StatelessWidget {
                                 child: Text(
                                   task.title,
                                   style: TextStyle(
-                                    fontSize: visuals.isPhantom ? 24 : 19,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.w700,
                                     color: visuals.textStrong,
-                                    letterSpacing: visuals.isPhantom ? 0.45 : 0,
+                                    letterSpacing: 0,
                                   ),
                                 ),
                               ),
@@ -699,7 +678,8 @@ class _TaskCard extends StatelessWidget {
                                 _SoftChip(label: _timeLabel(task.scheduledAt!)),
                               _SoftChip(
                                   label: _taskPriorityLabel(task.priority)),
-                              if (task.reminderRule?.enabled ?? false)
+                              if (task.reminderRules
+                                  .any((rule) => rule.enabled))
                                 const _SoftChip(
                                     label: 'Aviso',
                                     icon: Icons.notifications_active_rounded),
@@ -782,27 +762,17 @@ class _TaskCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 8),
                               decoration: BoxDecoration(
-                                color: visuals.isPhantom
-                                    ? visuals.panel
-                                    : const Color(0xFFF7F1E9),
-                                borderRadius: BorderRadius.circular(
-                                    visuals.isPhantom ? 0 : 14),
-                                border: Border.all(
-                                    color: visuals.isPhantom
-                                        ? visuals.panelBorder
-                                        : const Color(0xFFE4D8CA)),
+                                color: const Color(0xFFF7F1E9),
+                                borderRadius: BorderRadius.circular(14),
+                                border:
+                                    Border.all(color: const Color(0xFFE4D8CA)),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    visuals.isPhantom
-                                        ? Icons.chevron_right_rounded
-                                        : Icons
-                                            .subdirectory_arrow_right_rounded,
+                                    Icons.subdirectory_arrow_right_rounded,
                                     size: 16,
-                                    color: visuals.isPhantom
-                                        ? visuals.accentAlt
-                                        : null,
+                                    color: null,
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
@@ -845,37 +815,22 @@ class _MetricCard extends StatelessWidget {
       width: 220,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? visuals.panel
-            : Colors.white.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 22),
+        color: Colors.white.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.textStrong
-                : const Color(0xFFE3D5C3),
-            width: visuals.isPhantom ? 1.6 : 1),
-        boxShadow: visuals.isPhantom
-            ? const [
-                BoxShadow(
-                  blurRadius: 0,
-                  offset: Offset(8, 8),
-                  color: Color(0xFF121212),
-                ),
-              ]
-            : null,
+          color: const Color(0xFFE3D5C3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
               style: TextStyle(
-                  color: visuals.isPhantom ? visuals.accentAlt : tone,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: visuals.isPhantom ? 0.8 : 0)),
+                  color: tone, fontWeight: FontWeight.w700, letterSpacing: 0)),
           const SizedBox(height: 12),
           Text(value,
               style: TextStyle(
-                  fontSize: visuals.isPhantom ? 46 : 36,
+                  fontSize: 36,
                   fontWeight: FontWeight.w800,
                   color: visuals.textStrong)),
           const SizedBox(height: 6),
@@ -897,33 +852,20 @@ class _SurfaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visuals = context.visuals;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? visuals.panel
-            : Colors.white.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 26),
+        color: Colors.white.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
-            color: visuals.isPhantom
-                ? visuals.panelBorder
-                : const Color(0xFFE5D8C7),
-            width: visuals.isPhantom ? 1.6 : 1),
-        boxShadow: visuals.isPhantom
-            ? const [
-                BoxShadow(
-                  blurRadius: 0,
-                  color: Color(0xFF0A0A0A),
-                  offset: Offset(10, 10),
-                ),
-              ]
-            : const [
-                BoxShadow(
-                  blurRadius: 20,
-                  color: Color(0x10000000),
-                  offset: Offset(0, 10),
-                ),
-              ],
+          color: const Color(0xFFE5D8C7),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 20,
+            color: Color(0x10000000),
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: Padding(
         padding: padding,
@@ -946,33 +888,20 @@ class _SoftChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visuals = context.visuals;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: visuals.isPhantom
-            ? (color ?? visuals.accent).withValues(alpha: 0.22)
-            : color?.withValues(alpha: 0.14) ?? const Color(0xFFF0E7DA),
-        borderRadius: BorderRadius.circular(visuals.isPhantom ? 0 : 999),
-        border: visuals.isPhantom
-            ? Border.all(color: visuals.textStrong, width: 1.1)
-            : null,
+        color: color?.withValues(alpha: 0.14) ?? const Color(0xFFF0E7DA),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon,
-                size: 15,
-                color: visuals.isPhantom
-                    ? visuals.textStrong
-                    : color ?? const Color(0xFF5A5A57)),
+            Icon(icon, size: 15, color: color ?? const Color(0xFF5A5A57)),
             const SizedBox(width: 6),
           ],
-          Text(label,
-              style: TextStyle(
-                  color: visuals.isPhantom ? visuals.textStrong : null,
-                  letterSpacing: visuals.isPhantom ? 0.3 : 0)),
+          Text(label, style: const TextStyle(letterSpacing: 0)),
         ],
       ),
     );
@@ -992,7 +921,6 @@ class _HeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visuals = context.visuals;
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 154, minHeight: 48),
       child: FilledButton.tonalIcon(
@@ -1005,21 +933,13 @@ class _HeaderActionButton extends StatelessWidget {
         ),
         style: FilledButton.styleFrom(
           minimumSize: const Size(154, 48),
-          backgroundColor:
-              visuals.isPhantom ? visuals.accent : const Color(0xFF263625),
+          backgroundColor: const Color(0xFF263625),
           foregroundColor: const Color(0xFFFFFCF8),
           padding: const EdgeInsets.symmetric(horizontal: 18),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          shape: visuals.isPhantom
-              ? const BeveledRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(3),
-                    bottomRight: Radius.circular(22),
-                  ),
-                )
-              : RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
         ),
       ),
     );
@@ -1115,16 +1035,6 @@ class _PageHeader extends StatelessWidget {
     final heading = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (visuals.isPhantom)
-          Container(
-            width: 18,
-            height: 46,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: visuals.accent,
-              border: Border.all(color: visuals.textStrong),
-            ),
-          ),
         Flexible(
           child: Text(
             title,
@@ -1192,12 +1102,11 @@ class _SectionTabBar extends StatelessWidget {
       indicatorSize: TabBarIndicatorSize.label,
       indicator: UnderlineTabIndicator(
         borderSide: BorderSide(
-          color: visuals.isPhantom ? visuals.accent : const Color(0xFF70835D),
+          color: const Color(0xFF70835D),
           width: 2,
         ),
       ),
-      labelColor:
-          visuals.isPhantom ? visuals.textStrong : const Color(0xFF51693E),
+      labelColor: const Color(0xFF51693E),
       unselectedLabelColor: visuals.textMuted,
       labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       unselectedLabelStyle:
@@ -1240,9 +1149,7 @@ class _FilterPill extends StatelessWidget {
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: selected
-              ? (visuals.isPhantom ? visuals.accent : const Color(0xFFE8F1DD))
-              : (visuals.isPhantom ? visuals.panel : Colors.white),
+          color: selected ? const Color(0xFFE8F1DD) : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: visuals.pageBorder),
         ),
@@ -1253,9 +1160,7 @@ class _FilterPill extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: visuals.isPhantom
-                    ? visuals.textStrong
-                    : const Color(0xFF61764C),
+                color: const Color(0xFF61764C),
               ),
               const SizedBox(width: 7),
             ],

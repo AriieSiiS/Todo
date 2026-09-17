@@ -29,4 +29,13 @@ void main() {
     expect(intent.testNotification, isTrue);
     expect(intent.section, isNull);
   });
+
+  test('una alarma importante conserva su identificador de arranque', () {
+    final intent = AppLaunchIntent.fromArgs(
+      const ['--important-alarm=horno_123_5'],
+    );
+
+    expect(intent.importantAlarmId, 'horno_123_5');
+    expect(intent.section, isNull);
+  });
 }
