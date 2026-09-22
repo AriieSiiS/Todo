@@ -34,6 +34,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$menu.Save()"
 if errorlevel 1 goto :fail
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%TARGET_DIR%\register_lan_sync_agent.ps1" -InstallDirectory "%TARGET_DIR%"
+if errorlevel 1 goto :fail
+
 start "" "%TARGET_DIR%\todo.exe"
 exit /b 0
 

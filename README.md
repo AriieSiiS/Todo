@@ -151,14 +151,19 @@ Scripts útiles:
 
 Para completar el login real de la app, todavía hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
 
-### Android y sincronización por revisión
+### Android por Wi-Fi local
 
-La versión Android usa el mismo snapshot de Supabase que Windows, pero con una capa de revisión para evitar sobrescrituras silenciosas entre dispositivos. Antes de usar la sincronización Android, aplica también [supabase/002_snapshot_revision_sync.sql](</C:/Users/AlejandroAfonso/Documents/Todo/supabase/002_snapshot_revision_sync.sql>).
+La versión Android es un visor de tareas de solo lectura. No inicializa
+Supabase ni comparte el snapshot completo: se empareja mediante el QR de
+`Ajustes > Conexión Android`, descarga por HTTPS local únicamente tareas,
+proyectos y categorías referenciados, conserva una copia sin conexión y
+programa los avisos en el propio teléfono.
 
-Redirects recomendados en Supabase Auth:
-
-- Windows: `http://localhost:3000/`
-- Android: `todo://login-callback`
+Windows instala `todo_lan_agent.exe`, un agente por usuario que arranca con la
+sesión y continúa disponible aunque la ventana de Todo esté cerrada. Su
+certificado, tokens y dispositivos emparejados viven en
+`%LOCALAPPDATA%\Todo\lan_sync`, separados de los datos personales recuperables.
+La sincronización requiere que PC y móvil puedan verse en la misma red privada.
 
 APK privada:
 
@@ -166,7 +171,9 @@ APK privada:
 .\tooling\android_private_apk.ps1
 ```
 
-Si existe `android/key.properties`, el build release usa esa keystore. Puedes partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/Todo/android/key.properties.example>).
+La APK usa `dev.aries.todo` y actualiza la instalación Android anterior. Si
+existe `android/key.properties`, el build release usa esa keystore. Puedes
+partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/Todo/android/key.properties.example>).
 
 ## MCP local
 

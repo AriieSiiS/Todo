@@ -20,6 +20,7 @@ import '../../services/ambient_music_controller.dart';
 import '../../services/clipboard_image_service.dart';
 import '../../services/full_backup_service.dart';
 import '../../services/important_alarm_service.dart';
+import '../../services/lan_sync_desktop_service.dart';
 import '../../domain/models.dart';
 import '../shared/editors.dart';
 import '../knowledge/knowledge_workspace_page.dart';

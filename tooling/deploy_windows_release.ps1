@@ -52,6 +52,18 @@ foreach ($sourceFile in $sourceFiles) {
 }
 
 $executable = Join-Path $target 'todo.exe'
+$agentExecutable = Join-Path $target 'todo_lan_agent.exe'
+if (-not (Test-Path -LiteralPath $agentExecutable -PathType Leaf)) {
+  throw 'La instalación no contiene todo_lan_agent.exe.'
+}
+$registrationScript = Join-Path $target 'register_lan_sync_agent.ps1'
+if (-not (Test-Path -LiteralPath $registrationScript -PathType Leaf)) {
+  throw 'La instalación no contiene register_lan_sync_agent.ps1.'
+}
+& powershell -NoProfile -ExecutionPolicy Bypass -File $registrationScript -InstallDirectory $target
+if ($LASTEXITCODE -ne 0) {
+  throw 'No se pudo registrar el agente de sincronización local.'
+}
 $result = [ordered]@{
   source = $source
   target = $target
@@ -60,6 +72,7 @@ $result = [ordered]@{
   mismatches = $mismatches
   executableSha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
   executableSize = (Get-Item -LiteralPath $executable).Length
+  lanAgentSha256 = (Get-FileHash -LiteralPath $agentExecutable -Algorithm SHA256).Hash
 }
 $result | ConvertTo-Json -Depth 4
 

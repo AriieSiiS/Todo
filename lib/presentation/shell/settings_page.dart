@@ -2,6 +2,34 @@
 
 part of 'app_shell.dart';
 
+class _LanSyncNotice extends StatelessWidget {
+  const _LanSyncNotice({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.visuals.panelAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.visuals.panelBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: context.visuals.accent),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
     required this.controller,
@@ -20,8 +48,12 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _desktopClientController;
   late final TextEditingController _desktopSecretController;
   late final FullBackupService _backupService;
+  late final LanSyncDesktopService _lanSyncService;
   FullBackupOverview? _backupOverview;
+  LanSyncDesktopStatus _lanSyncStatus =
+      const LanSyncDesktopStatus.unavailable();
   bool _backupBusy = false;
+  bool _lanSyncBusy = false;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -29,11 +61,15 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _backupService = widget.backupService ?? FullBackupService();
+    _lanSyncService = LanSyncDesktopService();
     _desktopClientController = TextEditingController(
         text: controller.calendarSettings.desktopClientId);
     _desktopSecretController = TextEditingController(
         text: controller.calendarSettings.desktopClientSecret);
     unawaited(_loadBackupOverview());
+    if (!_isSettingsWidgetTest()) {
+      unawaited(_loadLanSyncStatus());
+    }
   }
 
   @override
@@ -371,6 +407,116 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
+    final androidConnection = _SettingsSectionCard(
+      icon: Icons.phonelink_rounded,
+      title: 'Conexión Android',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Comparte únicamente tus tareas con la aplicación Android mediante la red Wi-Fi local. No usa Supabase ni Internet.',
+            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
+          ),
+          const SizedBox(height: 16),
+          if (_lanSyncBusy)
+            const Center(child: CircularProgressIndicator())
+          else if (!_lanSyncStatus.running)
+            _LanSyncNotice(
+              icon: Icons.sync_problem_rounded,
+              text: _lanSyncStatus.error.isEmpty
+                  ? 'El agente local no está disponible.'
+                  : _lanSyncStatus.error,
+            )
+          else ...[
+            _LanSyncNotice(
+              icon: Icons.lock_rounded,
+              text: _lanSyncStatus.endpoint.isEmpty
+                  ? 'Agente activo; esperando una dirección de red privada.'
+                  : 'Agente cifrado activo en ${_lanSyncStatus.endpoint}',
+            ),
+            const SizedBox(height: 16),
+            if (_lanSyncStatus.pairingAvailable) ...[
+              Center(
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(12),
+                  child: QrImageView(
+                    data: _lanSyncStatus.qrPayload,
+                    size: 210,
+                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Escanea este código desde Todo en Android. Caduca a las ${_timeLabel(_lanSyncStatus.pairingExpiresAt!)}.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.visuals.textMuted,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: _lanSyncStatus.qrPayload),
+                    );
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Código manual copiado.'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Copiar código manual'),
+                ),
+              ),
+            ] else
+              const _LanSyncNotice(
+                icon: Icons.hourglass_empty_rounded,
+                text:
+                    'El código está renovándose. Actualiza dentro de unos segundos.',
+              ),
+            if (_lanSyncStatus.devices.isNotEmpty) ...[
+              const Divider(height: 30),
+              const Text(
+                'Dispositivos emparejados',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              for (final device in _lanSyncStatus.devices)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.smartphone_rounded),
+                  title: Text(device.name),
+                  subtitle: Text(
+                    device.pairedAt == null
+                        ? 'Emparejado'
+                        : 'Emparejado el ${_dateLabel(device.pairedAt!)}',
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Revocar acceso',
+                    onPressed: () => _revokeLanSyncDevice(device),
+                    icon: const Icon(Icons.link_off_rounded),
+                  ),
+                ),
+            ],
+          ],
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _lanSyncBusy ? null : _loadLanSyncStatus,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Actualizar estado'),
+          ),
+        ],
+      ),
+    );
+
     final backup = _SettingsSectionCard(
       icon: Icons.backup_outlined,
       title: 'Copias de seguridad',
@@ -508,6 +654,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       notifications,
                       const SizedBox(height: 16),
+                      androidConnection,
+                      const SizedBox(height: 16),
                       wardrobe,
                       const SizedBox(height: 16),
                       backup,
@@ -529,6 +677,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           dayRules,
                           const SizedBox(height: 16),
                           notifications,
+                          const SizedBox(height: 16),
+                          androidConnection,
                           const SizedBox(height: 16),
                           backup,
                           const SizedBox(height: 16),
@@ -563,6 +713,34 @@ class _SettingsPageState extends State<SettingsPage> {
     final overview = await _backupService.loadOverview();
     if (!mounted) return;
     setState(() => _backupOverview = overview);
+  }
+
+  Future<void> _loadLanSyncStatus() async {
+    if (!Platform.isWindows || _isSettingsWidgetTest()) return;
+    setState(() => _lanSyncBusy = true);
+    final status = await _lanSyncService.loadStatus();
+    if (!mounted) return;
+    setState(() {
+      _lanSyncStatus = status;
+      _lanSyncBusy = false;
+    });
+  }
+
+  bool _isSettingsWidgetTest() {
+    try {
+      return WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _revokeLanSyncDevice(LanSyncPairedDevice device) async {
+    await _lanSyncService.revokeDevice(device.id);
+    await _loadLanSyncStatus();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Acceso revocado para ${device.name}.')),
+    );
   }
 
   Future<void> _confirmFullBackup() async {
