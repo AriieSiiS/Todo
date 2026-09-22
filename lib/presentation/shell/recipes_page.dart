@@ -1881,6 +1881,8 @@ Future<void> _showRecipeEditor(
   final tags = TextEditingController(text: current?.tags.join(', ') ?? '');
   final sourceUrl = TextEditingController(text: current?.sourceUrl ?? '');
   XFile? imageFile;
+  Uint8List? pastedImageBytes;
+  final imagePasteFocus = FocusNode(debugLabel: 'Pegar imagen de receta');
 
   final result = await showDialog<bool>(
     context: context,
@@ -1900,6 +1902,8 @@ Future<void> _showRecipeEditor(
         tags: tags,
         sourceUrl: sourceUrl,
         imageFile: imageFile,
+        pastedImageBytes: pastedImageBytes,
+        imagePasteFocus: imagePasteFocus,
         onTitleChanged: () => setDialogState(() {}),
         onSelectImage: () async {
           final selected = await openFile(
@@ -1911,8 +1915,28 @@ Future<void> _showRecipeEditor(
             ],
           );
           if (selected != null) {
-            setDialogState(() => imageFile = selected);
+            setDialogState(() {
+              imageFile = selected;
+              pastedImageBytes = null;
+            });
           }
+        },
+        onPasteImage: () async {
+          final clipboardResult = await readClipboardImage();
+          if (!context.mounted) return;
+          if (!clipboardResult.hasImage) {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              SnackBar(content: Text(clipboardResult.errorMessage!)),
+            );
+            return;
+          }
+          setDialogState(() {
+            pastedImageBytes = clipboardResult.bytes;
+            imageFile = null;
+          });
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(content: Text('Imagen pegada.')),
+          );
         },
         onCancel: () => Navigator.pop(dialogContext, false),
         onSave: () => Navigator.pop(dialogContext, true),
@@ -1967,7 +1991,17 @@ Future<void> _showRecipeEditor(
         sourceUrl: sourceUrl.text,
       );
     }
-    if (imageFile != null) {
+    if (pastedImageBytes != null) {
+      try {
+        await controller.importRecipeImageBytes(saved.id, pastedImageBytes!);
+      } catch (error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo importar la imagen: $error')),
+          );
+        }
+      }
+    } else if (imageFile != null) {
       try {
         await controller.importRecipeImage(saved.id, imageFile!.path);
       } catch (error) {
@@ -1995,6 +2029,7 @@ Future<void> _showRecipeEditor(
   ]) {
     field.dispose();
   }
+  imagePasteFocus.dispose();
 }
 
 class _RecipeEditorDialog extends StatelessWidget {
@@ -2013,8 +2048,11 @@ class _RecipeEditorDialog extends StatelessWidget {
     required this.tags,
     required this.sourceUrl,
     required this.imageFile,
+    required this.pastedImageBytes,
+    required this.imagePasteFocus,
     required this.onTitleChanged,
     required this.onSelectImage,
+    required this.onPasteImage,
     required this.onCancel,
     required this.onSave,
   });
@@ -2033,8 +2071,11 @@ class _RecipeEditorDialog extends StatelessWidget {
   final TextEditingController tags;
   final TextEditingController sourceUrl;
   final XFile? imageFile;
+  final Uint8List? pastedImageBytes;
+  final FocusNode imagePasteFocus;
   final VoidCallback onTitleChanged;
   final Future<void> Function() onSelectImage;
+  final Future<void> Function() onPasteImage;
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
@@ -2136,47 +2177,86 @@ class _RecipeEditorDialog extends StatelessWidget {
   }
 
   Widget _imagePanel(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0xFFF3EEE5),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: imageFile != null
-                    ? Image.file(
-                        File(imageFile!.path),
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) =>
-                            const _MissingRecipeImage(),
-                      )
-                    : current == null
-                        ? const _MissingRecipeImage()
-                        : _RecipeImage(
-                            controller: controller,
-                            recipe: current!,
-                            thumbnail: false,
-                          ),
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            onPasteImage,
+      },
+      child: Focus(
+        focusNode: imagePasteFocus,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: imagePasteFocus.requestFocus,
+          child: ColoredBox(
+            color: const Color(0xFFF3EEE5),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: pastedImageBytes != null
+                          ? Image.memory(
+                              pastedImageBytes!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) =>
+                                  const _MissingRecipeImage(),
+                            )
+                          : imageFile != null
+                              ? Image.file(
+                                  File(imageFile!.path),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) =>
+                                      const _MissingRecipeImage(),
+                                )
+                              : current == null
+                                  ? const _MissingRecipeImage()
+                                  : _RecipeImage(
+                                      controller: controller,
+                                      recipe: current!,
+                                      thumbnail: false,
+                                    ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: onSelectImage,
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text(
+                          imageFile?.name ??
+                              (pastedImageBytes != null ||
+                                      current?.imagePath.isNotEmpty == true
+                                  ? 'Cambiar imagen'
+                                  : 'Elegir imagen'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: onPasteImage,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('Pegar imagen'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    'También puedes hacer clic aquí y pulsar Ctrl+V.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.visuals.textMuted,
+                          fontWeight: FontWeight.w400,
+                        ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onSelectImage,
-                icon: const Icon(Icons.image_outlined),
-                label: Text(
-                  imageFile?.name ??
-                      (current?.imagePath.isNotEmpty == true
-                          ? 'Cambiar imagen'
-                          : 'Elegir imagen'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -26,6 +26,8 @@ class TaskModel {
     this.reminderRules = const <ReminderRule>[],
     this.completedAt,
     this.recurrenceCompletions = const <String, DateTime>{},
+    this.sourcePlantId,
+    this.sourcePlantCareRoutineId,
   });
 
   final String id;
@@ -48,6 +50,8 @@ class TaskModel {
   final List<ReminderRule> reminderRules;
   final DateTime? completedAt;
   final Map<String, DateTime> recurrenceCompletions;
+  final String? sourcePlantId;
+  final String? sourcePlantCareRoutineId;
 
   bool get isSubtask => parentTaskId != null;
 
@@ -78,6 +82,10 @@ class TaskModel {
     DateTime? completedAt,
     bool clearCompletedAt = false,
     Map<String, DateTime>? recurrenceCompletions,
+    String? sourcePlantId,
+    bool clearSourcePlantId = false,
+    String? sourcePlantCareRoutineId,
+    bool clearSourcePlantCareRoutineId = false,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -105,6 +113,11 @@ class TaskModel {
       completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
       recurrenceCompletions:
           recurrenceCompletions ?? this.recurrenceCompletions,
+      sourcePlantId:
+          clearSourcePlantId ? null : sourcePlantId ?? this.sourcePlantId,
+      sourcePlantCareRoutineId: clearSourcePlantCareRoutineId
+          ? null
+          : sourcePlantCareRoutineId ?? this.sourcePlantCareRoutineId,
     );
   }
 
@@ -135,6 +148,8 @@ class TaskModel {
       'recurrenceCompletions': recurrenceCompletions.map(
         (key, value) => MapEntry(key, value.toIso8601String()),
       ),
+      'sourcePlantId': sourcePlantId,
+      'sourcePlantCareRoutineId': sourcePlantCareRoutineId,
     };
   }
 
@@ -175,6 +190,8 @@ class TaskModel {
           : DateTime.tryParse(json['completedAt'] as String),
       recurrenceCompletions:
           _recurrenceCompletionsFromJson(json['recurrenceCompletions']),
+      sourcePlantId: json['sourcePlantId'] as String?,
+      sourcePlantCareRoutineId: json['sourcePlantCareRoutineId'] as String?,
     );
   }
 }

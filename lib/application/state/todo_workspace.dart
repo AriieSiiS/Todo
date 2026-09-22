@@ -22,6 +22,7 @@ import '../../services/notification_service.dart';
 import '../../services/knowledge_service.dart';
 import '../../services/isaac_save_service.dart';
 import '../../services/household_asset_service.dart';
+import '../../services/plant_asset_service.dart';
 import '../../services/important_alarm_service.dart';
 import '../../services/recipe_asset_service.dart';
 import '../../services/recipe_import_service.dart';
@@ -32,15 +33,16 @@ import '../../services/wardrobe_asset_service.dart';
 
 class TodoWorkspace extends ChangeNotifier {
   TodoWorkspace._(
-    this._store,
-    this._cloudService,
-    this._calendarService,
-    this._notificationService,
-    this._importantAlarmService,
-    this._scheduler,
-    this._feedback,
-    this._knowledgeService,
-  ) {
+      this._store,
+      this._cloudService,
+      this._calendarService,
+      this._notificationService,
+      this._importantAlarmService,
+      this._scheduler,
+      this._feedback,
+      this._knowledgeService,
+      {PlantAssetService? plantAssets})
+      : _plantAssets = plantAssets ?? PlantAssetService() {
     _isaacSaveSync = IsaacSaveSyncService(_knowledgeService);
     _notificationActionSubscription =
         _notificationService.actions.listen(_handleNotificationAction);
@@ -82,13 +84,17 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.library,
     AppSection.wardrobe,
     AppSection.household,
+    AppSection.plants,
     AppSection.recipes,
     AppSection.completed,
     AppSection.settings,
   ];
 
   @visibleForTesting
-  static TodoWorkspace createForTest({AppStateSnapshot? snapshot}) {
+  static TodoWorkspace createForTest({
+    AppStateSnapshot? snapshot,
+    PlantAssetService? plantAssets,
+  }) {
     final controller = TodoWorkspace._(
       _InMemoryTodoStateRepository(snapshot),
       SupabaseCloudSyncRepository(SupabaseCloudService()),
@@ -98,6 +104,7 @@ class TodoWorkspace extends ChangeNotifier {
       TaskSchedulerService(),
       TaskFeedbackService(enabled: false),
       KnowledgeService.inMemory(),
+      plantAssets: plantAssets,
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
@@ -144,11 +151,13 @@ class TodoWorkspace extends ChangeNotifier {
   final List<WardrobeImportBatch> _wardrobeImportBatches =
       <WardrobeImportBatch>[];
   final List<HouseholdItem> _householdItems = <HouseholdItem>[];
+  final List<Plant> _plants = <Plant>[];
   final List<Recipe> _recipes = <Recipe>[];
   final List<WeeklyMenu> _weeklyMenus = <WeeklyMenu>[];
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
   final WardrobeAssetService _wardrobeAssets = WardrobeAssetService();
   final HouseholdAssetService _householdAssets = HouseholdAssetService();
+  final PlantAssetService _plantAssets;
   final RecipeAssetService _recipeAssets = RecipeAssetService();
   final RecipeImportService _recipeImporter = RecipeImportService();
   final RecipeIngredientClassifier _recipeIngredientClassifier =
@@ -227,6 +236,7 @@ class TodoWorkspace extends ChangeNotifier {
       List<WardrobeImportBatch>.unmodifiable(_wardrobeImportBatches);
   List<HouseholdItem> get householdItems =>
       List<HouseholdItem>.unmodifiable(_householdItems);
+  List<Plant> get plants => List<Plant>.unmodifiable(_plants);
   List<Recipe> get recipes => List<Recipe>.unmodifiable(_recipes);
   List<WeeklyMenu> get weeklyMenus =>
       List<WeeklyMenu>.unmodifiable(_weeklyMenus);
@@ -558,6 +568,7 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobePlanEntries: wardrobePlanEntries,
       wardrobePackingLists: wardrobePackingLists,
       householdItems: householdItems,
+      plants: plants,
       recipes: recipes,
       weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
@@ -919,12 +930,36 @@ class TodoWorkspace extends ChangeNotifier {
 
   Future<void> importWardrobeOutfitRender(
       String outfitId, String sourcePath) async {
+    if (!_wardrobeOutfits.any((outfit) => outfit.id == outfitId)) {
+      throw StateError('No se encuentra el conjunto.');
+    }
+    await _setWardrobeOutfitRender(
+      outfitId,
+      await _wardrobeAssets.importOutfitRender(outfitId, sourcePath),
+    );
+  }
+
+  Future<void> importWardrobeOutfitRenderBytes(
+    String outfitId,
+    Uint8List bytes,
+  ) async {
+    if (!_wardrobeOutfits.any((outfit) => outfit.id == outfitId)) {
+      throw StateError('No se encuentra el conjunto.');
+    }
+    await _setWardrobeOutfitRender(
+      outfitId,
+      await _wardrobeAssets.importOutfitRenderBytes(outfitId, bytes),
+    );
+  }
+
+  Future<void> _setWardrobeOutfitRender(
+    String outfitId,
+    String relativePath,
+  ) async {
     final index =
         _wardrobeOutfits.indexWhere((outfit) => outfit.id == outfitId);
     if (index == -1) throw StateError('No se encuentra el conjunto.');
     final previous = _wardrobeOutfits[index].renderImagePath;
-    final relativePath =
-        await _wardrobeAssets.importOutfitRender(outfitId, sourcePath);
     _wardrobeOutfits[index] =
         _wardrobeOutfits[index].copyWith(renderImagePath: relativePath);
     _commit();
@@ -1286,11 +1321,33 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   Future<void> importHouseholdImage(String id, String sourcePath) async {
+    if (householdItemById(id) == null) {
+      throw StateError('No se encuentra el artículo.');
+    }
+    await _importHouseholdStoredImage(
+      id,
+      await _householdAssets.importImage(id, sourcePath),
+    );
+  }
+
+  Future<void> importHouseholdImageBytes(String id, Uint8List bytes) async {
+    if (householdItemById(id) == null) {
+      throw StateError('No se encuentra el artículo.');
+    }
+    await _importHouseholdStoredImage(
+      id,
+      await _householdAssets.importImageBytes(id, bytes),
+    );
+  }
+
+  Future<void> _importHouseholdStoredImage(
+    String id,
+    HouseholdImportedImage imported,
+  ) async {
     final index = _householdItems.indexWhere((item) => item.id == id);
     if (index == -1) throw StateError('No se encuentra el artículo.');
     final previousImage = _householdItems[index].imagePath;
     final previousThumbnail = _householdItems[index].thumbnailPath;
-    final imported = await _householdAssets.importImage(id, sourcePath);
     _householdItems[index] = _householdItems[index].copyWith(
       imagePath: imported.imagePath,
       thumbnailPath: imported.thumbnailPath,
@@ -1363,6 +1420,251 @@ class TodoWorkspace extends ChangeNotifier {
       item.invoicePath,
     ]) {
       if (path.isNotEmpty) unawaited(_householdAssets.deleteAsset(path));
+    }
+  }
+
+  Plant? plantById(String id) {
+    for (final plant in _plants) {
+      if (plant.id == id) return plant;
+    }
+    return null;
+  }
+
+  Future<String> plantImageAbsolutePath(
+    Plant plant, {
+    bool thumbnail = true,
+  }) {
+    final path = thumbnail && plant.thumbnailPath.isNotEmpty
+        ? plant.thumbnailPath
+        : plant.imagePath;
+    return _plantAssets.absolutePath(path);
+  }
+
+  Plant createPlant({
+    required String name,
+    required String commonName,
+    required String scientificName,
+    String cultivar = '',
+    String location = '',
+    DateTime? acquiredAt,
+    String description = '',
+    String light = '',
+    String watering = '',
+    String humidity = '',
+    String temperature = '',
+    String substrate = '',
+    String fertilizing = '',
+    String pruning = '',
+    String propagation = '',
+    String repotting = '',
+    String commonProblems = '',
+    PlantCatSafety catSafety = PlantCatSafety.unknown,
+    String catSafetyNotes = '',
+    List<PlantSource> sources = const <PlantSource>[],
+    List<PlantCareRoutine> routines = const <PlantCareRoutine>[],
+    List<String> tags = const <String>[],
+    String notes = '',
+  }) {
+    final instant = DateTime.now();
+    final plant = Plant(
+      id: _id('plant'),
+      name: name.trim().isEmpty ? 'Planta sin nombre' : name.trim(),
+      commonName: commonName.trim(),
+      scientificName: scientificName.trim(),
+      cultivar: cultivar.trim(),
+      location: location.trim(),
+      acquiredAt: acquiredAt,
+      description: description.trim(),
+      light: light.trim(),
+      watering: watering.trim(),
+      humidity: humidity.trim(),
+      temperature: temperature.trim(),
+      substrate: substrate.trim(),
+      fertilizing: fertilizing.trim(),
+      pruning: pruning.trim(),
+      propagation: propagation.trim(),
+      repotting: repotting.trim(),
+      commonProblems: commonProblems.trim(),
+      catSafety: catSafety,
+      catSafetyNotes: catSafetyNotes.trim(),
+      sources: List<PlantSource>.from(sources),
+      routines: List<PlantCareRoutine>.from(routines),
+      tags: tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(),
+      notes: notes.trim(),
+      createdAt: instant,
+      updatedAt: instant,
+    );
+    _plants.add(plant);
+    _syncPlantCareTasks(plant);
+    _commit();
+    return plant;
+  }
+
+  void updatePlant(Plant updated) {
+    final index = _plants.indexWhere((plant) => plant.id == updated.id);
+    if (index == -1) return;
+    final previous = _plants[index];
+    final next = updated.copyWith(
+      imagePath: previous.imagePath,
+      thumbnailPath: previous.thumbnailPath,
+      imageSha256: previous.imageSha256,
+      updatedAt: DateTime.now(),
+    );
+    _plants[index] = next;
+    _syncPlantCareTasks(next);
+    _commit();
+  }
+
+  Future<void> importPlantImage(String id, String sourcePath) async {
+    if (plantById(id) == null) throw StateError('No se encuentra la planta.');
+    await _importPlantStoredImage(
+      id,
+      await _plantAssets.importImage(id, sourcePath),
+    );
+  }
+
+  Future<void> importPlantImageBytes(String id, Uint8List bytes) async {
+    if (plantById(id) == null) throw StateError('No se encuentra la planta.');
+    await _importPlantStoredImage(
+      id,
+      await _plantAssets.importImageBytes(id, bytes),
+    );
+  }
+
+  Future<void> _importPlantStoredImage(
+    String id,
+    PlantImportedImage imported,
+  ) async {
+    final index = _plants.indexWhere((plant) => plant.id == id);
+    if (index == -1) throw StateError('No se encuentra la planta.');
+    final previousImage = _plants[index].imagePath;
+    final previousThumbnail = _plants[index].thumbnailPath;
+    _plants[index] = _plants[index].copyWith(
+      imagePath: imported.imagePath,
+      thumbnailPath: imported.thumbnailPath,
+      imageSha256: imported.sha256,
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+    for (final path in <String>[previousImage, previousThumbnail]) {
+      if (path.isNotEmpty &&
+          path != imported.imagePath &&
+          path != imported.thumbnailPath) {
+        await _plantAssets.deleteAsset(path);
+      }
+    }
+  }
+
+  void archivePlant(String id, {bool archived = true}) {
+    final index = _plants.indexWhere((plant) => plant.id == id);
+    if (index == -1) return;
+    final next = _plants[index].copyWith(
+      archived: archived,
+      updatedAt: DateTime.now(),
+    );
+    _plants[index] = next;
+    _syncPlantCareTasks(next);
+    _commit();
+  }
+
+  void deletePlant(String id) {
+    final plant = plantById(id);
+    if (plant == null) return;
+    _plants.removeWhere((value) => value.id == id);
+    _tasks.removeWhere((task) => task.sourcePlantId == id);
+    _commit();
+    for (final path in <String>[plant.imagePath, plant.thumbnailPath]) {
+      if (path.isNotEmpty) unawaited(_plantAssets.deleteAsset(path));
+    }
+  }
+
+  CategoryModel _ensurePlantsCategory() {
+    for (final category in _categories) {
+      if (category.name.trim().toLowerCase() == 'plantas') return category;
+    }
+    const category = CategoryModel(
+      id: 'category-plants',
+      name: 'Plantas',
+      description: 'Cuidados y mantenimiento de las plantas.',
+      colorValue: 0xFF4F7A4A,
+      icon: Icons.local_florist_rounded,
+    );
+    _categories.add(category);
+    return category;
+  }
+
+  void _syncPlantCareTasks(Plant plant) {
+    final category = _ensurePlantsCategory();
+    final routineIds = plant.routines.map((routine) => routine.id).toSet();
+    for (final routine in plant.routines) {
+      final index = _tasks.indexWhere(
+        (task) =>
+            task.sourcePlantId == plant.id &&
+            task.sourcePlantCareRoutineId == routine.id,
+      );
+      final date = DateTime(
+        routine.firstDueDate.year,
+        routine.firstDueDate.month,
+        routine.firstDueDate.day,
+      );
+      final title =
+          routine.title.toLowerCase().contains(plant.name.toLowerCase())
+              ? routine.title.trim()
+              : '${routine.title.trim()} · ${plant.name}';
+      final active = routine.enabled && !plant.archived;
+      if (index == -1) {
+        _tasks.add(TaskModel(
+          id: _id('task'),
+          title: title,
+          description: routine.instructions.trim().isEmpty
+              ? null
+              : routine.instructions.trim(),
+          categoryIds: <String>[category.id],
+          scheduledAt: date,
+          status: active ? TaskStatus.active : TaskStatus.archived,
+          recurrence: routine.recurrence,
+          origin: TaskOrigin.plant,
+          manualOrder: _nextManualOrder(),
+          sourcePlantId: plant.id,
+          sourcePlantCareRoutineId: routine.id,
+        ));
+        continue;
+      }
+      final current = _tasks[index];
+      final currentDate = current.scheduledAt;
+      final scheduledAt = currentDate == null
+          ? date
+          : DateTime(
+              date.year,
+              date.month,
+              date.day,
+              currentDate.hour,
+              currentDate.minute,
+            );
+      _tasks[index] = current.copyWith(
+        title: title,
+        description:
+            routine.instructions.trim().isEmpty ? null : routine.instructions,
+        clearDescription: routine.instructions.trim().isEmpty,
+        categoryIds: <String>[category.id],
+        scheduledAt: scheduledAt,
+        status: active ? TaskStatus.active : TaskStatus.archived,
+        recurrence: routine.recurrence,
+        origin: TaskOrigin.plant,
+        sourcePlantId: plant.id,
+        sourcePlantCareRoutineId: routine.id,
+      );
+    }
+    for (var index = 0; index < _tasks.length; index++) {
+      final task = _tasks[index];
+      if (task.sourcePlantId == plant.id &&
+          !routineIds.contains(task.sourcePlantCareRoutineId)) {
+        _tasks[index] = task.copyWith(status: TaskStatus.archived);
+      }
     }
   }
 
@@ -1733,11 +2035,33 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   Future<void> importRecipeImage(String id, String sourcePath) async {
+    if (recipeById(id) == null) {
+      throw StateError('No se encuentra la receta.');
+    }
+    await _importRecipeStoredImage(
+      id,
+      await _recipeAssets.importImage(id, sourcePath),
+    );
+  }
+
+  Future<void> importRecipeImageBytes(String id, Uint8List bytes) async {
+    if (recipeById(id) == null) {
+      throw StateError('No se encuentra la receta.');
+    }
+    await _importRecipeStoredImage(
+      id,
+      await _recipeAssets.importImageBytes(id, bytes),
+    );
+  }
+
+  Future<void> _importRecipeStoredImage(
+    String id,
+    RecipeImportedImage imported,
+  ) async {
     final index = _recipes.indexWhere((recipe) => recipe.id == id);
     if (index == -1) throw StateError('No se encuentra la receta.');
     final previousImage = _recipes[index].imagePath;
     final previousThumbnail = _recipes[index].thumbnailPath;
-    final imported = await _recipeAssets.importImage(id, sourcePath);
     _recipes[index] = _recipes[index].copyWith(
       imagePath: imported.imagePath,
       thumbnailPath: imported.thumbnailPath,
@@ -1946,6 +2270,8 @@ class TodoWorkspace extends ChangeNotifier {
     String? parentTaskId,
     List<ReminderRule> reminderRules = const <ReminderRule>[],
     CalendarLink? calendarLink,
+    String? sourcePlantId,
+    String? sourcePlantCareRoutineId,
   }) {
     final task = TaskModel(
       id: _id('task'),
@@ -1962,6 +2288,8 @@ class TodoWorkspace extends ChangeNotifier {
       parentTaskId: parentTaskId,
       reminderRules: List<ReminderRule>.from(reminderRules),
       calendarLink: calendarLink,
+      sourcePlantId: sourcePlantId,
+      sourcePlantCareRoutineId: sourcePlantCareRoutineId,
     );
     _tasks.add(task);
     if (parentTaskId != null) {
@@ -3211,6 +3539,7 @@ class TodoWorkspace extends ChangeNotifier {
 
   Future<void> resetToSeed() async {
     _clearStateToDefaults();
+    _ensurePlantsCategory();
     await _calendarService.disconnect();
     await _store.clearCalendarSession();
     _commit();
@@ -3426,6 +3755,10 @@ class TodoWorkspace extends ChangeNotifier {
     String? collectionName,
     int? collectionNumber,
     bool showCollectionNumber = false,
+    int rewatchCount = 1,
+    int? seasonCount,
+    bool nextSeasonConfirmed = false,
+    LibraryPublicationStatus? publicationStatus,
   }) {
     final now = DateTime.now();
     final normalizedCompletedDate = status == LibraryItemStatus.completed
@@ -3460,6 +3793,10 @@ class TodoWorkspace extends ChangeNotifier {
           ? collectionNumber
           : null,
       showCollectionNumber: showCollectionNumber,
+      rewatchCount: rewatchCount.clamp(1, 99).toInt(),
+      seasonCount: seasonCount != null && seasonCount > 0 ? seasonCount : null,
+      nextSeasonConfirmed: nextSeasonConfirmed,
+      publicationStatus: publicationStatus,
       createdAt: now,
       updatedAt: now,
     );
@@ -3985,6 +4322,14 @@ class TodoWorkspace extends ChangeNotifier {
       collectionNumber: primary.collectionNumber ?? secondary.collectionNumber,
       showCollectionNumber:
           primary.showCollectionNumber || secondary.showCollectionNumber,
+      rewatchCount: primary.rewatchCount > secondary.rewatchCount
+          ? primary.rewatchCount
+          : secondary.rewatchCount,
+      seasonCount: primary.seasonCount ?? secondary.seasonCount,
+      nextSeasonConfirmed:
+          primary.nextSeasonConfirmed || secondary.nextSeasonConfirmed,
+      publicationStatus:
+          primary.publicationStatus ?? secondary.publicationStatus,
       linkedGoalId: primary.linkedGoalId ?? secondary.linkedGoalId,
       createdAt: keeper.createdAt.isBefore(incoming.createdAt)
           ? keeper.createdAt
@@ -4105,14 +4450,18 @@ class TodoWorkspace extends ChangeNotifier {
       final normalized = _normalizeLoadedSpanishText();
       final migratedChecklists = _migrateLegacyChecklistsToSubtasks();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
-      if (persisted.schemaVersion < 9 ||
+      final migratedPlants = await _prepareEmptyPlantsFeature();
+      if (persisted.schemaVersion < 11 ||
           normalized ||
           migratedChecklists ||
-          syncedLibraryGoals) {
+          syncedLibraryGoals ||
+          migratedPlants) {
         await _persist();
       }
     } else {
       _clearStateToDefaults();
+      _ensurePlantsCategory();
+      await _persist();
     }
     await _knowledgeService.initialize();
     await _knowledgeService.ensureLibraryRoots(_libraryItems);
@@ -4282,6 +4631,9 @@ class TodoWorkspace extends ChangeNotifier {
     _householdItems
       ..clear()
       ..addAll(snapshot.householdItems);
+    _plants
+      ..clear()
+      ..addAll(snapshot.plants);
     _recipes
       ..clear()
       ..addAll(snapshot.recipes);
@@ -4306,6 +4658,28 @@ class TodoWorkspace extends ChangeNotifier {
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
     _syncCompletedLibraryGoalsIntoItems();
   }
+
+  Future<bool> _prepareEmptyPlantsFeature() async {
+    final hadCategory = _categories.any(
+      (category) => category.name.trim().toLowerCase() == 'plantas',
+    );
+    _ensurePlantsCategory();
+    final sampleIndex =
+        _plants.indexWhere((plant) => plant.id == 'plant-example-spider');
+    final sample = sampleIndex == -1 ? null : _plants.removeAt(sampleIndex);
+    final taskCount = _tasks.length;
+    _tasks.removeWhere((task) => task.sourcePlantId == 'plant-example-spider');
+    if (sample != null) {
+      for (final path in <String>[sample.imagePath, sample.thumbnailPath]) {
+        if (path.isNotEmpty) await _plantAssets.deleteAsset(path);
+      }
+    }
+    return !hadCategory || sample != null || taskCount != _tasks.length;
+  }
+
+  @visibleForTesting
+  Future<bool> prepareEmptyPlantsFeatureForTest() =>
+      _prepareEmptyPlantsFeature();
 
   bool _migrateLegacyChecklistsToSubtasks() {
     final parents = _tasks.where((task) => task.checklist.isNotEmpty).toList();
@@ -4723,6 +5097,7 @@ class TodoWorkspace extends ChangeNotifier {
       wardrobePackingLists: wardrobePackingLists,
       wardrobeImportBatches: wardrobeImportBatches,
       householdItems: householdItems,
+      plants: plants,
       recipes: recipes,
       weeklyMenus: weeklyMenus,
       calendarEvents: calendarEvents,
@@ -4738,7 +5113,7 @@ class TodoWorkspace extends ChangeNotifier {
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 9,
+      schemaVersion: 11,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -4786,6 +5161,10 @@ class TodoWorkspace extends ChangeNotifier {
     if (target.isBefore(start)) {
       return false;
     }
+    if (task.recurrence.activeMonths.isNotEmpty &&
+        !task.recurrence.activeMonths.contains(target.month)) {
+      return false;
+    }
     final days = target.difference(start).inDays;
     switch (task.recurrence.type) {
       case RecurrenceType.none:
@@ -4795,6 +5174,12 @@ class TodoWorkspace extends ChangeNotifier {
         return days % task.recurrence.interval == 0;
       case RecurrenceType.weekly:
         return days % (7 * task.recurrence.interval) == 0;
+      case RecurrenceType.monthly:
+        final months =
+            (target.year - start.year) * 12 + target.month - start.month;
+        if (months % task.recurrence.interval != 0) return false;
+        final lastDay = DateTime(target.year, target.month + 1, 0).day;
+        return target.day == min(start.day, lastDay);
       case RecurrenceType.yearly:
         return target.month == start.month &&
             target.day == start.day &&
@@ -4969,6 +5354,7 @@ class TodoWorkspace extends ChangeNotifier {
     _wardrobePackingLists.clear();
     _wardrobeImportBatches.clear();
     _householdItems.clear();
+    _plants.clear();
     _recipes.clear();
     _weeklyMenus.clear();
     _calendarEvents.clear();

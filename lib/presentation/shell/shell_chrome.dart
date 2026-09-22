@@ -213,6 +213,7 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.library => LibraryPage(controller: controller),
       AppSection.wardrobe => WardrobePage(controller: controller),
       AppSection.household => HouseholdPage(controller: controller),
+      AppSection.plants => PlantsPage(controller: controller),
       AppSection.recipes => RecipesPage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
@@ -591,6 +592,11 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         icon: Icons.home_work_rounded,
         label: 'Hogar',
       ),
+    AppSection.plants => const _SidebarDestination(
+        section: AppSection.plants,
+        icon: Icons.local_florist_rounded,
+        label: 'Plantas',
+      ),
     AppSection.recipes => const _SidebarDestination(
         section: AppSection.recipes,
         icon: Icons.restaurant_menu_rounded,
@@ -688,6 +694,7 @@ class _MobileNav extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
         return SafeArea(
           child: ListView(

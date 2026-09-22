@@ -125,6 +125,7 @@ class _InboxPageState extends State<InboxPage> {
                           : _InboxNoteDetail(
                               note: selectedNote,
                               categories: controller.categories,
+                              onBodyChanged: _updateNoteBody,
                               onEdit: _startEditingNote,
                               onEditCategories: _editNoteCategories,
                               onCreateTask: _createTaskFromNote,
@@ -173,6 +174,20 @@ class _InboxPageState extends State<InboxPage> {
 
   void _finishEditingNote() {
     setState(() => _editingNoteId = null);
+  }
+
+  void _updateNoteBody(QuickNote note, String body) {
+    final current = controller.noteById(note.id);
+    if (current == null) return;
+    final title = _splitNoteContent(current.content).title;
+    final normalizedBody = body.trim();
+    final content = normalizedBody.isEmpty ? title : '$title\n$normalizedBody';
+    if (content == current.content) return;
+    controller.updateNote(
+      current.id,
+      content: content,
+      scheduledFor: current.scheduledFor,
+    );
   }
 
   Future<void> _editNoteInDialog(QuickNote note) async {
@@ -1260,7 +1275,8 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
     final body = parts.body ?? '';
     _editorState = body.trim().isEmpty
         ? EditorState.blank()
-        : EditorState(document: markdownToDocument(body));
+        : EditorState(
+            document: markdownToDocument(_normalizeNoteMarkdown(body)));
     _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
     _emoji = widget.note.emoji;
     _isPinned = widget.note.isPinned;
@@ -1425,9 +1441,9 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
                 key: const ValueKey('contenidoNotaEnPanel'),
                 editorState: _editorState,
                 editable: true,
-                blockComponentBuilders: standardBlockComponentBuilderMap,
+                blockComponentBuilders: _compactNoteBlockComponentBuilders,
                 commandShortcutEvents: standardCommandShortcutEvents,
-                characterShortcutEvents: standardCharacterShortcutEvents,
+                characterShortcutEvents: _noteCharacterShortcutEvents,
                 editorStyle: EditorStyle.desktop(
                   padding: const EdgeInsets.all(18),
                   cursorColor: const Color(0xFF607A4D),
@@ -1435,9 +1451,10 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
                   textStyleConfiguration: const TextStyleConfiguration(
                     text: TextStyle(
                       fontSize: 16,
-                      height: 1.5,
+                      height: 1.15,
                       color: Color(0xFF2D2A25),
                     ),
+                    lineHeight: 1.15,
                     bold: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
@@ -1544,6 +1561,7 @@ class _InboxNoteDetail extends StatelessWidget {
   const _InboxNoteDetail({
     required this.note,
     required this.categories,
+    required this.onBodyChanged,
     required this.onEdit,
     required this.onEditCategories,
     required this.onCreateTask,
@@ -1556,6 +1574,7 @@ class _InboxNoteDetail extends StatelessWidget {
 
   final QuickNote? note;
   final List<CategoryModel> categories;
+  final void Function(QuickNote, String) onBodyChanged;
   final Future<void> Function(QuickNote) onEdit;
   final Future<void> Function(QuickNote) onEditCategories;
   final Future<void> Function(QuickNote) onCreateTask;
@@ -1683,19 +1702,11 @@ class _InboxNoteDetail extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 22),
           Expanded(
-            child: parts.body == null
-                ? Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      'Esta nota no tiene texto adicional.',
-                      style: TextStyle(
-                        color: visuals.textMuted,
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  )
-                : _InboxRichTextViewer(markdown: parts.body!),
+            child: _InboxDirectNoteEditor(
+              key: ValueKey('escrituraDirectaNota-${selected.id}'),
+              markdown: parts.body ?? '',
+              onChanged: (body) => onBodyChanged(selected, body),
+            ),
           ),
           const SizedBox(height: 18),
           Row(
@@ -1755,61 +1766,105 @@ class _InboxNoteDetail extends StatelessWidget {
   }
 }
 
-class _InboxRichTextViewer extends StatefulWidget {
-  const _InboxRichTextViewer({required this.markdown});
+class _InboxDirectNoteEditor extends StatefulWidget {
+  const _InboxDirectNoteEditor({
+    required this.markdown,
+    required this.onChanged,
+    super.key,
+  });
 
   final String markdown;
+  final ValueChanged<String> onChanged;
 
   @override
-  State<_InboxRichTextViewer> createState() => _InboxRichTextViewerState();
+  State<_InboxDirectNoteEditor> createState() => _InboxDirectNoteEditorState();
 }
 
-class _InboxRichTextViewerState extends State<_InboxRichTextViewer> {
+class _InboxDirectNoteEditorState extends State<_InboxDirectNoteEditor> {
   late EditorState _editorState;
+  StreamSubscription<EditorTransactionValue>? _transactionSubscription;
+  Timer? _saveTimer;
+  late String _sourceMarkdown;
 
   @override
   void initState() {
     super.initState();
-    _editorState = _createEditorState();
+    _sourceMarkdown = widget.markdown.trim();
+    _createEditorState();
   }
 
   @override
-  void didUpdateWidget(covariant _InboxRichTextViewer oldWidget) {
+  void didUpdateWidget(covariant _InboxDirectNoteEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.markdown == widget.markdown) return;
+    final incoming = widget.markdown.trim();
+    if (incoming == _sourceMarkdown) return;
+    final current = documentToMarkdown(_editorState.document).trim();
+    _sourceMarkdown = incoming;
+    if (incoming == current) return;
+    _saveTimer?.cancel();
+    unawaited(_transactionSubscription?.cancel());
     _editorState.dispose();
-    _editorState = _createEditorState();
+    _createEditorState();
   }
 
   @override
   void dispose() {
+    _saveTimer?.cancel();
+    _saveNow();
+    unawaited(_transactionSubscription?.cancel());
     _editorState.dispose();
     super.dispose();
   }
 
-  EditorState _createEditorState() {
-    final state = EditorState(document: markdownToDocument(widget.markdown));
-    state.logConfiguration.level = AppFlowyEditorLogLevel.off;
-    return state;
+  void _createEditorState() {
+    _editorState = _sourceMarkdown.isEmpty
+        ? EditorState.blank()
+        : EditorState(
+            document: markdownToDocument(
+              _normalizeNoteMarkdown(_sourceMarkdown),
+            ),
+          );
+    _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
+    _transactionSubscription = _editorState.transactionStream.listen((event) {
+      if (event.$1 != TransactionTime.after) return;
+      _saveTimer?.cancel();
+      _saveTimer = Timer(const Duration(milliseconds: 500), _saveNow);
+    });
+  }
+
+  void _saveNow() {
+    _saveTimer?.cancel();
+    final markdown = documentToMarkdown(_editorState.document).trim();
+    if (markdown == _sourceMarkdown) return;
+    _sourceMarkdown = markdown;
+    widget.onChanged(markdown);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppFlowyEditor(
-      editorState: _editorState,
-      editable: false,
-      blockComponentBuilders: standardBlockComponentBuilderMap,
-      editorStyle: EditorStyle.desktop(
-        padding: EdgeInsets.zero,
-        cursorColor: const Color(0xFF607A4D),
-        selectionColor: const Color(0xFFD8E4CF),
-        textStyleConfiguration: const TextStyleConfiguration(
-          text: TextStyle(
-            fontSize: 17,
-            height: 1.55,
-            color: Color(0xFF2D2A25),
+    return Focus(
+      onFocusChange: (hasFocus) {
+        if (!hasFocus) _saveNow();
+      },
+      child: AppFlowyEditor(
+        key: const ValueKey('contenidoNotaDirecto'),
+        editorState: _editorState,
+        editable: true,
+        blockComponentBuilders: _directNoteBlockComponentBuilders,
+        commandShortcutEvents: standardCommandShortcutEvents,
+        characterShortcutEvents: _noteCharacterShortcutEvents,
+        editorStyle: EditorStyle.desktop(
+          padding: EdgeInsets.zero,
+          cursorColor: const Color(0xFF607A4D),
+          selectionColor: const Color(0xFFD8E4CF),
+          textStyleConfiguration: const TextStyleConfiguration(
+            text: TextStyle(
+              fontSize: 17,
+              height: 1.55,
+              color: Color(0xFF2D2A25),
+            ),
+            bold: TextStyle(fontWeight: FontWeight.w800),
           ),
-          bold: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -1905,6 +1960,11 @@ _NoteContentParts _splitNoteContent(String content) {
   final body = bodyParts.isEmpty ? null : bodyParts.join('\n\n');
   return _NoteContentParts(title, body);
 }
+
+String _normalizeNoteMarkdown(String markdown) => markdown.replaceAllMapped(
+      RegExp(r'!\[\]\(([A-Za-z]:\\[^\r\n)]*)\)'),
+      (match) => '![](${match.group(1)!.replaceAll('\\', '/')})',
+    );
 
 String _collapseNoteText(String content) => content
     .replaceAll(RegExp(r'^#{1,6}\s+', multiLine: true), '')

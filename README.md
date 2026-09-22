@@ -30,6 +30,8 @@ Este repositorio contiene:
   maletas, estadísticas e importaciones preparadas por Codex
 - un inventario visual de Hogar para compras, aparatos, manuales, facturas,
   números de serie y garantías
+- un catálogo de Plantas con cuidados, seguridad para gatos y rutinas
+  recurrentes enlazadas con tareas
 - un recetario visual con tiempos, raciones, ingredientes, pasos, favoritos,
   imágenes e importación desde JSON o páginas con datos schema.org
 
@@ -55,6 +57,18 @@ Codex puede completar el flujo mediante el MCP local: crear la ficha con
 `set_household_item_image` y guardar el manual o la factura PDF con
 `set_household_item_document`. Así la aplicación no necesita claves de IA ni
 acceso permanente al correo o a la web.
+
+## Plantas
+
+La sección `Plantas` muestra cada ejemplar como una tarjeta visual con su
+ubicación, seguridad para gatos y próximo cuidado. La ficha reúne información
+botánica, condiciones de cultivo, fuentes verificables, notas y rutinas
+editables. Las imágenes y miniaturas se guardan en `Documents/Todo/plants`.
+
+Cada rutina activa crea o actualiza una tarea recurrente de día completo en la
+categoría `Plantas`. La relación por identificadores evita duplicados y permite
+conservar las horas, los avisos y el historial que el usuario haya añadido a la
+tarea. Archivar o eliminar una planta hace lo mismo con sus tareas enlazadas.
 
 ## Recetas
 

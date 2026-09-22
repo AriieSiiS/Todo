@@ -35,6 +35,7 @@ Eso significa que cuando lleves este proyecto a otro PC:
 - preparar lotes de prendas PNG para revisarlos en la sección Ropa
 - gestionar prendas, conjuntos, usos, lavandería, planificación y maletas
 - gestionar recetas, sus imágenes y su conversión en tareas de compra o cocina
+- gestionar plantas, imágenes, seguridad felina y rutinas de cuidado enlazadas con tareas
 
 Cada tarea admite varios avisos simultáneos. `set_task_reminder` añade uno sin
 sustituir los anteriores; `clear_task_reminder` elimina el aviso indicado o
@@ -121,6 +122,24 @@ permanente a la aplicación a servicios externos:
 Los archivos quedan bajo `household/images`, `household/thumbnails`,
 `household/manuals` y `household/invoices`; el snapshot guarda únicamente sus
 rutas relativas y metadatos.
+
+## Plantas y cuidados automáticos
+
+El MCP permite dar de alta y mantener plantas sin abrir la interfaz:
+
+1. `get_plant_contract` devuelve el formato de ficha, rutinas y seguridad para
+   gatos.
+2. `create_plant` crea de forma idempotente la planta y una tarea recurrente
+   independiente por cada rutina activa.
+3. `set_plant_image` guarda un PNG de catálogo de al menos 400 × 400 píxeles en
+   `Documents/Todo/plants`.
+4. `list_plants`, `update_plant` y `delete_plant` permiten verificar, editar o
+   retirar la ficha y sus tareas enlazadas.
+
+Las rutinas pertenecen a una única categoría `Plantas`, reutilizada sin
+distinguir mayúsculas. Las tareas nuevas no incluyen hora ni aviso; si el
+usuario añade esos ajustes desde Todo, una edición posterior de la ficha los
+conserva. `request_id` evita duplicados al reintentar creaciones o imágenes.
 
 ## Recetas y tareas
 

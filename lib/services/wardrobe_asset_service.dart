@@ -71,7 +71,13 @@ class WardrobeAssetService {
       throw const FileSystemException(
           'No se encuentra la imagen del conjunto.');
     }
-    final bytes = await source.readAsBytes();
+    return importOutfitRenderBytes(outfitId, await source.readAsBytes());
+  }
+
+  Future<String> importOutfitRenderBytes(
+    String outfitId,
+    Uint8List bytes,
+  ) async {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) {
       throw const FormatException('La imagen del conjunto no es válida.');

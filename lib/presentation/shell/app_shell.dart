@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' show max, min;
 import 'dart:io';
 
@@ -9,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:super_clipboard/super_clipboard.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../application/providers/todo_providers.dart';
@@ -17,6 +17,7 @@ import '../../application/state/todo_workspace.dart';
 import '../../app/app_launch_intent.dart';
 import '../../app/todo_theme.dart';
 import '../../services/ambient_music_controller.dart';
+import '../../services/clipboard_image_service.dart';
 import '../../services/full_backup_service.dart';
 import '../../services/important_alarm_service.dart';
 import '../../domain/models.dart';
@@ -32,6 +33,7 @@ part 'calendar_page.dart';
 part 'library_page.dart';
 part 'wardrobe_page.dart';
 part 'household_page.dart';
+part 'plants_page.dart';
 part 'recipes_page.dart';
 part 'inbox_page.dart';
 part 'completed_page.dart';

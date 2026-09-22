@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -275,6 +276,10 @@ void main() {
     );
 
     final imported = await service.importImage('plato-1', source.path);
+    final pasted = await service.importImageBytes(
+      'plato-pegado',
+      Uint8List.fromList(img.encodePng(picture)),
+    );
 
     expect(File(await service.absolutePath(imported.imagePath)).existsSync(),
         isTrue);
@@ -282,6 +287,8 @@ void main() {
       File(await service.absolutePath(imported.thumbnailPath)).existsSync(),
       isTrue,
     );
+    expect(File(await service.absolutePath(pasted.imagePath)).existsSync(),
+        isTrue);
   });
 
   testWidgets('Recetas muestra el catálogo visual y sus filtros',

@@ -8,6 +8,7 @@ export 'entities/library_item.dart';
 export 'entities/library_goal.dart';
 export 'entities/knowledge.dart';
 export 'entities/notification_plan.dart';
+export 'entities/plant.dart';
 export 'entities/project.dart';
 export 'entities/quick_note.dart';
 export 'entities/recipe.dart';

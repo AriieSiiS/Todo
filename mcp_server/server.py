@@ -155,6 +155,7 @@ def default_state() -> dict[str, Any]:
         "wardrobePackingLists": [],
         "wardrobeImportBatches": [],
         "householdItems": [],
+        "plants": [],
         "recipes": [],
         "weeklyMenus": [],
         "calendarEvents": [],
@@ -191,12 +192,13 @@ def default_state() -> dict[str, Any]:
             "library",
             "wardrobe",
             "household",
+            "plants",
             "recipes",
             "completed",
             "settings",
         ],
         "updatedAt": now_iso(),
-        "schemaVersion": 9,
+        "schemaVersion": 11,
         "lastModifiedBy": "mcp",
     }
 
@@ -317,6 +319,7 @@ def load_state() -> dict[str, Any]:
     migrated = migrate_library_state(state)
     migrated = migrate_task_reminders(state) or migrated
     migrated = migrate_removed_visual_mode(state) or migrated
+    migrated = migrate_plants_feature(state) or migrated
     if migrated:
         touch_state(state)
     write_local_state(state)
@@ -336,7 +339,7 @@ def save_state(state: dict[str, Any]) -> None:
 
 def touch_state(state: dict[str, Any]) -> None:
     state["updatedAt"] = now_iso()
-    state["schemaVersion"] = max(9, int(state.get("schemaVersion", 1) or 1))
+    state["schemaVersion"] = max(11, int(state.get("schemaVersion", 1) or 1))
     credentials = remote_credentials() if remote_enabled() else None
     state["lastModifiedBy"] = credentials[2] if credentials is not None else "mcp"
 
@@ -1195,6 +1198,12 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "show_collection_number": boolean,
         "clear_collection_name": boolean,
         "clear_collection_number": boolean,
+        "rewatch_count": integer,
+        "season_count": integer,
+        "clear_season_count": boolean,
+        "next_season_confirmed": boolean,
+        "publication_status": string,
+        "clear_publication_status": boolean,
         "confirm": boolean,
     }
     wardrobe_fields = {
@@ -1231,6 +1240,34 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "warranty_until": string,
         "price": number,
         "tags": strings,
+        "archived": boolean,
+    }
+    plant_fields = {
+        "plant_id": string,
+        "request_id": string,
+        "name": string,
+        "common_name": string,
+        "scientific_name": string,
+        "cultivar": string,
+        "location": string,
+        "acquired_at": string,
+        "description": string,
+        "light": string,
+        "watering": string,
+        "humidity": string,
+        "temperature": string,
+        "substrate": string,
+        "fertilizing": string,
+        "pruning": string,
+        "propagation": string,
+        "repotting": string,
+        "common_problems": string,
+        "cat_safety": string,
+        "cat_safety_notes": string,
+        "sources": {"type": "array", "items": {"type": "object"}},
+        "routines": {"type": "array", "items": {"type": "object"}},
+        "tags": strings,
+        "notes": string,
         "archived": boolean,
     }
     recipe_fields = {
@@ -1327,6 +1364,12 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("set_household_item_image", "Asocia a una ficha una imagen PNG de catálogo generada o preparada por Codex.", {"item_id": string, "source_file": string}, ["item_id", "source_file"]),
         tool("set_household_item_document", "Guarda un manual o una factura PDF dentro de la ficha de Hogar.", {"item_id": string, "kind": string, "source_file": string, "source_url": string}, ["item_id", "kind", "source_file"]),
         tool("delete_household_item", "Elimina una ficha de Hogar y sus recursos locales.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
+        tool("get_plant_contract", "Devuelve el contrato para añadir plantas con cuidados y seguridad felina verificados.", {}, []),
+        tool("list_plants", "Lista las plantas y sus rutinas de cuidado.", {"include_archived": boolean}, []),
+        tool("create_plant", "Crea de forma idempotente una planta y sus tareas automáticas en la categoría Plantas.", plant_fields, ["request_id", "name", "scientific_name"]),
+        tool("update_plant", "Actualiza una planta y sincroniza sus tareas automáticas sin duplicarlas.", plant_fields, ["plant_id"]),
+        tool("set_plant_image", "Asocia de forma idempotente una imagen PNG de catálogo a una planta.", {"plant_id": string, "source_file": string, "request_id": string}, ["plant_id", "source_file", "request_id"]),
+        tool("delete_plant", "Elimina una planta, sus tareas enlazadas y sus imágenes locales.", {"plant_id": string, "confirm": boolean}, ["plant_id", "confirm"]),
         tool("list_recipes", "Lista las recetas del recetario visual.", {"include_archived": boolean, "favorites_only": boolean}, []),
         tool("create_recipe", "Crea una receta con tiempos, raciones, ingredientes y pasos.", recipe_fields, ["title"]),
         tool("update_recipe", "Actualiza una receta existente.", recipe_fields, ["recipe_id"]),
@@ -1526,6 +1569,34 @@ def migrate_removed_visual_mode(state: dict[str, Any]) -> bool:
     if int(state.get("schemaVersion", 1) or 1) < 8:
         state["schemaVersion"] = 8
         changed = True
+    return changed
+
+
+def migrate_plants_feature(state: dict[str, Any]) -> bool:
+    ensure_core_lists(state)
+    changed = int(state.get("schemaVersion", 1) or 1) < 11
+    sample_id = "plant-example-spider"
+    samples = [plant for plant in state["plants"] if plant.get("id") == sample_id]
+    if samples:
+        state["plants"] = [
+            plant for plant in state["plants"] if plant.get("id") != sample_id
+        ]
+        changed = True
+    task_count = len(state["tasks"])
+    state["tasks"] = [
+        task for task in state["tasks"] if task.get("sourcePlantId") != sample_id
+    ]
+    changed = changed or len(state["tasks"]) != task_count
+    had_category = any(
+        str(category.get("name") or "").strip().casefold() == "plantas"
+        for category in state["categories"]
+    )
+    _ensure_plants_category(state)
+    changed = changed or not had_category
+    for sample in samples:
+        _delete_plant_asset(str(sample.get("imagePath") or ""))
+        _delete_plant_asset(str(sample.get("thumbnailPath") or ""))
+    state["schemaVersion"] = max(11, int(state.get("schemaVersion", 1) or 1))
     return changed
 
 
@@ -2297,6 +2368,16 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
         and bool((arguments.get("collection_name") or "").strip())
         and arguments.get("collection_number") is not None
         and int(arguments["collection_number"]) > 0,
+        "rewatchCount": max(1, int(arguments.get("rewatch_count", 1))),
+        "seasonCount": (
+            int(arguments["season_count"])
+            if arguments.get("season_count") is not None
+            and int(arguments["season_count"]) > 0
+            else None
+        ),
+        "nextSeasonConfirmed": bool(arguments.get("next_season_confirmed", False)),
+        "publicationStatus": (arguments.get("publication_status") or "").strip()
+        or None,
         "linkedGoalId": arguments.get("linked_goal_id") or None,
         "createdAt": now,
         "updatedAt": now,
@@ -2392,6 +2473,21 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["showCollectionNumber"] = bool(arguments["show_collection_number"])
     if not updated.get("collectionName") or not updated.get("collectionNumber"):
         updated["showCollectionNumber"] = False
+    if "rewatch_count" in arguments:
+        updated["rewatchCount"] = max(1, int(arguments["rewatch_count"]))
+    if "season_count" in arguments:
+        value = arguments.get("season_count")
+        updated["seasonCount"] = int(value) if value is not None and int(value) > 0 else None
+    if arguments.get("clear_season_count"):
+        updated["seasonCount"] = None
+    if "next_season_confirmed" in arguments:
+        updated["nextSeasonConfirmed"] = bool(arguments["next_season_confirmed"])
+    if "publication_status" in arguments:
+        updated["publicationStatus"] = (
+            arguments.get("publication_status") or ""
+        ).strip() or None
+    if arguments.get("clear_publication_status"):
+        updated["publicationStatus"] = None
     if "linked_goal_id" in arguments:
         updated["linkedGoalId"] = arguments.get("linked_goal_id") or None
     if arguments.get("clear_linked_goal_id"):
@@ -2734,9 +2830,9 @@ VALID_TASK_PRIORITIES = {"low", "medium", "high", "urgent"}
 VALID_TASK_STATUSES = {"active", "completed", "archived"}
 VALID_PROJECT_STATUSES = {"active", "paused", "completed", "cancelled"}
 VALID_NOTE_STATUSES = {"inbox", "converted", "archived"}
-VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "yearly"}
+VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "monthly", "yearly"}
 VALID_TODAY_SORTS = {"manual", "category", "time", "project", "priority"}
-VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "recipes", "completed", "settings"}
+VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "plants", "recipes", "completed", "settings"}
 
 
 def require_confirm(arguments: dict[str, Any], action: str) -> None:
@@ -2751,6 +2847,7 @@ def ensure_core_lists(state: dict[str, Any]) -> None:
         "projects",
         "notes",
         "calendarEvents",
+        "plants",
         "libraryItems",
         "libraryGoals",
     ):
@@ -3595,6 +3692,10 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
         "collectionName",
         "collectionNumber",
         "showCollectionNumber",
+        "rewatchCount",
+        "seasonCount",
+        "nextSeasonConfirmed",
+        "publicationStatus",
         "linkedGoalId",
     ):
         merged[key] = primary.get(key) or secondary.get(key)
@@ -4789,6 +4890,325 @@ def delete_household_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"deleted": True, "item_id": arguments["item_id"]}
 
 
+PLANT_CAT_SAFETY = {"nonToxic", "caution", "toxic", "unknown"}
+PLANT_CARE_TYPES = {
+    "watering", "fertilizing", "inspection", "repotting",
+    "pruning", "cleaning", "misting", "custom",
+}
+
+
+def plants_directory() -> Path:
+    override = os.environ.get("TODO_MCP_PLANTS_PATH")
+    directory = Path(override) if override else documents_todo_dir() / "plants"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def get_plant_contract_impl() -> dict[str, Any]:
+    return {
+        "version": 1,
+        "category": "Plantas",
+        "cat_safety_values": sorted(PLANT_CAT_SAFETY),
+        "care_types": sorted(PLANT_CARE_TYPES),
+        "recurrence_types": sorted(VALID_RECURRENCE_TYPES - {"none"}),
+        "routine_shape": {
+            "id": "identificador estable opcional",
+            "type": "watering | fertilizing | inspection | repotting | pruning | cleaning | misting | custom",
+            "title": "título visible de la tarea",
+            "instructions": "instrucciones accionables",
+            "firstDueDate": "YYYY-MM-DD",
+            "recurrence": {
+                "type": "daily | everyXDays | weekly | monthly | yearly",
+                "interval": 1,
+                "weekdays": [],
+                "activeMonths": [],
+            },
+            "enabled": True,
+        },
+        "image": {"format": "PNG", "minimum": "400 × 400 píxeles"},
+        "rules": [
+            "Las tareas se crean sin hora ni avisos.",
+            "La toxicidad genérica nunca se infiere: usa unknown si no hay una fuente veterinaria fiable.",
+            "Cada fuente usa title y url.",
+        ],
+    }
+
+
+def list_plants_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    plants = load_state().setdefault("plants", [])
+    if bool(arguments.get("include_archived", False)):
+        return plants
+    return [plant for plant in plants if not plant.get("archived", False)]
+
+
+def _normalize_plant_sources(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    result: list[dict[str, str]] = []
+    for source in value:
+        if not isinstance(source, dict):
+            continue
+        title = str(source.get("title") or "").strip()
+        url = str(source.get("url") or "").strip()
+        if url:
+            result.append({"title": title or url, "url": url})
+    return result
+
+
+def _normalize_plant_routine(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("Cada rutina debe ser un objeto.")
+    care_type = str(value.get("type") or "custom")
+    if care_type not in PLANT_CARE_TYPES:
+        raise ValueError(f"Tipo de cuidado no compatible: {care_type}.")
+    recurrence = value.get("recurrence") or {}
+    if not isinstance(recurrence, dict):
+        raise ValueError("recurrence debe ser un objeto.")
+    recurrence_type = ensure_value(
+        str(recurrence.get("type") or "everyXDays"),
+        VALID_RECURRENCE_TYPES - {"none"},
+        "recurrence.type",
+    )
+    months: list[int] = []
+    for month in recurrence.get("activeMonths", []):
+        try:
+            parsed_month = int(month)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= parsed_month <= 12 and parsed_month not in months:
+            months.append(parsed_month)
+    months.sort()
+    due_value = str(value.get("firstDueDate") or dt.date.today().isoformat())
+    return {
+        "id": str(value.get("id") or make_id("plant-care")),
+        "type": care_type,
+        "title": str(value.get("title") or "Cuidado de la planta").strip(),
+        "instructions": str(value.get("instructions") or "").strip(),
+        "firstDueDate": date_iso(due_value, "firstDueDate"),
+        "recurrence": {
+            "type": recurrence_type,
+            "interval": max(1, int(recurrence.get("interval", 1))),
+            "weekdays": [int(day) for day in recurrence.get("weekdays", [])],
+            "activeMonths": months,
+        },
+        "enabled": bool(value.get("enabled", True)),
+    }
+
+
+def _plant_values(arguments: dict[str, Any]) -> dict[str, Any]:
+    mapping = {
+        "name": "name", "common_name": "commonName",
+        "scientific_name": "scientificName", "cultivar": "cultivar",
+        "location": "location", "acquired_at": "acquiredAt",
+        "description": "description", "light": "light",
+        "watering": "watering", "humidity": "humidity",
+        "temperature": "temperature", "substrate": "substrate",
+        "fertilizing": "fertilizing", "pruning": "pruning",
+        "propagation": "propagation", "repotting": "repotting",
+        "common_problems": "commonProblems", "cat_safety": "catSafety",
+        "cat_safety_notes": "catSafetyNotes", "sources": "sources",
+        "routines": "routines", "tags": "tags", "notes": "notes",
+        "archived": "archived",
+    }
+    values: dict[str, Any] = {}
+    for source, destination in mapping.items():
+        if source not in arguments:
+            continue
+        value = arguments[source]
+        if source == "acquired_at":
+            value = date_iso(str(value), "acquired_at") if value else None
+        elif source == "cat_safety":
+            value = ensure_value(str(value), PLANT_CAT_SAFETY, "cat_safety")
+        elif source == "sources":
+            value = _normalize_plant_sources(value)
+        elif source == "routines":
+            value = [_normalize_plant_routine(routine) for routine in value]
+        elif source == "tags":
+            value = list(dict.fromkeys(
+                str(tag).strip() for tag in value if str(tag).strip()
+            ))
+        elif source != "archived":
+            value = str(value or "").strip()
+        values[destination] = value
+    return values
+
+
+def _ensure_plants_category(state: dict[str, Any]) -> dict[str, Any]:
+    for category in state.setdefault("categories", []):
+        if str(category.get("name") or "").strip().casefold() == "plantas":
+            return category
+    category = {
+        "id": "category-plants",
+        "name": "Plantas",
+        "description": "Cuidados y mantenimiento de las plantas.",
+        "colorValue": 0xFF4F7A4A,
+        "iconCodePoint": 0xE545,
+        "active": True,
+    }
+    state["categories"].append(category)
+    return category
+
+
+def _sync_plant_tasks(state: dict[str, Any], plant: dict[str, Any]) -> None:
+    category = _ensure_plants_category(state)
+    tasks = state.setdefault("tasks", [])
+    routine_ids = {routine["id"] for routine in plant.get("routines", [])}
+    for routine in plant.get("routines", []):
+        existing = next((task for task in tasks
+            if task.get("sourcePlantId") == plant["id"]
+            and task.get("sourcePlantCareRoutineId") == routine["id"]), None)
+        title = routine["title"]
+        if str(plant["name"]).casefold() not in title.casefold():
+            title = f"{title} · {plant['name']}"
+        status = "active" if routine.get("enabled", True) and not plant.get("archived", False) else "archived"
+        if existing is None:
+            existing = {
+                "id": make_id("task"), "title": title,
+                "description": routine.get("instructions") or None,
+                "categoryIds": [category["id"]], "projectIds": [],
+                "scheduledAt": routine["firstDueDate"], "priority": "medium",
+                "status": status, "recurrence": copy.deepcopy(routine["recurrence"]),
+                "subtaskIds": [], "checklist": [], "materials": [],
+                "origin": "plant", "manualOrder": next_manual_order(tasks),
+                "parentTaskId": None, "collapsed": False, "calendarLink": None,
+                "reminderRules": [], "reminderRule": None, "completedAt": None,
+                "recurrenceCompletions": {}, "sourcePlantId": plant["id"],
+                "sourcePlantCareRoutineId": routine["id"],
+            }
+            tasks.append(existing)
+            continue
+        current = parse_datetime(existing.get("scheduledAt"))
+        due = parse_datetime(routine["firstDueDate"]) or dt.datetime.now()
+        if current is not None:
+            due = due.replace(hour=current.hour, minute=current.minute)
+        existing.update({
+            "title": title,
+            "description": routine.get("instructions") or None,
+            "categoryIds": [category["id"]], "scheduledAt": due.isoformat(),
+            "status": status, "recurrence": copy.deepcopy(routine["recurrence"]),
+            "origin": "plant", "sourcePlantId": plant["id"],
+            "sourcePlantCareRoutineId": routine["id"],
+        })
+    for task in tasks:
+        if (task.get("sourcePlantId") == plant["id"]
+                and task.get("sourcePlantCareRoutineId") not in routine_ids):
+            task["status"] = "archived"
+
+
+def create_plant_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    request_id = str(arguments["request_id"]).strip()
+    for plant in state.setdefault("plants", []):
+        if plant.get("requestId") == request_id:
+            return {"plant": plant, "savedLocally": True, "syncPending": True}
+    instant = now_iso()
+    plant = {
+        "id": make_id("plant"), "requestId": request_id,
+        "name": str(arguments["name"]).strip() or "Planta sin nombre",
+        "commonName": "", "scientificName": str(arguments["scientific_name"]).strip(),
+        "cultivar": "", "location": "", "acquiredAt": None,
+        "description": "", "light": "", "watering": "", "humidity": "",
+        "temperature": "", "substrate": "", "fertilizing": "",
+        "pruning": "", "propagation": "", "repotting": "",
+        "commonProblems": "", "catSafety": "unknown", "catSafetyNotes": "",
+        "sources": [], "routines": [], "tags": [], "notes": "",
+        "imagePath": "", "thumbnailPath": "", "imageSha256": "",
+        "archived": False, "createdAt": instant, "updatedAt": instant,
+    }
+    plant.update(_plant_values(arguments))
+    state["plants"].append(plant)
+    _sync_plant_tasks(state, plant)
+    save_state(state)
+    return {"plant": plant, "savedLocally": True, "syncPending": True}
+
+
+def update_plant_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = load_state()
+    index, plant = find_by_id(
+        state.setdefault("plants", []), arguments["plant_id"], "planta"
+    )
+    plant.update(_plant_values(arguments))
+    plant["updatedAt"] = now_iso()
+    state["plants"][index] = plant
+    _sync_plant_tasks(state, plant)
+    save_state(state)
+    return {"plant": plant, "savedLocally": True, "syncPending": True}
+
+
+def _delete_plant_asset(relative_path: str) -> None:
+    if not relative_path:
+        return
+    root = plants_directory().resolve()
+    candidate = (root / relative_path).resolve()
+    if root in candidate.parents:
+        candidate.unlink(missing_ok=True)
+
+
+def set_plant_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_file"])).expanduser().resolve()
+    if not source.is_file() or source.suffix.lower() != ".png":
+        raise ValueError("La imagen de la planta debe ser un archivo PNG local.")
+    data = source.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) < 33:
+        raise ValueError("La imagen de la planta no es un PNG válido.")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 400 or height < 400:
+        raise ValueError("La imagen debe medir al menos 400 × 400 píxeles.")
+    state = load_state()
+    index, plant = find_by_id(
+        state.setdefault("plants", []), arguments["plant_id"], "planta"
+    )
+    request_id = str(arguments["request_id"]).strip()
+    if plant.get("imageRequestId") == request_id:
+        return {"plant": plant, "savedLocally": True, "syncPending": True}
+    digest = hashlib.sha256(data).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(plant["id"]))
+    file_name = f"{safe_id}-{digest[:12]}.png"
+    root = plants_directory()
+    _write_household_asset(root / "images", file_name, data)
+    _write_household_asset(root / "thumbnails", file_name, data)
+    previous = [str(plant.get("imagePath") or ""), str(plant.get("thumbnailPath") or "")]
+    plant.update({
+        "imagePath": f"images/{file_name}",
+        "thumbnailPath": f"thumbnails/{file_name}",
+        "imageSha256": digest, "imageRequestId": request_id,
+        "updatedAt": now_iso(),
+    })
+    state["plants"][index] = plant
+    try:
+        save_state(state)
+    except Exception:
+        _delete_plant_asset(plant["imagePath"])
+        _delete_plant_asset(plant["thumbnailPath"])
+        raise
+    for old_path in previous:
+        if old_path not in {plant["imagePath"], plant["thumbnailPath"]}:
+            _delete_plant_asset(old_path)
+    return {"plant": plant, "savedLocally": True, "syncPending": True}
+
+
+def delete_plant_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    require_confirm(arguments, "delete_plant")
+    state = load_state()
+    index, plant = find_by_id(
+        state.setdefault("plants", []), arguments["plant_id"], "planta"
+    )
+    state["plants"].pop(index)
+    state["tasks"] = [
+        task for task in state.setdefault("tasks", [])
+        if task.get("sourcePlantId") != plant["id"]
+    ]
+    save_state(state)
+    _delete_plant_asset(str(plant.get("imagePath") or ""))
+    _delete_plant_asset(str(plant.get("thumbnailPath") or ""))
+    return {
+        "deleted": True,
+        "plant_id": arguments["plant_id"],
+        "savedLocally": True,
+        "syncPending": remote_enabled(),
+    }
+
+
 def recipe_directory() -> Path:
     override = os.environ.get("TODO_MCP_RECIPE_PATH")
     directory = Path(override) if override else documents_todo_dir() / "recipes"
@@ -5557,6 +5977,18 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(set_household_item_document_impl(arguments))
     if name == "delete_household_item":
         return json_result(delete_household_item_impl(arguments))
+    if name == "get_plant_contract":
+        return json_result(get_plant_contract_impl())
+    if name == "list_plants":
+        return json_result(list_plants_impl(arguments))
+    if name == "create_plant":
+        return json_result(create_plant_impl(arguments))
+    if name == "update_plant":
+        return json_result(update_plant_impl(arguments))
+    if name == "set_plant_image":
+        return json_result(set_plant_image_impl(arguments))
+    if name == "delete_plant":
+        return json_result(delete_plant_impl(arguments))
     if name == "list_recipes":
         return json_result(list_recipes_impl(arguments))
     if name == "create_recipe":

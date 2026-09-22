@@ -1833,55 +1833,18 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
 
   Future<void> _pasteImage() async {
     if (_saving) return;
-    final clipboard = SystemClipboard.instance;
-    if (clipboard == null) {
-      _showImageMessage('No se puede acceder al portapapeles en este equipo.');
+    final result = await readClipboardImage();
+    if (!mounted) return;
+    if (!result.hasImage) {
+      _showImageMessage(result.errorMessage!);
       return;
     }
-    try {
-      final reader = await clipboard.read();
-      if (!reader.canProvide(Formats.png)) {
-        _showImageMessage('El portapapeles no contiene una imagen.');
-        return;
-      }
-      final completer = Completer<Uint8List>();
-      final progress = reader.getFile(
-        Formats.png,
-        (file) async {
-          try {
-            final bytes = await file.readAll();
-            if (!completer.isCompleted) completer.complete(bytes);
-          } catch (error, stackTrace) {
-            if (!completer.isCompleted) {
-              completer.completeError(error, stackTrace);
-            }
-          }
-        },
-        onError: (error) {
-          if (!completer.isCompleted) completer.completeError(error);
-        },
-      );
-      if (progress == null) {
-        _showImageMessage('El portapapeles no contiene una imagen.');
-        return;
-      }
-      final bytes = await completer.future;
-      if (!mounted) return;
-      if (bytes.isEmpty) {
-        _showImageMessage('La imagen copiada está vacía.');
-        return;
-      }
-      setState(() {
-        _pastedImageBytes = bytes;
-        _selectedImage = null;
-        _removeImage = false;
-      });
-      _showImageMessage('Imagen pegada.');
-    } catch (_) {
-      if (mounted) {
-        _showImageMessage('No se pudo pegar la imagen del portapapeles.');
-      }
-    }
+    setState(() {
+      _pastedImageBytes = result.bytes;
+      _selectedImage = null;
+      _removeImage = false;
+    });
+    _showImageMessage('Imagen pegada.');
   }
 
   void _showImageMessage(String message) {
@@ -2010,9 +1973,11 @@ Future<void> _showWardrobeOutfit(BuildContext context, TodoWorkspace controller,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
                           onPressed: () async {
                             final changed = await _pickOutfitRender(
                                 dialogContext, controller, outfit);
@@ -2025,22 +1990,34 @@ Future<void> _showWardrobeOutfit(BuildContext context, TodoWorkspace controller,
                               ? 'Añadir render'
                               : 'Cambiar render'),
                         ),
-                      ),
-                      if (outfit.renderImagePath.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        IconButton.outlined(
-                          tooltip: 'Quitar render',
+                        OutlinedButton.icon(
                           onPressed: () async {
-                            await controller
-                                .clearWardrobeOutfitRender(outfit.id);
-                            if (dialogContext.mounted) {
+                            final changed = await _pasteOutfitRender(
+                              dialogContext,
+                              controller,
+                              outfit,
+                            );
+                            if (changed && dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }
                           },
-                          icon: const Icon(Icons.hide_image_outlined),
+                          icon: const Icon(Icons.content_paste_rounded),
+                          label: const Text('Pegar imagen'),
                         ),
+                        if (outfit.renderImagePath.isNotEmpty)
+                          IconButton.outlined(
+                            tooltip: 'Quitar render',
+                            onPressed: () async {
+                              await controller
+                                  .clearWardrobeOutfitRender(outfit.id);
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+                            },
+                            icon: const Icon(Icons.hide_image_outlined),
+                          ),
                       ],
-                    ]),
+                    ),
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: () async {
@@ -2137,6 +2114,40 @@ Future<bool> _pickOutfitRender(BuildContext context, TodoWorkspace controller,
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo importar la imagen: $error')),
+      );
+    }
+    return false;
+  }
+}
+
+Future<bool> _pasteOutfitRender(
+  BuildContext context,
+  TodoWorkspace controller,
+  WardrobeOutfit outfit,
+) async {
+  final result = await readClipboardImage();
+  if (!context.mounted) return false;
+  if (!result.hasImage) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.errorMessage!)),
+    );
+    return false;
+  }
+  try {
+    await controller.importWardrobeOutfitRenderBytes(
+      outfit.id,
+      result.bytes!,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Imagen pegada en el conjunto.')),
+      );
+    }
+    return true;
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo pegar la imagen: $error')),
       );
     }
     return false;

@@ -1,3 +1,4 @@
+import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -350,6 +351,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(content), findsNothing);
+    final directEditor = tester.widget<AppFlowyEditor>(
+      find.byKey(const ValueKey('contenidoNotaDirecto')),
+    );
+    expect(directEditor.editable, isTrue);
+    await directEditor.editorState.insertText(
+      body.length,
+      ' Texto añadido.',
+      path: const [0],
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(
+      controller.noteById('nota-contextual')?.content,
+      '$title\n$body Texto añadido.',
+    );
     final note = find.text(title).first;
 
     await tester.tap(note, buttons: kSecondaryMouseButton);
@@ -528,11 +543,53 @@ void main() {
     expect(find.text('Pendientes'), findsOneWidget);
     expect(find.text('En curso'), findsWidgets);
     expect(find.text('Completados'), findsOneWidget);
+    expect(find.text('Todo'), findsOneWidget);
     expect(find.text('Control'), findsWidgets);
+
+    expect(find.byTooltip('Vista de portadas'), findsOneWidget);
+    await tester.tap(find.byTooltip('Vista de portadas'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.byKey(const ValueKey('library-cover-card-in-progress-game')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('library-cover-type-in-progress-game')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Vista por columnas'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.byKey(const ValueKey('library-cover-card-in-progress-game')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('library-cover-type-in-progress-game')),
+      findsNothing,
+    );
+
+    final allLibrarySearch = find.byType(TextField).first;
+    await tester.enterText(allLibrarySearch, 'sin coincidencias');
+    await tester.pump(const Duration(milliseconds: 300));
+    // El panel lateral conserva el resumen global aunque la cuadrícula no
+    // tenga coincidencias para la búsqueda actual.
+    expect(find.text('Control'), findsOneWidget);
+    await tester.enterText(allLibrarySearch, 'control');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Control'), findsWidgets);
+    await tester.enterText(allLibrarySearch, '');
+    await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.text('Pendientes'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(controller.libraryStatusView, LibraryItemStatus.pending);
+
+    await tester.tap(find.text('Todo'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.libraryStatusView, LibraryItemStatus.pending);
+    expect(find.text('Control'), findsWidgets);
+    expect(find.text('En curso'), findsWidgets);
 
     await tester.tap(find.text('Añadir a Biblioteca'));
     await tester.pump();
@@ -578,6 +635,90 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('library remembers the type selected in each area', (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now();
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'library-game',
+            type: LibraryItemType.game,
+            title: 'Juego de biblioteca',
+            status: LibraryItemStatus.completed,
+            completedDate: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+        libraryGoals: [
+          LibraryGoal(
+            id: 'book-goal',
+            type: LibraryItemType.book,
+            title: 'Libro de propósito',
+            targetYear: now.year,
+            createdAt: now,
+            updatedAt: now,
+          ),
+          LibraryGoal(
+            id: 'game-goal',
+            type: LibraryItemType.game,
+            title: 'Juego de propósito',
+            targetYear: now.year,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Propósitos'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Libros').first);
+      await tester.pump(const Duration(milliseconds: 300));
+    });
+
+    expect(find.text('Libro de propósito'), findsOneWidget);
+    expect(find.text('Juego de propósito'), findsNothing);
+
+    await tester.tap(find.text('Biblioteca').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Juegos').first);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Juego de biblioteca'), findsWidgets);
+    final completedLibraryCard = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('library-cover-card-library-game')),
+    );
+    final completedLibraryDecoration =
+        completedLibraryCard.foregroundDecoration! as BoxDecoration;
+    expect(completedLibraryDecoration.border, isNotNull);
+
+    await tester.tap(find.text('Propósitos'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Libro de propósito'), findsOneWidget);
+    expect(find.text('Juego de propósito'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('library editor exposes rating and notes for completed items', (
     WidgetTester tester,
   ) async {
@@ -607,7 +748,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Biblioteca muestra etiquetas cuando una saga tiene entregas', (
+  testWidgets('Biblioteca muestra colecciones aunque tengan una sola entrega', (
     WidgetTester tester,
   ) async {
     final date = DateTime(2026, 9, 6);
@@ -681,12 +822,11 @@ void main() {
     });
 
     expect(find.text('Saga Carl el mazmorrero'), findsNWidgets(2));
-    expect(find.text('Libro 1'), findsOneWidget);
-    expect(find.text('Libro 2'), findsOneWidget);
-    expect(find.text('Entrega única'), findsOneWidget);
-    expect(find.text('Saga Otra saga'), findsNothing);
+    expect(find.text('#1'), findsNWidgets(2));
+    expect(find.text('#2'), findsOneWidget);
+    expect(find.text('Entrega única'), findsNWidgets(2));
+    expect(find.text('Saga Otra saga'), findsOneWidget);
     expect(find.text('Saga futura'), findsOneWidget);
-    expect(find.text('Juego 1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -844,14 +984,14 @@ void main() {
 
     await tester.tap(find.text('Juegos').first);
     await tester.pump();
-    expect(find.text('Juego pendiente'), findsOneWidget);
+    expect(find.text('Juego pendiente'), findsNWidgets(2));
 
     await tester.tap(find.text('En curso').first);
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(controller.libraryStatusView, LibraryItemStatus.inProgress);
-    expect(find.text('Juego en curso'), findsOneWidget);
-    expect(find.text('Libro en curso'), findsNothing);
+    expect(find.text('Juego en curso'), findsNWidgets(2));
+    expect(find.text('Libro en curso'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -993,7 +1133,7 @@ void main() {
     expect(find.text('Completadas'), findsWidgets);
   });
 
-  test('controller imports json and can reset to empty state', () async {
+  test('el controlador importa JSON y restablece el estado inicial', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final controller = TodoWorkspace.createForTest();
 
@@ -1024,7 +1164,9 @@ void main() {
     await controller.resetToSeed();
 
     expect(controller.tasks, isEmpty);
-    expect(controller.categories, isEmpty);
+    expect(controller.categories.where((item) => item.name == 'Plantas'),
+        hasLength(1));
+    expect(controller.plants, isEmpty);
     expect(controller.projects, isEmpty);
     expect(controller.notes, isEmpty);
     expect(

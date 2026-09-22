@@ -173,6 +173,20 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.initialTask?.origin == TaskOrigin.plant) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F1E4),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text(
+              'Esta rutina se gestiona desde la ficha de la planta. Aquí solo se guardarán la hora y los avisos que añadas.',
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
         _sectionLabel('Título de la tarea'),
         const SizedBox(height: 6),
         TextField(
@@ -360,6 +374,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                 value: RecurrenceType.everyXDays,
                 child: Text('Cada X días', style: fieldTextStyle)),
             DropdownMenuItem(
+                value: RecurrenceType.monthly,
+                child: Text('Cada X meses', style: fieldTextStyle)),
+            DropdownMenuItem(
                 value: RecurrenceType.yearly,
                 child: Text('Anual', style: fieldTextStyle)),
           ],
@@ -375,16 +392,21 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           decoration:
               const InputDecoration(prefixIcon: Icon(Icons.autorenew_rounded)),
         ),
-        if (_recurrenceType == RecurrenceType.everyXDays) ...[
+        if (_recurrenceType == RecurrenceType.everyXDays ||
+            _recurrenceType == RecurrenceType.monthly) ...[
           const SizedBox(height: 10),
           TextField(
             key: const ValueKey('recurrence-interval-input'),
             controller: _recurrenceIntervalController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: 'Número de días',
+              labelText: _recurrenceType == RecurrenceType.monthly
+                  ? 'Número de meses'
+                  : 'Número de días',
               prefixText: 'Cada ',
-              suffixText: ' días',
+              suffixText: _recurrenceType == RecurrenceType.monthly
+                  ? ' meses'
+                  : ' días',
               helperText: 'La tarea se repetirá con este intervalo.',
               errorText: _recurrenceIntervalError,
               prefixIcon: const Icon(Icons.event_repeat_rounded),
@@ -392,12 +414,16 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
             onChanged: (value) {
               final parsed = int.tryParse(value.trim());
               setState(() {
-                if (parsed != null && parsed >= 2) {
+                final minimum =
+                    _recurrenceType == RecurrenceType.monthly ? 1 : 2;
+                if (parsed != null && parsed >= minimum) {
                   _recurrenceInterval = parsed;
                   _recurrenceIntervalError = null;
                 } else {
                   _recurrenceIntervalError =
-                      'Introduce un número de días igual o superior a 2.';
+                      _recurrenceType == RecurrenceType.monthly
+                          ? 'Introduce un número de meses igual o superior a 1.'
+                          : 'Introduce un número de días igual o superior a 2.';
                 }
               });
             },
@@ -684,12 +710,15 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
     if (title.isEmpty) {
       return;
     }
-    if (_recurrenceType == RecurrenceType.everyXDays) {
+    if (_recurrenceType == RecurrenceType.everyXDays ||
+        _recurrenceType == RecurrenceType.monthly) {
       final interval = int.tryParse(_recurrenceIntervalController.text.trim());
-      if (interval == null || interval < 2) {
+      final minimum = _recurrenceType == RecurrenceType.monthly ? 1 : 2;
+      if (interval == null || interval < minimum) {
         setState(() {
-          _recurrenceIntervalError =
-              'Introduce un número de días igual o superior a 2.';
+          _recurrenceIntervalError = _recurrenceType == RecurrenceType.monthly
+              ? 'Introduce un número de meses igual o superior a 1.'
+              : 'Introduce un número de días igual o superior a 2.';
         });
         return;
       }
@@ -712,6 +741,24 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           ),
         )
         .toList();
+    if (widget.initialTask?.origin == TaskOrigin.plant) {
+      final initial = widget.initialTask!;
+      final originalDate = initial.scheduledAt ?? _date;
+      controller.updateTask(
+        initial.copyWith(
+          scheduledAt: DateTime(
+            originalDate.year,
+            originalDate.month,
+            originalDate.day,
+            _time.hour,
+            _time.minute,
+          ),
+          reminderRules: reminderRules,
+        ),
+      );
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
     final categoryIds = _effectiveTaskCategoryIds();
     final checklist =
         _subtasks.where((item) => item.trim().isNotEmpty).toList();

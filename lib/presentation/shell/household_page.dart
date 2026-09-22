@@ -968,6 +968,10 @@ class _HouseholdItemEditorDialogState
   DateTime? _purchaseDate;
   DateTime? _warrantyUntil;
   XFile? _imageFile;
+  Uint8List? _pastedImageBytes;
+  final FocusNode _imagePasteFocus = FocusNode(
+    debugLabel: 'Pegar imagen de hogar',
+  );
   XFile? _manualFile;
   XFile? _invoiceFile;
   bool _saving = false;
@@ -1012,6 +1016,7 @@ class _HouseholdItemEditorDialogState
     ]) {
       controller.dispose();
     }
+    _imagePasteFocus.dispose();
     super.dispose();
   }
 
@@ -1127,36 +1132,76 @@ class _HouseholdItemEditorDialogState
   }
 
   Widget _imagePanel() {
-    return ColoredBox(
-      color: const Color(0xFFF3EEE5),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            Expanded(child: _imagePreview()),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _saving ? null : _selectImage,
-                icon: const Icon(Icons.image_outlined),
-                label: Text(
-                  _imageFile?.name ??
-                      (item?.imagePath.isNotEmpty == true
-                          ? 'Cambiar imagen'
-                          : 'Elegir imagen'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            _pasteImage,
+      },
+      child: Focus(
+        focusNode: _imagePasteFocus,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _imagePasteFocus.requestFocus,
+          child: ColoredBox(
+            color: const Color(0xFFF3EEE5),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  Expanded(child: _imagePreview()),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : _selectImage,
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text(
+                          _imageFile?.name ??
+                              (_pastedImageBytes != null
+                                  ? 'Cambiar imagen'
+                                  : item?.imagePath.isNotEmpty == true
+                                      ? 'Cambiar imagen'
+                                      : 'Elegir imagen'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : _pasteImage,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('Pegar imagen'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    'También puedes hacer clic aquí y pulsar Ctrl+V.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.visuals.textMuted,
+                          fontWeight: FontWeight.w400,
+                        ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _imagePreview() {
+    if (_pastedImageBytes != null) {
+      return Image.memory(
+        _pastedImageBytes!,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const _MissingHouseholdImage(),
+      );
+    }
     if (_imageFile != null) {
       return Image.file(
         File(_imageFile!.path),
@@ -1394,7 +1439,33 @@ class _HouseholdItemEditorDialogState
         ),
       ],
     );
-    if (selected != null && mounted) setState(() => _imageFile = selected);
+    if (selected != null && mounted) {
+      setState(() {
+        _imageFile = selected;
+        _pastedImageBytes = null;
+      });
+    }
+  }
+
+  Future<void> _pasteImage() async {
+    if (_saving) return;
+    final result = await readClipboardImage();
+    if (!mounted) return;
+    if (!result.hasImage) {
+      _showImageMessage(result.errorMessage!);
+      return;
+    }
+    setState(() {
+      _pastedImageBytes = result.bytes;
+      _imageFile = null;
+    });
+    _showImageMessage('Imagen pegada.');
+  }
+
+  void _showImageMessage(String message) {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _selectPdf({required bool manual}) async {
@@ -1463,7 +1534,12 @@ class _HouseholdItemEditorDialogState
     }
     String? resourceError;
     try {
-      if (_imageFile != null) {
+      if (_pastedImageBytes != null) {
+        await widget.controller.importHouseholdImageBytes(
+          saved.id,
+          _pastedImageBytes!,
+        );
+      } else if (_imageFile != null) {
         await widget.controller
             .importHouseholdImage(saved.id, _imageFile!.path);
       }

@@ -46,6 +46,8 @@ class AppLaunchIntent {
         section = AppSection.wardrobe;
       } else if (arg == '--section=household') {
         section = AppSection.household;
+      } else if (arg == '--section=plants') {
+        section = AppSection.plants;
       } else if (arg == '--section=recipes') {
         section = AppSection.recipes;
       } else if (arg == '--new-task') {

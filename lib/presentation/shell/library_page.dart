@@ -2,6 +2,8 @@ part of 'app_shell.dart';
 
 enum _LibraryContextAction { pages, complete, edit, delete }
 
+enum _LibraryOverviewMode { columns, covers }
+
 class LibraryPage extends StatefulWidget {
   const LibraryPage({required this.controller, super.key});
 
@@ -13,18 +15,41 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   LibraryItemType? _typeFilter;
+  LibraryItemType? _goalsTypeFilter;
+  _LibraryOverviewMode _overviewMode = _LibraryOverviewMode.columns;
+  LibrarySortOrder _allSortOrder = LibrarySortOrder.newestFirst;
+  late final TextEditingController _allSearchController;
   late int _year = DateTime.now().year;
   double? _minRating;
+  bool _showAllStatuses = false;
 
   TodoWorkspace get controller => widget.controller;
 
   @override
+  void initState() {
+    super.initState();
+    _allSearchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _allSearchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final area = controller.libraryAreaView;
-    final status = controller.libraryStatusView;
-    final items = _sortedItems(_filteredItems(controller.libraryItems));
-    final statusItems =
-        controller.libraryItems.where((item) => item.status == status).toList();
+    final status = _showAllStatuses ? null : controller.libraryStatusView;
+    final statusFilteredItems = _filteredItems(controller.libraryItems, status);
+    final items = _typeFilter == null
+        ? _filterAndSortAllItems(statusFilteredItems)
+        : _sortedItems(statusFilteredItems);
+    final statusItems = status == null
+        ? controller.libraryItems
+        : controller.libraryItems
+            .where((item) => item.status == status)
+            .toList();
     final yearItems = status == LibraryItemStatus.completed
         ? statusItems.where((item) => item.yearGroup == _year).toList()
         : statusItems;
@@ -76,8 +101,11 @@ class _LibraryPageState extends State<LibraryPage> {
               _LibraryStatusTabs(
                 status: status,
                 onChanged: (value) {
-                  controller.setLibraryStatusView(value);
                   setState(() {
+                    _showAllStatuses = value == null;
+                    if (value != null) {
+                      controller.setLibraryStatusView(value);
+                    }
                     if (value == LibraryItemStatus.completed &&
                         !availableYears.contains(_year)) {
                       _year = currentYear;
@@ -92,54 +120,48 @@ class _LibraryPageState extends State<LibraryPage> {
                   ? _LibraryGoalsView(
                       controller: controller,
                       year: _year,
+                      selectedType: _goalsTypeFilter,
+                      onSelectedTypeChanged: (type) =>
+                          setState(() => _goalsTypeFilter = type),
                       onAdd: _showAddGoalDialog,
                     )
                   : wide
-                      ? status == LibraryItemStatus.completed
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: _LibraryMainContent(
-                                    controller: controller,
-                                    items: items,
-                                    yearItems: yearItems,
-                                    year: _year,
-                                    selectedType: _typeFilter,
-                                    onSelectedTypeChanged: (type) =>
-                                        setState(() => _typeFilter = type),
-                                    status: status,
-                                    fillAvailableHeight: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 18),
-                                SizedBox(
-                                  width: 330,
-                                  child: ScrollConfiguration(
-                                    behavior: const MaterialScrollBehavior()
-                                        .copyWith(scrollbars: false),
-                                    child: SingleChildScrollView(
-                                      child: _LibrarySidePanel(
-                                        controller: controller,
-                                        items: controller.libraryItems,
-                                        year: _year,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : _LibraryMainContent(
-                              controller: controller,
-                              items: items,
-                              yearItems: yearItems,
-                              year: _year,
-                              selectedType: _typeFilter,
-                              onSelectedTypeChanged: (type) =>
-                                  setState(() => _typeFilter = type),
-                              status: status,
-                              fillAvailableHeight: true,
-                            )
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _LibraryMainContent(
+                                controller: controller,
+                                items: items,
+                                yearItems: yearItems,
+                                year: _year,
+                                selectedType: _typeFilter,
+                                onSelectedTypeChanged: (type) =>
+                                    setState(() => _typeFilter = type),
+                                status: status,
+                                showStatus: false,
+                                overviewMode: _overviewMode,
+                                onOverviewModeChanged: (mode) =>
+                                    setState(() => _overviewMode = mode),
+                                allSearchController: _allSearchController,
+                                allSortOrder: _allSortOrder,
+                                onAllSearchChanged: () => setState(() {}),
+                                onAllSortChanged: (order) =>
+                                    setState(() => _allSortOrder = order),
+                                fillAvailableHeight: true,
+                              ),
+                            ),
+                            const SizedBox(width: 18),
+                            SizedBox(
+                              width: 330,
+                              child: _LibrarySidePanel(
+                                controller: controller,
+                                items: controller.libraryItems,
+                                year: _year,
+                              ),
+                            ),
+                          ],
+                        )
                       : ListView(
                           children: [
                             _LibraryMainContent(
@@ -151,16 +173,23 @@ class _LibraryPageState extends State<LibraryPage> {
                               onSelectedTypeChanged: (type) =>
                                   setState(() => _typeFilter = type),
                               status: status,
+                              showStatus: false,
+                              overviewMode: _overviewMode,
+                              onOverviewModeChanged: (mode) =>
+                                  setState(() => _overviewMode = mode),
+                              allSearchController: _allSearchController,
+                              allSortOrder: _allSortOrder,
+                              onAllSearchChanged: () => setState(() {}),
+                              onAllSortChanged: (order) =>
+                                  setState(() => _allSortOrder = order),
                               scrollColumns: false,
                             ),
-                            if (status == LibraryItemStatus.completed) ...[
-                              const SizedBox(height: 16),
-                              _LibrarySidePanel(
-                                controller: controller,
-                                items: statusItems,
-                                year: _year,
-                              ),
-                            ],
+                            const SizedBox(height: 16),
+                            _LibrarySidePanel(
+                              controller: controller,
+                              items: controller.libraryItems,
+                              year: _year,
+                            ),
                           ],
                         ),
             ),
@@ -170,12 +199,14 @@ class _LibraryPageState extends State<LibraryPage> {
     );
   }
 
-  List<LibraryItem> _filteredItems(List<LibraryItem> source) {
+  List<LibraryItem> _filteredItems(
+    List<LibraryItem> source,
+    LibraryItemStatus? status,
+  ) {
     return source
-        .where((item) => item.status == controller.libraryStatusView)
+        .where((item) => status == null || item.status == status)
         .where((item) =>
-            item.status != LibraryItemStatus.completed ||
-            item.yearGroup == _year)
+            status != LibraryItemStatus.completed || item.yearGroup == _year)
         .where(
             (item) => _minRating == null || (item.rating ?? -1) >= _minRating!)
         .toList();
@@ -185,6 +216,22 @@ class _LibraryPageState extends State<LibraryPage> {
     final sorted = [...source];
     sorted.sort((left, right) =>
         _compareLibraryItems(left, right, LibrarySortOrder.newestFirst));
+    return sorted;
+  }
+
+  List<LibraryItem> _filterAndSortAllItems(List<LibraryItem> source) {
+    final query = _allSearchController.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? source
+        : source
+            .where(
+              (item) => _searchableText(item).toLowerCase().contains(query),
+            )
+            .toList();
+    final sorted = [...filtered];
+    sorted.sort(
+      (left, right) => _compareLibraryItems(left, right, _allSortOrder),
+    );
     return sorted;
   }
 
@@ -231,7 +278,7 @@ class _LibraryHeader extends StatelessWidget {
   final int currentYear;
   final List<int> availableYears;
   final bool isGoals;
-  final LibraryItemStatus libraryStatus;
+  final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
 
@@ -341,8 +388,8 @@ class _LibraryGoalYearButton extends StatelessWidget {
 class _LibraryStatusTabs extends StatelessWidget {
   const _LibraryStatusTabs({required this.status, required this.onChanged});
 
-  final LibraryItemStatus status;
-  final ValueChanged<LibraryItemStatus> onChanged;
+  final LibraryItemStatus? status;
+  final ValueChanged<LibraryItemStatus?> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -350,13 +397,23 @@ class _LibraryStatusTabs extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (final value in LibraryItemStatus.values)
+        for (final value in const [
+          LibraryItemStatus.completed,
+          LibraryItemStatus.inProgress,
+          LibraryItemStatus.pending,
+        ])
           _FilterPill(
             label: _libraryStatusPluralLabel(value),
             icon: _libraryStatusIcon(value),
             selected: status == value,
             onTap: () => onChanged(value),
           ),
+        _FilterPill(
+          label: 'Todo',
+          icon: Icons.select_all_rounded,
+          selected: status == null,
+          onTap: () => onChanged(null),
+        ),
       ],
     );
   }
@@ -401,6 +458,13 @@ class _LibraryMainContent extends StatelessWidget {
     required this.selectedType,
     required this.onSelectedTypeChanged,
     required this.status,
+    required this.showStatus,
+    required this.overviewMode,
+    required this.onOverviewModeChanged,
+    required this.allSearchController,
+    required this.allSortOrder,
+    required this.onAllSearchChanged,
+    required this.onAllSortChanged,
     this.scrollColumns = true,
     this.fillAvailableHeight = false,
   });
@@ -411,7 +475,14 @@ class _LibraryMainContent extends StatelessWidget {
   final int year;
   final LibraryItemType? selectedType;
   final ValueChanged<LibraryItemType?> onSelectedTypeChanged;
-  final LibraryItemStatus status;
+  final LibraryItemStatus? status;
+  final bool showStatus;
+  final _LibraryOverviewMode overviewMode;
+  final ValueChanged<_LibraryOverviewMode> onOverviewModeChanged;
+  final TextEditingController allSearchController;
+  final LibrarySortOrder allSortOrder;
+  final VoidCallback onAllSearchChanged;
+  final ValueChanged<LibrarySortOrder> onAllSortChanged;
   final bool scrollColumns;
   final bool fillAvailableHeight;
 
@@ -432,6 +503,7 @@ class _LibraryMainContent extends StatelessWidget {
         items: selectedItems,
         totalCount: selectedYearItems.length,
         status: status,
+        showStatus: false,
         typeFilters: typeFilters,
       );
       final content = fillAvailableHeight
@@ -449,6 +521,17 @@ class _LibraryMainContent extends StatelessWidget {
               : content;
     }
 
+    final overviewToolbar = _LibraryOverviewToolbar(
+      filters: typeFilters,
+      mode: overviewMode,
+      onModeChanged: onOverviewModeChanged,
+      totalCount: items.length,
+      status: status,
+      searchController: allSearchController,
+      sortOrder: allSortOrder,
+      onSearchChanged: onAllSearchChanged,
+      onSortChanged: onAllSortChanged,
+    );
     final cards = Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -458,30 +541,42 @@ class _LibraryMainContent extends StatelessWidget {
               controller: controller,
               type: type,
               items: items.where((item) => item.type == type).toList(),
-              allItems: yearItems.where((item) => item.type == type).toList(),
-              totalCount: yearItems.where((item) => item.type == type).length,
+              allItems: items.where((item) => item.type == type).toList(),
+              totalCount: items.where((item) => item.type == type).length,
               status: status,
+              showStatus: showStatus,
             ),
           ),
           if (type != LibraryItemType.values.last) const SizedBox(width: 14),
         ],
       ],
     );
+    final overview = overviewMode == _LibraryOverviewMode.columns
+        ? cards
+        : _LibraryAllCoverGrid(
+            items: items,
+            controller: controller,
+            showStatus: showStatus,
+          );
     final content = fillAvailableHeight
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              typeFilters,
+              overviewToolbar,
               const SizedBox(height: 12),
-              Expanded(child: cards),
+              Expanded(child: overview),
             ],
           )
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              typeFilters,
+              overviewToolbar,
               const SizedBox(height: 12),
-              SizedBox(height: 420, child: cards),
+              SizedBox(
+                height:
+                    overviewMode == _LibraryOverviewMode.columns ? 420 : 620,
+                child: overview,
+              ),
             ],
           );
     if (fillAvailableHeight) {
@@ -494,6 +589,250 @@ class _LibraryMainContent extends StatelessWidget {
   }
 }
 
+class _LibraryOverviewToolbar extends StatelessWidget {
+  const _LibraryOverviewToolbar({
+    required this.filters,
+    required this.mode,
+    required this.onModeChanged,
+    required this.totalCount,
+    required this.status,
+    required this.searchController,
+    required this.sortOrder,
+    required this.onSearchChanged,
+    required this.onSortChanged,
+  });
+
+  final Widget filters;
+  final _LibraryOverviewMode mode;
+  final ValueChanged<_LibraryOverviewMode> onModeChanged;
+  final int totalCount;
+  final LibraryItemStatus? status;
+  final TextEditingController searchController;
+  final LibrarySortOrder sortOrder;
+  final VoidCallback onSearchChanged;
+  final ValueChanged<LibrarySortOrder> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final toggle = _LibraryOverviewModeToggle(
+      value: mode,
+      onChanged: onModeChanged,
+    );
+    final countBadge = _LibraryToolbarCountBadge(
+      label: '$totalCount ${_libraryStatusCountLabel(status, totalCount)}',
+      background: const Color(0xFFE8EEE5),
+      foreground: const Color(0xFF70835D),
+    );
+    final searchField = SizedBox(
+      width: 280,
+      child: _CompactLibrarySearchField(
+        controller: searchController,
+        onChanged: onSearchChanged,
+      ),
+    );
+    final sortButton = _LibrarySortButton(
+      label: _sortLabel(sortOrder),
+      onSelected: onSortChanged,
+    );
+    final controls = <Widget>[
+      countBadge,
+      const SizedBox(width: 10),
+      searchField,
+      const SizedBox(width: 10),
+      sortButton,
+      const SizedBox(width: 10),
+      toggle,
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 1120) {
+          return Row(
+            children: [
+              Expanded(child: filters),
+              const SizedBox(width: 16),
+              ...controls,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            filters,
+            const SizedBox(height: 8),
+            if (constraints.maxWidth >= 680)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: controls,
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: controls),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LibraryOverviewModeToggle extends StatelessWidget {
+  const _LibraryOverviewModeToggle({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final _LibraryOverviewMode value;
+  final ValueChanged<_LibraryOverviewMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: context.visuals.panel,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE3D7C8)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _LibraryOverviewModeButton(
+            icon: Icons.view_column_rounded,
+            tooltip: 'Vista por columnas',
+            selected: value == _LibraryOverviewMode.columns,
+            onPressed: () => onChanged(_LibraryOverviewMode.columns),
+          ),
+          _LibraryOverviewModeButton(
+            icon: Icons.grid_view_rounded,
+            tooltip: 'Vista de portadas',
+            selected: value == _LibraryOverviewMode.covers,
+            onPressed: () => onChanged(_LibraryOverviewMode.covers),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryOverviewModeButton extends StatelessWidget {
+  const _LibraryOverviewModeButton({
+    required this.icon,
+    required this.tooltip,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFE8F0E3) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 19,
+            color:
+                selected ? const Color(0xFF3F5B3B) : context.visuals.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryAllCoverGrid extends StatelessWidget {
+  const _LibraryAllCoverGrid({
+    required this.items,
+    required this.controller,
+    required this.showStatus,
+  });
+
+  final List<LibraryItem> items;
+  final TodoWorkspace controller;
+  final bool showStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          'No hay contenido para este filtro.',
+          style: TextStyle(color: context.visuals.textMuted),
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxExtent = constraints.maxWidth >= 980
+            ? 194.0
+            : constraints.maxWidth >= 720
+                ? 176.0
+                : 154.0;
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 16),
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            mainAxisSpacing: 24,
+            crossAxisSpacing: 20,
+            childAspectRatio: 0.66,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _LibraryCoverGridCard(
+              item: item,
+              controller: controller,
+              showStatus: showStatus,
+              showTypeBadge: true,
+              onTap: () => _showLibraryItemDetails(
+                context,
+                controller,
+                items,
+                item,
+              ),
+              onEdit: () => showDialog<void>(
+                context: context,
+                builder: (context) => _LibraryItemDialog(
+                  controller: controller,
+                  item: item,
+                ),
+              ),
+              onDelete: () => _deleteItem(context, item),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteItem(BuildContext context, LibraryItem item) async {
+    final confirmed = await _confirmLibraryDelete(
+      context,
+      title: 'Borrar de la biblioteca',
+      message: _libraryDeleteMessage(controller, item),
+    );
+    if (confirmed) {
+      controller.deleteLibraryItem(item.id);
+    }
+  }
+}
+
 class _LibraryTypeCard extends StatelessWidget {
   const _LibraryTypeCard({
     required this.controller,
@@ -502,6 +841,7 @@ class _LibraryTypeCard extends StatelessWidget {
     required this.allItems,
     required this.totalCount,
     required this.status,
+    required this.showStatus,
   });
 
   final TodoWorkspace controller;
@@ -509,7 +849,8 @@ class _LibraryTypeCard extends StatelessWidget {
   final List<LibraryItem> items;
   final List<LibraryItem> allItems;
   final int totalCount;
-  final LibraryItemStatus status;
+  final LibraryItemStatus? status;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -571,6 +912,7 @@ class _LibraryTypeCard extends StatelessWidget {
                       return _LibraryItemRow(
                         item: item,
                         controller: controller,
+                        showStatus: showStatus,
                         onTap: () => _showDetailDialog(context, item),
                         onEdit: () => _showEditDialog(context, item),
                         onDelete: () => _deleteItem(context, item),
@@ -632,6 +974,7 @@ class _LibraryTypeCard extends StatelessWidget {
         type: type,
         items: allItems,
         status: status,
+        showStatus: showStatus,
       ),
     );
   }
@@ -644,6 +987,7 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
     required this.items,
     required this.totalCount,
     required this.status,
+    required this.showStatus,
     required this.typeFilters,
   });
 
@@ -651,7 +995,8 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
   final LibraryItemType type;
   final List<LibraryItem> items;
   final int totalCount;
-  final LibraryItemStatus status;
+  final LibraryItemStatus? status;
+  final bool showStatus;
   final Widget typeFilters;
 
   @override
@@ -679,111 +1024,107 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   Widget build(BuildContext context) {
     final filtered = _filteredItems(widget.items);
     final sorted = _sortedItems(filtered);
-    return _SurfaceCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final controls = <Widget>[
-                  _miniBadge(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final controls = <Widget>[
+              _LibraryToolbarCountBadge(
+                label:
                     '${widget.totalCount} ${_libraryStatusCountLabel(widget.status, widget.totalCount)}',
-                    _libraryColor(widget.type).withValues(alpha: 0.12),
-                    _libraryColor(widget.type),
+                background: _libraryColor(widget.type).withValues(alpha: 0.12),
+                foreground: _libraryColor(widget.type),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 230,
+                child: _CompactLibrarySearchField(
+                  controller: _searchController,
+                  onChanged: () => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _LibrarySortButton(
+                label: _sortLabelForType(_sortOrder, widget.type),
+                type: widget.type,
+                onSelected: (order) => setState(() => _sortOrder = order),
+              ),
+            ];
+            if (constraints.maxWidth >= 1260) {
+              return Row(
+                children: [
+                  Expanded(child: widget.typeFilters),
+                  const SizedBox(width: 16),
+                  ...controls,
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                widget.typeFilters,
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: controls,
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: sorted.isEmpty
+              ? Center(
+                  child: Text(
+                    _libraryEmptyStatusText(widget.status),
+                    style: TextStyle(color: context.visuals.textMuted),
                   ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 230,
-                    child: _CompactLibrarySearchField(
-                      controller: _searchController,
-                      onChanged: () => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  _LibrarySortButton(
-                    label: _sortLabelForType(_sortOrder, widget.type),
-                    type: widget.type,
-                    onSelected: (order) => setState(() => _sortOrder = order),
-                  ),
-                ];
-                if (constraints.maxWidth >= 980) {
-                  return Row(
-                    children: [
-                      Expanded(child: widget.typeFilters),
-                      const SizedBox(width: 16),
-                      ...controls,
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    widget.typeFilters,
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: controls,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: sorted.isEmpty
-                ? Center(
-                    child: Text(
-                      _libraryEmptyStatusText(widget.status),
-                      style: TextStyle(color: context.visuals.textMuted),
-                    ),
-                  )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final maxExtent = constraints.maxWidth >= 980
-                          ? 194.0
-                          : constraints.maxWidth >= 720
-                              ? 176.0
-                              : 154.0;
-                      return GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
-                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: maxExtent,
-                          mainAxisSpacing: 24,
-                          crossAxisSpacing: 20,
-                          childAspectRatio: 0.66,
-                        ),
-                        itemCount: sorted.length,
-                        itemBuilder: (context, index) {
-                          final item = sorted[index];
-                          return _LibraryCoverGridCard(
-                            item: item,
-                            controller: widget.controller,
-                            onTap: () => _showLibraryItemDetails(
-                              context,
-                              widget.controller,
-                              sorted,
-                              item,
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxExtent = constraints.maxWidth >= 980
+                        ? 194.0
+                        : constraints.maxWidth >= 720
+                            ? 176.0
+                            : 154.0;
+                    return GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(6, 6, 6, 16),
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: maxExtent,
+                        mainAxisSpacing: 24,
+                        crossAxisSpacing: 20,
+                        childAspectRatio: 0.66,
+                      ),
+                      itemCount: sorted.length,
+                      itemBuilder: (context, index) {
+                        final item = sorted[index];
+                        return _LibraryCoverGridCard(
+                          item: item,
+                          controller: widget.controller,
+                          showStatus: widget.showStatus,
+                          onTap: () => _showLibraryItemDetails(
+                            context,
+                            widget.controller,
+                            sorted,
+                            item,
+                          ),
+                          onEdit: () => showDialog<void>(
+                            context: context,
+                            builder: (context) => _LibraryItemDialog(
+                              controller: widget.controller,
+                              item: item,
                             ),
-                            onEdit: () => showDialog<void>(
-                              context: context,
-                              builder: (context) => _LibraryItemDialog(
-                                controller: widget.controller,
-                                item: item,
-                              ),
-                            ),
-                            onDelete: () => _deleteItem(context, item),
-                          );
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+                          ),
+                          onDelete: () => _deleteItem(context, item),
+                        );
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -827,16 +1168,25 @@ class _CompactLibrarySearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 38,
       child: TextField(
         controller: controller,
         onChanged: (_) => onChanged(),
         decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search_rounded),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 38, minHeight: 38),
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 38, minHeight: 38),
           suffixIcon: controller.text.trim().isEmpty
               ? null
               : IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints.tightFor(width: 38, height: 38),
+                  icon: const Icon(Icons.close_rounded, size: 18),
                   tooltip: 'Limpiar búsqueda',
                   onPressed: () {
                     controller.clear();
@@ -852,12 +1202,12 @@ class _CompactLibrarySearchField extends StatelessWidget {
 class _LibrarySortButton extends StatelessWidget {
   const _LibrarySortButton({
     required this.label,
-    required this.type,
+    this.type,
     required this.onSelected,
   });
 
   final String label;
-  final LibraryItemType type;
+  final LibraryItemType? type;
   final ValueChanged<LibrarySortOrder> onSelected;
 
   @override
@@ -868,17 +1218,79 @@ class _LibrarySortButton extends StatelessWidget {
       offset: const Offset(0, 8),
       onSelected: onSelected,
       itemBuilder: (context) => [
-        for (final order in _sortOptionsForType(type))
+        for (final order
+            in type == null ? _sortOptionsForAll() : _sortOptionsForType(type!))
           PopupMenuItem(
             value: order,
-            child: Text(_sortLabelForType(order, type)),
+            child: Text(
+              type == null
+                  ? _sortLabel(order)
+                  : _sortLabelForType(order, type!),
+            ),
           ),
       ],
       child: IgnorePointer(
-        child: _HeaderSecondaryButton(
-          label: label,
-          icon: Icons.expand_more_rounded,
-          onPressed: () {},
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.62),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFE8DCCB)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF34362F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.expand_more_rounded,
+                size: 18,
+                color: Color(0xFF34362F),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryToolbarCountBadge extends StatelessWidget {
+  const _LibraryToolbarCountBadge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 38,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: foreground.withValues(alpha: 0.14)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -889,6 +1301,8 @@ class _LibraryCoverGridCard extends StatefulWidget {
   const _LibraryCoverGridCard({
     required this.item,
     required this.controller,
+    required this.showStatus,
+    this.showTypeBadge = false,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -896,6 +1310,8 @@ class _LibraryCoverGridCard extends StatefulWidget {
 
   final LibraryItem item;
   final TodoWorkspace controller;
+  final bool showStatus;
+  final bool showTypeBadge;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -912,204 +1328,231 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
     final item = widget.item;
     final rewatchCount = _libraryRewatchCount(item);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
-    final collectionTooltip = collectionLabels == null
-        ? ''
-        : '\n${collectionLabels.saga} · ${collectionLabels.installment}';
-    return Tooltip(
-      message:
-          '${item.title}$collectionTooltip\n${_libraryItemSubtitle(item)}\n${_libraryExtraInfo(item)}',
-      waitDuration: const Duration(milliseconds: 450),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onSecondaryTapDown: (details) => _showLibraryContextMenu(
-            context: context,
-            position: details.globalPosition,
-            onPages: () => _openKnowledgeWorkspace(
-              context,
-              widget.controller,
-              item,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onSecondaryTapDown: (details) => _showLibraryContextMenu(
+          context: context,
+          position: details.globalPosition,
+          onPages: () => _openKnowledgeWorkspace(
+            context,
+            widget.controller,
+            item,
+          ),
+          onComplete: item.status == LibraryItemStatus.completed
+              ? null
+              : () => _completeLibraryItem(
+                    context,
+                    widget.controller,
+                    item,
+                  ),
+          onEdit: widget.onEdit,
+          onDelete: widget.onDelete,
+        ),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(7),
+          child: AnimatedContainer(
+            key: ValueKey('library-cover-card-${item.id}'),
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            transform: Matrix4.identity()
+              ..scaleByDouble(
+                _hovered ? 1.025 : 1.0,
+                _hovered ? 1.025 : 1.0,
+                1,
+                1,
+              ),
+            transformAlignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFF18202A),
+              borderRadius: BorderRadius.circular(7),
+              boxShadow: [
+                if (item.status == LibraryItemStatus.completed)
+                  BoxShadow(
+                    color: const Color(0xFF5F7F49).withValues(alpha: 0.38),
+                    blurRadius: _hovered ? 26 : 18,
+                    spreadRadius: _hovered ? 2 : 1,
+                  ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: _hovered ? 0.26 : 0.18),
+                  blurRadius: _hovered ? 22 : 16,
+                  offset: Offset(0, _hovered ? 11 : 8),
+                ),
+              ],
             ),
-            onComplete: item.status == LibraryItemStatus.completed
-                ? null
-                : () => _completeLibraryItem(
+            foregroundDecoration: item.status == LibraryItemStatus.completed
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: const Color(0xFF5F7F49),
+                      width: 4,
+                    ),
+                  )
+                : null,
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _LibraryCoverImage(
+                  source: item.coverUrl,
+                  type: item.type,
+                  iconSize: 44,
+                ),
+                AnimatedOpacity(
+                  opacity: _hovered ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x00000000),
+                          Color(0x1A000000),
+                          Color(0xB8000000),
+                        ],
+                        stops: [0.42, 0.72, 1],
+                      ),
+                    ),
+                  ),
+                ),
+                if (widget.showTypeBadge ||
+                    item.rating != null ||
+                    rewatchCount > 1)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (widget.showTypeBadge)
+                          _LibraryCoverTypeBadge(
+                            key: ValueKey('library-cover-type-${item.id}'),
+                            type: item.type,
+                          ),
+                        if (widget.showTypeBadge &&
+                            (item.rating != null || rewatchCount > 1))
+                          const SizedBox(height: 5),
+                        if (item.rating != null)
+                          _LibraryPosterBadge(
+                            icon: Icons.star_rounded,
+                            label: _formatRating(item.rating!),
+                          ),
+                        if (item.rating != null && rewatchCount > 1)
+                          const SizedBox(height: 5),
+                        if (rewatchCount > 1)
+                          _LibraryRewatchBadge(count: rewatchCount),
+                      ],
+                    ),
+                  ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  left: 12,
+                  right: 12,
+                  bottom: _hovered ? 50 : 38,
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      opacity: _hovered ? 1 : 0,
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0xAA000000),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (collectionLabels != null) ...[
+                            const SizedBox(height: 6),
+                            _LibraryCollectionChips(
+                              controller: widget.controller,
+                              item: item,
+                              compact: true,
+                              onDark: true,
+                              alignment: WrapAlignment.center,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 8,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 13,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xE63B4654),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.26),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        _libraryItemStatusMeta(item),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (widget.showStatus)
+                  Positioned(
+                    left: 8,
+                    bottom: 42,
+                    child: _LibraryStatusBadge(status: item.status),
+                  ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: _LibraryCoverMenuButton(
+                    onPages: () => _openKnowledgeWorkspace(
                       context,
                       widget.controller,
                       item,
                     ),
-            onEdit: widget.onEdit,
-            onDelete: widget.onDelete,
-          ),
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(7),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOut,
-              transform: Matrix4.identity()
-                ..scaleByDouble(
-                  _hovered ? 1.025 : 1.0,
-                  _hovered ? 1.025 : 1.0,
-                  1,
-                  1,
+                    onComplete: item.status == LibraryItemStatus.completed
+                        ? null
+                        : () => _completeLibraryItem(
+                              context,
+                              widget.controller,
+                              item,
+                            ),
+                    onEdit: widget.onEdit,
+                    onDelete: widget.onDelete,
+                  ),
                 ),
-              transformAlignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFF18202A),
-                borderRadius: BorderRadius.circular(7),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        Colors.black.withValues(alpha: _hovered ? 0.26 : 0.18),
-                    blurRadius: _hovered ? 22 : 16,
-                    offset: Offset(0, _hovered ? 11 : 8),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _LibraryCoverImage(
-                    source: item.coverUrl,
-                    type: item.type,
-                    iconSize: 44,
-                  ),
-                  AnimatedOpacity(
-                    opacity: _hovered ? 1 : 0,
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    child: const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0x00000000),
-                            Color(0x1A000000),
-                            Color(0xB8000000),
-                          ],
-                          stops: [0.42, 0.72, 1],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (item.rating != null)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: _LibraryPosterBadge(
-                        icon: Icons.star_rounded,
-                        label: _formatRating(item.rating!),
-                      ),
-                    ),
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    left: 12,
-                    right: 12,
-                    bottom: _hovered ? 50 : 38,
-                    child: IgnorePointer(
-                      child: AnimatedOpacity(
-                        opacity: _hovered ? 1 : 0,
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.easeOut,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              item.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xAA000000),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (collectionLabels != null) ...[
-                              const SizedBox(height: 6),
-                              _LibraryCollectionChips(
-                                controller: widget.controller,
-                                item: item,
-                                compact: true,
-                                onDark: true,
-                                alignment: WrapAlignment.center,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 8,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 13,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xE63B4654),
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.26),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          _libraryItemStatusMeta(item),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _LibraryCoverMenuButton(
-                      onPages: () => _openKnowledgeWorkspace(
-                        context,
-                        widget.controller,
-                        item,
-                      ),
-                      onComplete: item.status == LibraryItemStatus.completed
-                          ? null
-                          : () => _completeLibraryItem(
-                                context,
-                                widget.controller,
-                                item,
-                              ),
-                      onEdit: widget.onEdit,
-                      onDelete: widget.onDelete,
-                    ),
-                  ),
-                  if (rewatchCount > 1)
-                    Positioned(
-                      top: item.rating == null ? 8 : 42,
-                      right: 8,
-                      child: _LibraryRewatchBadge(count: rewatchCount),
-                    ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
@@ -1152,6 +1595,30 @@ class _LibraryPosterBadge extends StatelessWidget {
   }
 }
 
+class _LibraryCoverTypeBadge extends StatelessWidget {
+  const _LibraryCoverTypeBadge({super.key, required this.type});
+
+  final LibraryItemType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _libraryColor(type);
+    return Tooltip(
+      message: _libraryTypeSingularLabelForType(type),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: const Color(0xD9202732),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        ),
+        child: Icon(_libraryIcon(type), size: 15, color: color),
+      ),
+    );
+  }
+}
+
 class _LibraryRewatchBadge extends StatelessWidget {
   const _LibraryRewatchBadge({required this.count, this.compact = false});
 
@@ -1183,12 +1650,14 @@ class _LibraryRewatchBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.replay_rounded,
-              size: compact ? 13 : 15,
-              color: const Color(0xFF607A4D),
-            ),
-            const SizedBox(width: 3),
+            if (!compact) ...[
+              const Icon(
+                Icons.replay_rounded,
+                size: 15,
+                color: Color(0xFF607A4D),
+              ),
+              const SizedBox(width: 3),
+            ],
             Text(
               'x$count',
               style: const TextStyle(
@@ -1199,6 +1668,58 @@ class _LibraryRewatchBadge extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LibraryStatusBadge extends StatelessWidget {
+  const _LibraryStatusBadge({required this.status});
+
+  final LibraryItemStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = switch (status) {
+      LibraryItemStatus.completed => (
+          label: 'Completado',
+          background: const Color(0xFFE7F2DF),
+          foreground: const Color(0xFF597743),
+          icon: Icons.check_rounded,
+        ),
+      LibraryItemStatus.inProgress => (
+          label: 'En curso',
+          background: const Color(0xFFFFEFD9),
+          foreground: const Color(0xFFC77721),
+          icon: Icons.play_arrow_rounded,
+        ),
+      LibraryItemStatus.pending => (
+          label: 'Pendiente',
+          background: const Color(0xFFECEFF3),
+          foreground: const Color(0xFF687384),
+          icon: Icons.bookmark_outline_rounded,
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(style.icon, size: 12, color: style.foreground),
+          const SizedBox(width: 3),
+          Text(
+            style.label,
+            style: TextStyle(
+              color: style.foreground,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1291,6 +1812,7 @@ class _LibraryItemRow extends StatelessWidget {
   const _LibraryItemRow({
     required this.item,
     required this.controller,
+    this.showStatus = false,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -1298,6 +1820,7 @@ class _LibraryItemRow extends StatelessWidget {
 
   final LibraryItem item;
   final TodoWorkspace controller;
+  final bool showStatus;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -1306,6 +1829,7 @@ class _LibraryItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final rewatchCount = _libraryRewatchCount(item);
     final collectionLabels = _libraryCollectionLabels(controller, item);
+    final seriesLabels = _librarySeriesLabels(item);
     return GestureDetector(
       onSecondaryTapDown: (details) => _showLibraryContextMenu(
         context: context,
@@ -1336,24 +1860,51 @@ class _LibraryItemRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    if (collectionLabels != null || rewatchCount > 1) ...[
+                    if (collectionLabels != null ||
+                        rewatchCount > 1 ||
+                        seriesLabels != null) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
+                          if (showStatus)
+                            _LibraryStatusBadge(status: item.status),
+                          if (showStatus &&
+                              (collectionLabels != null ||
+                                  rewatchCount > 1 ||
+                                  seriesLabels != null))
+                            const SizedBox(width: 5),
                           if (collectionLabels != null)
-                            Expanded(
+                            Flexible(
                               child: _LibraryCollectionChips(
                                 controller: controller,
                                 item: item,
                                 compact: true,
                               ),
                             ),
-                          if (collectionLabels != null && rewatchCount > 1)
-                            const SizedBox(width: 8),
                           if (rewatchCount > 1)
-                            _LibraryRewatchBadge(
-                              count: rewatchCount,
-                              compact: true,
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: collectionLabels == null ? 0 : 5,
+                              ),
+                              child: _LibraryRewatchBadge(
+                                count: rewatchCount,
+                                compact: true,
+                              ),
+                            ),
+                          if (seriesLabels != null)
+                            Flexible(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  left: collectionLabels == null &&
+                                          rewatchCount <= 1
+                                      ? 0
+                                      : 5,
+                                ),
+                                child: _LibrarySeriesChips(
+                                  labels: seriesLabels,
+                                  compact: true,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -1396,8 +1947,32 @@ class _LibraryCollectionChips extends StatelessWidget {
     if (labels == null) {
       return const SizedBox.shrink();
     }
+    if (compact) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: _LibraryCollectionChip(
+              label: labels.saga,
+              item: item,
+              compact: true,
+              onDark: onDark,
+            ),
+          ),
+          if (labels.installment != null) ...[
+            const SizedBox(width: 5),
+            _LibraryCollectionChip(
+              label: labels.installment!,
+              item: item,
+              compact: true,
+              onDark: onDark,
+            ),
+          ],
+        ],
+      );
+    }
     return Wrap(
-      spacing: compact ? 5 : 7,
+      spacing: 7,
       runSpacing: 5,
       alignment: alignment,
       children: [
@@ -1407,12 +1982,13 @@ class _LibraryCollectionChips extends StatelessWidget {
           compact: compact,
           onDark: onDark,
         ),
-        _LibraryCollectionChip(
-          label: labels.installment,
-          item: item,
-          compact: compact,
-          onDark: onDark,
-        ),
+        if (labels.installment != null)
+          _LibraryCollectionChip(
+            label: labels.installment!,
+            item: item,
+            compact: compact,
+            onDark: onDark,
+          ),
       ],
     );
   }
@@ -1459,6 +2035,85 @@ class _LibraryCollectionChip extends StatelessWidget {
   }
 }
 
+class _LibrarySeriesChips extends StatelessWidget {
+  const _LibrarySeriesChips({required this.labels, this.compact = false});
+
+  final ({String seasons, String? upcoming}) labels;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: _LibrarySeriesChip(
+              label: labels.seasons,
+              tooltip: 'Temporadas disponibles',
+            ),
+          ),
+          if (labels.upcoming != null) ...[
+            const SizedBox(width: 5),
+            Flexible(
+              child: _LibrarySeriesChip(
+                label: labels.upcoming!,
+                tooltip: 'Siguiente temporada confirmada',
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+    return Wrap(
+      spacing: 5,
+      runSpacing: 5,
+      children: [
+        _LibrarySeriesChip(
+          label: labels.seasons,
+          tooltip: 'Temporadas disponibles',
+        ),
+        if (labels.upcoming != null)
+          _LibrarySeriesChip(
+            label: labels.upcoming!,
+            tooltip: 'Siguiente temporada confirmada',
+          ),
+      ],
+    );
+  }
+}
+
+class _LibrarySeriesChip extends StatelessWidget {
+  const _LibrarySeriesChip({required this.label, required this.tooltip});
+
+  final String label;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF0D9),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFFC77721),
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LibraryThumbnail extends StatelessWidget {
   const _LibraryThumbnail({required this.item, this.small = false});
 
@@ -1493,12 +2148,14 @@ class _LibraryTypeListDialog extends StatelessWidget {
     required this.type,
     required this.items,
     required this.status,
+    required this.showStatus,
   });
 
   final TodoWorkspace controller;
   final LibraryItemType type;
   final List<LibraryItem> items;
-  final LibraryItemStatus status;
+  final LibraryItemStatus? status;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -1567,6 +2224,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
                         return _LibraryItemRow(
                           item: item,
                           controller: controller,
+                          showStatus: showStatus,
                           onTap: () async {
                             await _showLibraryItemDetails(
                               context,
@@ -1634,23 +2292,20 @@ class _LibrarySidePanel extends StatelessWidget {
     return Column(
       children: [
         _SurfaceCard(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Recientes',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Text('Últimos completados',
-                  style: TextStyle(color: context.visuals.textMuted)),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               if (recent.isEmpty)
                 Text(
-                  'No hay completados recientes.',
+                  'No hay elementos recientes.',
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final item in recent.take(5))
+                for (final item in recent.take(4))
                   GestureDetector(
                     onSecondaryTapDown: (details) => _showLibraryContextMenu(
                       context: context,
@@ -1669,7 +2324,7 @@ class _LibrarySidePanel extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1727,27 +2382,27 @@ class _LibrarySidePanel extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _SurfaceCard(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Años',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text('Explora tu biblioteca por año',
                   style: TextStyle(color: context.visuals.textMuted)),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               if (years.isEmpty)
                 Text(
                   'Aún no hay años registrados.',
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final value in years.take(4))
+                for (final value in years.take(3))
                   Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 5),
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: value == year
                           ? const Color(0xFFE8F1DD)
@@ -1765,7 +2420,7 @@ class _LibrarySidePanel extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _LibraryTotalsSideCard(items: yearItems, year: year),
       ],
     );
@@ -1802,23 +2457,23 @@ class _LibraryTotalsSideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SurfaceCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Totales',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text('Resumen de completados en $year',
               style: TextStyle(color: context.visuals.textMuted)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _LibraryTotalRow(
             icon: Icons.bookmarks_outlined,
             color: const Color(0xFF7E9BB4),
             label: 'Total completados',
             value: items.length,
           ),
-          const Divider(height: 18),
+          const Divider(height: 12),
           for (final type in LibraryItemType.values)
             _LibraryTotalRow(
               icon: _libraryIcon(type),
@@ -2675,11 +3330,15 @@ class _LibraryGoalsView extends StatefulWidget {
   const _LibraryGoalsView({
     required this.controller,
     required this.year,
+    required this.selectedType,
+    required this.onSelectedTypeChanged,
     required this.onAdd,
   });
 
   final TodoWorkspace controller;
   final int year;
+  final LibraryItemType? selectedType;
+  final ValueChanged<LibraryItemType?> onSelectedTypeChanged;
   final VoidCallback onAdd;
 
   @override
@@ -2687,8 +3346,6 @@ class _LibraryGoalsView extends StatefulWidget {
 }
 
 class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
-  LibraryItemType? _selectedType;
-
   @override
   Widget build(BuildContext context) {
     final goals = widget.controller.libraryGoals
@@ -2700,11 +3357,11 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _LibraryTypeFilters(
-          selected: _selectedType,
-          onChanged: (value) => setState(() => _selectedType = value),
+          selected: widget.selectedType,
+          onChanged: widget.onSelectedTypeChanged,
         ),
         const SizedBox(height: 14),
-        if (_selectedType != null)
+        if (widget.selectedType != null)
           wide
               ? Expanded(child: _filteredGoalsPanel(context, goals))
               : SizedBox(
@@ -2839,7 +3496,7 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
   }
 
   Widget _filteredGoalsPanel(BuildContext context, List<LibraryGoal> goals) {
-    final selectedType = _selectedType!;
+    final selectedType = widget.selectedType!;
     return _LibraryGoalFilteredCardsPanel(
       type: selectedType,
       goals: goals.where((goal) => goal.type == selectedType).toList(),
@@ -4386,7 +5043,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _cover = TextEditingController();
   final _collectionName = TextEditingController();
   final _collectionNumber = TextEditingController();
+  final _seasonCount = TextEditingController();
   bool _showCollectionNumber = false;
+  bool _nextSeasonConfirmed = false;
+  LibraryPublicationStatus? _publicationStatus;
   bool get _isEditing => widget.item != null;
 
   @override
@@ -4417,7 +5077,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _cover.text = item.coverUrl ?? '';
     _collectionName.text = item.collectionName ?? '';
     _collectionNumber.text = item.collectionNumber?.toString() ?? '';
+    _seasonCount.text = item.seasonCount?.toString() ?? '';
     _showCollectionNumber = item.showCollectionNumber;
+    _nextSeasonConfirmed = item.nextSeasonConfirmed;
+    _publicationStatus = item.publicationStatus;
   }
 
   @override
@@ -4438,6 +5101,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _cover.dispose();
     _collectionName.dispose();
     _collectionNumber.dispose();
+    _seasonCount.dispose();
     super.dispose();
   }
 
@@ -4540,7 +5204,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                         const SizedBox(height: 26),
                       ],
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        // La ficha de la derecha puede crecer al mostrar la
+                        // fecha y la valoración de un elemento completado.
+                        // Mantener la carátula alineada arriba evita que salte
+                        // de posición al cambiar el estado.
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _LibraryImageDropField(
                             label: _imageLabel(),
@@ -4628,6 +5296,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 keyboardType: TextInputType.number),
             const SizedBox(height: 8),
             _dialogField(_genre, 'Género', 'Ej. Inmersivo, RPG...'),
+            if (_status == LibraryItemStatus.completed) ...[
+              const SizedBox(height: 8),
+              _dialogField(
+                _rating,
+                'Valoración opcional',
+                'Ej. 8,5',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             _dialogField(
               _note,
@@ -4640,17 +5319,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(_developer, 'Desarrollador', 'Ej. Arkane Studios'),
             const SizedBox(height: 8),
             _dialogField(_duration, 'Horas jugadas', 'Ej. 28 h (opcional)'),
-            if (_status == LibraryItemStatus.completed) ...[
-              const SizedBox(height: 8),
-              _dialogField(
-                _rating,
-                'Valoración opcional',
-                'Ej. 8,5',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-              ),
-            ],
           ],
         ),
       LibraryItemType.book => Column(
@@ -4672,19 +5340,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _bookFormatField(),
             const SizedBox(height: 8),
             _dialogField(_genre, 'Género', 'Ej. Fantasía, Manga...'),
-            const SizedBox(height: 8),
-            _dialogField(
-              _note,
-              'Notas opcionales',
-              'Añade contexto, una reseña o cualquier detalle…',
-              minLines: 3,
-              maxLines: 5,
-            ),
-            const SizedBox(height: 8),
-            _bookTypeField(),
-            const SizedBox(height: 8),
-            _dialogField(_pages, 'Páginas / Volúmenes',
-                'Ej. 832 páginas / 3 tomos (opcional)'),
             if (_status == LibraryItemStatus.completed) ...[
               const SizedBox(height: 8),
               _dialogField(
@@ -4696,6 +5351,23 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 ),
               ),
             ],
+            const SizedBox(height: 8),
+            _dialogField(
+              _note,
+              'Notas opcionales',
+              'Añade contexto, una reseña o cualquier detalle…',
+              minLines: 3,
+              maxLines: 5,
+            ),
+            const SizedBox(height: 8),
+            _bookTypeField(),
+            if (_creator.text == 'Manga') ...[
+              const SizedBox(height: 8),
+              _publicationStatusField(),
+            ],
+            const SizedBox(height: 8),
+            _dialogField(_pages, 'Páginas / Volúmenes',
+                'Ej. 832 páginas / 3 tomos (opcional)'),
           ],
         ),
       LibraryItemType.movieSeries => Column(
@@ -4704,6 +5376,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             ..._collectionFields(),
             const SizedBox(height: 8),
             _mediaTypeField(),
+            if (_mediaType == LibraryMediaType.series) ...[
+              const SizedBox(height: 8),
+              _dialogField(
+                _seasonCount,
+                'Temporadas disponibles',
+                'Ej. 2',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              _nextSeasonConfirmedField(),
+            ],
             const SizedBox(height: 8),
             _statusField(),
             if (_status == LibraryItemStatus.completed) ...[
@@ -4717,6 +5400,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(_format, 'Formato', 'Ej. Digital'),
             const SizedBox(height: 8),
             _dialogField(_genre, 'Género', 'Ej. Drama, Acción...'),
+            if (_status == LibraryItemStatus.completed) ...[
+              const SizedBox(height: 8),
+              _dialogField(
+                _rating,
+                'Valoración opcional',
+                'Ej. 8,5',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             _dialogField(
               _note,
@@ -4733,17 +5427,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 8),
             _dialogField(
                 _country, 'País de origen', 'Ej. Estados Unidos (opcional)'),
-            if (_status == LibraryItemStatus.completed) ...[
-              const SizedBox(height: 8),
-              _dialogField(
-                _rating,
-                'Valoración opcional',
-                'Ej. 8,5',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-              ),
-            ],
           ],
         ),
     };
@@ -4904,6 +5587,52 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     );
   }
 
+  Widget _publicationStatusField() {
+    return _LibraryEditLine(
+      label: 'Publicación',
+      child: DropdownButtonFormField<LibraryPublicationStatus>(
+        initialValue: _publicationStatus,
+        decoration: _libraryEditInputDecoration(context, 'Selecciona estado'),
+        style: TextStyle(
+          color: context.visuals.textStrong,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        items: const [
+          DropdownMenuItem(
+            value: LibraryPublicationStatus.ongoing,
+            child: Text('En publicación'),
+          ),
+          DropdownMenuItem(
+            value: LibraryPublicationStatus.finished,
+            child: Text('Finalizado'),
+          ),
+        ],
+        onChanged: (value) => setState(() => _publicationStatus = value),
+      ),
+    );
+  }
+
+  Widget _nextSeasonConfirmedField() {
+    return _LibraryEditLine(
+      label: 'Próxima temporada',
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Temporada confirmada',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Switch(
+            value: _nextSeasonConfirmed,
+            onChanged: (value) => setState(() => _nextSeasonConfirmed = value),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _dropdownTextField({
     required String label,
     required TextEditingController controller,
@@ -5032,6 +5761,22 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           showCollectionNumber: _validCollectionNumber != null &&
               _collectionName.text.trim().isNotEmpty &&
               _showCollectionNumber,
+          seasonCount: _type == LibraryItemType.movieSeries &&
+                  _mediaType == LibraryMediaType.series
+              ? _validSeasonCount
+              : null,
+          clearSeasonCount: _type != LibraryItemType.movieSeries ||
+              _mediaType != LibraryMediaType.series ||
+              _validSeasonCount == null,
+          nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
+              _mediaType == LibraryMediaType.series &&
+              _nextSeasonConfirmed,
+          publicationStatus:
+              _type == LibraryItemType.book && _creator.text == 'Manga'
+                  ? _publicationStatus
+                  : null,
+          clearPublicationStatus:
+              _type != LibraryItemType.book || _creator.text != 'Manga',
         ),
       );
       Navigator.of(context).pop();
@@ -5065,12 +5810,28 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       showCollectionNumber: _validCollectionNumber != null &&
           _collectionName.text.trim().isNotEmpty &&
           _showCollectionNumber,
+      seasonCount: _type == LibraryItemType.movieSeries &&
+              _mediaType == LibraryMediaType.series
+          ? _validSeasonCount
+          : null,
+      nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
+          _mediaType == LibraryMediaType.series &&
+          _nextSeasonConfirmed,
+      publicationStatus:
+          _type == LibraryItemType.book && _creator.text == 'Manga'
+              ? _publicationStatus
+              : null,
     );
     Navigator.of(context).pop();
   }
 
   int? get _validCollectionNumber {
     final value = int.tryParse(_collectionNumber.text.trim());
+    return value != null && value > 0 ? value : null;
+  }
+
+  int? get _validSeasonCount {
+    final value = int.tryParse(_seasonCount.text.trim());
     return value != null && value > 0 ? value : null;
   }
 }
@@ -5219,7 +5980,7 @@ class _LibraryContentTypeButton extends StatelessWidget {
   }
 }
 
-class _LibraryImageDropField extends StatelessWidget {
+class _LibraryImageDropField extends StatefulWidget {
   const _LibraryImageDropField({
     required this.label,
     required this.type,
@@ -5237,45 +5998,84 @@ class _LibraryImageDropField extends StatelessWidget {
   final double height;
 
   @override
+  State<_LibraryImageDropField> createState() => _LibraryImageDropFieldState();
+}
+
+class _LibraryImageDropFieldState extends State<_LibraryImageDropField> {
+  final FocusNode _pasteFocus = FocusNode(
+    debugLabel: 'Pegar portada de biblioteca',
+  );
+
+  @override
+  void dispose() {
+    _pasteFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: width,
+      width: widget.width,
       child: Column(
         children: [
-          InkWell(
-            onTap: () => _pickCoverFile(context),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: height,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFCF8),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE3D8CB)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x260F1B0C),
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: controller,
-                builder: (context, value, _) {
-                  final source = value.text.trim();
-                  if (source.isNotEmpty) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: _LibraryCoverImage(
-                        source: source,
-                        type: type,
-                        iconSize: 34,
-                      ),
-                    );
-                  }
-                  return _LibraryImagePlaceholder(icon: icon, label: label);
+          CallbackShortcuts(
+            bindings: <ShortcutActivator, VoidCallback>{
+              const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+                  () => _pasteCover(context),
+            },
+            child: Focus(
+              focusNode: _pasteFocus,
+              child: InkWell(
+                onTap: () {
+                  _pasteFocus.requestFocus();
+                  _pickCoverFile(context);
                 },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: widget.height,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFCF8),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE3D8CB)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x260F1B0C),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: widget.controller,
+                    builder: (context, value, _) {
+                      final source = value.text.trim();
+                      if (source.isNotEmpty) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _LibraryCoverImage(
+                            source: source,
+                            type: widget.type,
+                            iconSize: 34,
+                          ),
+                        );
+                      }
+                      return _LibraryImagePlaceholder(
+                        icon: widget.icon,
+                        label: widget.label,
+                      );
+                    },
+                  ),
+                ),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _pasteCover(context),
+              icon: const Icon(Icons.content_paste_rounded),
+              label: const Text('Pegar imagen'),
             ),
           ),
         ],
@@ -5302,10 +6102,35 @@ class _LibraryImageDropField extends StatelessWidget {
         _showCoverError(context, 'No se pudo guardar la imagen seleccionada.');
         return;
       }
-      controller.text = savedPath;
+      widget.controller.text = savedPath;
     } catch (error) {
       if (context.mounted) {
         _showCoverError(context, 'No se pudo cambiar la portada: $error');
+      }
+    }
+  }
+
+  Future<void> _pasteCover(BuildContext context) async {
+    final result = await readClipboardImage();
+    if (!context.mounted) return;
+    if (!result.hasImage) {
+      _showCoverError(context, result.errorMessage!);
+      return;
+    }
+    try {
+      final savedPath = await _copyLibraryCoverBytes(result.bytes!);
+      if (!context.mounted) return;
+      if (savedPath == null) {
+        _showCoverError(context, 'La imagen copiada no es compatible.');
+        return;
+      }
+      widget.controller.text = savedPath;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Imagen pegada.')),
+      );
+    } catch (error) {
+      if (context.mounted) {
+        _showCoverError(context, 'No se pudo pegar la portada: $error');
       }
     }
   }
@@ -5368,6 +6193,12 @@ String _libraryTypePluralLabel(LibraryItemType type) => switch (type) {
       LibraryItemType.movieSeries => 'Películas y series',
     };
 
+String _libraryTypeSingularLabelForType(LibraryItemType type) => switch (type) {
+      LibraryItemType.game => 'Juego',
+      LibraryItemType.book => 'Libro',
+      LibraryItemType.movieSeries => 'Película o serie',
+    };
+
 String _libraryTypeSingularLabel(LibraryItem item) => switch (item.type) {
       LibraryItemType.game => 'Juego',
       LibraryItemType.book => 'Libro',
@@ -5375,49 +6206,10 @@ String _libraryTypeSingularLabel(LibraryItem item) => switch (item.type) {
         item.mediaType == LibraryMediaType.series ? 'Serie' : 'Película',
     };
 
-String _libraryItemSubtitle(LibraryItem item) => switch (item.type) {
-      LibraryItemType.game => _libraryGameSubtitle(item),
-      LibraryItemType.book => item.author ?? 'Sin autor',
-      LibraryItemType.movieSeries => _libraryMovieSubtitle(item),
-    };
-
-String _libraryGameSubtitle(LibraryItem item) {
-  final parts = <String>[
-    if (item.platform?.trim().isNotEmpty ?? false) item.platform!.trim(),
-    if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
-  ];
-  return parts.isEmpty ? 'Sin plataforma' : parts.join(' · ');
-}
-
-String _libraryExtraInfo(LibraryItem item) => switch (item.type) {
-      LibraryItemType.game => item.developer ?? 'Sin desarrollador',
-      LibraryItemType.book => _libraryBookExtraInfo(item),
-      LibraryItemType.movieSeries => item.creatorOrDirector ?? 'Sin creador',
-    };
-
-String _libraryMovieSubtitle(LibraryItem item) {
-  final parts = <String>[
-    _libraryTypeSingularLabel(item),
-    if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
-  ];
-  return parts.join(' · ');
-}
-
-String _libraryBookExtraInfo(LibraryItem item) {
-  final parts = <String>[
-    if (item.creatorOrDirector?.trim().isNotEmpty ?? false)
-      item.creatorOrDirector!.trim(),
-    if (item.format?.trim().isNotEmpty ?? false) item.format!.trim(),
-    if (item.pages?.trim().isNotEmpty ?? false) item.pages!.trim(),
-    if (item.genre?.trim().isNotEmpty ?? false) item.genre!.trim(),
-  ];
-  return parts.isEmpty ? 'Sin tipo' : parts.join(' · ');
-}
-
 String _librarySeeAllLabel(
   LibraryItemType type,
   int count,
-  LibraryItemStatus status,
+  LibraryItemStatus? status,
 ) {
   final state = _libraryStatusCountLabel(status, count);
   return switch (type) {
@@ -5427,33 +6219,37 @@ String _librarySeeAllLabel(
   };
 }
 
-String _libraryStatusPluralLabel(LibraryItemStatus status) => switch (status) {
+String _libraryStatusPluralLabel(LibraryItemStatus? status) => switch (status) {
       LibraryItemStatus.pending => 'Pendientes',
       LibraryItemStatus.inProgress => 'En curso',
       LibraryItemStatus.completed => 'Completados',
+      null => 'Todo',
     };
 
-String _libraryStatusSingularLabel(LibraryItemStatus status) =>
+String _libraryStatusSingularLabel(LibraryItemStatus? status) =>
     switch (status) {
       LibraryItemStatus.pending => 'Pendiente',
       LibraryItemStatus.inProgress => 'En curso',
       LibraryItemStatus.completed => 'Completado',
+      null => 'Contenido',
     };
 
-String _libraryStatusCountLabel(LibraryItemStatus status, int count) =>
+String _libraryStatusCountLabel(LibraryItemStatus? status, int count) =>
     switch (status) {
       LibraryItemStatus.pending => count == 1 ? 'pendiente' : 'pendientes',
       LibraryItemStatus.inProgress => 'en curso',
       LibraryItemStatus.completed => count == 1 ? 'completado' : 'completados',
+      null => count == 1 ? 'elemento' : 'elementos',
     };
 
-String _libraryEmptyStatusText(LibraryItemStatus status) => switch (status) {
+String _libraryEmptyStatusText(LibraryItemStatus? status) => switch (status) {
       LibraryItemStatus.pending =>
         'No hay contenido pendiente para este filtro.',
       LibraryItemStatus.inProgress =>
         'No hay contenido en curso para este filtro.',
       LibraryItemStatus.completed =>
         'No hay contenido completado para este filtro.',
+      null => 'No hay contenido en la biblioteca.',
     };
 
 IconData _libraryStatusIcon(LibraryItemStatus status) => switch (status) {
@@ -5470,15 +6266,13 @@ String _libraryItemStatusMeta(LibraryItem item) {
   return _libraryStatusSingularLabel(item.status);
 }
 
-({String saga, String installment})? _libraryCollectionLabels(
+({String saga, String? installment})? _libraryCollectionLabels(
   TodoWorkspace controller,
   LibraryItem item,
 ) {
   final collectionName = item.collectionName?.trim();
   final collectionNumber = item.collectionNumber;
-  if (collectionName == null ||
-      collectionName.isEmpty ||
-      collectionNumber == null) {
+  if (collectionName == null || collectionName.isEmpty) {
     return null;
   }
   final collectionKey = _libraryCollectionKey(collectionName);
@@ -5491,14 +6285,28 @@ String _libraryItemStatusMeta(LibraryItem item) {
       .map((candidate) => candidate.collectionNumber)
       .whereType<int>()
       .toSet();
-  if (distinctNumbers.length < 2 && !item.showCollectionNumber) {
-    return null;
-  }
+  final showInstallment = collectionNumber != null &&
+      (distinctNumbers.length >= 2 || item.showCollectionNumber);
   return (
     saga: collectionName.toLowerCase().startsWith('saga ')
         ? collectionName
         : 'Saga $collectionName',
-    installment: '${_libraryTypeSingularLabel(item)} $collectionNumber',
+    installment: showInstallment ? '#$collectionNumber' : null,
+  );
+}
+
+({String seasons, String? upcoming})? _librarySeriesLabels(
+  LibraryItem item,
+) {
+  if (item.type != LibraryItemType.movieSeries ||
+      item.mediaType != LibraryMediaType.series ||
+      item.seasonCount == null) {
+    return null;
+  }
+  final count = item.seasonCount!;
+  return (
+    seasons: 'T$count',
+    upcoming: item.nextSeasonConfirmed ? 'T${count + 1} ✓' : null,
   );
 }
 
@@ -5585,10 +6393,9 @@ int _libraryRewatchCount(LibraryItem item) {
   final note = item.note ?? '';
   final match =
       RegExp(r'\[rewatch:x(\d+)\]', caseSensitive: false).firstMatch(note);
-  if (match == null) {
-    return 1;
-  }
-  return int.tryParse(match.group(1) ?? '') ?? 1;
+  final legacyCount =
+      match == null ? 1 : int.tryParse(match.group(1) ?? '') ?? 1;
+  return item.rewatchCount > legacyCount ? item.rewatchCount : legacyCount;
 }
 
 String _detailTitle(LibraryItemType type) => switch (type) {
@@ -5606,6 +6413,7 @@ List<(String, String)> _detailFields(LibraryItem item) {
       ('Saga / colección', item.collectionName!),
     if (item.collectionNumber != null)
       ('Número de entrega', '#${item.collectionNumber}'),
+    if (item.rewatchCount > 1) ('Rewatch', 'x${item.rewatchCount}'),
     if (item.completedDate != null)
       ('Fecha completado', _libraryDate(item.completedDate!)),
     if (item.releaseYear != null) ('Año', item.releaseYear.toString()),
@@ -5629,6 +6437,13 @@ List<(String, String)> _detailFields(LibraryItem item) {
         ...common,
         if (item.creatorOrDirector?.isNotEmpty == true)
           ('Tipo', item.creatorOrDirector!),
+        if (item.creatorOrDirector == 'Manga' && item.publicationStatus != null)
+          (
+            'Publicación',
+            item.publicationStatus == LibraryPublicationStatus.ongoing
+                ? 'En publicación'
+                : 'Finalizado'
+          ),
         if (item.pages?.isNotEmpty == true)
           ('Páginas / volúmenes', item.pages!),
         if (item.rating != null) ('Valoración', item.rating!.toString()),
@@ -5639,6 +6454,12 @@ List<(String, String)> _detailFields(LibraryItem item) {
           item.mediaType == LibraryMediaType.series ? 'Serie' : 'Película'
         ),
         ...common,
+        if (item.mediaType == LibraryMediaType.series &&
+            item.seasonCount != null)
+          ('Temporadas disponibles', item.seasonCount.toString()),
+        if (item.mediaType == LibraryMediaType.series &&
+            item.nextSeasonConfirmed)
+          ('Próxima temporada', 'Confirmada'),
         if (item.creatorOrDirector?.isNotEmpty == true)
           ('Director / creador', item.creatorOrDirector!),
         if (item.duration?.isNotEmpty == true) ('Duración', item.duration!),
@@ -5783,6 +6604,18 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
   };
 }
 
+List<LibrarySortOrder> _sortOptionsForAll() => const [
+      LibrarySortOrder.newestFirst,
+      LibrarySortOrder.oldestFirst,
+      LibrarySortOrder.titleAsc,
+      LibrarySortOrder.titleDesc,
+      LibrarySortOrder.highestRating,
+      LibrarySortOrder.releaseYearDesc,
+      LibrarySortOrder.releaseYearAsc,
+      LibrarySortOrder.creatorAsc,
+      LibrarySortOrder.genreAsc,
+    ];
+
 // ignore: unused_element
 String _searchHint(LibraryItemType type) => switch (type) {
       LibraryItemType.game =>
@@ -5890,6 +6723,17 @@ Future<String?> _copyLibraryCover(XFile file) async {
   final target =
       File('${directory.path}${Platform.pathSeparator}cover_$stamp$extension');
   await file.saveTo(target.path);
+  return target.path;
+}
+
+Future<String?> _copyLibraryCoverBytes(Uint8List bytes) async {
+  final extension = _coverExtensionFromSignature(bytes);
+  if (extension == null) return null;
+  final directory = await _libraryCoversDirectory();
+  final stamp = DateTime.now().microsecondsSinceEpoch;
+  final target =
+      File('${directory.path}${Platform.pathSeparator}cover_$stamp$extension');
+  await target.writeAsBytes(bytes, flush: true);
   return target.path;
 }
 

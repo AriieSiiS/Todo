@@ -25,6 +25,10 @@ class LibraryItem {
     this.collectionName,
     this.collectionNumber,
     this.showCollectionNumber = false,
+    this.rewatchCount = 1,
+    this.seasonCount,
+    this.nextSeasonConfirmed = false,
+    this.publicationStatus,
     this.linkedGoalId,
     required this.createdAt,
     required this.updatedAt,
@@ -52,6 +56,10 @@ class LibraryItem {
   final String? collectionName;
   final int? collectionNumber;
   final bool showCollectionNumber;
+  final int rewatchCount;
+  final int? seasonCount;
+  final bool nextSeasonConfirmed;
+  final LibraryPublicationStatus? publicationStatus;
   final String? linkedGoalId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -98,6 +106,12 @@ class LibraryItem {
     int? collectionNumber,
     bool clearCollectionNumber = false,
     bool? showCollectionNumber,
+    int? rewatchCount,
+    int? seasonCount,
+    bool clearSeasonCount = false,
+    bool? nextSeasonConfirmed,
+    LibraryPublicationStatus? publicationStatus,
+    bool clearPublicationStatus = false,
     String? linkedGoalId,
     bool clearLinkedGoalId = false,
     DateTime? createdAt,
@@ -132,6 +146,12 @@ class LibraryItem {
           ? null
           : collectionNumber ?? this.collectionNumber,
       showCollectionNumber: showCollectionNumber ?? this.showCollectionNumber,
+      rewatchCount: rewatchCount ?? this.rewatchCount,
+      seasonCount: clearSeasonCount ? null : seasonCount ?? this.seasonCount,
+      nextSeasonConfirmed: nextSeasonConfirmed ?? this.nextSeasonConfirmed,
+      publicationStatus: clearPublicationStatus
+          ? null
+          : publicationStatus ?? this.publicationStatus,
       linkedGoalId:
           clearLinkedGoalId ? null : linkedGoalId ?? this.linkedGoalId,
       createdAt: createdAt ?? this.createdAt,
@@ -164,6 +184,10 @@ class LibraryItem {
       'collectionName': collectionName,
       'collectionNumber': collectionNumber,
       'showCollectionNumber': showCollectionNumber,
+      'rewatchCount': rewatchCount,
+      'seasonCount': seasonCount,
+      'nextSeasonConfirmed': nextSeasonConfirmed,
+      'publicationStatus': publicationStatus?.name,
       'linkedGoalId': linkedGoalId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -211,6 +235,16 @@ class LibraryItem {
       collectionName: json['collectionName'] as String?,
       collectionNumber: (json['collectionNumber'] as num?)?.toInt(),
       showCollectionNumber: json['showCollectionNumber'] as bool? ?? false,
+      rewatchCount: ((json['rewatchCount'] as num?)?.toInt() ?? 1).clamp(1, 99),
+      seasonCount: (json['seasonCount'] as num?)?.toInt(),
+      nextSeasonConfirmed: json['nextSeasonConfirmed'] as bool? ?? false,
+      publicationStatus: json['publicationStatus'] == null
+          ? null
+          : enumByName(
+              LibraryPublicationStatus.values,
+              json['publicationStatus'] as String?,
+              LibraryPublicationStatus.ongoing,
+            ),
       linkedGoalId: json['linkedGoalId'] as String?,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           completed ??

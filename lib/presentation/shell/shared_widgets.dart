@@ -1,5 +1,214 @@
 part of 'app_shell.dart';
 
+final _compactNoteBlockConfiguration =
+    standardBlockComponentConfiguration.copyWith(
+  padding: (_) => EdgeInsets.zero,
+);
+
+final _compactNoteBlockComponentBuilders = {
+  ...standardBlockComponentBuilderMap,
+  ParagraphBlockKeys.type: ParagraphBlockComponentBuilder(
+    configuration: _compactNoteBlockConfiguration.copyWith(
+      placeholderText: (_) => AppFlowyEditorL10n.current.slashPlaceHolder,
+    ),
+  ),
+  BulletedListBlockKeys.type: BulletedListBlockComponentBuilder(
+    configuration: _compactNoteBlockConfiguration,
+  ),
+  NumberedListBlockKeys.type: NumberedListBlockComponentBuilder(
+    configuration: _compactNoteBlockConfiguration,
+  ),
+};
+
+final _directNoteBlockComponentBuilders = {
+  ..._compactNoteBlockComponentBuilders,
+  ParagraphBlockKeys.type: ParagraphBlockComponentBuilder(
+    configuration: _compactNoteBlockConfiguration.copyWith(
+      placeholderText: (_) => 'Escribe aquí…',
+    ),
+  ),
+};
+
+final _noteSelectionMenuItems = [
+  ...standardSelectionMenuItems.where(
+    (item) => item.name != AppFlowyEditorL10n.current.image,
+  ),
+  SelectionMenuItem(
+    getName: () => 'Imagen',
+    icon: (_, isSelected, style) => Icon(
+      Icons.image_outlined,
+      color: isSelected
+          ? style.selectionMenuItemSelectedIconColor
+          : style.selectionMenuItemIconColor,
+      size: 18,
+    ),
+    keywords: const ['imagen', 'archivo', 'url', 'portapapeles'],
+    handler: (editorState, _, context) {
+      unawaited(_showNoteImageSelector(editorState, context));
+    },
+  ),
+];
+
+final _noteCharacterShortcutEvents = [
+  ...standardCharacterShortcutEvents.where(
+    (event) => event.key != 'show the slash menu',
+  ),
+  customSlashCommand(_noteSelectionMenuItems),
+];
+
+Future<void> _showNoteImageSelector(
+  EditorState editorState,
+  BuildContext context,
+) async {
+  final source = await showDialog<String>(
+    context: context,
+    builder: (_) => const _NoteImageSourceDialog(),
+  );
+  if (source != null) await editorState.insertImageNode(source);
+}
+
+class _NoteImageSourceDialog extends StatefulWidget {
+  const _NoteImageSourceDialog();
+
+  @override
+  State<_NoteImageSourceDialog> createState() => _NoteImageSourceDialogState();
+}
+
+class _NoteImageSourceDialogState extends State<_NoteImageSourceDialog>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final _urlController = TextEditingController();
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true): () =>
+            unawaited(_pasteImage()),
+      },
+      child: AlertDialog(
+        title: const Text('Añadir imagen'),
+        content: SizedBox(
+          width: 520,
+          height: 250,
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Archivo'),
+                  Tab(text: 'URL'),
+                  Tab(text: 'Portapapeles'),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    Center(
+                      child: FilledButton.icon(
+                        onPressed: _selectFile,
+                        icon: const Icon(Icons.folder_open_rounded),
+                        label: const Text('Seleccionar archivo'),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _urlController,
+                          autofocus: true,
+                          keyboardType: TextInputType.url,
+                          decoration: const InputDecoration(
+                            labelText: 'Dirección de la imagen',
+                            hintText: 'https://…',
+                          ),
+                          onSubmitted: (_) => _useUrl(),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _useUrl,
+                          child: const Text('Usar URL'),
+                        ),
+                      ],
+                    ),
+                    Center(
+                      child: FilledButton.icon(
+                        onPressed: _pasteImage,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('Pegar imagen'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectFile() async {
+    final file = await openFile(
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'Imágenes',
+          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        ),
+      ],
+    );
+    if (file == null || !mounted) return;
+    Navigator.of(context).pop(base64Encode(await file.readAsBytes()));
+  }
+
+  void _useUrl() {
+    final url = _urlController.text.trim();
+    if (Uri.tryParse(url)?.hasScheme != true) {
+      setState(() => _error = 'Introduce una dirección web válida.');
+      return;
+    }
+    Navigator.of(context).pop(url);
+  }
+
+  Future<void> _pasteImage() async {
+    final result = await readClipboardImage();
+    if (!mounted) return;
+    if (!result.hasImage) {
+      setState(() => _error = result.errorMessage);
+      return;
+    }
+    Navigator.of(context).pop(base64Encode(result.bytes!));
+  }
+}
+
 Future<void> showQuickNoteComposer(
   BuildContext context,
   TodoWorkspace controller, {
@@ -119,7 +328,9 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
     final initialBody = parts.body ?? '';
     _editorState = initialBody.trim().isEmpty
         ? EditorState.blank()
-        : EditorState(document: markdownToDocument(initialBody));
+        : EditorState(
+            document: markdownToDocument(_normalizeNoteMarkdown(initialBody)),
+          );
     _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
     _emoji = widget.initialNote?.emoji ?? '';
     _isPinned = widget.initialNote?.isPinned ?? false;
@@ -305,9 +516,10 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                       key: const ValueKey('editorContenidoNota'),
                       editorState: _editorState,
                       editable: true,
-                      blockComponentBuilders: standardBlockComponentBuilderMap,
+                      blockComponentBuilders:
+                          _compactNoteBlockComponentBuilders,
                       commandShortcutEvents: standardCommandShortcutEvents,
-                      characterShortcutEvents: standardCharacterShortcutEvents,
+                      characterShortcutEvents: _noteCharacterShortcutEvents,
                       editorStyle: EditorStyle.desktop(
                         padding: const EdgeInsets.all(18),
                         cursorColor: const Color(0xFF607A4D),
@@ -315,9 +527,10 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                         textStyleConfiguration: const TextStyleConfiguration(
                           text: TextStyle(
                             fontSize: 16,
-                            height: 1.5,
+                            height: 1.15,
                             color: Color(0xFF2D2A25),
                           ),
+                          lineHeight: 1.15,
                           bold: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),

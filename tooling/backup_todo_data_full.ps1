@@ -39,7 +39,7 @@ try {
     throw 'La copia no puede guardarse dentro de los datos activos.'
   }
 
-  $dataDirectories = @('runtime', 'covers', 'library_covers', 'wardrobe', 'recipes', 'household', 'knowledge')
+  $dataDirectories = @('runtime', 'covers', 'library_covers', 'wardrobe', 'recipes', 'household', 'plants', 'knowledge')
   $destination = Join-Path $destinationRootPath ("Todo-completo-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
   New-Item -ItemType Directory -Path $destination | Out-Null
   $manifestFiles = [System.Collections.Generic.List[object]]::new()
@@ -84,6 +84,7 @@ try {
       libraryItems=@($snapshot.libraryItems).Count; libraryGoals=@($snapshot.libraryGoals).Count
       wardrobeItems=@($snapshot.wardrobeItems).Count; wardrobeOutfits=@($snapshot.wardrobeOutfits).Count
       householdItems=@($snapshot.householdItems).Count; recipes=@($snapshot.recipes).Count
+      plants=@($snapshot.plants).Count
       calendarEvents=@($snapshot.calendarEvents).Count
     }
     verifiedFiles = $manifestFiles.Count

@@ -2,6 +2,14 @@
 
 Guía corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
 
+## Supabase desactivado temporalmente
+
+Supabase no está funcionando y debe ignorarse hasta que el usuario indique lo
+contrario. Los datos locales son la única fuente de verdad: no se debe intentar
+conectar, sincronizar, diagnosticar ni validar nada contra Supabase, ni bloquear
+una tarea por su estado. Esta regla prevalece sobre cualquier flujo general o
+skill que normalmente obligue a comprobar Supabase.
+
 ## Regla de idioma
 
 Todo texto visible de la app y de la documentación propia del proyecto debe estar en castellano correcto, con tildes, `ñ` y signos adecuados. Antes de entregar cambios de UI hay que buscar y corregir textos sin acentos como `Categoria`, `Mas`, `rapido` o `sesion`, además de cualquier mojibake. No se deben introducir textos en inglés salvo nombres técnicos inevitables, marcas, APIs, claves internas o comandos no visibles.
@@ -70,6 +78,8 @@ La app tiene:
   planificación, lavandería, maletas, estadísticas e importaciones de Ropa
 - `lib/presentation/shell/household_page.dart`: inventario visual de Hogar,
   fichas técnicas, manuales, facturas y garantías
+- `lib/presentation/shell/plants_page.dart`: catálogo de Plantas, fichas de
+  cuidados, seguridad felina y rutinas enlazadas con tareas
 - `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
   tiempos, ingredientes, pasos y creación de tareas de compra o cocina
 - `lib/presentation/shell/completed_page.dart`: vista Completadas
@@ -91,6 +101,7 @@ Secciones:
 - `--section=settings`
 - `--section=wardrobe`
 - `--section=household`
+- `--section=plants`
 - `--section=recipes`
 
 Editores:
@@ -154,6 +165,18 @@ inserción directa en la aplicación.
   repetir verificaciones que no puedan descubrir un fallo concreto.
 - Un render que el usuario haya aprobado se reutiliza tal cual; nunca se vuelve
   a generar solo para retirar el fondo o introducirlo en Todo.
+
+## Flujo rápido para añadir plantas
+
+Cuando el usuario pida añadir una planta a su colección, hay que leer y seguir
+`skills/add-plant-to-todo/SKILL.md`. Se verifican por separado la especie, los
+cuidados y la seguridad para gatos, se prepara una imagen si no se ha aportado
+ninguna y se guarda la ficha con sus rutinas mediante el MCP local.
+
+- No inferir la toxicidad por el nombre común ni por la familia botánica.
+- Usar fuentes hortícolas y veterinarias fiables y guardar sus enlaces.
+- Tras recibir `savedLocally: true`, confirmar el identificador y terminar sin
+  abrir la app ni esperar a la sincronización remota.
 
 ## Validación recomendada
 

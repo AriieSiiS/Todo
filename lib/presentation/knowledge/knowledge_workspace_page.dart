@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../application/state/todo_workspace.dart';
 import '../../domain/models.dart';
 import '../../services/knowledge_service.dart';
+import '../../services/clipboard_image_service.dart';
 
 class KnowledgeWorkspacePage extends StatefulWidget {
   const KnowledgeWorkspacePage({
@@ -563,6 +564,11 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
         children: [
           _toolbarButton(Icons.image_outlined, 'Imagen',
               () => _addAsset(KnowledgeAssetKind.image)),
+          _toolbarButton(
+            Icons.content_paste_rounded,
+            'Pegar imagen',
+            _pasteImageAsset,
+          ),
           _toolbarButton(Icons.attach_file_rounded, 'Archivo',
               () => _addAsset(KnowledgeAssetKind.file)),
           _toolbarButton(Icons.audiotrack_rounded, 'Audio',
@@ -972,6 +978,39 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
+  Future<void> _pasteImageAsset() async {
+    final result = await readClipboardImage();
+    if (!mounted) return;
+    if (!result.hasImage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.errorMessage!)),
+      );
+      return;
+    }
+    try {
+      final asset = await service.importAssetBytes(
+        result.bytes!,
+        extension: '.png',
+      );
+      await _insertNode(imageNode(url: service.absoluteAssetPath(asset))
+        ..updateAttributes(<String, dynamic>{
+          'knowledgeAssetId': asset.id,
+          'knowledgeBlockId': 'block-${DateTime.now().microsecondsSinceEpoch}',
+        }));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Imagen pegada.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo pegar la imagen: $error')),
+        );
       }
     }
   }

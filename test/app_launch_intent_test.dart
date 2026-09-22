@@ -16,6 +16,12 @@ void main() {
     expect(intent.section, AppSection.library);
   });
 
+  test('la sección Plantas puede abrirse directamente', () {
+    final intent = AppLaunchIntent.fromArgs(const ['--section=plants']);
+
+    expect(intent.section, AppSection.plants);
+  });
+
   test('editor shortcuts keep their explicit destination', () {
     final intent = AppLaunchIntent.fromArgs(const ['--new-project']);
 

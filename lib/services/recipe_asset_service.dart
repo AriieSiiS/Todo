@@ -59,6 +59,12 @@ class RecipeAssetService {
     return _storeImage(recipeId, await source.readAsBytes());
   }
 
+  Future<RecipeImportedImage> importImageBytes(
+    String recipeId,
+    Uint8List bytes,
+  ) =>
+      _storeImage(recipeId, bytes);
+
   Future<RecipeImportedImage> importImageFromUrl(
     String recipeId,
     String sourceUrl,

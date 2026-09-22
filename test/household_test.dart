@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,6 +93,10 @@ void main() {
     );
 
     final imported = await service.importImage('horno-1', sourceImage.path);
+    final pasted = await service.importImageBytes(
+      'horno-pegado',
+      Uint8List.fromList(img.encodePng(picture)),
+    );
     final manual = await service.importPdf(
       'horno-1',
       sourcePdf.path,
@@ -104,6 +109,10 @@ void main() {
         File(await service.absolutePath(imported.thumbnailPath)).existsSync(),
         isTrue);
     expect(File(await service.absolutePath(manual)).existsSync(), isTrue);
+    expect(
+      File(await service.absolutePath(pasted.imagePath)).existsSync(),
+      isTrue,
+    );
   });
 
   testWidgets('Hogar muestra el inventario visual y sus documentos',

@@ -22,7 +22,7 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if (@($manifest.files).Count -eq 0) { throw 'El manifiesto no contiene archivos.' }
-$allowed = @('runtime', 'covers', 'library_covers', 'wardrobe', 'recipes', 'household', 'knowledge')
+$allowed = @('runtime', 'covers', 'library_covers', 'wardrobe', 'recipes', 'household', 'plants', 'knowledge')
 $backupPrefix = $backup + '\'
 
 foreach ($entry in $manifest.files) {

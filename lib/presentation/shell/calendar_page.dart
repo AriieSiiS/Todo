@@ -1990,6 +1990,10 @@ String _recurrenceSummary(TaskModel task) {
       return 'Cada ${task.recurrence.interval} días';
     case RecurrenceType.weekly:
       return 'Semanal';
+    case RecurrenceType.monthly:
+      return task.recurrence.interval == 1
+          ? 'Mensual'
+          : 'Cada ${task.recurrence.interval} meses';
     case RecurrenceType.yearly:
       return 'Anual';
   }

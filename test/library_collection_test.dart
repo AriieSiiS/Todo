@@ -37,4 +37,35 @@ void main() {
     expect(item.collectionNumber, 2);
     expect(item.showCollectionNumber, isTrue);
   });
+
+  test('guarda temporadas, rewatch y publicación de un manga', () {
+    final item = LibraryItem(
+      id: 'serie-manga',
+      type: LibraryItemType.movieSeries,
+      title: 'Serie en emisión',
+      mediaType: LibraryMediaType.series,
+      rewatchCount: 2,
+      seasonCount: 2,
+      nextSeasonConfirmed: true,
+      createdAt: DateTime(2026, 9, 18),
+      updatedAt: DateTime(2026, 9, 18),
+    );
+    final manga = LibraryItem(
+      id: 'manga',
+      type: LibraryItemType.book,
+      title: 'Manga en curso',
+      creatorOrDirector: 'Manga',
+      publicationStatus: LibraryPublicationStatus.ongoing,
+      createdAt: DateTime(2026, 9, 18),
+      updatedAt: DateTime(2026, 9, 18),
+    );
+
+    final restoredItem = LibraryItem.fromJson(item.toJson());
+    final restoredManga = LibraryItem.fromJson(manga.toJson());
+
+    expect(restoredItem.rewatchCount, 2);
+    expect(restoredItem.seasonCount, 2);
+    expect(restoredItem.nextSeasonConfirmed, isTrue);
+    expect(restoredManga.publicationStatus, LibraryPublicationStatus.ongoing);
+  });
 }

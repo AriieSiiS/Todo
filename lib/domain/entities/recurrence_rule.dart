@@ -6,11 +6,13 @@ class RecurrenceRule {
     this.type = RecurrenceType.none,
     this.interval = 1,
     this.weekdays = const <int>[],
+    this.activeMonths = const <int>[],
   });
 
   final RecurrenceType type;
   final int interval;
   final List<int> weekdays;
+  final List<int> activeMonths;
 
   bool get isRecurring => type != RecurrenceType.none;
 
@@ -18,11 +20,13 @@ class RecurrenceRule {
     RecurrenceType? type,
     int? interval,
     List<int>? weekdays,
+    List<int>? activeMonths,
   }) {
     return RecurrenceRule(
       type: type ?? this.type,
       interval: interval ?? this.interval,
       weekdays: weekdays ?? this.weekdays,
+      activeMonths: activeMonths ?? this.activeMonths,
     );
   }
 
@@ -31,6 +35,7 @@ class RecurrenceRule {
       'type': type.name,
       'interval': interval,
       'weekdays': weekdays,
+      'activeMonths': activeMonths,
     };
   }
 
@@ -42,6 +47,11 @@ class RecurrenceRule {
       weekdays: (json['weekdays'] as List<dynamic>? ?? const <dynamic>[])
           .map((value) => (value as num).toInt())
           .toList(),
+      activeMonths:
+          (json['activeMonths'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => (value as num).toInt())
+              .where((value) => value >= 1 && value <= 12)
+              .toList(),
     );
   }
 }

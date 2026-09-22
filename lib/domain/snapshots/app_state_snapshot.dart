@@ -8,6 +8,7 @@ import '../entities/household.dart';
 import '../entities/json_helpers.dart';
 import '../entities/library_goal.dart';
 import '../entities/library_item.dart';
+import '../entities/plant.dart';
 import '../entities/project.dart';
 import '../entities/quick_note.dart';
 import '../entities/recipe.dart';
@@ -36,6 +37,7 @@ class AppStateSnapshot {
     this.wardrobePackingLists = const <WardrobePackingList>[],
     this.wardrobeImportBatches = const <WardrobeImportBatch>[],
     this.householdItems = const <HouseholdItem>[],
+    this.plants = const <Plant>[],
     this.recipes = const <Recipe>[],
     this.weeklyMenus = const <WeeklyMenu>[],
     required this.daySettings,
@@ -72,6 +74,7 @@ class AppStateSnapshot {
   final List<WardrobePackingList> wardrobePackingLists;
   final List<WardrobeImportBatch> wardrobeImportBatches;
   final List<HouseholdItem> householdItems;
+  final List<Plant> plants;
   final List<Recipe> recipes;
   final List<WeeklyMenu> weeklyMenus;
   final List<CalendarEventModel> calendarEvents;
@@ -119,6 +122,7 @@ class AppStateSnapshot {
       'wardrobeImportBatches':
           wardrobeImportBatches.map((item) => item.toJson()).toList(),
       'householdItems': householdItems.map((item) => item.toJson()).toList(),
+      'plants': plants.map((item) => item.toJson()).toList(),
       'recipes': recipes.map((item) => item.toJson()).toList(),
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
@@ -232,6 +236,10 @@ class AppStateSnapshot {
               .map((item) => HouseholdItem.fromJson(
                   (item as Map<dynamic, dynamic>).cast<String, dynamic>()))
               .toList(),
+      plants: (json['plants'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<dynamic, dynamic>>()
+          .map((item) => Plant.fromJson(item.cast<String, dynamic>()))
+          .toList(),
       recipes: (json['recipes'] as List<dynamic>? ?? const <dynamic>[])
           .map((item) => Recipe.fromJson(
               (item as Map<dynamic, dynamic>).cast<String, dynamic>()))

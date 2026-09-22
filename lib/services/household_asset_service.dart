@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
@@ -55,7 +56,14 @@ class HouseholdAssetService {
     if (!await source.exists()) {
       throw const FileSystemException('No se encuentra la imagen.');
     }
-    final decoded = img.decodeImage(await source.readAsBytes());
+    return importImageBytes(itemId, await source.readAsBytes());
+  }
+
+  Future<HouseholdImportedImage> importImageBytes(
+    String itemId,
+    Uint8List bytes,
+  ) async {
+    final decoded = img.decodeImage(bytes);
     if (decoded == null) {
       throw const FormatException('El archivo seleccionado no es una imagen.');
     }

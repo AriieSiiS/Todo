@@ -721,6 +721,9 @@ String _categoryRecurrenceLabel(TaskModel task) {
     RecurrenceType.daily => 'Diaria',
     RecurrenceType.everyXDays => 'Cada ${task.recurrence.interval} días',
     RecurrenceType.weekly => 'Semanal',
+    RecurrenceType.monthly => task.recurrence.interval == 1
+        ? 'Mensual'
+        : 'Cada ${task.recurrence.interval} meses',
     RecurrenceType.yearly => 'Anual',
     RecurrenceType.none => 'Tarea única',
   };

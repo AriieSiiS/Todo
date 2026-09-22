@@ -54,6 +54,7 @@ class McpServerTest(unittest.TestCase):
         os.environ["TODO_MCP_WARDROBE_PATH"] = str(root / "wardrobe")
         os.environ["TODO_MCP_HOUSEHOLD_PATH"] = str(root / "household")
         os.environ["TODO_MCP_RECIPE_PATH"] = str(root / "recipes")
+        os.environ["TODO_MCP_PLANTS_PATH"] = str(root / "plants")
         os.environ["TODO_MCP_KNOWLEDGE_PATH"] = str(root / "knowledge")
         sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -146,6 +147,12 @@ class McpServerTest(unittest.TestCase):
             "set_household_item_image",
             "set_household_item_document",
             "delete_household_item",
+            "get_plant_contract",
+            "list_plants",
+            "create_plant",
+            "update_plant",
+            "set_plant_image",
+            "delete_plant",
             "list_recipes",
             "create_recipe",
             "update_recipe",
@@ -183,7 +190,7 @@ class McpServerTest(unittest.TestCase):
         loaded = self.call("get_app_state")
         persisted = json.loads(self.server.STATE_PATH.read_text(encoding="utf-8"))
 
-        self.assertEqual(loaded["schemaVersion"], 9)
+        self.assertEqual(loaded["schemaVersion"], 11)
         self.assertNotIn("visualMode", loaded)
         self.assertNotIn("visualMode", persisted)
 
@@ -273,7 +280,7 @@ class McpServerTest(unittest.TestCase):
 
         loaded = self.call("get_app_state")
         rules = loaded["tasks"][0]["reminderRules"]
-        self.assertEqual(loaded["schemaVersion"], 9)
+        self.assertEqual(loaded["schemaVersion"], 11)
         self.assertEqual(
             {rule["minutesBefore"]: rule["deliveryMode"] for rule in rules},
             {0: "important", 5: "normal"},
@@ -797,6 +804,118 @@ class McpServerTest(unittest.TestCase):
         self.assertTrue((root / item["thumbnailPath"]).is_file())
         self.assertTrue((root / item["manualPath"]).is_file())
         self.assertTrue((root / item["invoicePath"]).is_file())
+
+    def test_plant_crud_is_idempotent_and_preserves_personal_task_settings(self) -> None:
+        self.call("reset_state", {"confirm": True})
+        routine = {
+            "id": "care-calathea-water",
+            "type": "watering",
+            "title": "Comprobar el sustrato y regar Calatea",
+            "instructions": "Regar solo cuando se seque la capa superior.",
+            "firstDueDate": "2026-09-22",
+            "recurrence": {
+                "type": "everyXDays",
+                "interval": 7,
+                "weekdays": [],
+                "activeMonths": [],
+            },
+            "enabled": True,
+        }
+        arguments = {
+            "request_id": "plant-calathea-01",
+            "name": "Calatea del salón",
+            "scientific_name": "Goeppertia orbifolia",
+            "location": "Salón",
+            "cat_safety": "nonToxic",
+            "cat_safety_notes": "No tóxica para gatos según ASPCA.",
+            "sources": [{"title": "ASPCA", "url": "https://example.com/aspca"}],
+            "routines": [routine],
+        }
+        first = self.call("create_plant", arguments)
+        repeated = self.call("create_plant", arguments)
+
+        self.assertTrue(first["savedLocally"])
+        self.assertEqual(first["plant"]["id"], repeated["plant"]["id"])
+        state = self.server.load_state()
+        self.assertEqual(len(state["plants"]), 1)
+        self.assertEqual(
+            len([category for category in state["categories"]
+                 if category["name"].casefold() == "plantas"]),
+            1,
+        )
+        self.assertEqual(len(state["tasks"]), 1)
+
+        task_id = state["tasks"][0]["id"]
+        state["tasks"][0]["scheduledAt"] = "2026-09-22T18:30:00"
+        state["tasks"][0]["reminderRules"] = [
+            {"minutesBefore": 15, "enabled": True, "deliveryMode": "normal"}
+        ]
+        self.server.save_state(state)
+        updated_routine = dict(routine)
+        updated_routine["instructions"] = "Comprobar la humedad antes de regar."
+        updated_routine["recurrence"] = {
+            "type": "monthly", "interval": 2, "weekdays": [],
+            "activeMonths": [4, 5, 6, 7, 8, 9],
+        }
+        self.call("update_plant", {
+            "plant_id": first["plant"]["id"],
+            "routines": [updated_routine],
+        })
+        task = self.server.load_state()["tasks"][0]
+        self.assertEqual(task["id"], task_id)
+        self.assertEqual(task["scheduledAt"], "2026-09-22T18:30:00")
+        self.assertEqual(task["reminderRules"][0]["minutesBefore"], 15)
+        self.assertEqual(task["recurrence"]["type"], "monthly")
+        self.assertEqual(task["recurrence"]["activeMonths"], [4, 5, 6, 7, 8, 9])
+
+        image = Path(self.temp_dir.name) / "calatea.png"
+        image.write_bytes(opaque_png(640, 640))
+        with_image = self.call("set_plant_image", {
+            "plant_id": first["plant"]["id"],
+            "source_file": str(image),
+            "request_id": "plant-calathea-image-01",
+        })
+        self.assertTrue(with_image["savedLocally"])
+        self.assertTrue(
+            (Path(self.temp_dir.name) / "plants" / with_image["plant"]["imagePath"]).is_file()
+        )
+
+        self.call("update_plant", {
+            "plant_id": first["plant"]["id"], "archived": True,
+        })
+        self.assertEqual(self.server.load_state()["tasks"][0]["status"], "archived")
+        deleted = self.call("delete_plant", {
+            "plant_id": first["plant"]["id"], "confirm": True,
+        })
+        self.assertTrue(deleted["deleted"])
+        self.assertTrue(deleted["savedLocally"])
+        final_state = self.server.load_state()
+        self.assertEqual(final_state["plants"], [])
+        self.assertEqual(final_state["tasks"], [])
+
+    def test_plant_migration_removes_only_the_reserved_example(self) -> None:
+        state = self.server.default_state()
+        state["schemaVersion"] = 10
+        state["plants"] = [
+            {"id": "plant-example-spider", "name": "Cinta de ejemplo"},
+            {"id": "plant-real", "name": "Planta real"},
+        ]
+        state["tasks"] = [
+            {"id": "task-example", "sourcePlantId": "plant-example-spider"},
+            {"id": "task-real", "sourcePlantId": "plant-real"},
+        ]
+        self.server.write_local_state(state)
+
+        migrated = self.call("get_app_state")
+
+        self.assertEqual(migrated["schemaVersion"], 11)
+        self.assertEqual([plant["id"] for plant in migrated["plants"]], ["plant-real"])
+        self.assertEqual([task["id"] for task in migrated["tasks"]], ["task-real"])
+        self.assertEqual(
+            len([category for category in migrated["categories"]
+                 if category["name"].casefold() == "plantas"]),
+            1,
+        )
 
     def test_recipe_crud_image_and_task_integration(self) -> None:
         self.call("reset_state", {"confirm": True})

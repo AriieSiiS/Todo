@@ -7,6 +7,7 @@ enum AppSection {
   library,
   wardrobe,
   household,
+  plants,
   recipes,
   inbox,
   completed,
@@ -27,9 +28,22 @@ enum ProjectStatus { active, paused, completed, cancelled }
 
 enum NoteStatus { inbox, converted, archived }
 
-enum TaskOrigin { manual, recurring, project, calendar, note }
+enum TaskOrigin { manual, recurring, project, calendar, note, plant }
 
-enum RecurrenceType { none, daily, everyXDays, weekly, yearly }
+enum RecurrenceType { none, daily, everyXDays, weekly, monthly, yearly }
+
+enum PlantCatSafety { nonToxic, caution, toxic, unknown }
+
+enum PlantCareType {
+  watering,
+  fertilizing,
+  inspection,
+  repotting,
+  pruning,
+  cleaning,
+  misting,
+  custom,
+}
 
 enum TodaySort { manual, category, time, project, priority }
 
@@ -46,6 +60,8 @@ enum FixedPaymentFrequency { weekly, monthly, yearly, custom }
 enum LibraryItemType { game, book, movieSeries }
 
 enum LibraryMediaType { movie, series }
+
+enum LibraryPublicationStatus { ongoing, finished }
 
 enum LibraryItemStatus { pending, inProgress, completed }
 

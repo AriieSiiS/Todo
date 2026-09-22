@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
@@ -1399,9 +1400,28 @@ class KnowledgeService {
     if (!await source.exists()) {
       throw const FileSystemException('No se encuentra el recurso.');
     }
-    final length = await source.length();
     final extension = _safeExtension(source.path);
-    final kind = _assetKind(extension);
+    return importAssetBytes(
+      await source.readAsBytes(),
+      extension: extension,
+      sourceUrl: sourceUrl,
+      sourcePageUrl: sourcePageUrl,
+      author: author,
+      altText: altText,
+    );
+  }
+
+  Future<KnowledgeAsset> importAssetBytes(
+    Uint8List bytes, {
+    required String extension,
+    String? sourceUrl,
+    String? sourcePageUrl,
+    String? author,
+    String? altText,
+  }) async {
+    final safeExtension = _safeExtension('resource$extension');
+    final length = bytes.length;
+    final kind = _assetKind(safeExtension);
     final maxSize = switch (kind) {
       KnowledgeAssetKind.image => 25 * 1024 * 1024,
       KnowledgeAssetKind.pdf => 100 * 1024 * 1024,
@@ -1413,7 +1433,6 @@ class KnowledgeService {
     if (length > maxSize) {
       throw const FormatException('El recurso supera el tamaño permitido.');
     }
-    final bytes = await source.readAsBytes();
     final id = sha256.convert(bytes).toString();
     final existing = assetById(id);
     if (existing != null) return existing;
@@ -1422,7 +1441,7 @@ class KnowledgeService {
       '${assetsDirectory.path}${Platform.pathSeparator}$prefix',
     );
     await folder.create(recursive: true);
-    final relativePath = '$prefix/$id$extension';
+    final relativePath = '$prefix/$id$safeExtension';
     final destination = File(
       '${assetsDirectory.path}${Platform.pathSeparator}${relativePath.replaceAll('/', Platform.pathSeparator)}',
     );
@@ -1432,7 +1451,7 @@ class KnowledgeService {
     final asset = KnowledgeAsset(
       id: id,
       kind: kind,
-      mimeType: _mimeType(extension),
+      mimeType: _mimeType(safeExtension),
       relativePath: relativePath,
       size: length,
       sourceUrl: sourceUrl,
