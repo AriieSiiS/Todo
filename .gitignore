@@ -10,9 +10,11 @@ pubspec.lock
 *.iml
 mcp_server/.env
 .codex_tmp_py/
+.codex_tmp/
 .codex_video_review/
 __pycache__/
 *.pyc
 runtime/
 output/
 tmp/
+node_modules/

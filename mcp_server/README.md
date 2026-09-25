@@ -123,6 +123,21 @@ Los archivos quedan bajo `household/images`, `household/thumbnails`,
 `household/manuals` y `household/invoices`; el snapshot guarda únicamente sus
 rutas relativas y metadatos.
 
+### Gemelo 3D de la casa
+
+`list_home_twin_rooms` consulta las habitaciones modeladas. Para añadir o
+actualizar una, `import_home_twin_room` recibe `room_id`, `name`, `source_file`
+(.glb), `floor`, `position` en metros (`x`, `y`, `z`), `rotation_degrees` y una
+lista opcional de objetos. Cada objeto indica `id`, `name`, `node_name`, `kind`
+y, si procede, `household_item_id`. El nodo debe existir en el GLB. Repetir una
+importación idéntica no duplica la habitación.
+
+El modelo usa glTF 2.0, metros, eje Y vertical y un origen local estable. Las
+habitaciones se colocan en una escena común según su posición. El manifiesto y
+los modelos se guardan en `Documents/Todo/household/twin`, incluido en la copia
+completa. La pestaña «Gemelo 3D» de Hogar permite recargar la escena tras una
+importación. La conexión con Home Assistant pertenece a la fase posterior.
+
 ## Plantas y cuidados automáticos
 
 El MCP permite dar de alta y mantener plantas sin abrir la interfaz:

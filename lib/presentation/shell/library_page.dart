@@ -506,14 +506,25 @@ class _LibraryMainContent extends StatelessWidget {
         showStatus: false,
         typeFilters: typeFilters,
       );
+      final contextualSingle = GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onSecondaryTapDown: (details) => _showLibraryAddContextMenu(
+          context: context,
+          position: details.globalPosition,
+          controller: controller,
+          selectedType: selectedType,
+          status: status,
+        ),
+        child: single,
+      );
       final content = fillAvailableHeight
           ? LayoutBuilder(
               builder: (context, constraints) => SizedBox(
                 height: constraints.maxHeight,
-                child: single,
+                child: contextualSingle,
               ),
             )
-          : single;
+          : contextualSingle;
       return fillAvailableHeight
           ? content
           : scrollColumns
@@ -558,13 +569,24 @@ class _LibraryMainContent extends StatelessWidget {
             controller: controller,
             showStatus: showStatus,
           );
+    final contextualOverview = GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onSecondaryTapDown: (details) => _showLibraryAddContextMenu(
+        context: context,
+        position: details.globalPosition,
+        controller: controller,
+        selectedType: selectedType,
+        status: status,
+      ),
+      child: overview,
+    );
     final content = fillAvailableHeight
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               overviewToolbar,
               const SizedBox(height: 12),
-              Expanded(child: overview),
+              Expanded(child: contextualOverview),
             ],
           )
         : Column(
@@ -575,7 +597,7 @@ class _LibraryMainContent extends StatelessWidget {
               SizedBox(
                 height:
                     overviewMode == _LibraryOverviewMode.columns ? 420 : 620,
-                child: overview,
+                child: contextualOverview,
               ),
             ],
           );
@@ -695,22 +717,44 @@ class _LibraryOverviewModeToggle extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFE3D7C8)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _LibraryOverviewModeButton(
-            icon: Icons.view_column_rounded,
-            tooltip: 'Vista por columnas',
-            selected: value == _LibraryOverviewMode.columns,
-            onPressed: () => onChanged(_LibraryOverviewMode.columns),
-          ),
-          _LibraryOverviewModeButton(
-            icon: Icons.grid_view_rounded,
-            tooltip: 'Vista de portadas',
-            selected: value == _LibraryOverviewMode.covers,
-            onPressed: () => onChanged(_LibraryOverviewMode.covers),
-          ),
-        ],
+      child: SizedBox(
+        width: 68,
+        height: 32,
+        child: Stack(
+          children: [
+            AnimatedAlign(
+              alignment: value == _LibraryOverviewMode.columns
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOutCubic,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F0E3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                _LibraryOverviewModeButton(
+                  icon: Icons.view_column_rounded,
+                  tooltip: 'Vista por columnas',
+                  selected: value == _LibraryOverviewMode.columns,
+                  onPressed: () => onChanged(_LibraryOverviewMode.columns),
+                ),
+                _LibraryOverviewModeButton(
+                  icon: Icons.grid_view_rounded,
+                  tooltip: 'Vista de portadas',
+                  selected: value == _LibraryOverviewMode.covers,
+                  onPressed: () => onChanged(_LibraryOverviewMode.covers),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -736,19 +780,22 @@ class _LibraryOverviewModeButton extends StatelessWidget {
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+        child: SizedBox(
           width: 32,
           height: 32,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE8F0E3) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 19,
-            color:
-                selected ? const Color(0xFF3F5B3B) : context.visuals.textMuted,
+          child: Center(
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              scale: selected ? 1.06 : 1,
+              child: Icon(
+                icon,
+                size: 19,
+                color: selected
+                    ? const Color(0xFF3F5B3B)
+                    : context.visuals.textMuted,
+              ),
+            ),
           ),
         ),
       ),
@@ -2634,6 +2681,53 @@ Future<void> _showLibraryContextMenu({
   } else if (action == _LibraryContextAction.delete) {
     onDelete();
   }
+}
+
+Future<void> _showLibraryAddContextMenu({
+  required BuildContext context,
+  required Offset position,
+  required TodoWorkspace controller,
+  required LibraryItemType? selectedType,
+  required LibraryItemStatus? status,
+}) async {
+  final overlay =
+      Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+  if (overlay == null) {
+    return;
+  }
+  final types = selectedType == null
+      ? LibraryItemType.values
+      : <LibraryItemType>[selectedType];
+  final type = await showMenu<LibraryItemType>(
+    context: context,
+    position: RelativeRect.fromRect(
+      position & const Size(1, 1),
+      Offset.zero & overlay.size,
+    ),
+    items: [
+      for (final type in types)
+        PopupMenuItem(
+          value: type,
+          child: ListTile(
+            dense: true,
+            leading: Icon(_libraryIcon(type), color: _libraryColor(type)),
+            title: Text(
+                'Añadir ${_libraryTypeSingularLabelForType(type).toLowerCase()}'),
+          ),
+        ),
+    ],
+  );
+  if (type == null || !context.mounted) {
+    return;
+  }
+  await showDialog<void>(
+    context: context,
+    builder: (context) => _LibraryItemDialog(
+      controller: controller,
+      initialType: type,
+      initialStatus: status ?? LibraryItemStatus.pending,
+    ),
+  );
 }
 
 void _completeLibraryItem(
@@ -5011,11 +5105,13 @@ class _LibraryItemDialog extends StatefulWidget {
   const _LibraryItemDialog({
     required this.controller,
     this.item,
+    this.initialType = LibraryItemType.game,
     this.initialStatus = LibraryItemStatus.pending,
   });
 
   final TodoWorkspace controller;
   final LibraryItem? item;
+  final LibraryItemType initialType;
   final LibraryItemStatus initialStatus;
 
   @override
@@ -5023,7 +5119,7 @@ class _LibraryItemDialog extends StatefulWidget {
 }
 
 class _LibraryItemDialogState extends State<_LibraryItemDialog> {
-  LibraryItemType _type = LibraryItemType.game;
+  late LibraryItemType _type;
   LibraryMediaType _mediaType = LibraryMediaType.movie;
   late LibraryItemStatus _status;
   late DateTime _completedDate;
@@ -5053,6 +5149,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   void initState() {
     super.initState();
     final item = widget.item;
+    _type = item?.type ?? widget.initialType;
     _status = item?.status ?? widget.initialStatus;
     if (item == null) {
       _completedDate = DateTime.now();

@@ -1,0 +1,14 @@
+{
+  "name": "todo-gemelo-3d",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=../../assets/home_twin_web/scene.js"
+  },
+  "dependencies": {
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

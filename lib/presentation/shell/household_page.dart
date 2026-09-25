@@ -53,7 +53,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
             : left.name.toLowerCase().compareTo(right.name.toLowerCase());
       });
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
@@ -74,7 +74,9 @@ class _HouseholdPageState extends State<HouseholdPage> {
               ),
             ),
             const SizedBox(height: 6),
-            const _SectionTabBar(labels: ['Inventario', 'Códigos QR']),
+            const _SectionTabBar(
+              labels: ['Inventario', 'Gemelo 3D', 'Códigos QR'],
+            ),
             const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
@@ -85,6 +87,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
                     selectedCategory: selectedCategory,
                     items: items,
                   ),
+                  HomeTwinPage(controller: controller),
                   _HouseholdQrTab(controller: controller),
                 ],
               ),

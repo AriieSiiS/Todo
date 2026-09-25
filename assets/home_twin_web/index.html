@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gemelo de la casa</title>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+      body { background: radial-gradient(circle at 45% 35%, #f8f2e7 0%, #e9e6de 65%, #dcded6 100%); }
+      canvas { display: block; width: 100%; height: 100%; outline: none; }
+      #estado { position: absolute; top: 16px; left: 16px; padding: 9px 13px; border-radius: 12px; background: #fffffff0; color: #4b5747; font: 600 13px system-ui, sans-serif; box-shadow: 0 5px 18px #3b46351c; pointer-events: none; }
+      #estado[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="estado">Cargando maqueta…</div>
+    <script type="module" src="/scene.js"></script>
+  </body>
+</html>

@@ -175,6 +175,22 @@ La APK usa `dev.aries.todo` y actualiza la instalación Android anterior. Si
 existe `android/key.properties`, el build release usa esa keystore. Puedes
 partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/Todo/android/key.properties.example>).
 
+## Gemelo 3D de Hogar
+
+En Windows, `Hogar > Gemelo 3D` muestra una maqueta isométrica navegable. Se
+puede girar, desplazar y ampliar la escena, seleccionar objetos y abrir una
+ficha de Hogar cuando el objeto esté vinculado. La primera estancia es una
+habitación vacía de ejemplo con puerta y ventana; sus medidas y acabados son
+provisionales hasta recibir fotos y un croquis de la habitación real.
+
+El manifiesto y los modelos se guardan en `Documents/Todo/household/twin` y
+entran en las copias completas. El MCP local ofrece `list_home_twin_rooms` e
+`import_home_twin_room` para sustituir la habitación de ejemplo o añadir otras
+sin recompilar la aplicación. El modelo de ejemplo puede regenerarse con
+`python tooling/generate_home_twin_demo.py`; la opción `--importar` lo añade
+a los datos locales. La conexión con Home Assistant corresponde a una fase
+posterior.
+
 ## MCP local
 
 La app ya trae una base para control externo por IA mediante un servidor MCP local en [mcp_server/README.md](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/README.md>).

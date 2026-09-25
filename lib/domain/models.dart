@@ -4,6 +4,7 @@ export 'entities/category.dart';
 export 'entities/enums.dart';
 export 'entities/financial.dart';
 export 'entities/household.dart';
+export 'entities/home_twin.dart';
 export 'entities/library_item.dart';
 export 'entities/library_goal.dart';
 export 'entities/knowledge.dart';

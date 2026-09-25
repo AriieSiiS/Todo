@@ -24,6 +24,7 @@ except ImportError:  # La importación PNG básica sigue disponible sin Pillow.
     ImageOps = None
 
 from knowledge_repository import KnowledgeRepository
+from home_twin_repository import HomeTwinRepository
 
 
 PROTOCOL_VERSION = "2025-03-26"
@@ -1364,6 +1365,13 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("set_household_item_image", "Asocia a una ficha una imagen PNG de catálogo generada o preparada por Codex.", {"item_id": string, "source_file": string}, ["item_id", "source_file"]),
         tool("set_household_item_document", "Guarda un manual o una factura PDF dentro de la ficha de Hogar.", {"item_id": string, "kind": string, "source_file": string, "source_url": string}, ["item_id", "kind", "source_file"]),
         tool("delete_household_item", "Elimina una ficha de Hogar y sus recursos locales.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
+        tool("list_home_twin_rooms", "Lista las habitaciones del gemelo 3D local.", {}, []),
+        tool("import_home_twin_room", "Importa o actualiza una habitación GLB de forma idempotente.", {
+            "room_id": string, "name": string, "source_file": string,
+            "floor": integer, "rotation_degrees": {"type": "number"},
+            "position": {"type": "object"},
+            "objects": {"type": "array", "items": {"type": "object"}},
+        }, ["room_id", "name", "source_file"]),
         tool("get_plant_contract", "Devuelve el contrato para añadir plantas con cuidados y seguridad felina verificados.", {}, []),
         tool("list_plants", "Lista las plantas y sus rutinas de cuidado.", {"include_archived": boolean}, []),
         tool("create_plant", "Crea de forma idempotente una planta y sus tareas automáticas en la categoría Plantas.", plant_fields, ["request_id", "name", "scientific_name"]),
@@ -5977,6 +5985,17 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(set_household_item_document_impl(arguments))
     if name == "delete_household_item":
         return json_result(delete_household_item_impl(arguments))
+    if name == "list_home_twin_rooms":
+        return json_result(HomeTwinRepository(household_directory()).list_rooms())
+    if name == "import_home_twin_room":
+        household_ids = {
+            str(item.get("id"))
+            for item in read_local_state().get("householdItems", [])
+            if isinstance(item, dict)
+        }
+        return json_result(HomeTwinRepository(household_directory()).import_room(
+            arguments, household_ids,
+        ))
     if name == "get_plant_contract":
         return json_result(get_plant_contract_impl())
     if name == "list_plants":
