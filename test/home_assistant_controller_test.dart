@@ -68,6 +68,10 @@ void main() {
               ...(state['attributes'] as Map),
               if (options['brightness'] != null)
                 'brightness': options['brightness'],
+              if (options['rgb_color'] != null)
+                'rgb_color': options['rgb_color'],
+              if (options['color_temp_kelvin'] != null)
+                'color_temp_kelvin': options['color_temp_kelvin'],
             },
           };
         }

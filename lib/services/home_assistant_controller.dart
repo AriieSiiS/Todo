@@ -366,8 +366,34 @@ class HomeAssistantController extends ChangeNotifier {
         'service': on ? 'turn_on' : 'turn_off',
         'service_data': data,
       });
-      final states = await _request({'type': 'get_states'});
-      _readStates(states['result']);
+      final deadline = DateTime.now().add(const Duration(seconds: 8));
+      while (connected && DateTime.now().isBefore(deadline)) {
+        final states = await _request({'type': 'get_states'});
+        _readStates(states['result']);
+        final current = selectedLight;
+        if (current != null &&
+            current.available &&
+            current.isOn == on &&
+            (!on ||
+                ((brightness == null ||
+                        (current.brightness - brightness).abs() <= 3) &&
+                    (rgb == null ||
+                        current.rgb != null &&
+                            List.generate(3, (index) => index).every(
+                              (index) =>
+                                  (current.rgb![index] - rgb[index]).abs() <=
+                                  25,
+                            )) &&
+                    (temperature == null ||
+                        current.temperature != null &&
+                            (current.temperature! - temperature).abs() <=
+                                100)))) {
+          return;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      }
+      throw const FormatException(
+          'Home Assistant no confirmó el estado solicitado.');
     } catch (_) {
       error = 'No se pudo confirmar el cambio de la bombilla.';
       notifyListeners();
