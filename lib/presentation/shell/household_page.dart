@@ -1,9 +1,11 @@
 part of 'app_shell.dart';
 
 class HouseholdPage extends StatefulWidget {
-  const HouseholdPage({required this.controller, super.key});
+  const HouseholdPage(
+      {required this.controller, this.homeAssistant, super.key});
 
   final TodoWorkspace controller;
+  final HomeAssistantController? homeAssistant;
 
   @override
   State<HouseholdPage> createState() => _HouseholdPageState();
@@ -87,7 +89,9 @@ class _HouseholdPageState extends State<HouseholdPage> {
                     selectedCategory: selectedCategory,
                     items: items,
                   ),
-                  HomeTwinPage(controller: controller),
+                  HomeTwinPage(
+                      controller: controller,
+                      homeAssistant: widget.homeAssistant),
                   _HouseholdQrTab(controller: controller),
                 ],
               ),

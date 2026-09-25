@@ -1,9 +1,10 @@
 part of 'app_shell.dart';
 
 class HomeTwinPage extends StatefulWidget {
-  const HomeTwinPage({required this.controller, super.key});
+  const HomeTwinPage({required this.controller, this.homeAssistant, super.key});
 
   final TodoWorkspace controller;
+  final HomeAssistantController? homeAssistant;
 
   @override
   State<HomeTwinPage> createState() => _HomeTwinPageState();
@@ -18,17 +19,60 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
   String? _error;
   HomeTwinRoom? _selectedRoom;
   HomeTwinObject? _selectedObject;
+  double? _brightnessDraft;
+  double? _temperatureDraft;
+  double? _hueDraft;
+  double? _saturationDraft;
+  bool _viewerReady = false;
 
   @override
   void initState() {
     super.initState();
+    widget.homeAssistant?.addListener(_homeAssistantChanged);
     _load();
   }
 
   @override
   void dispose() {
+    widget.homeAssistant?.removeListener(_homeAssistantChanged);
     unawaited(_server.stop());
     super.dispose();
+  }
+
+  void _homeAssistantChanged() {
+    if (!mounted) return;
+    setState(() {});
+    unawaited(_sendLightToViewer());
+  }
+
+  Future<void> _sendLightToViewer() async {
+    final light = widget.homeAssistant?.selectedLight;
+    if (!_viewerReady || _viewer == null || light == null) return;
+    try {
+      await _viewer!.evaluateJavascript(
+        source: 'window.actualizarLuz(${jsonEncode(light.toVisualState())})',
+      );
+    } catch (_) {
+      // El visor puede estar recargando la habitación.
+    }
+  }
+
+  Future<void> _sendLight({
+    required bool on,
+    int? brightness,
+    List<int>? rgb,
+    int? temperature,
+  }) async {
+    try {
+      await widget.homeAssistant?.setLight(
+        on: on,
+        brightness: brightness,
+        rgb: rgb,
+        temperature: temperature,
+      );
+    } catch (_) {
+      // El error de la conexión se muestra junto a los controles.
+    }
   }
 
   Future<void> _load() async {
@@ -157,6 +201,11 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
                     callback: _selectObject,
                   );
                 },
+                onLoadStart: (_, __) => _viewerReady = false,
+                onLoadStop: (_, __) {
+                  _viewerReady = true;
+                  unawaited(_sendLightToViewer());
+                },
               ),
       );
       final details = _details(context);
@@ -189,12 +238,12 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
                 ? Column(children: [
                     Expanded(child: viewer),
                     const SizedBox(height: 10),
-                    SizedBox(height: 160, child: details),
+                    SizedBox(height: 280, child: details),
                   ])
                 : Row(children: [
                     Expanded(child: viewer),
                     const SizedBox(width: 12),
-                    SizedBox(width: 246, child: details),
+                    SizedBox(width: 292, child: details),
                   ]),
           ),
         ],
@@ -215,7 +264,8 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: context.visuals.pageBorder),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Habitaciones (${_scene!.rooms.length})',
@@ -260,9 +310,136 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
                 ),
               ),
             ],
+            if (_selectedObject!.id == 'luz_techo') ...[
+              const SizedBox(height: 12),
+              _lightControls(context),
+            ],
           ],
         ],
-      ),
+      )),
+    );
+  }
+
+  Widget _lightControls(BuildContext context) {
+    final home = widget.homeAssistant;
+    if (home == null || home.endpoint.isEmpty || home.entityId.isEmpty) {
+      return const Text(
+          'Configura Home Assistant y asocia la bombilla en Ajustes.');
+    }
+    final light = home.selectedLight;
+    final enabled =
+        home.connected && light?.available == true && !home.commandPending;
+    if (light == null) {
+      return Text(home.connected
+          ? 'La bombilla asociada no aparece en Home Assistant.'
+          : 'Home Assistant está sin conexión. El estado de la bombilla no está actualizado.');
+    }
+    final rgb = light.rgb ?? const [255, 245, 225];
+    final hsv = HSVColor.fromColor(Color.fromARGB(255, rgb[0], rgb[1], rgb[2]));
+    final brightness = _brightnessDraft ?? light.brightness.toDouble();
+    final minimum = light.minTemperature.toDouble();
+    final maximum = light.maxTemperature.toDouble();
+    final temperature =
+        (_temperatureDraft ?? (light.temperature ?? minimum.toInt()).toDouble())
+            .clamp(minimum, maximum);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(home.connected && light.available
+            ? light.isOn
+                ? 'Encendida'
+                : 'Apagada'
+            : 'Sin conexión · estado desactualizado'),
+        if (home.error != null) ...[
+          const SizedBox(height: 5),
+          Text(home.error!, style: const TextStyle(color: Color(0xFF9D4436))),
+        ],
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Luz del techo'),
+          value: light.isOn,
+          onChanged:
+              enabled ? (value) => unawaited(_sendLight(on: value)) : null,
+        ),
+        if (light.supportsBrightness) ...[
+          Text('Brillo · ${(brightness / 255 * 100).round()} %'),
+          Slider(
+            value: brightness.clamp(1, 255),
+            min: 1,
+            max: 255,
+            onChanged: enabled
+                ? (value) => setState(() => _brightnessDraft = value)
+                : null,
+            onChangeEnd: enabled
+                ? (value) {
+                    setState(() => _brightnessDraft = null);
+                    unawaited(_sendLight(on: true, brightness: value.round()));
+                  }
+                : null,
+          ),
+        ],
+        if (light.supportsColor) ...[
+          const Text('Color'),
+          Slider(
+            value: _hueDraft ?? hsv.hue,
+            min: 0,
+            max: 360,
+            onChanged:
+                enabled ? (value) => setState(() => _hueDraft = value) : null,
+          ),
+          Text(
+              'Saturación · ${((_saturationDraft ?? hsv.saturation) * 100).round()} %'),
+          Slider(
+            value: _saturationDraft ?? hsv.saturation,
+            min: 0,
+            max: 1,
+            onChanged: enabled
+                ? (value) => setState(() => _saturationDraft = value)
+                : null,
+          ),
+          OutlinedButton.icon(
+            onPressed: enabled
+                ? () {
+                    final selected = HSVColor.fromAHSV(
+                      1,
+                      _hueDraft ?? hsv.hue,
+                      _saturationDraft ?? hsv.saturation,
+                      1,
+                    ).toColor();
+                    setState(() {
+                      _hueDraft = null;
+                      _saturationDraft = null;
+                    });
+                    unawaited(_sendLight(on: true, rgb: [
+                      (selected.r * 255).round().clamp(0, 255),
+                      (selected.g * 255).round().clamp(0, 255),
+                      (selected.b * 255).round().clamp(0, 255),
+                    ]));
+                  }
+                : null,
+            icon: const Icon(Icons.palette_outlined),
+            label: const Text('Aplicar color'),
+          ),
+        ],
+        if (light.supportsTemperature) ...[
+          const SizedBox(height: 8),
+          Text('Blanco · ${temperature.round()} K'),
+          Slider(
+            value: temperature,
+            min: minimum,
+            max: maximum,
+            onChanged: enabled
+                ? (value) => setState(() => _temperatureDraft = value)
+                : null,
+            onChangeEnd: enabled
+                ? (value) {
+                    setState(() => _temperatureDraft = null);
+                    unawaited(_sendLight(on: true, temperature: value.round()));
+                  }
+                : null,
+          ),
+        ],
+      ],
     );
   }
 }

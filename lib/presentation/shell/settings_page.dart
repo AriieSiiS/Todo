@@ -33,11 +33,13 @@ class _LanSyncNotice extends StatelessWidget {
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
     required this.controller,
+    this.homeAssistant,
     this.backupService,
     super.key,
   });
 
   final TodoWorkspace controller;
+  final HomeAssistantController? homeAssistant;
   final FullBackupService? backupService;
 
   @override
@@ -183,6 +185,10 @@ class _SettingsPageState extends State<SettingsPage> {
         },
       ),
     );
+
+    final homeAssistant = widget.homeAssistant == null
+        ? null
+        : HomeAssistantSettingsCard(controller: widget.homeAssistant!);
 
     final notifications = _SettingsSectionCard(
       icon: Icons.notifications_active_outlined,
@@ -656,6 +662,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       androidConnection,
                       const SizedBox(height: 16),
+                      if (homeAssistant != null) ...[
+                        homeAssistant,
+                        const SizedBox(height: 16),
+                      ],
                       wardrobe,
                       const SizedBox(height: 16),
                       backup,
@@ -680,6 +690,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           const SizedBox(height: 16),
                           androidConnection,
                           const SizedBox(height: 16),
+                          if (homeAssistant != null) ...[
+                            homeAssistant,
+                            const SizedBox(height: 16),
+                          ],
                           backup,
                           const SizedBox(height: 16),
                           data,

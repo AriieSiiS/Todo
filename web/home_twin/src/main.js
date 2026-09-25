@@ -14,7 +14,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 200);
-camera.position.set(8, 7, 9);
+camera.position.set(-8, 14, 9);
 camera.lookAt(0, 0, 0);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -24,8 +24,8 @@ controls.minDistance = 2;
 controls.maxDistance = 40;
 controls.screenSpacePanning = true;
 
-scene.add(new THREE.HemisphereLight(0xfff6e9, 0x777a68, 1.8));
-const sun = new THREE.DirectionalLight(0xffead0, 2.2);
+scene.add(new THREE.HemisphereLight(0xfff6e9, 0x777a68, 1.05));
+const sun = new THREE.DirectionalLight(0xffead0, 1.2);
 sun.position.set(-4, 9, 6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -41,10 +41,50 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const roots = [];
 const rooms = new Map();
+const ceilingLights = new Map();
+let latestLightState = null;
 const wholeHouse = new THREE.Group();
 scene.add(wholeHouse);
 let selectedHelper = null;
 let down = null;
+
+function kelvinColor(kelvin) {
+  const value = Math.max(1000, Math.min(40000, kelvin)) / 100;
+  const red = value <= 66 ? 255 : 329.698727446 * (value - 60) ** -0.1332047592;
+  const green = value <= 66
+    ? 99.4708025861 * Math.log(value) - 161.1195681661
+    : 288.1221695283 * (value - 60) ** -0.0755148492;
+  const blue = value >= 66 ? 255 : value <= 19
+    ? 0 : 138.5177312231 * Math.log(value - 10) - 305.0447927307;
+  return new THREE.Color().setRGB(
+    Math.max(0, Math.min(255, red)) / 255,
+    Math.max(0, Math.min(255, green)) / 255,
+    Math.max(0, Math.min(255, blue)) / 255,
+    THREE.SRGBColorSpace,
+  );
+}
+
+function applyLight(value) {
+  latestLightState = value;
+  const rig = ceilingLights.get(`${value.roomId}/${value.objectId}`);
+  if (!rig || !value.available) return;
+  const color = Array.isArray(value.rgb) && value.rgb.length >= 3
+    ? new THREE.Color().setRGB(
+      value.rgb[0] / 255, value.rgb[1] / 255, value.rgb[2] / 255,
+      THREE.SRGBColorSpace,
+    )
+    : kelvinColor(value.temperature || 3000);
+  const power = value.on ? Math.max(0.02, Math.min(1, value.brightness / 255)) : 0;
+  rig.light.color.copy(color);
+  rig.light.intensity = 28 * power;
+  rig.bulb.traverse((mesh) => {
+    if (!mesh.isMesh || !mesh.material?.emissive) return;
+    mesh.material.emissive.copy(color);
+    mesh.material.emissiveIntensity = value.on ? 1.3 * power : 0;
+  });
+}
+
+window.actualizarLuz = applyLight;
 
 function resize() {
   const width = window.innerWidth;
@@ -66,8 +106,8 @@ function frame(target) {
   const center = bounds.getCenter(new THREE.Vector3());
   controls.target.copy(center);
   const radius = Math.max(size.x, size.z, size.y * 1.6, 2);
-  camera.zoom = Math.min(2.1, Math.max(0.48, 5.5 / radius));
-  camera.position.copy(center).add(new THREE.Vector3(8, 7, 9));
+  camera.zoom = Math.min(2.1, Math.max(0.48, 6.8 / radius));
+  camera.position.copy(center).add(new THREE.Vector3(-8, 14, 9));
   camera.updateProjectionMatrix();
   controls.update();
 }
@@ -133,12 +173,30 @@ async function load() {
           objectId: object.id,
           objectName: object.name,
         };
+        if (node && object.id === 'luz_techo') {
+          const bulb = root.getObjectByName('bombilla_luz_techo') || node;
+          bulb.traverse((mesh) => {
+            if (mesh.isMesh && mesh.material?.emissive) {
+              mesh.material = mesh.material.clone();
+              mesh.material.emissiveIntensity = 0;
+            }
+          });
+          const lamp = new THREE.PointLight(0xffe6b7, 0, 6, 1.5);
+          const bounds = new THREE.Box3().setFromObject(bulb);
+          bounds.getCenter(lamp.position);
+          lamp.castShadow = true;
+          lamp.shadow.mapSize.set(1024, 1024);
+          lamp.shadow.bias = -0.0003;
+          scene.add(lamp);
+          ceilingLights.set(`${room.id}/${object.id}`, { light: lamp, bulb });
+        }
       }
       roots.push(root);
       rooms.set(room.id, root);
       wholeHouse.add(root);
     }
     frame(wholeHouse);
+    if (latestLightState) applyLight(latestLightState);
     state.hidden = true;
   } catch (error) {
     state.textContent = error?.message || 'No se pudo cargar la maqueta.';

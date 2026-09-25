@@ -16,6 +16,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
+  late final HomeAssistantController _homeAssistant;
   late final AmbientMusicController _musicController;
   late final bool _shouldInitializeMusic;
   bool _launchIntentHandled = false;
@@ -29,6 +30,10 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void initState() {
     super.initState();
+    _homeAssistant = HomeAssistantController();
+    if (Platform.isWindows && !_isWidgetTest()) {
+      unawaited(_homeAssistant.initialize());
+    }
     _shouldInitializeMusic = _showAmbientMusic && !_isWidgetTest();
     _musicController = AmbientMusicController(enabled: _shouldInitializeMusic);
     WidgetsBinding.instance.addObserver(this);
@@ -43,6 +48,7 @@ class _AppShellState extends ConsumerState<AppShell>
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_alarmPlayer.dispose());
     _musicController.dispose();
+    _homeAssistant.dispose();
     super.dispose();
   }
 
@@ -212,12 +218,14 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.calendar => CalendarPage(controller: controller),
       AppSection.library => LibraryPage(controller: controller),
       AppSection.wardrobe => WardrobePage(controller: controller),
-      AppSection.household => HouseholdPage(controller: controller),
+      AppSection.household =>
+        HouseholdPage(controller: controller, homeAssistant: _homeAssistant),
       AppSection.plants => PlantsPage(controller: controller),
       AppSection.recipes => RecipesPage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
-      AppSection.settings => SettingsPage(controller: controller),
+      AppSection.settings =>
+        SettingsPage(controller: controller, homeAssistant: _homeAssistant),
     };
   }
 

@@ -179,17 +179,56 @@ partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/
 
 En Windows, `Hogar > Gemelo 3D` muestra una maqueta isométrica navegable. Se
 puede girar, desplazar y ampliar la escena, seleccionar objetos y abrir una
-ficha de Hogar cuando el objeto esté vinculado. La primera estancia es una
-habitación vacía de ejemplo con puerta y ventana; sus medidas y acabados son
-provisionales hasta recibir fotos y un croquis de la habitación real.
+ficha de Hogar cuando el objeto esté vinculado. La primera estancia representa
+una habitación de 2,10 × 4,10 × 3,10 m, con paredes verde salvia, techo
+blanco, suelo oscuro y puerta y ventana en paredes cortas opuestas. La posición
+y el tamaño de los huecos son aproximados hasta disponer de sus medidas. El
+mobiliario inicial incluye escritorio, ordenador, silla, baldas, vitrina,
+librería, un armario negro con puerta blanca y sofá con cojines; sus tamaños y
+posiciones se han estimado a partir de fotografías.
+La lámpara circular del techo es seleccionable y puede seguir el estado de una
+bombilla conectada a Home Assistant; sin configurar la conexión permanece como
+parte de la maqueta.
+Mirando desde la puerta hacia la ventana, el lateral izquierdo tiene el sofá
+y unas baldas compactas con libros y una planta; el derecho reúne la vitrina,
+la librería y el armario negro con su puerta blanca, pegado a la esquina de la
+entrada. La puerta de la habitación abre hacia el pasillo.
+En la pared derecha, desde la puerta hacia la ventana, el armario de ropa mide
+140 cm de ancho, la librería 60 cm y la vitrina roja 80 cm; quedan contiguos.
+Este orden se comprobó con un recorrido en vídeo.
 
 El manifiesto y los modelos se guardan en `Documents/Todo/household/twin` y
 entran en las copias completas. El MCP local ofrece `list_home_twin_rooms` e
 `import_home_twin_room` para sustituir la habitación de ejemplo o añadir otras
 sin recompilar la aplicación. El modelo de ejemplo puede regenerarse con
 `python tooling/generate_home_twin_demo.py`; la opción `--importar` lo añade
-a los datos locales. La conexión con Home Assistant corresponde a una fase
-posterior.
+a los datos locales. La primera maqueta de la habitación real se genera con
+`python tooling/generate_home_twin_room.py --importar`.
+
+### Luz del techo y Home Assistant
+
+Home Assistant OS se ejecuta en Hyper-V como `Todo-Home-Assistant`, conectado
+mediante el conmutador externo `Todo Home Assistant LAN`. La imagen oficial se
+descarga y verifica con `tooling/install_home_assistant_vm.ps1`; la opción
+`-Install` crea e inicia la máquina virtual con permisos de administrador.
+Tras el primer arranque, abrir `http://homeassistant.local`, crear la
+cuenta propietaria y añadir la integración oficial TP-Link con la cuenta Tapo.
+No compartir esas credenciales ni el token en chats o archivos del repositorio.
+
+En Home Assistant, crear un token de acceso de larga duración desde el perfil
+de usuario. En Todo, abrir `Ajustes > Home Assistant · luz del techo`, indicar
+`http://homeassistant.local`, pegar el token y pulsar «Guardar y conectar».
+Cuando aparezcan las entidades de luz, elegir la bombilla del techo. Después,
+en `Hogar > Gemelo 3D`, seleccionar la lámpara para encenderla, apagarla,
+regular el brillo, elegir color o temperatura de blanco. Los cambios externos
+se reflejan mediante los eventos de Home Assistant. Si no hay conexión, los
+controles quedan desactivados.
+
+La dirección y la asociación se guardan en
+`Documents/Todo/household/twin/home_assistant.json` y entran en las copias
+completas de Todo. El token se guarda en el almacén seguro de Windows y debe
+introducirse de nuevo al restaurar en otro equipo. Las copias de Home
+Assistant se gestionan por separado desde su interfaz.
 
 ## MCP local
 
