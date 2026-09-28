@@ -26,6 +26,7 @@ class TaskModel {
     this.reminderRules = const <ReminderRule>[],
     this.completedAt,
     this.recurrenceCompletions = const <String, DateTime>{},
+    this.skippedRecurrenceOccurrences = const <String>{},
     this.sourcePlantId,
     this.sourcePlantCareRoutineId,
   });
@@ -50,10 +51,13 @@ class TaskModel {
   final List<ReminderRule> reminderRules;
   final DateTime? completedAt;
   final Map<String, DateTime> recurrenceCompletions;
+  final Set<String> skippedRecurrenceOccurrences;
   final String? sourcePlantId;
   final String? sourcePlantCareRoutineId;
 
   bool get isSubtask => parentTaskId != null;
+
+  bool get canSkipOccurrence => recurrence.isRecurring;
 
   TaskModel copyWith({
     String? id,
@@ -82,6 +86,7 @@ class TaskModel {
     DateTime? completedAt,
     bool clearCompletedAt = false,
     Map<String, DateTime>? recurrenceCompletions,
+    Set<String>? skippedRecurrenceOccurrences,
     String? sourcePlantId,
     bool clearSourcePlantId = false,
     String? sourcePlantCareRoutineId,
@@ -113,6 +118,8 @@ class TaskModel {
       completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
       recurrenceCompletions:
           recurrenceCompletions ?? this.recurrenceCompletions,
+      skippedRecurrenceOccurrences:
+          skippedRecurrenceOccurrences ?? this.skippedRecurrenceOccurrences,
       sourcePlantId:
           clearSourcePlantId ? null : sourcePlantId ?? this.sourcePlantId,
       sourcePlantCareRoutineId: clearSourcePlantCareRoutineId
@@ -148,6 +155,8 @@ class TaskModel {
       'recurrenceCompletions': recurrenceCompletions.map(
         (key, value) => MapEntry(key, value.toIso8601String()),
       ),
+      'skippedRecurrenceOccurrences': skippedRecurrenceOccurrences.toList()
+        ..sort(),
       'sourcePlantId': sourcePlantId,
       'sourcePlantCareRoutineId': sourcePlantCareRoutineId,
     };
@@ -190,6 +199,8 @@ class TaskModel {
           : DateTime.tryParse(json['completedAt'] as String),
       recurrenceCompletions:
           _recurrenceCompletionsFromJson(json['recurrenceCompletions']),
+      skippedRecurrenceOccurrences:
+          stringList(json['skippedRecurrenceOccurrences']).toSet(),
       sourcePlantId: json['sourcePlantId'] as String?,
       sourcePlantCareRoutineId: json['sourcePlantCareRoutineId'] as String?,
     );

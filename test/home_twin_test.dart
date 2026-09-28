@@ -45,6 +45,12 @@ void main() {
         scene.rooms.map((room) => room.name), <String>['Dormitorio', 'Salón']);
     expect(scene.rooms.last.position.x, 4);
     expect(await service.modelFile('../runtime/todo_state.json'), isNull);
+    expect(await service.loadWindowOpen(), isFalse);
+    await service.saveWindowOpen(true);
+    expect(await service.loadWindowOpen(), isTrue);
+    await File('${twin.path}${Platform.pathSeparator}house.json')
+        .writeAsString(jsonEncode(scene.toJson()));
+    expect(await service.loadWindowOpen(), isTrue);
 
     final web = HomeTwinWebServer(service);
     addTearDown(web.stop);
@@ -57,5 +63,6 @@ void main() {
     final document = jsonDecode(await response.transform(utf8.decoder).join())
         as Map<String, dynamic>;
     expect((document['rooms'] as List<dynamic>).length, 2);
+
   });
 }

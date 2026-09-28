@@ -1,0 +1,440 @@
+{
+  "ambientes": [
+    {
+      "id": "SFX_Birds_Loop",
+      "nombre": "Sfx Birds Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Birds_Loop.ogg"
+    },
+    {
+      "id": "SFX_Blizzard_Moderate_Loop",
+      "nombre": "Sfx Blizzard Moderate Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Blizzard_Moderate_Loop.ogg"
+    },
+    {
+      "id": "SFX_Cicadas_Loop",
+      "nombre": "Sfx Cicadas Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Cicadas_Loop.ogg"
+    },
+    {
+      "id": "sfx_cottage_rain_loop",
+      "nombre": "Sfx Cottage Rain Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/sfx_cottage_rain_loop.ogg"
+    },
+    {
+      "id": "SFX_Fireplace_Loop",
+      "nombre": "Sfx Fireplace Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Fireplace_Loop.ogg"
+    },
+    {
+      "id": "SFX_Thunderstorm_Loop",
+      "nombre": "Sfx Thunderstorm Loop",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Thunderstorm_Loop.ogg"
+    },
+    {
+      "id": "SFX_Wind_Exterior_Loop_02",
+      "nombre": "Sfx Wind Exterior Loop 02",
+      "grupo": "",
+      "ruta": "/audio/sonidos/SFX_Wind_Exterior_Loop_02.ogg"
+    }
+  ],
+  "efectos": [
+    {
+      "id": "Cat_Purr",
+      "nombre": "Cat Purr",
+      "grupo": "",
+      "ruta": "/audio/sonidos/Cat_Purr.ogg"
+    },
+    {
+      "id": "Dog_Bark",
+      "nombre": "Dog Bark",
+      "grupo": "",
+      "ruta": "/audio/sonidos/Dog_Bark.ogg"
+    },
+    {
+      "id": "lamp_click",
+      "nombre": "Lamp Click",
+      "grupo": "",
+      "ruta": "/audio/sonidos/lamp_click.ogg"
+    },
+    {
+      "id": "timer down",
+      "nombre": "Timer Down",
+      "grupo": "",
+      "ruta": "/audio/sonidos/timer down.ogg"
+    }
+  ],
+  "musica": [
+    {
+      "id": "bka_is--sweet_dreams",
+      "nombre": "Bka Is · Sweet Dreams",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/bka_is--sweet_dreams.ogg"
+    },
+    {
+      "id": "dreeme--bigger_things_ptii",
+      "nombre": "Dreeme · Bigger Things Ptii",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dreeme--bigger_things_ptii.ogg"
+    },
+    {
+      "id": "dreeme--escape",
+      "nombre": "Dreeme · Escape",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dreeme--escape.ogg"
+    },
+    {
+      "id": "dreeme--evoke",
+      "nombre": "Dreeme · Evoke",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dreeme--evoke.ogg"
+    },
+    {
+      "id": "dreeme--finale",
+      "nombre": "Dreeme · Finale",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dreeme--finale.ogg"
+    },
+    {
+      "id": "dreeme--losing_it",
+      "nombre": "Dreeme · Losing It",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dreeme--losing_it.ogg"
+    },
+    {
+      "id": "dweeb--72_audi_coupe",
+      "nombre": "Dweeb · 72 Audi Coupe",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/dweeb--72_audi_coupe.ogg"
+    },
+    {
+      "id": "elijah_who--we_used_to_talk_every_night",
+      "nombre": "Elijah Who · We Used To Talk Every Night",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/elijah_who--we_used_to_talk_every_night.ogg"
+    },
+    {
+      "id": "elijah_who--what_if_we_just_sat_together_and_did_nothing",
+      "nombre": "Elijah Who · What If We Just Sat Together And Did Nothing",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/elijah_who--what_if_we_just_sat_together_and_did_nothing.ogg"
+    },
+    {
+      "id": "fortnight-2000",
+      "nombre": "Fortnight 2000",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/fortnight-2000.ogg"
+    },
+    {
+      "id": "himitsu--lo-fi_wow-fi",
+      "nombre": "Himitsu · Lo Fi Wow Fi",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/himitsu--lo-fi_wow-fi.ogg"
+    },
+    {
+      "id": "in_love_with_a_ghost--i_know_its_not_easy",
+      "nombre": "In Love With A Ghost · I Know Its Not Easy",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/in_love_with_a_ghost--i_know_its_not_easy.ogg"
+    },
+    {
+      "id": "in_love_with_a_ghost--i_was_feeling_down",
+      "nombre": "In Love With A Ghost · I Was Feeling Down",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/in_love_with_a_ghost--i_was_feeling_down.ogg"
+    },
+    {
+      "id": "in_love_with_a_ghost--lets_walk_across_this_forest",
+      "nombre": "In Love With A Ghost · Lets Walk Across This Forest",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/in_love_with_a_ghost--lets_walk_across_this_forest.ogg"
+    },
+    {
+      "id": "in_love_with_a_ghost--sorry_for_not_answering_the_phone",
+      "nombre": "In Love With A Ghost · Sorry For Not Answering The Phone",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/in_love_with_a_ghost--sorry_for_not_answering_the_phone.ogg"
+    },
+    {
+      "id": "joe_bizzaro--rainy_day",
+      "nombre": "Joe Bizzaro · Rainy Day",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/joe_bizzaro--rainy_day.ogg"
+    },
+    {
+      "id": "joe_bizzaro--wish_on_a_star",
+      "nombre": "Joe Bizzaro · Wish On A Star",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/joe_bizzaro--wish_on_a_star.ogg"
+    },
+    {
+      "id": "made_in_m--dindi",
+      "nombre": "Made In M · Dindi",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/made_in_m--dindi.ogg"
+    },
+    {
+      "id": "made_in_m--warmwinter",
+      "nombre": "Made In M · Warmwinter",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/made_in_m--warmwinter.ogg"
+    },
+    {
+      "id": "omaure--drama",
+      "nombre": "Omaure · Drama",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/omaure--drama.ogg"
+    },
+    {
+      "id": "omaure--vanilla_sky",
+      "nombre": "Omaure · Vanilla Sky",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/omaure--vanilla_sky.ogg"
+    },
+    {
+      "id": "rizzugoi--im_in_love_with_ghost",
+      "nombre": "Rizzugoi · Im In Love With Ghost",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/rizzugoi--im_in_love_with_ghost.ogg"
+    },
+    {
+      "id": "rizzugoi--im_so_tired",
+      "nombre": "Rizzugoi · Im So Tired",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/rizzugoi--im_so_tired.ogg"
+    },
+    {
+      "id": "tesk--driftaway",
+      "nombre": "Tesk · Driftaway",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/tesk--driftaway.ogg"
+    },
+    {
+      "id": "tesk--hide",
+      "nombre": "Tesk · Hide",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/tesk--hide.ogg"
+    },
+    {
+      "id": "tesk--makemesee",
+      "nombre": "Tesk · Makemesee",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/tesk--makemesee.ogg"
+    },
+    {
+      "id": "tesk--moonlit",
+      "nombre": "Tesk · Moonlit",
+      "grupo": "base",
+      "ruta": "/audio/musica/base/tesk--moonlit.ogg"
+    },
+    {
+      "id": "3am",
+      "nombre": "3Am",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/3am.ogg"
+    },
+    {
+      "id": "abschied",
+      "nombre": "Abschied",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/abschied.ogg"
+    },
+    {
+      "id": "breakup",
+      "nombre": "Breakup",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/breakup.ogg"
+    },
+    {
+      "id": "brokeback_dirt_road",
+      "nombre": "Brokeback Dirt Road",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/brokeback_dirt_road.ogg"
+    },
+    {
+      "id": "debate",
+      "nombre": "Debate",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/debate.ogg"
+    },
+    {
+      "id": "dog_days",
+      "nombre": "Dog Days",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/dog_days.ogg"
+    },
+    {
+      "id": "eastern_stroll",
+      "nombre": "Eastern Stroll",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/eastern_stroll.ogg"
+    },
+    {
+      "id": "first_dance",
+      "nombre": "First Dance",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/first_dance.ogg"
+    },
+    {
+      "id": "friendship",
+      "nombre": "Friendship",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/friendship.ogg"
+    },
+    {
+      "id": "glockenspiel",
+      "nombre": "Glockenspiel",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/glockenspiel.ogg"
+    },
+    {
+      "id": "innocence",
+      "nombre": "Innocence",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/innocence.ogg"
+    },
+    {
+      "id": "jammin",
+      "nombre": "Jammin",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/jammin.ogg"
+    },
+    {
+      "id": "lunas_lullaby",
+      "nombre": "Lunas Lullaby",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/lunas_lullaby.ogg"
+    },
+    {
+      "id": "meow_meow",
+      "nombre": "Meow Meow",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/meow_meow.ogg"
+    },
+    {
+      "id": "playground_memories",
+      "nombre": "Playground Memories",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/playground_memories.ogg"
+    },
+    {
+      "id": "reunion",
+      "nombre": "Reunion",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/reunion.ogg"
+    },
+    {
+      "id": "road_trip",
+      "nombre": "Road Trip",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/road_trip.ogg"
+    },
+    {
+      "id": "silver-haired",
+      "nombre": "Silver Haired",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/silver-haired.ogg"
+    },
+    {
+      "id": "summer_heat",
+      "nombre": "Summer Heat",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/summer_heat.ogg"
+    },
+    {
+      "id": "sunrays",
+      "nombre": "Sunrays",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/sunrays.ogg"
+    },
+    {
+      "id": "velvet_night",
+      "nombre": "Velvet Night",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/velvet_night.ogg"
+    },
+    {
+      "id": "vertraumt",
+      "nombre": "Vertraumt",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/vertraumt.ogg"
+    },
+    {
+      "id": "warm_blanket",
+      "nombre": "Warm Blanket",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/warm_blanket.ogg"
+    },
+    {
+      "id": "young_love",
+      "nombre": "Young Love",
+      "grupo": "dlc",
+      "ruta": "/audio/musica/dlc/young_love.ogg"
+    },
+    {
+      "id": "etude",
+      "nombre": "Etude",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/etude.ogg"
+    },
+    {
+      "id": "hard_work",
+      "nombre": "Hard Work",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/hard_work.ogg"
+    },
+    {
+      "id": "high_spirits",
+      "nombre": "High Spirits",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/high_spirits.ogg"
+    },
+    {
+      "id": "imagination",
+      "nombre": "Imagination",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/imagination.ogg"
+    },
+    {
+      "id": "in_good_order",
+      "nombre": "In Good Order",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/in_good_order.ogg"
+    },
+    {
+      "id": "lavender",
+      "nombre": "Lavender",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/lavender.ogg"
+    },
+    {
+      "id": "shuchu_suru",
+      "nombre": "Shuchu Suru",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/shuchu_suru.ogg"
+    },
+    {
+      "id": "springtime",
+      "nombre": "Springtime",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/springtime.ogg"
+    },
+    {
+      "id": "sunrise",
+      "nombre": "Sunrise",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/sunrise.ogg"
+    },
+    {
+      "id": "sunset",
+      "nombre": "Sunset",
+      "grupo": "dreemeDLC",
+      "ruta": "/audio/musica/dreemeDLC/sunset.ogg"
+    }
+  ]
+}

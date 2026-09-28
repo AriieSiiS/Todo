@@ -82,6 +82,52 @@ class _HomeAssistantSettingsCardState extends State<HomeAssistantSettingsCard> {
     }
   }
 
+  Future<void> _bindHallway(String id) async {
+    setState(() {
+      _busy = true;
+      _localError = null;
+    });
+    try {
+      await widget.controller.bindHallwayLight(id);
+    } on FormatException catch (error) {
+      _localError = error.message;
+    } catch (_) {
+      _localError = 'No se pudo asociar la bombilla del pasillo.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _bindSecondRoom(String id) async {
+    setState(() {
+      _busy = true;
+      _localError = null;
+    });
+    try {
+      await widget.controller.bindSecondRoomLight(id);
+    } on FormatException catch (error) {
+      _localError = error.message;
+    } catch (_) {
+      _localError = 'No se pudo asociar la bombilla del dormitorio.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _bindWeather(String id) async {
+    setState(() {
+      _busy = true;
+      _localError = null;
+    });
+    try {
+      await widget.controller.bindWeather(id);
+    } catch (_) {
+      _localError = 'No se pudo asociar la entidad meteorológica.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final home = widget.controller;
@@ -96,7 +142,7 @@ class _HomeAssistantSettingsCardState extends State<HomeAssistantSettingsCard> {
             : 'Sin conexión';
     return _SettingsSectionCard(
       icon: Icons.lightbulb_outline_rounded,
-      title: 'Home Assistant · luz del techo',
+      title: 'Home Assistant · luz y tiempo',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -171,6 +217,115 @@ class _HomeAssistantSettingsCardState extends State<HomeAssistantSettingsCard> {
           if (home.entityId.isNotEmpty && selected == null) ...[
             const SizedBox(height: 8),
             Text('La entidad ${home.entityId} no aparece en Home Assistant.'),
+          ],
+          const Divider(height: 28),
+          Text(
+            'Bombilla del pasillo',
+            style: TextStyle(color: context.visuals.textMuted),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey('home-assistant-hallway-${home.hallwayEntityId}'),
+            initialValue: available.any((item) =>
+                    item.entityId == home.hallwayEntityId &&
+                    item.entityId != home.entityId)
+                ? home.hallwayEntityId
+                : null,
+            hint: const Text('Selecciona la bombilla del pasillo'),
+            isExpanded: true,
+            items: [
+              for (final light
+                  in available.where((item) => item.entityId != home.entityId))
+                DropdownMenuItem(
+                  value: light.entityId,
+                  child: Text('${light.name} · ${light.entityId}',
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _busy || !home.connected
+                ? null
+                : (id) {
+                    if (id != null) unawaited(_bindHallway(id));
+                  },
+          ),
+          if (home.hallwayEntityId.isNotEmpty && home.hallwayLight == null) ...[
+            const SizedBox(height: 8),
+            Text(
+                'La entidad ${home.hallwayEntityId} no aparece en Home Assistant.'),
+          ],
+          const Divider(height: 28),
+          Text(
+            'Bombilla del dormitorio',
+            style: TextStyle(color: context.visuals.textMuted),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+                'home-assistant-second-room-${home.secondRoomEntityId}'),
+            initialValue: available.any((item) =>
+                    item.entityId == home.secondRoomEntityId &&
+                    item.entityId != home.entityId &&
+                    item.entityId != home.hallwayEntityId)
+                ? home.secondRoomEntityId
+                : null,
+            hint: const Text('Selecciona la bombilla del dormitorio'),
+            isExpanded: true,
+            items: [
+              for (final light in available.where((item) =>
+                  item.entityId != home.entityId &&
+                  item.entityId != home.hallwayEntityId))
+                DropdownMenuItem(
+                  value: light.entityId,
+                  child: Text('${light.name} · ${light.entityId}',
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _busy || !home.connected
+                ? null
+                : (id) {
+                    if (id != null) unawaited(_bindSecondRoom(id));
+                  },
+          ),
+          if (home.secondRoomEntityId.isNotEmpty &&
+              home.secondRoomLight == null) ...[
+            const SizedBox(height: 8),
+            Text(
+                'La entidad ${home.secondRoomEntityId} no aparece en Home Assistant.'),
+          ],
+          const Divider(height: 28),
+          Text(
+            'Tiempo actual de la ventana',
+            style: TextStyle(color: context.visuals.textMuted),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey('home-assistant-weather-${home.weatherEntityId}'),
+            initialValue: home.weathers
+                    .any((item) => item.entityId == home.weatherEntityId)
+                ? home.weatherEntityId
+                : null,
+            hint: const Text('Selecciona el tiempo de casa'),
+            isExpanded: true,
+            items: [
+              for (final weather in home.weathers)
+                DropdownMenuItem(
+                  value: weather.entityId,
+                  child: Text('${weather.name} · ${weather.entityId}',
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _busy || !home.connected
+                ? null
+                : (id) {
+                    if (id != null) unawaited(_bindWeather(id));
+                  },
+          ),
+          if (home.weathers.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No hay ninguna entidad meteorológica. Añade Met.no en Home Assistant usando la ubicación de tu casa y vuelve a conectar.',
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
           ],
           const SizedBox(height: 8),
           Text(

@@ -1,5 +1,7 @@
 part of 'app_shell.dart';
 
+const _reservedHouseholdCategories = <String>{'Audio'};
+
 class HouseholdPage extends StatefulWidget {
   const HouseholdPage(
       {required this.controller, this.homeAssistant, super.key});
@@ -21,11 +23,12 @@ class _HouseholdPageState extends State<HouseholdPage> {
   Widget build(BuildContext context) {
     final active =
         controller.householdItems.where((item) => !item.archived).toList();
-    final categories = active
-        .map((item) => item.category.trim())
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList()
+    final categories = <String>{
+      ...active
+          .map((item) => item.category.trim())
+          .where((value) => value.isNotEmpty),
+      ..._reservedHouseholdCategories,
+    }.toList()
       ..sort();
     categories.insert(0, 'Todos');
     final selectedCategory =
@@ -790,7 +793,11 @@ class _HouseholdDetailPanel extends StatelessWidget {
                 ),
               ],
             ),
-            Text(item.name, style: Theme.of(context).textTheme.headlineSmall),
+            SelectableText(
+              item.name,
+              key: const ValueKey('household-detail-name'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 14),
             Expanded(
               child: ListView(
@@ -1421,7 +1428,8 @@ class _HouseholdItemEditorDialogState
         .where((householdItem) => !householdItem.archived)
         .map((householdItem) => householdItem.category.trim())
         .where((category) => category.isNotEmpty)
-        .toSet();
+        .toSet()
+      ..addAll(_reservedHouseholdCategories);
     if (item != null) categories.add(item!.category);
     return categories.toList()..sort();
   }

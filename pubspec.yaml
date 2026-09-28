@@ -56,6 +56,29 @@ flutter:
     - assets/branding/todo-app-icon.svg
     - assets/home_twin_web/index.html
     - assets/home_twin_web/scene.js
+    - assets/home_twin_web/audio/catalogo.json
+    - assets/home_twin_web/audio/sonidos/
+    - assets/home_twin_web/audio/musica/base/
+    - assets/home_twin_web/audio/musica/dlc/
+    - assets/home_twin_web/audio/musica/dreemeDLC/
+    - assets/home_twin_web/weather/despejado.png
+    - assets/home_twin_web/weather/nublado.png
+    - assets/home_twin_web/weather/lluvia.png
+    - assets/home_twin_web/weather/tormenta.png
+    - assets/home_twin_web/weather/noche.png
+    - assets/home_twin_web/weather/panorama_despejado.png
+    - assets/home_twin_web/weather/panorama_nublado.png
+    - assets/home_twin_web/weather/panorama_tormenta.png
+    - assets/home_twin_web/weather/panorama_noche.png
+    - assets/home_twin_web/weather/panorama_madrugada.png
+    - assets/home_twin_web/weather/panorama_atardecer.png
+    - assets/home_twin_web/weather/panorama_tarde_noche.png
+    - assets/home_twin_web/wallpapers/monitor_derecho_dia.png
+    - assets/home_twin_web/wallpapers/monitor_derecho_atardecer.png
+    - assets/home_twin_web/wallpapers/monitor_derecho_noche.png
+    - assets/home_twin_web/wallpapers/monitor_derecho.mp4
+    - assets/home_twin_web/wallpapers/monitor_izquierdo.mp4
+    - assets/home_twin_web/wallpapers/monitor_izquierdo.png
     - resources/Persona 5 but it's Lofi ~ Chill Lofi Mix for Study_Work (1 Hour) [aM9dxd2nRwE] (1).mp3
     - resources/task-complete.wav
     - resources/task-complete-pencil-check.mp3

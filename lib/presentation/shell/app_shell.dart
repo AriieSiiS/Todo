@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' show max, min;
+import 'dart:math' show atan2, cos, max, min, pi, sin, sqrt;
 import 'dart:io';
 
 import 'package:appflowy_editor/appflowy_editor.dart';

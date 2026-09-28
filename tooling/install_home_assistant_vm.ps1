@@ -84,7 +84,7 @@ try {
         -SwitchName $switchName -Path $vmDirectory | Out-Null
     Set-VMProcessor -VMName $vmName -Count 2
     Set-VMFirmware -VMName $vmName -EnableSecureBoot Off
-    Set-VM -Name $vmName -AutomaticStartAction Start -AutomaticStopAction ShutDown
+    Set-VM -Name $vmName -AutomaticStartAction Nothing -AutomaticStopAction ShutDown
     Start-VM -Name $vmName
     Write-InstallationStatus 'iniciada' 'La máquina virtual está iniciada. Falta completar el asistente de Home Assistant.'
 } catch {

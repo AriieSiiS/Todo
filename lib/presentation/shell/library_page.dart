@@ -154,10 +154,12 @@ class _LibraryPageState extends State<LibraryPage> {
                             const SizedBox(width: 18),
                             SizedBox(
                               width: 330,
-                              child: _LibrarySidePanel(
-                                controller: controller,
-                                items: controller.libraryItems,
-                                year: _year,
+                              child: SingleChildScrollView(
+                                child: _LibrarySidePanel(
+                                  controller: controller,
+                                  items: controller.libraryItems,
+                                  year: _year,
+                                ),
                               ),
                             ),
                           ],
@@ -711,15 +713,15 @@ class _LibraryOverviewModeToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 38,
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: context.visuals.panel,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFE3D7C8)),
       ),
       child: SizedBox(
-        width: 68,
-        height: 32,
+        width: 70,
+        height: 34,
         child: Stack(
           children: [
             AnimatedAlign(
@@ -729,11 +731,11 @@ class _LibraryOverviewModeToggle extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeInOutCubic,
               child: Container(
-                width: 32,
-                height: 32,
+                width: 35,
+                height: 34,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F0E3),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
@@ -779,10 +781,10 @@ class _LibraryOverviewModeButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(999),
         child: SizedBox(
-          width: 32,
-          height: 32,
+          width: 35,
+          height: 34,
           child: Center(
             child: AnimatedScale(
               duration: const Duration(milliseconds: 180),

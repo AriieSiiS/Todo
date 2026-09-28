@@ -1876,6 +1876,11 @@ List<PopupMenuEntry<String>> _taskActionItems(
     const PopupMenuItem(value: 'edit', child: Text('Editar')),
     if (!task.isSubtask)
       const PopupMenuItem(value: 'subtask', child: Text('Crear subtarea')),
+    if (controller.canSkipTaskOccurrence(task))
+      const PopupMenuItem(
+        value: 'skipOccurrence',
+        child: Text('Saltar este día'),
+      ),
     const PopupMenuItem(value: 'tomorrow', child: Text('Mover a mañana')),
     if (controller.isCalendarConnected) ...[
       const PopupMenuItem(value: 'sync', child: Text('Sincronizar con Google')),
@@ -1926,6 +1931,8 @@ Future<void> _handleTaskAction(
       task.id,
       controller.logicalDate().add(const Duration(days: 1)),
     );
+  } else if (value == 'skipOccurrence') {
+    controller.skipTaskOccurrence(task.id);
   } else if (value == 'sync') {
     await controller.syncTaskToCalendar(task.id);
   } else if (value == 'unlink') {

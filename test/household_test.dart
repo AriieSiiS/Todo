@@ -147,6 +147,7 @@ void main() {
     expect(find.text('Cafetera'), findsOneWidget);
     expect(find.text('Cocina (1)'), findsOneWidget);
     expect(find.text('Salón (1)'), findsOneWidget);
+    expect(find.text('Audio (0)'), findsOneWidget);
     expect(find.text('Marca y modelo pendientes'), findsNothing);
 
     await tester.enterText(
@@ -160,6 +161,15 @@ void main() {
     await tester.tap(find.text('Cafetera').last);
     await tester.pumpAndSettle();
     expect(find.text('Ficha del hogar'), findsOneWidget);
+    expect(find.byKey(const ValueKey('household-detail-name')), findsOneWidget);
+    expect(
+      tester
+          .widget<SelectableText>(
+            find.byKey(const ValueKey('household-detail-name')),
+          )
+          .data,
+      'Cafetera',
+    );
     expect(find.text('Código QR'), findsOneWidget);
     expect(find.byKey(const ValueKey('household-detail-more')), findsOneWidget);
     expect(find.text('Factura'), findsNothing);

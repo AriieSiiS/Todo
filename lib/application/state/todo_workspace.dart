@@ -449,6 +449,12 @@ class TodoWorkspace extends ChangeNotifier {
 
   List<TaskModel> tasksForDate(DateTime day) => _sortTasks(_tasksForDay(day));
 
+  bool canSkipTaskOccurrence(TaskModel task) {
+    final recurringTask =
+        task.recurrence.isRecurring ? task : _recurringParentOf(task);
+    return recurringTask?.canSkipOccurrence ?? false;
+  }
+
   bool isTaskCompletedOnDay(TaskModel task, DateTime day) {
     if (task.recurrence.isRecurring || _recurringParentOf(task) != null) {
       return task.recurrenceCompletions.containsKey(_occurrenceKey(day));
@@ -2393,6 +2399,37 @@ class TodoWorkspace extends ChangeNotifier {
     if (willComplete) {
       unawaited(_feedback.playTaskCompleted());
     }
+    _commit();
+  }
+
+  void skipTaskOccurrence(String taskId, {DateTime? day}) {
+    final occurrence = _parseRecurringOccurrenceId(taskId);
+    final source = taskById(occurrence?.taskId ?? taskId);
+    if (source == null) return;
+
+    final recurringTask =
+        source.recurrence.isRecurring ? source : _recurringParentOf(source);
+    if (recurringTask == null || !recurringTask.canSkipOccurrence) return;
+
+    final targetDay = occurrence == null
+        ? logicalDate(day)
+        : DateTime.tryParse(occurrence.key) ?? logicalDate(day);
+    if (!_recursOnDay(recurringTask, targetDay)) return;
+
+    final key = _occurrenceKey(targetDay);
+    if (recurringTask.recurrenceCompletions.containsKey(key) ||
+        recurringTask.skippedRecurrenceOccurrences.contains(key)) {
+      return;
+    }
+
+    final skipped = Set<String>.from(
+      recurringTask.skippedRecurrenceOccurrences,
+    )..add(key);
+    final index = _tasks.indexWhere((task) => task.id == recurringTask.id);
+    if (index == -1) return;
+    _tasks[index] = recurringTask.copyWith(
+      skippedRecurrenceOccurrences: skipped,
+    );
     _commit();
   }
 
@@ -5129,7 +5166,8 @@ class TodoWorkspace extends ChangeNotifier {
         .where((task) => !task.isSubtask)
         .where((task) {
       if (task.recurrence.isRecurring &&
-          task.recurrenceCompletions.containsKey(occurrenceKey)) {
+          (task.recurrenceCompletions.containsKey(occurrenceKey) ||
+              task.skippedRecurrenceOccurrences.contains(occurrenceKey))) {
         return false;
       }
       if (task.recurrence.isRecurring) {

@@ -35,7 +35,7 @@ class HomeTwinWebServer {
     response.headers.set(
       'Content-Security-Policy',
       "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
-          "connect-src 'self'; img-src 'self' data: blob:",
+          "connect-src 'self'; img-src 'self' data: blob:; media-src 'self'",
     );
     try {
       if (request.method != 'GET') {
@@ -43,7 +43,36 @@ class HomeTwinWebServer {
       } else if (request.uri.path == '/') {
         await _asset(response, 'index.html', 'text/html; charset=utf-8');
       } else if (request.uri.path == '/scene.js') {
-        await _asset(response, 'scene.js', 'text/javascript; charset=utf-8');
+        await _viewerScript(response);
+      } else if (request.uri.path == '/audio/catalogo.json') {
+        await _asset(
+            response, 'audio/catalogo.json', 'application/json; charset=utf-8');
+      } else if (_audioPath(request.uri.path)) {
+        await _media(request, request.uri.path.substring(1), 'audio/ogg');
+      } else if (const {
+        '/wallpapers/monitor_derecho_dia.png',
+        '/wallpapers/monitor_derecho_atardecer.png',
+        '/wallpapers/monitor_derecho_noche.png',
+        '/wallpapers/monitor_izquierdo.png',
+        '/weather/despejado.png',
+        '/weather/nublado.png',
+        '/weather/lluvia.png',
+        '/weather/tormenta.png',
+        '/weather/noche.png',
+        '/weather/panorama_despejado.png',
+        '/weather/panorama_nublado.png',
+        '/weather/panorama_tormenta.png',
+        '/weather/panorama_noche.png',
+        '/weather/panorama_madrugada.png',
+        '/weather/panorama_atardecer.png',
+        '/weather/panorama_tarde_noche.png',
+      }.contains(request.uri.path)) {
+        await _asset(response, request.uri.path.substring(1), 'image/png');
+      } else if (const {
+        '/wallpapers/monitor_izquierdo.mp4',
+        '/wallpapers/monitor_derecho.mp4',
+      }.contains(request.uri.path)) {
+        await _media(request, request.uri.path.substring(1), 'video/mp4');
       } else if (request.uri.path == '/api/house') {
         final scene = await _home.load();
         response.headers.contentType = ContentType.json;
@@ -77,5 +106,77 @@ class HomeTwinWebServer {
     response.headers.contentType = ContentType.parse(contentType);
     final asset = await rootBundle.load('assets/home_twin_web/$name');
     response.add(asset.buffer.asUint8List());
+  }
+
+  Future<void> _viewerScript(HttpResponse response) async {
+    response.headers.contentType =
+        ContentType.parse('text/javascript; charset=utf-8');
+    final directory = File(Platform.resolvedExecutable).parent;
+    final file = File('${directory.path}${Platform.pathSeparator}data'
+        '${Platform.pathSeparator}flutter_assets${Platform.pathSeparator}assets'
+        '${Platform.pathSeparator}home_twin_web${Platform.pathSeparator}scene.js');
+    if (await file.exists()) {
+      await response.addStream(file.openRead());
+    } else {
+      final asset = await rootBundle.load('assets/home_twin_web/scene.js');
+      response.add(asset.buffer.asUint8List());
+    }
+  }
+
+  bool _audioPath(String path) {
+    final parts = Uri.parse(path).pathSegments;
+    if (parts.length == 3 && parts[0] == 'audio' && parts[1] == 'sonidos') {
+      return RegExp(r'^[A-Za-z0-9_. -]+\.ogg$').hasMatch(parts[2]);
+    }
+    if (parts.length == 4 &&
+        parts[0] == 'audio' &&
+        parts[1] == 'musica' &&
+        const {'base', 'dlc', 'dreemeDLC'}.contains(parts[2])) {
+      return RegExp(r'^[A-Za-z0-9_. -]+\.ogg$').hasMatch(parts[3]);
+    }
+    return false;
+  }
+
+  Future<void> _media(
+      HttpRequest request, String assetPath, String contentType) async {
+    final response = request.response;
+    final asset = await rootBundle.load('assets/home_twin_web/$assetPath');
+    final bytes = asset.buffer.asUint8List(
+      asset.offsetInBytes,
+      asset.lengthInBytes,
+    );
+    final length = bytes.length;
+    final range = request.headers.value(HttpHeaders.rangeHeader);
+    response.headers.contentType = ContentType.parse(contentType);
+    response.headers.set('Accept-Ranges', 'bytes');
+    if (range == null) {
+      response.headers.contentLength = length;
+      response.add(bytes);
+      return;
+    }
+
+    final match = RegExp(r'^bytes=(\d*)-(\d*)$').firstMatch(range);
+    final first = match?.group(1) ?? '';
+    final last = match?.group(2) ?? '';
+    if (match == null || (first.isEmpty && last.isEmpty)) {
+      response.statusCode = HttpStatus.requestedRangeNotSatisfiable;
+      response.headers.set('Content-Range', 'bytes */$length');
+      return;
+    }
+    final start = first.isEmpty
+        ? (length - int.parse(last)).clamp(0, length).toInt()
+        : int.parse(first);
+    final end = first.isEmpty || last.isEmpty
+        ? length - 1
+        : int.parse(last).clamp(0, length - 1).toInt();
+    if (start >= length || end < start) {
+      response.statusCode = HttpStatus.requestedRangeNotSatisfiable;
+      response.headers.set('Content-Range', 'bytes */$length');
+      return;
+    }
+    response.statusCode = HttpStatus.partialContent;
+    response.headers.set('Content-Range', 'bytes $start-$end/$length');
+    response.headers.contentLength = end - start + 1;
+    response.add(bytes.sublist(start, end + 1));
   }
 }

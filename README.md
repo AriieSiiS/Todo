@@ -186,6 +186,10 @@ y el tamaño de los huecos son aproximados hasta disponer de sus medidas. El
 mobiliario inicial incluye escritorio, ordenador, silla, baldas, vitrina,
 librería, un armario negro con puerta blanca y sofá con cojines; sus tamaños y
 posiciones se han estimado a partir de fotografías.
+El tablero del escritorio mide 160 × 80 cm y la torre del ordenador, 28 cm de
+ancho, 45 cm de alto y 43 cm de fondo. Sobre la torre se representan una
+lámpara pequeña y tres peluches; sus piezas están separadas para permitir
+controlar sus luces en una fase posterior.
 La lámpara circular del techo es seleccionable y puede seguir el estado de una
 bombilla conectada a Home Assistant; sin configurar la conexión permanece como
 parte de la maqueta.
@@ -211,6 +215,10 @@ Home Assistant OS se ejecuta en Hyper-V como `Todo-Home-Assistant`, conectado
 mediante el conmutador externo `Todo Home Assistant LAN`. La imagen oficial se
 descarga y verifica con `tooling/install_home_assistant_vm.ps1`; la opción
 `-Install` crea e inicia la máquina virtual con permisos de administrador.
+El arranque automático está desactivado: al reiniciar Windows la máquina no se
+enciende sola. Para usar la domótica hay que iniciarla manualmente en Hyper-V
+o pedir a Codex que lo haga. Cerrar Todo no apaga Home Assistant; para liberar
+su memoria hay que apagar la máquina virtual de forma ordenada.
 Tras el primer arranque, abrir `http://homeassistant.local`, crear la
 cuenta propietaria y añadir la integración oficial TP-Link con la cuenta Tapo.
 No compartir esas credenciales ni el token en chats o archivos del repositorio.

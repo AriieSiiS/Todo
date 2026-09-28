@@ -1845,8 +1845,9 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
     final logicalDay = controller.logicalDate(task.scheduledAt!);
     final month = logicalDay.month.toString().padLeft(2, '0');
     final day = logicalDay.day.toString().padLeft(2, '0');
-    return !task.recurrenceCompletions
-        .containsKey('${logicalDay.year}-$month-$day');
+    final occurrenceKey = '${logicalDay.year}-$month-$day';
+    return !task.recurrenceCompletions.containsKey(occurrenceKey) &&
+        !task.skippedRecurrenceOccurrences.contains(occurrenceKey);
   }).map((task) {
     final category = task.categoryIds.isNotEmpty
         ? controller.categoryById(task.categoryIds.first)

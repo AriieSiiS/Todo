@@ -13,7 +13,9 @@ from generate_home_twin_demo import cube_geometry
 REPO = Path(__file__).resolve().parents[1]
 OUTPUT = REPO / "assets" / "home_twin_models" / "mi_habitacion_base.glb"
 
-# Metros. La ventana y la puerta aún no tienen medidas aportadas por el usuario.
+# Coordenadas en metros: X = izquierda/derecha, Y = altura, Z = fondo/entrada.
+# En box(nombre, material, (X, Y, Z), (ancho, alto, fondo)), 0.01 = 1 cm.
+# La ventana y la puerta aún no tienen medidas aportadas por el usuario.
 WIDTH = 2.10
 LENGTH = 4.10
 HEIGHT = 3.10
@@ -25,7 +27,12 @@ WINDOW_TOP = 2.27
 DOOR_LEFT = -0.88
 DOOR_RIGHT = -0.06
 DOOR_TOP = 2.18
+VIGA_ENTRADA_ALTO = 0.25
+VIGA_ENTRADA_FONDO = 0.11
 VITRINA_ANCHO = 0.80
+TABLON_ANCHO = 0.64
+TABLON_ALTO = 0.50
+TABLON_SEPARACION_VITRINA = 0.025
 LIBRERIA_ANCHO = 0.60
 ARMARIO_ANCHO = 1.40
 JUNTA_MUEBLES = 0.005
@@ -51,10 +58,25 @@ def generate(output: Path = OUTPUT) -> Path:
         "persiana_clara": (0.74, 0.73, 0.69, 1),
         "metal": (0.48, 0.48, 0.42, 1),
         "madera_clara": (0.62, 0.45, 0.31, 1),
+        "madera_respaldo": (0.59, 0.42, 0.29, 1),
         "madera_canteada": (0.48, 0.34, 0.24, 1),
+        "corcho_tablon": (0.54, 0.37, 0.25, 1),
+        "papel_cartel": (0.88, 0.85, 0.81, 1),
         "granate_vitrina": (0.28, 0.065, 0.055, 1),
         "cristal_vitrina": (0.075, 0.085, 0.095, 0.45),
+        "vidrio_frontal_vitrina": (0.55, 0.58, 0.56, 0.14),
+        "plata_maqueta": (0.47, 0.49, 0.49, 1),
+        "oro_detalle": (0.64, 0.48, 0.19, 1),
+        "papel_manga": (0.82, 0.80, 0.72, 1),
+        "verde_vitrina": (0.08, 0.30, 0.26, 1),
+        "azul_turquesa": (0.08, 0.56, 0.61, 1),
+        "azul_futbol": (0.06, 0.22, 0.38, 1),
+        "piel_figura": (0.65, 0.49, 0.36, 1),
+        "piedra_vitrina": (0.42, 0.37, 0.34, 1),
         "negro_mueble": (0.035, 0.037, 0.040, 1),
+        "negro_cajon": (0.14, 0.14, 0.145, 1),
+        "blanco_opal_armario": (0.72, 0.73, 0.74, 1),
+        "riel_armario": (0.58, 0.59, 0.60, 1),
         "negro_tela": (0.052, 0.053, 0.057, 1),
         "gris_cojin": (0.31, 0.32, 0.33, 1),
         "cojin_claro": (0.61, 0.61, 0.58, 1),
@@ -68,6 +90,16 @@ def generate(output: Path = OUTPUT) -> Path:
         "libro_granate": (0.30, 0.06, 0.08, 1),
         "libro_crema": (0.67, 0.61, 0.49, 1),
         "libro_verde": (0.11, 0.21, 0.14, 1),
+        "caja_ps4": (0.035, 0.16, 0.52, 1),
+        "caja_ps3": (0.12, 0.13, 0.16, 1),
+        "caratula_clara": (0.72, 0.72, 0.67, 1),
+        "caratula_gris": (0.31, 0.34, 0.36, 1),
+        "caratula_violeta": (0.23, 0.18, 0.32, 1),
+        "caratula_naranja": (0.56, 0.24, 0.12, 1),
+        "figura_verde": (0.16, 0.49, 0.22, 1),
+        "figura_amarilla": (0.88, 0.67, 0.12, 1),
+        "figura_roja": (0.70, 0.17, 0.14, 1),
+        "figura_azul": (0.15, 0.32, 0.65, 1),
         "maceta_arcilla": (0.46, 0.24, 0.14, 1),
         "hojas_verde": (0.08, 0.27, 0.12, 1),
         "hojas_claras": (0.17, 0.38, 0.18, 1),
@@ -92,7 +124,11 @@ def generate(output: Path = OUTPUT) -> Path:
             },
             "doubleSided": True,
         }
-        if name in ("cristal", "cristal_vitrina"):
+        if name == "blanco_opal_armario":
+            material["pbrMetallicRoughness"]["roughnessFactor"] = 0.5
+            material["pbrMetallicRoughness"]["metallicFactor"] = 0.08
+        if name in ("cristal", "cristal_vitrina",
+                    "vidrio_frontal_vitrina"):
             material["alphaMode"] = "BLEND"
         if name in ("pantalla_azul", "luz_violeta", "luz_cian",
                     "bombilla_calida"):
@@ -152,13 +188,7 @@ def generate(output: Path = OUTPUT) -> Path:
                 node["translation"][2] - minimo) * factor
             node["scale"][2] *= factor
 
-    def ampliar_altura_armario(children):
-        for child in children:
-            node = nodes[child]
-            node["translation"][1] *= 1.05
-            node["scale"][1] *= 1.05
-
-    # La planta conserva las medidas reales. Las baldosas oscuras son una
+    # Suelo y baldosas. La planta conserva las medidas reales. Las baldosas oscuras son una
     # aproximación visual al suelo que aparece en la segunda fotografía.
     box("base_suelo", "suelo_oscuro", (0, -0.09, 0),
         (WIDTH + 0.18, 0.17, LENGTH + 0.18))
@@ -170,7 +200,7 @@ def generate(output: Path = OUTPUT) -> Path:
             box(f"baldosa_{row + 1}_{column + 1}", tile, (x, 0.005, z),
                 (WIDTH / 4 - 0.008, 0.02, LENGTH / 8 - 0.008))
 
-    # Pared del fondo: ventana desplazada hacia la derecha en el croquis.
+    # Pared del fondo y hueco de la ventana: desplazados según el croquis.
     back = -LENGTH / 2
     left_segment = WINDOW_LEFT + WIDTH / 2
     right_segment = WIDTH / 2 - WINDOW_RIGHT
@@ -187,26 +217,33 @@ def generate(output: Path = OUTPUT) -> Path:
         ((WINDOW_LEFT + WINDOW_RIGHT) / 2, (WINDOW_TOP + HEIGHT) / 2, back),
         (WINDOW_RIGHT - WINDOW_LEFT, HEIGHT - WINDOW_TOP, WALL))
 
-    # La pared derecha permanece visible detrás de los armarios. La
-    # izquierda queda recortada para enseñar el sofá y el resto del interior.
+    # Pared izquierda y tabique derecho compartido: el visor atenúa el cercano.
     box("pared_larga_derecha", "pared_verde_salvia",
-        (WIDTH / 2, HEIGHT / 2, 0), (WALL, HEIGHT, LENGTH))
-    box("pared_larga_izquierda_recortada", "pared_verde_salvia",
-        (-WIDTH / 2, 0.18, 0), (WALL, 0.36, LENGTH))
+        (WIDTH / 2, HEIGHT / 2, 0), (0.09, HEIGHT, LENGTH))
+    box("pared_larga_izquierda", "pared_verde_salvia",
+        (-WIDTH / 2, HEIGHT / 2, 0), (WALL, HEIGHT, LENGTH))
 
-    # En el extremo opuesto, el umbral y los laterales marcan la puerta sin
-    # levantar un muro que tape la vista isométrica de la estancia.
+    # Pared de entrada y hueco de la puerta.
     front = LENGTH / 2
-    box("pared_entrada_izquierda_recortada", "pared_verde_salvia",
-        ((-WIDTH / 2 + DOOR_LEFT) / 2, 0.18, front),
-        (DOOR_LEFT + WIDTH / 2, 0.36, WALL))
-    box("pared_entrada_derecha_recortada", "pared_verde_salvia",
-        ((DOOR_RIGHT + WIDTH / 2) / 2, 0.18, front),
-        (WIDTH / 2 - DOOR_RIGHT, 0.36, WALL))
+    box("pared_entrada_izquierda", "pared_verde_salvia",
+        ((-WIDTH / 2 + DOOR_LEFT) / 2, HEIGHT / 2, front),
+        (DOOR_LEFT + WIDTH / 2, HEIGHT, WALL))
+    box("pared_entrada_derecha", "pared_verde_salvia",
+        ((DOOR_RIGHT + WIDTH / 2) / 2, HEIGHT / 2, front),
+        (WIDTH / 2 - DOOR_RIGHT, HEIGHT, WALL))
+    box("pared_entrada_sobre_puerta", "pared_verde_salvia",
+        ((DOOR_LEFT + DOOR_RIGHT) / 2, (DOOR_TOP + HEIGHT) / 2, front),
+        (DOOR_RIGHT - DOOR_LEFT, HEIGHT - DOOR_TOP, WALL))
+    # La viga cruza toda la pared de entrada y sobresale hacia la habitación.
+    box("pared_entrada_viga_superior", "pared_verde_salvia",
+        (0, HEIGHT - VIGA_ENTRADA_ALTO / 2,
+         front - WALL / 2 - VIGA_ENTRADA_FONDO / 2),
+        (WIDTH, VIGA_ENTRADA_ALTO, VIGA_ENTRADA_FONDO))
     box("umbral_puerta", "rodapié_blanco",
         ((DOOR_LEFT + DOOR_RIGHT) / 2, 0.015, front),
         (DOOR_RIGHT - DOOR_LEFT, 0.03, 0.15))
 
+    # Rodapiés de las tres paredes.
     box("rodapié_fondo", "rodapié_blanco", (0, 0.08, back + 0.065),
         (WIDTH, 0.16, 0.03))
     box("rodapié_izquierdo", "rodapié_blanco",
@@ -214,7 +251,7 @@ def generate(output: Path = OUTPUT) -> Path:
     box("rodapié_derecho", "rodapié_blanco",
         (WIDTH / 2 - 0.065, 0.08, 0), (0.03, 0.16, LENGTH))
 
-    # Fragmentos de techo blanco: el resto está recortado para ver el suelo.
+    # Techo blanco: fragmentos recortados para ver el suelo.
     box("techo_blanco_fondo", "techo_blanco",
         (0, HEIGHT + 0.025, back + 0.11), (WIDTH + 0.12, 0.08, 0.32))
     box("techo_blanco_lateral", "techo_blanco",
@@ -259,6 +296,7 @@ def generate(output: Path = OUTPUT) -> Path:
             (0.012, 0.012, largo)))
     group("luz_techo", luz_techo)
 
+    # Ventana: cristal, marco, alféizar y persiana; ajustar WINDOW_* arriba.
     window = []
     window_center = (WINDOW_LEFT + WINDOW_RIGHT) / 2
     window_height = WINDOW_TOP - WINDOW_SILL
@@ -276,18 +314,22 @@ def generate(output: Path = OUTPUT) -> Path:
             (window_center, WINDOW_TOP, back + 0.11),
             (WINDOW_RIGHT - WINDOW_LEFT + 0.11, 0.06, 0.10)),
         box("alféizar_ventana", "marco_blanco",
-            (window_center, WINDOW_SILL, back + 0.18),
-            (WINDOW_RIGHT - WINDOW_LEFT + 0.15, 0.06, 0.25)),
+            (window_center, WINDOW_SILL - 0.015, back + 0.10),
+            (WINDOW_RIGHT - WINDOW_LEFT + 0.11, 0.03, 0.10)),
         box("persiana_ventana", "persiana_clara",
-            (window_center - 0.055, (WINDOW_SILL + WINDOW_TOP) / 2,
+            (window_center, (WINDOW_SILL + WINDOW_TOP) / 2,
              back + 0.13),
-            (WINDOW_RIGHT - WINDOW_LEFT - 0.17, window_height - 0.05, 0.015)),
+            (WINDOW_RIGHT - WINDOW_LEFT + 0.01, window_height + 0.01, 0.015)),
+        box("borde_inferior_persiana", "marco_blanco",
+            (window_center, WINDOW_SILL + 0.005, back + 0.15),
+            (WINDOW_RIGHT - WINDOW_LEFT + 0.04, 0.018, 0.03)),
         box("barra_persiana", "marco_blanco",
             (window_center, WINDOW_TOP + 0.07, back + 0.17),
             (WINDOW_RIGHT - WINDOW_LEFT + 0.18, 0.065, 0.07)),
     ])
     group("ventana", window)
 
+    # Puerta de entrada: marco, hoja, cristales y tirador; ajustar DOOR_* arriba.
     door = []
     door_center = (DOOR_LEFT + DOOR_RIGHT) / 2
     door.extend([
@@ -301,8 +343,8 @@ def generate(output: Path = OUTPUT) -> Path:
             (door_center, DOOR_TOP, front - 0.02),
             (DOOR_RIGHT - DOOR_LEFT + 0.11, 0.07, 0.12)),
     ])
-    # Hoja abierta hacia el pasillo, con cristales divididos como en la foto.
-    leaf_x = DOOR_RIGHT - 0.02
+    # Hoja abierta hacia el pasillo, con bisagras al lado izquierdo.
+    leaf_x = DOOR_LEFT + 0.02
     leaf_z = front + 0.43
     door.extend([
         box("hoja_lateral_1", "marco_blanco", (leaf_x, 1.08, leaf_z - 0.40),
@@ -318,30 +360,30 @@ def generate(output: Path = OUTPUT) -> Path:
     ])
     for index in range(1, 4):
         door.append(box(f"travesaño_puerta_{index}", "marco_blanco",
-            (leaf_x + 0.03, 0.88 + index * 0.32, leaf_z),
+            (leaf_x - 0.03, 0.88 + index * 0.32, leaf_z),
             (0.035, 0.045, 0.83)))
     door.append(box("parteluz_puerta", "marco_blanco",
-        (leaf_x + 0.03, 1.49, leaf_z), (0.035, 1.25, 0.045)))
+        (leaf_x - 0.03, 1.49, leaf_z), (0.035, 1.25, 0.045)))
     door.append(box("tirador_puerta", "metal",
-        (leaf_x + 0.07, 0.99, leaf_z - 0.30), (0.07, 0.04, 0.10)))
+        (leaf_x - 0.07, 0.99, leaf_z - 0.30), (0.07, 0.04, 0.10)))
     group("puerta", door)
 
-    # El escritorio queda frente a la ventana. Las medidas de los muebles
-    # son estimaciones derivadas de las fotos, separadas de la planta medida.
+    # Mesa / escritorio: tablero de 160 × 80 cm y cuatro patas.
+    # La torre de 28 × 45 × 43 cm se monta en src/desk_details.js.
     escritorio = [
         box("tablero_escritorio", "madera_clara", (0.02, 0.74, -1.55),
-            (1.64, 0.055, 0.72)),
-        box("canto_escritorio", "madera_canteada", (0.02, 0.705, -1.19),
-            (1.64, 0.035, 0.025)),
+            (1.60, 0.055, 0.80)),
     ]
     for x in (-0.70, 0.74):
-        for z in (-1.81, -1.29):
+        for z in (-1.87, -1.23):
             escritorio.append(box(f"pata_escritorio_{x}_{z}",
                 "blanco_mueble", (x, 0.36, z), (0.055, 0.72, 0.055)))
     group("escritorio", escritorio)
 
+    # Monitor 1: X = -0.45. Monitor 2: X = 0.16.
+    # Cada pantalla tiene marco, superficie visible, pie y base.
     ordenador = []
-    for indice, x in enumerate((-0.38, 0.24), start=1):
+    for indice, x in enumerate((-0.45, 0.16), start=1):
         ordenador.extend([
             box(f"monitor_{indice}", "negro_mueble", (x, 1.15, -1.73),
                 (0.58, 0.36, 0.035)),
@@ -352,22 +394,9 @@ def generate(output: Path = OUTPUT) -> Path:
             box(f"base_monitor_{indice}", "negro_mueble",
                 (x, 0.82, -1.73), (0.22, 0.02, 0.15)),
         ])
-    ordenador.extend([
-        box("caja_ordenador", "blanco_mueble", (0.73, 1.045, -1.58),
-            (0.25, 0.54, 0.42)),
-        box("lateral_cristal_ordenador", "cristal_vitrina",
-            (0.587, 1.045, -1.58), (0.007, 0.48, 0.37)),
-        box("teclado", "negro_mueble", (-0.06, 0.782, -1.37),
-            (0.45, 0.022, 0.16)),
-        box("ratón", "negro_mueble", (0.29, 0.79, -1.36),
-            (0.07, 0.03, 0.10)),
-    ])
-    for indice, y in enumerate((0.90, 1.05, 1.20), start=1):
-        ordenador.append(box(f"ventilador_ordenador_{indice}",
-            "luz_violeta" if indice != 2 else "luz_cian",
-            (0.73, y, -1.365), (0.13, 0.11, 0.008)))
     group("ordenador", ordenador)
 
+    # Silla de escritorio: asiento, respaldo, columna, base y reposabrazos.
     silla = [
         box("asiento_silla", "gris_silla", (-0.12, 0.52, -0.78),
             (0.52, 0.11, 0.52)),
@@ -383,7 +412,7 @@ def generate(output: Path = OUTPUT) -> Path:
             (x, 0.69, -0.75), (0.055, 0.04, 0.39)))
     group("silla", silla)
 
-    # Baldas compactas junto al sofá, en la pared izquierda. Los libros
+    # Estantería / baldas compactas junto al sofá, en la pared izquierda. Los libros
     # quedan agrupados en cuatro niveles y una planta ocupa la balda superior.
     estanteria = [
         box("montante_estanteria_fondo", "madera_clara",
@@ -391,6 +420,15 @@ def generate(output: Path = OUTPUT) -> Path:
         box("montante_estanteria_sofa", "madera_clara",
             (-0.99, 0.84, -0.43), (0.045, 1.68, 0.04)),
     ]
+    # Respaldo continuo de madera: los tablones y sus juntas quedan visibles
+    # entre las baldas y detrás de los libros.
+    for indice in range(5):
+        estanteria.append(box(
+            f"tablon_respaldo_estanteria_{indice + 1}",
+            "madera_clara" if indice % 2 == 0 else "madera_respaldo",
+            (-0.995, 0.84, -0.806 + indice * 0.086),
+            (0.025, 1.68, 0.082),
+        ))
     for indice, y in enumerate((0.16, 0.48, 0.80, 1.12, 1.44), start=1):
         estanteria.append(box(f"balda_{indice}", "madera_clara",
             (-0.83, y, -0.63), (0.30, 0.045, 0.44)))
@@ -422,23 +460,31 @@ def generate(output: Path = OUTPUT) -> Path:
     ])
     group("estanteria", estanteria)
 
-    # Los tres muebles de la pared derecha ocupan sus medidas reales desde
-    # la esquina de la puerta: armario, librería y vitrina hacia la ventana.
+    # Vitrina roja: el primer mueble de la pared derecha, hacia la ventana.
+    # Sus medidas y las del armario y librería están en las constantes de arriba.
     vitrina = [
         box("lateral_vitrina_1", "cristal_vitrina", (0.77, 1.12, -1.25),
             (0.44, 2.15, 0.012)),
         box("lateral_vitrina_2", "cristal_vitrina", (0.77, 1.12, -0.56),
             (0.44, 2.15, 0.012)),
-        box("trasera_vitrina", "cristal_vitrina", (1.00, 1.12, -0.905),
-            (0.012, 2.20, 0.68)),
+        box("trasera_vitrina", "granate_vitrina", (1.00, 1.12, -0.905),
+            (0.018, 2.20, 0.68)),
         box("corona_vitrina", "granate_vitrina", (0.77, 2.23, -0.905),
             (0.49, 0.06, 0.74)),
         box("base_vitrina", "granate_vitrina", (0.77, 0.06, -0.905),
             (0.49, 0.12, 0.74)),
-        box("cristal_vitrina", "cristal_vitrina", (0.525, 1.26, -0.905),
-            (0.012, 1.82, 0.62)),
+        box("cristal_vitrina", "vidrio_frontal_vitrina", (0.525, 1.175, -0.905),
+            (0.012, 2.09, 0.62)),
         box("marco_central_vitrina", "granate_vitrina",
-            (0.51, 1.26, -0.905), (0.032, 1.84, 0.035)),
+            (0.51, 1.13, -0.905), (0.032, 2.24, 0.035)),
+        box("marco_superior_puertas_vitrina", "granate_vitrina",
+            (0.51, 2.22, -0.905), (0.035, 0.055, 0.72)),
+        box("travesaño_frontal_vitrina", "granate_vitrina",
+            (0.51, 0.96, -0.905), (0.035, 0.065, 0.72)),
+        box("bolsa_encima_vitrina", "negro_mueble",
+            (0.77, 2.34, -0.905), (0.27, 0.16, 0.38)),
+        box("asa_bolsa_vitrina", "negro_cajon",
+            (0.77, 2.435, -0.905), (0.05, 0.045, 0.16)),
     ]
     for x in (0.53, 1.00):
         for z in (-1.25, -0.56):
@@ -448,10 +494,205 @@ def generate(output: Path = OUTPUT) -> Path:
     for indice, y in enumerate((0.50, 0.96, 1.42, 1.88), start=1):
         vitrina.append(box(f"balda_vitrina_{indice}", "granate_vitrina",
             (0.77, y, -0.905), (0.46, 0.045, 0.70)))
+
+    def libro_vitrina(nombre, z, base, alto, color, ancho=0.034, x=0.81):
+        vitrina.extend([
+            box(nombre, color, (x, base + alto / 2, z),
+                (0.23, alto, ancho)),
+            box(f"{nombre}_lomo", "oro_detalle" if color == "libro_verde"
+                else "libro_granate", (x - 0.119, base + alto * 0.79, z),
+                (0.006, 0.012, ancho * 0.72)),
+        ])
+
+    def figura_vitrina(nombre, x, z, base, ropa, alto=0.17):
+        vitrina.extend([
+            box(f"{nombre}_peana", "negro_mueble",
+                (x, base + 0.009, z), (0.11, 0.018, 0.105)),
+            box(f"{nombre}_piernas", "negro_mueble",
+                (x, base + alto * 0.28, z),
+                (0.032, alto * 0.43, 0.060)),
+            box(f"{nombre}_camiseta", ropa,
+                (x, base + alto * 0.60, z),
+                (0.054, alto * 0.37, 0.075)),
+            box(f"{nombre}_cabeza", "piel_figura",
+                (x, base + alto * 0.89, z),
+                (0.044, alto * 0.18, 0.052)),
+        ])
+
+    # Primera balda: novelas y naves a la izquierda; manga y fútbol a la derecha.
+    for indice, (z, color) in enumerate((
+            (-1.205, "papel_manga"), (-1.16, "negro_mueble"),
+            (-1.115, "negro_mueble"), (-1.07, "negro_mueble")), start=1):
+        libro_vitrina(f"libro_galactico_{indice}", z, 1.903,
+            0.225 + (indice % 2) * 0.025, color, 0.036)
+    vitrina.extend([
+        box("nave_casco", "plata_maqueta", (0.73, 1.978, -0.99),
+            (0.23, 0.035, 0.11)),
+        box("nave_ala_izquierda", "plata_maqueta",
+            (0.73, 1.969, -1.06), (0.08, 0.011, 0.11)),
+        box("nave_ala_derecha", "plata_maqueta",
+            (0.73, 1.969, -0.92), (0.08, 0.011, 0.11)),
+    ])
+    for indice, z in enumerate((-1.17, -1.11, -1.05, -0.99), start=1):
+        figura_vitrina(f"soldado_pequeno_{indice}", 0.60, z, 1.903,
+            "papel_manga", 0.085)
+    for indice in range(13):
+        libro_vitrina(f"manga_superior_{indice + 1}",
+            -0.875 + indice * 0.021, 1.903, 0.218,
+            "papel_manga", 0.019)
+    figura_vitrina("futbolista_superior", 0.60, -0.635, 1.903,
+        "azul_futbol", 0.245)
+    vitrina.append(box("balon_superior", "papel_manga",
+        (0.61, 1.922, -0.655), (0.042, 0.042, 0.042)))
+
+    # Segunda balda: colección de Tolkien, figuras de fantasía y objetos verdes.
+    for indice, z in enumerate((-1.175, -1.115, -1.055), start=1):
+        libro_vitrina(f"tomo_fantasia_{indice}", z, 1.443,
+            0.33 if indice == 2 else 0.29, "papel_manga", 0.052)
+        vitrina.append(box(f"canto_dorado_tomo_{indice}", "oro_detalle",
+            (0.81, 1.443 + (0.33 if indice == 2 else 0.29), z),
+            (0.23, 0.011, 0.052)))
+    figura_vitrina("guerrero_fantasia", 0.62, -1.16, 1.443,
+        "negro_cajon", 0.19)
+    figura_vitrina("criatura_fantasia", 0.66, -0.985, 1.443,
+        "piedra_vitrina", 0.16)
+    for indice, z in enumerate((-0.865, -0.81, -0.755), start=1):
+        libro_vitrina(f"libro_verde_fantasia_{indice}", z, 1.443,
+            0.255 + indice * 0.014, "libro_verde", 0.045)
+    vitrina.extend([
+        box("lamina_fantasia", "libro_crema", (0.91, 1.627, -0.675),
+            (0.015, 0.33, 0.19)),
+        box("castillo_fantasia", "piedra_vitrina",
+            (0.65, 1.535, -0.655), (0.12, 0.18, 0.13)),
+        box("torre_castillo", "plata_maqueta",
+            (0.65, 1.665, -0.655), (0.047, 0.13, 0.055)),
+        box("vaso_verde", "verde_vitrina",
+            (0.61, 1.525, -0.785), (0.11, 0.16, 0.10)),
+        box("emblema_vaso", "oro_detalle",
+            (0.552, 1.54, -0.785), (0.007, 0.055, 0.065)),
+    ])
+
+    # Tercera balda: cartel, manga y figura turquesa; fútbol al otro lado.
+    vitrina.extend([
+        box("cartel_personaje", "libro_crema", (0.92, 1.197, -1.13),
+            (0.018, 0.35, 0.20)),
+        box("retrato_cartel", "libro_granate", (0.908, 1.19, -1.13),
+            (0.007, 0.15, 0.15)),
+        box("tomo_manga_naranja", "madera_clara",
+            (0.84, 1.14, -1.17), (0.13, 0.27, 0.11)),
+        box("sillon_figurita", "azul_turquesa",
+            (0.63, 1.05, -1.055), (0.15, 0.12, 0.15)),
+        box("respaldo_sillon", "azul_turquesa",
+            (0.69, 1.12, -1.055), (0.035, 0.18, 0.15)),
+        box("taza_amarilla", "figura_amarilla",
+            (0.61, 1.046, -0.948), (0.10, 0.12, 0.05)),
+    ])
+    figura_vitrina("personaje_sillon", 0.61, -1.055, 1.09,
+        "azul_futbol", 0.13)
+    for indice, z in enumerate((-1.01, -0.975), start=1):
+        libro_vitrina(f"libro_oscuro_tercero_{indice}", z, 0.983,
+            0.29, "negro_mueble", 0.031)
+    vitrina.extend([
+        box("lamina_futbol", "azul_futbol", (0.92, 1.20, -0.77),
+            (0.018, 0.33, 0.23)),
+        box("franja_lamina_futbol", "figura_roja",
+            (0.905, 1.09, -0.77), (0.008, 0.065, 0.23)),
+        box("roca_decorativa", "piedra_vitrina",
+            (0.63, 1.051, -0.70), (0.13, 0.13, 0.115)),
+        box("objeto_madera_futbol", "madera_canteada",
+            (0.63, 1.018, -0.64), (0.16, 0.07, 0.12)),
+    ])
+    for indice in range(4):
+        libro_vitrina(f"manga_futbol_{indice + 1}",
+            -0.67 + indice * 0.022, 0.983, 0.265,
+            "papel_manga", 0.019)
+    figura_vitrina("futbolista_rojo", 0.60, -0.85, 0.983,
+        "figura_roja", 0.22)
+    figura_vitrina("futbolista_azul", 0.65, -0.73, 0.983,
+        "azul_futbol", 0.25)
+
+    # Las dos baldas bajas mantienen libros, álbumes y cajas visibles.
+    for fila, base in enumerate((0.523, 0.123), start=1):
+        for indice in range(12):
+            z = -1.20 + indice * 0.052
+            color = ("negro_mueble", "libro_verde", "libro_crema",
+                     "libro_azul", "libro_granate")[(fila + indice) % 5]
+            libro_vitrina(f"libro_inferior_{fila}_{indice + 1}", z, base,
+                0.27 + (indice % 3) * 0.025, color, 0.038)
+    vitrina.extend([
+        box("album_inferior", "libro_granate", (0.65, 0.55, -0.68),
+            (0.18, 0.045, 0.18)),
+        box("caja_inferior_vitrina", "papel_manga",
+            (0.69, 0.17, -0.68), (0.24, 0.085, 0.17)),
+    ])
     ajustar_ancho_en_pared(vitrina, INICIO_VITRINA, VITRINA_ANCHO)
     group("vitrina", vitrina)
 
-    # Librería negra situada a continuación de la vitrina en la pared derecha.
+    # Tablón de anuncios de 64 × 50 cm, junto a la vitrina.
+    # El borde derecho queda a 2,5 cm de la vitrina y el superior coincide
+    # con la coronación de esta (2,26 m).
+    tablon_z_derecha = INICIO_VITRINA - TABLON_SEPARACION_VITRINA
+    tablon_z = tablon_z_derecha - TABLON_ANCHO / 2
+    tablon_y = 2.26 - TABLON_ALTO / 2
+    tablon = [
+        box("respaldo_tablon", "madera_canteada",
+            (0.972, tablon_y, tablon_z),
+            (0.028, TABLON_ALTO, TABLON_ANCHO)),
+        box("superficie_corcho", "corcho_tablon",
+            (0.955, tablon_y, tablon_z),
+            (0.008, TABLON_ALTO - 0.035, TABLON_ANCHO - 0.035)),
+        box("marco_superior_tablon", "madera_clara",
+            (0.943, 2.247, tablon_z), (0.026, 0.026, TABLON_ANCHO)),
+        box("marco_inferior_tablon", "madera_clara",
+            (0.943, 1.773, tablon_z), (0.026, 0.026, TABLON_ANCHO)),
+    ]
+    for indice, z in enumerate((tablon_z - TABLON_ANCHO / 2 + 0.013,
+                                tablon_z + TABLON_ANCHO / 2 - 0.013),
+                               start=1):
+        tablon.append(box(f"marco_lateral_tablon_{indice}", "madera_clara",
+            (0.943, tablon_y, z), (0.026, TABLON_ALTO, 0.026)))
+    # Franja con dos jugadores en la mitad inferior, como en la fotografía.
+    tablon.extend([
+        box("franja_negra_cartel_tablon", "negro_mueble",
+            (0.946, 1.941, tablon_z), (0.008, 0.028, 0.594)),
+        box("poster_jugadores", "papel_cartel",
+            (0.943, 1.864, tablon_z), (0.010, 0.14, 0.594)),
+        box("banda_inferior_poster", "negro_mueble",
+            (0.935, 1.800, tablon_z), (0.008, 0.023, 0.594)),
+    ])
+    for indice, z in enumerate((tablon_z - 0.16, tablon_z + 0.16), start=1):
+        tablon.extend([
+            box(f"jugador_{indice}_camiseta", "negro_mueble",
+                (0.933, 1.854, z), (0.009, 0.070, 0.073)),
+            box(f"jugador_{indice}_cabeza", "piel_figura",
+                (0.931, 1.910, z), (0.010, 0.033, 0.037)),
+            box(f"jugador_{indice}_detalle", "figura_roja",
+                (0.925, 1.833, z), (0.008, 0.030, 0.008)),
+        ])
+    # Notas, dorsal oscuro y dibujo sujetos al corcho superior.
+    tablon.extend([
+        box("dorsal_tablon", "negro_mueble",
+            (0.944, 2.174, tablon_z_derecha - 0.095),
+            (0.009, 0.115, 0.18)),
+        box("detalle_rojo_dorsal", "figura_roja",
+            (0.937, 2.159, tablon_z_derecha - 0.095),
+            (0.006, 0.038, 0.067)),
+        box("nota_clara_tablon", "papel_cartel",
+            (0.944, 2.075, tablon_z - 0.11),
+            (0.009, 0.075, 0.058)),
+        box("nota_azul_tablon", "azul_turquesa",
+            (0.943, 2.078, tablon_z + 0.115),
+            (0.009, 0.070, 0.068)),
+        box("dibujo_tablon", "papel_cartel",
+            (0.942, 2.054, tablon_z_derecha - 0.085),
+            (0.009, 0.105, 0.095)),
+        box("trazo_dibujo_tablon", "negro_cajon",
+            (0.935, 2.052, tablon_z_derecha - 0.085),
+            (0.006, 0.036, 0.050)),
+    ])
+    group("tablon_anuncios", tablon)
+
+    # Librería negra de juegos y figuras, junto a la vitrina.
     libreria = [
         box("trasera_libreria", "negro_mueble", (-1.005, 1.03, -0.39),
             (0.035, 2.06, 0.68)),
@@ -463,54 +704,180 @@ def generate(output: Path = OUTPUT) -> Path:
     for indice, y in enumerate((0.08, 0.46, 0.84, 1.22, 1.60, 1.99), start=1):
         libreria.append(box(f"balda_libreria_{indice}", "negro_mueble",
             (-0.77, y, -0.39), (0.48, 0.045, 0.68)))
-    colores_libros = ("libro_azul", "libro_granate", "libro_crema", "libro_verde")
-    for fila, y in enumerate((0.60, 0.98, 1.36, 1.74), start=1):
-        for columna in range(7):
-            z = -0.66 + columna * 0.082
-            libreria.append(box(f"libro_{fila}_{columna + 1}",
-                colores_libros[(fila + columna) % len(colores_libros)],
-                (-0.70, y, z), (0.24, 0.29, 0.06)))
+    # Cada hueco de juegos tiene dos filas rectas, separadas por una repisa
+    # fina. Todas las cajas están de pie y comparten altura dentro de su fila.
+    libreria.extend([
+        box("repisa_intermedia_ps4", "negro_mueble",
+            (-0.77, 1.793, -0.39), (0.46, 0.014, 0.63)),
+        box("repisa_intermedia_ps3", "negro_mueble",
+            (-0.77, 1.398, -0.39), (0.46, 0.012, 0.63)),
+    ])
+    colores_caratulas = (
+        "caratula_gris", "caratula_clara", "libro_granate",
+        "caratula_violeta", "libro_azul", "caratula_gris",
+        "libro_verde", "caratula_clara", "caratula_naranja",
+        "negro_cajon", "caratula_clara", "libro_azul",
+    )
+    filas_juegos = (
+        ("ps4", 1, 1.623, 0.162),
+        ("ps4", 2, 1.801, 0.162),
+        ("ps3", 1, 1.243, 0.148),
+        ("ps3", 2, 1.404, 0.148),
+    )
+    for plataforma, fila, base, altura in filas_juegos:
+        for indice in range(28):
+            z = -0.681 + indice * 0.0215
+            color = colores_caratulas[(indice * 5 + fila * 3 +
+                (0 if plataforma == "ps4" else 7)) % len(colores_caratulas)]
+            color_caja = "caja_ps4" if plataforma == "ps4" else "caja_ps3"
+            libreria.extend([
+                box(f"caja_{plataforma}_{fila}_{indice + 1}", color_caja,
+                    (-0.705, base + altura / 2, z),
+                    (0.24, altura, 0.019)),
+                box(f"lomo_{plataforma}_{fila}_{indice + 1}", color,
+                    (-0.579, base + altura / 2 - 0.011, z),
+                    (0.008, altura - 0.034, 0.016)),
+                box(f"cabecera_{plataforma}_{fila}_{indice + 1}",
+                    color_caja if plataforma == "ps4" else "negro_mueble",
+                    (-0.573, base + altura - 0.014, z),
+                    (0.009, 0.028, 0.018)),
+            ])
+
+    # Figuras y objetos en los tres huecos inferiores.
+    def figura(nombre, z, suelo, color):
+        libreria.extend([
+            box(f"{nombre}_base", "negro_cajon",
+                (-0.69, suelo + 0.025, z), (0.13, 0.018, 0.11)),
+            box(f"{nombre}_cuerpo", color,
+                (-0.69, suelo + 0.105, z), (0.085, 0.135, 0.075)),
+            box(f"{nombre}_cabeza", color,
+                (-0.69, suelo + 0.217, z), (0.105, 0.09, 0.095)),
+            box(f"{nombre}_ojos", "caratula_clara",
+                (-0.633, suelo + 0.225, z), (0.012, 0.019, 0.057)),
+        ])
+
+    for nombre, z, color in (
+            ("figura_verde_superior", -0.59, "figura_verde"),
+            ("figura_amarilla_superior", -0.38, "figura_amarilla"),
+            ("figura_roja_superior", -0.17, "figura_roja")):
+        figura(nombre, z, 0.847, color)
+
+    libreria.extend([
+        box("tarro_verde_estante", "libro_verde",
+            (-0.74, 0.585, -0.60), (0.16, 0.20, 0.12)),
+        box("tablero_juego_estante", "madera_clara",
+            (-0.70, 0.493, -0.40), (0.19, 0.025, 0.19)),
+        box("caja_objetos_estante", "libro_crema",
+            (-0.73, 0.535, -0.17), (0.19, 0.11, 0.15)),
+    ])
+    for fila in range(4):
+        for columna in range(4):
+            if (fila + columna) % 2 == 0:
+                libreria.append(box(f"casilla_{fila}_{columna}",
+                    "negro_mueble", (-0.78 + fila * 0.045, 0.509,
+                    -0.47 + columna * 0.045), (0.041, 0.006, 0.041)))
+    figura("figura_azul_central", -0.27, 0.447, "figura_azul")
+
+    libreria.extend([
+        box("caja_inferior_azul", "libro_azul",
+            (-0.76, 0.19, -0.59), (0.22, 0.18, 0.18)),
+        box("caja_inferior_clara", "libro_crema",
+            (-0.75, 0.165, -0.35), (0.20, 0.13, 0.17)),
+        box("objetos_inferiores", "libro_granate",
+            (-0.73, 0.16, -0.15), (0.17, 0.12, 0.13)),
+    ])
     reflejar_en_eje_x(libreria)
     ajustar_ancho_en_pared(libreria, INICIO_LIBRERIA, LIBRERIA_ANCHO)
     group("libreria", libreria)
 
-    # Un solo armario negro con perchero, cajones y puerta corredera blanca.
-    # Conserva el identificador anterior para sus posibles vínculos de Hogar.
+    # Armario negro de 140 × 240 cm: dos huecos de 70 cm y hoja corredera.
+    # La hoja empieza sobre el hueco derecho y puede deslizarse al izquierdo.
+    fondo_armario_x = WIDTH / 2 - WALL / 2 - 0.025
+    frente_armario_x = fondo_armario_x - 0.61
+    panel_corredero_x = frente_armario_x - 0.035
+    marco_corredero_x = panel_corredero_x - 0.016
+    centro_armario_x = (fondo_armario_x + frente_armario_x) / 2
+    centro_armario_z = (INICIO_ARMARIO + EXTREMO_MUEBLES) / 2
+    centro_blancos_z = (INICIO_ARMARIO + centro_armario_z) / 2
+    centro_negros_z = (centro_armario_z + EXTREMO_MUEBLES) / 2
     armario_abierto = [
-        box("trasera_armario_abierto", "negro_mueble",
-            (-1.01, 1.19, 0.35), (0.035, 2.38, 0.73)),
-        box("lateral_armario_abierto_1", "negro_mueble",
-            (-0.72, 1.19, 0.00), (0.58, 2.38, 0.045)),
-        box("lateral_armario_abierto_2", "negro_mueble",
-            (-0.72, 1.19, 0.70), (0.58, 2.38, 0.045)),
-        box("techo_armario_abierto", "negro_mueble",
-            (-0.72, 2.36, 0.35), (0.58, 0.045, 0.73)),
-        box("base_armario_abierto", "negro_mueble",
-            (-0.72, 0.065, 0.35), (0.58, 0.13, 0.73)),
-        box("zócalo_armario_abierto", "negro_mueble",
-            (-0.43, 0.065, 0.35), (0.035, 0.13, 0.70)),
-        box("barra_perchero", "metal", (-0.68, 1.86, 0.35),
-            (0.03, 0.03, 0.63)),
-        box("puerta_blanca_armario", "blanco_mueble",
-            (-0.39, 1.19, 0.53), (0.035, 2.38, 0.35)),
-        box("tirador_armario", "metal",
-            (-0.365, 1.18, 0.38), (0.015, 0.24, 0.025)),
+        box("trasera_armario", "negro_mueble",
+            (fondo_armario_x - 0.014, 1.20, centro_armario_z),
+            (0.028, 2.40, ARMARIO_ANCHO)),
+        box("lateral_armario_libreria", "negro_mueble",
+            (centro_armario_x, 1.20, INICIO_ARMARIO + 0.018),
+            (0.61, 2.40, 0.036)),
+        box("lateral_armario_puerta", "negro_mueble",
+            (centro_armario_x, 1.20, EXTREMO_MUEBLES - 0.018),
+            (0.61, 2.40, 0.036)),
+        box("separador_central_armario", "negro_mueble",
+            (centro_armario_x, 1.20, centro_armario_z),
+            (0.59, 2.36, 0.026)),
+        box("techo_armario", "negro_mueble",
+            (centro_armario_x, 2.38, centro_armario_z),
+            (0.61, 0.04, ARMARIO_ANCHO)),
+        box("base_armario", "negro_mueble",
+            (centro_armario_x, 0.055, centro_armario_z),
+            (0.61, 0.11, ARMARIO_ANCHO)),
+        box("balda_superior_blancos", "negro_mueble",
+            (centro_armario_x, 2.08, centro_blancos_z),
+            (0.58, 0.035, 0.65)),
+        box("balda_superior_negros", "negro_mueble",
+            (centro_armario_x, 2.08, centro_negros_z),
+            (0.58, 0.035, 0.65)),
+        box("barra_ropa_blancos", "riel_armario",
+            (centro_armario_x, 1.81, centro_blancos_z),
+            (0.026, 0.026, 0.62)),
+        box("barra_ropa_negros", "riel_armario",
+            (centro_armario_x, 1.81, centro_negros_z),
+            (0.026, 0.026, 0.62)),
+        box("guia_superior_corredera", "riel_armario",
+            (frente_armario_x - 0.02, 2.385, centro_armario_z),
+            (0.035, 0.03, 1.38)),
+        box("guia_inferior_corredera", "riel_armario",
+            (frente_armario_x - 0.02, 0.035, centro_armario_z),
+            (0.035, 0.025, 1.38)),
     ]
-    for indice, y in enumerate((0.20, 0.45, 0.70), start=1):
+    for indice, y in enumerate((0.18, 0.34, 0.50, 0.66), start=1):
         armario_abierto.append(box(f"cajon_blanco_{indice}",
-            "blanco_mueble", (-0.43, y, 0.35), (0.05, 0.22, 0.65)))
-    for indice, (z, color) in enumerate(((0.18, "libro_crema"),
-                                          (0.36, "gris_cojin"),
-                                          (0.54, "blanco_mueble")), start=1):
-        armario_abierto.append(box(f"ropa_colgada_{indice}", color,
-            (-0.66, 1.35, z), (0.35, 0.62, 0.12)))
-    reflejar_en_eje_x(armario_abierto)
-    ampliar_altura_armario(armario_abierto)
-    ajustar_ancho_en_pared(armario_abierto, INICIO_ARMARIO, ARMARIO_ANCHO)
+            "blanco_mueble", (frente_armario_x + 0.015, y, centro_blancos_z),
+            (0.035, 0.145, 0.61)))
+    for indice, y in enumerate((0.20, 0.40, 0.60), start=1):
+        armario_abierto.append(box(f"cajon_negro_{indice}",
+            "negro_cajon", (frente_armario_x + 0.015, y, centro_negros_z),
+            (0.035, 0.18, 0.61)))
+    for indice, (z, color) in enumerate((
+            (centro_blancos_z - 0.18, "libro_crema"),
+            (centro_blancos_z, "gris_silla"),
+            (centro_blancos_z + 0.18, "blanco_mueble")), start=1):
+        armario_abierto.append(box(f"ropa_colgada_blancos_{indice}", color,
+            (centro_armario_x, 1.43, z), (0.30, 0.62, 0.13)))
+    armario_abierto.append(box("ropa_colgada_negros", "negro_tela",
+        (centro_armario_x, 1.46, centro_negros_z), (0.30, 0.56, 0.16)))
+
+    hoja_corredera = [
+        box("panel_opal_armario", "blanco_opal_armario",
+            (panel_corredero_x, 1.20, centro_negros_z),
+            (0.028, 2.33, 0.675)),
+        box("marco_lateral_corredera_1", "negro_mueble",
+            (marco_corredero_x, 1.20, centro_negros_z - 0.34),
+            (0.014, 2.35, 0.018)),
+        box("marco_lateral_corredera_2", "negro_mueble",
+            (marco_corredero_x, 1.20, centro_negros_z + 0.34),
+            (0.014, 2.35, 0.018)),
+    ]
+    for indice, y in enumerate((0.61, 1.19, 1.78), start=1):
+        hoja_corredera.append(box(f"division_panel_corredera_{indice}",
+            "negro_mueble", (marco_corredero_x, y, centro_negros_z),
+            (0.014, 0.016, 0.69)))
+    group("puerta_corredera_armario", hoja_corredera)
+    armario_abierto.append(roots[-1])
     group("armario_abierto", armario_abierto)
 
-    # Sofá negro separado de la entrada: sin ropa, bolsas ni otros objetos.
+    # Sofá negro separado de la entrada: base, asiento, respaldo y brazos.
     sofa = [
+        box("base_sofa_hasta_suelo", "negro_tela", (0.63, 0.165, 0.87),
+            (0.76, 0.33, 1.74)),
         box("asiento_sofa", "negro_tela", (0.63, 0.43, 0.87),
             (0.78, 0.24, 1.76)),
         box("respaldo_sofa", "negro_tela", (0.94, 0.82, 0.87),
@@ -519,8 +886,10 @@ def generate(output: Path = OUTPUT) -> Path:
             (0.80, 0.54, 0.15)),
         box("brazo_sofa_2", "negro_tela", (0.63, 0.63, 1.71),
             (0.80, 0.54, 0.15)),
+        # Cojín 1: oscuro.
         box("cojin_sofa_oscuro", "gris_silla", (0.37, 0.65, 0.53),
             (0.46, 0.19, 0.48)),
+        # Cojín 2: claro con dos franjas.
         box("cojin_sofa_claro", "cojin_claro", (0.37, 0.65, 1.20),
             (0.46, 0.19, 0.47)),
         box("franja_cojin_claro_1", "gris_cojin", (0.37, 0.751, 1.05),
@@ -582,7 +951,7 @@ def main():
         repository = HomeTwinRepository(Path.home() / "Documents" / "Todo" / "household")
         result = repository.import_room({
             "room_id": "dormitorio",
-            "name": "Mi habitación",
+            "name": "Habitación",
             "source_file": str(output),
             "floor": 0,
             "position": {"x": 0, "y": 0, "z": 0},

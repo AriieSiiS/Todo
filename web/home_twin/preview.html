@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vista previa de la habitación</title>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; }
+      body { background: #ded1bd; }
+      canvas { display: block; }
+      .controles { position: absolute; z-index: 1; top: 16px; left: 16px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100% - 32px); }
+      button, select, #estado { border: 1px solid #a69b87; border-radius: 10px; padding: 9px 12px; background: #fffaf0ed; color: #28382e; font: 600 14px system-ui, sans-serif; }
+      button { cursor: pointer; }
+      button:hover { background: #fff; }
+      #estado { position: absolute; left: 16px; bottom: 16px; font-weight: 400; }
+    </style>
+  </head>
+  <body>
+    <div class="controles">
+      <select id="habitacion" aria-label="Habitación de la vista previa">
+        <option>Cargando habitaciones…</option>
+      </select>
+      <button id="enfocar-pc" type="button" hidden>Ver PC</button>
+      <button id="enfocar-habitacion" type="button">Ver habitación</button>
+      <button id="persiana-dormitorio" type="button" hidden>Persiana habitación</button>
+      <button id="persiana-vacia" type="button" hidden>Persiana dormitorio</button>
+      <select id="escena" aria-label="Clima exterior">
+        <option value="despejado">Despejado</option>
+        <option value="nublado">Nublado</option>
+        <option value="tormenta">Tormenta</option>
+        <option value="noche">Noche</option>
+        <option value="madrugada">Madrugada</option>
+        <option value="atardecer">Atardecer</option>
+        <option value="tarde_noche">Tarde noche</option>
+      </select>
+    </div>
+    <div id="estado">Cargando habitación…</div>
+    <script type="module" src="/preview.js"></script>
+    <script>
+      new EventSource('/__events').onmessage = (event) => {
+        if (event.data === 'recargar') location.reload();
+      };
+    </script>
+  </body>
+</html>

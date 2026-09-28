@@ -3,7 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=../../assets/home_twin_web/scene.js"
+    "build": "esbuild src/main.js --bundle --format=esm --minify --loader:.jpg=dataurl --loader:.png=dataurl --outfile=../../assets/home_twin_web/scene.js",
+    "preview": "node preview.cjs"
   },
   "dependencies": {
     "three": "0.186.0"

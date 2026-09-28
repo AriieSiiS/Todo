@@ -146,7 +146,8 @@ class MobileTaskSnapshot {
     final occurrenceKey = _occurrenceKey(day);
     final isToday = _sameDay(day, today);
     if (task.recurrence.isRecurring &&
-        task.recurrenceCompletions.containsKey(occurrenceKey)) {
+        (task.recurrenceCompletions.containsKey(occurrenceKey) ||
+            task.skippedRecurrenceOccurrences.contains(occurrenceKey))) {
       return false;
     }
     if (task.recurrence.isRecurring) {

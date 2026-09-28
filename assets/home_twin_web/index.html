@@ -6,14 +6,48 @@
     <title>Gemelo de la casa</title>
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-      body { background: radial-gradient(circle at 45% 35%, #f8f2e7 0%, #e9e6de 65%, #dcded6 100%); }
+      body { background: radial-gradient(circle at 45% 35%, #e6d9c4 0%, #d9c8ae 67%, #cbb99e 100%); }
       canvas { display: block; width: 100%; height: 100%; outline: none; }
       #estado { position: absolute; top: 16px; left: 16px; padding: 9px 13px; border-radius: 12px; background: #fffffff0; color: #4b5747; font: 600 13px system-ui, sans-serif; box-shadow: 0 5px 18px #3b46351c; pointer-events: none; }
       #estado[hidden] { display: none; }
+      #audio-toolbar { position: absolute; z-index: 2; left: 16px; bottom: 16px; display: flex; gap: 8px; }
+      #audio-toolbar button { border: 1px solid #a8a48c; border-radius: 12px; padding: 9px 12px; background: #fffaf0e8; color: #334238; font: 600 13px system-ui, sans-serif; cursor: pointer; box-shadow: 0 5px 18px #3b46351c; }
+      #audio-toolbar button:hover { background: #ffffff; }
+      #audio-toolbar button:focus-visible { outline: 3px solid #729b78; outline-offset: 3px; }
+      #audio-mute { position: relative; min-width: 40px; font-size: 18px !important; line-height: 1; }
+      #audio-mute[aria-pressed="true"] { background: #e4dacf; color: #765a55; }
+      #audio-mute[aria-pressed="true"]::after { content: ''; position: absolute; left: 10px; right: 9px; top: 50%; height: 2px; background: currentColor; transform: rotate(-45deg); }
+      #panel-audio { position: absolute; z-index: 3; left: 16px; bottom: 62px; width: min(360px, calc(100vw - 32px)); max-height: min(650px, calc(100vh - 90px)); overflow-y: auto; box-sizing: border-box; padding: 16px; border: 1px solid #b8ad96; border-radius: 18px; background: #fffaf3f5; box-shadow: 0 16px 45px #343d3260; color: #28382e; font: 13px system-ui, sans-serif; }
+      #panel-audio[hidden] { display: none; }
+      #panel-audio h2 { margin: 0 0 10px; font-size: 15px; }
+      #panel-audio section { border-top: 1px solid #ded5c5; padding-top: 14px; margin-top: 14px; }
+      #panel-audio button, #panel-audio select { border: 1px solid #c7bdab; border-radius: 9px; background: #fffdf8; color: #28382e; font: inherit; cursor: pointer; }
+      #panel-audio button:hover { background: #e8efdf; }
+      #panel-audio button:focus-visible, #panel-audio select:focus-visible, #panel-audio input:focus-visible { outline: 2px solid #6c9871; outline-offset: 2px; }
+      #panel-audio select { width: 100%; padding: 8px; }
+      .audio-heading { display: flex; align-items: center; justify-content: space-between; font-size: 17px; }
+      .audio-heading button { width: 28px; height: 28px; font-size: 19px !important; }
+      .audio-source { color: #657365; margin: 7px 0 0; }
+      .audio-buttons { display: flex; justify-content: center; gap: 8px; margin: 12px 0; }
+      .audio-buttons button { min-width: 42px; height: 36px; font-size: 19px !important; }
+      .audio-buttons button[aria-pressed="true"] { background: #d8e8d4 !important; }
+      .audio-range { display: grid; grid-template-columns: 92px 1fr 40px; gap: 8px; align-items: center; min-height: 33px; }
+      .audio-range input { width: 100%; accent-color: #6c9871; }
+      .audio-range output { text-align: right; color: #607061; font-variant-numeric: tabular-nums; }
+      .audio-auto { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+      .audio-auto input { accent-color: #6c9871; }
+      .audio-effects { display: flex; flex-wrap: wrap; gap: 7px; }
+      .audio-effects button { padding: 7px 9px; }
+      #audio-status { min-height: 18px; color: #647264; margin: 12px 0 0; }
     </style>
   </head>
   <body>
     <div id="estado">Cargando maqueta…</div>
+    <div id="audio-toolbar">
+      <button id="sonido" type="button" aria-expanded="false" aria-controls="panel-audio" title="Abrir música y ambientes">♪ Música y ambiente</button>
+      <button id="audio-mute" type="button" aria-pressed="false" aria-label="Silenciar todos los sonidos" title="Silenciar todos los sonidos">♫</button>
+    </div>
+    <aside id="panel-audio" hidden aria-label="Música y ambiente"></aside>
     <script type="module" src="/scene.js"></script>
   </body>
 </html>

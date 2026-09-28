@@ -9,6 +9,51 @@ class HomeTwinService {
       : _assets = HouseholdAssetService(rootOverride: rootOverride);
 
   final HouseholdAssetService _assets;
+  Future<void> _windowWrites = Future<void>.value();
+
+  Future<File> _windowStateFile() async {
+    final directory = await root();
+    return File('${directory.path}${Platform.pathSeparator}window_state.json');
+  }
+
+  Future<Map<String, bool>> _loadWindowStates() async {
+    final file = await _windowStateFile();
+    if (!await file.exists()) return {};
+    try {
+      final value = jsonDecode(await file.readAsString());
+      if (value is! Map) return {};
+      final windows = value['windows'];
+      if (windows is Map) {
+        return {
+          for (final entry in windows.entries)
+            if (entry.key is String) entry.key as String: entry.value == true,
+        };
+      }
+      return {'dormitorio': value['open'] == true};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<bool> loadWindowOpen([String roomId = 'dormitorio']) async =>
+      (await _loadWindowStates())[roomId] ?? false;
+
+  Future<void> saveWindowOpen(bool open, [String roomId = 'dormitorio']) {
+    _windowWrites = _windowWrites.catchError((Object _) {}).then((_) async {
+      final file = await _windowStateFile();
+      await file.parent.create(recursive: true);
+      final windows = await _loadWindowStates();
+      windows[roomId] = open;
+      final temporary = File('${file.path}.tmp');
+      await temporary.writeAsString(
+        jsonEncode({'schemaVersion': 2, 'windows': windows}),
+        flush: true,
+      );
+      if (await file.exists()) await file.delete();
+      await temporary.rename(file.path);
+    });
+    return _windowWrites;
+  }
 
   Future<Directory> root() async {
     final household = await _assets.householdDirectory();
