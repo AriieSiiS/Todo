@@ -9,18 +9,40 @@ import 'local_store.dart';
 import 'runtime_state_paths.dart';
 
 class FileBackedLocalStore implements LocalStore {
+  FileBackedLocalStore({Directory? baseDirectory})
+      : _baseDirectoryOverride = baseDirectory;
+
+  final Directory? _baseDirectoryOverride;
+  Future<void> _pendingOperation = Future<void>.value();
+  String? _lastPolledSnapshot;
+
+  // Lecturas, recuperación y escrituras comparten los archivos temporales.
+  // Un fallo se propaga al solicitante sin bloquear la siguiente operación.
+  Future<T> _enqueue<T>(Future<T> Function() operation) {
+    final result = _pendingOperation.then((_) => operation());
+    _pendingOperation =
+        result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
   static const String _snapshotKey = 'todo.snapshot.v1';
   static const String _calendarSessionKey = 'todo.calendar.session.v1';
   static const String _syncMetadataKey = 'todo.sync.metadata.v1';
 
   @override
-  Future<AppStateSnapshot?> load() async {
+  Future<AppStateSnapshot?> load() => _enqueue(() => _load());
+
+  @override
+  Future<AppStateSnapshot?> loadIfChanged() =>
+      _enqueue(() => _load(onlyIfChanged: true));
+
+  Future<AppStateSnapshot?> _load({bool onlyIfChanged = false}) async {
     final file = await _stateFile();
     await _recoverInterruptedWrite(file);
     if (await file.exists()) {
       final raw = await file.readAsString();
       if (raw.trim().isNotEmpty) {
-        return AppStateSnapshot.fromEncodedJson(raw);
+        return _decodeSnapshot(raw, onlyIfChanged: onlyIfChanged);
       }
     }
 
@@ -30,11 +52,21 @@ class FileBackedLocalStore implements LocalStore {
       return null;
     }
     await _writeAtomically(file, raw);
-    return AppStateSnapshot.fromEncodedJson(raw);
+    return _decodeSnapshot(raw, onlyIfChanged: onlyIfChanged);
+  }
+
+  AppStateSnapshot? _decodeSnapshot(String raw, {required bool onlyIfChanged}) {
+    if (onlyIfChanged && raw == _lastPolledSnapshot) return null;
+    final snapshot = AppStateSnapshot.fromEncodedJson(raw);
+    if (onlyIfChanged) _lastPolledSnapshot = raw;
+    return snapshot;
   }
 
   @override
-  Future<void> save(AppStateSnapshot snapshot) async {
+  Future<void> save(AppStateSnapshot snapshot) =>
+      _enqueue(() => _save(snapshot));
+
+  Future<void> _save(AppStateSnapshot snapshot) async {
     final encoded = snapshot.toEncodedJson();
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_snapshotKey, encoded);
@@ -42,7 +74,9 @@ class FileBackedLocalStore implements LocalStore {
   }
 
   @override
-  Future<String?> loadCalendarSession() async {
+  Future<String?> loadCalendarSession() => _enqueue(_loadCalendarSession);
+
+  Future<String?> _loadCalendarSession() async {
     final file = await _sessionFile();
     await _recoverInterruptedWrite(file);
     if (await file.exists()) {
@@ -57,24 +91,37 @@ class FileBackedLocalStore implements LocalStore {
   }
 
   @override
-  Future<void> saveCalendarSession(String encodedSession) async {
+  Future<void> saveCalendarSession(String encodedSession) =>
+      _enqueue(() => _saveCalendarSession(encodedSession));
+
+  Future<void> _saveCalendarSession(String encodedSession) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_calendarSessionKey, encodedSession);
     await _writeAtomically(await _sessionFile(), encodedSession);
   }
 
   @override
-  Future<void> clearCalendarSession() async {
+  Future<void> clearCalendarSession() => _enqueue(_clearCalendarSession);
+
+  Future<void> _clearCalendarSession() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_calendarSessionKey);
     final file = await _sessionFile();
-    if (await file.exists()) {
-      await file.delete();
+    for (final candidate in [
+      file,
+      File('${file.path}.tmp'),
+      File('${file.path}.previous')
+    ]) {
+      if (await candidate.exists()) {
+        await candidate.delete();
+      }
     }
   }
 
   @override
-  Future<LocalSyncMetadata> loadSyncMetadata() async {
+  Future<LocalSyncMetadata> loadSyncMetadata() => _enqueue(_loadSyncMetadata);
+
+  Future<LocalSyncMetadata> _loadSyncMetadata() async {
     final file = await _syncMetadataFile();
     await _recoverInterruptedWrite(file);
     if (await file.exists()) {
@@ -98,7 +145,10 @@ class FileBackedLocalStore implements LocalStore {
   }
 
   @override
-  Future<void> saveSyncMetadata(LocalSyncMetadata metadata) async {
+  Future<void> saveSyncMetadata(LocalSyncMetadata metadata) =>
+      _enqueue(() => _saveSyncMetadata(metadata));
+
+  Future<void> _saveSyncMetadata(LocalSyncMetadata metadata) async {
     final encoded = jsonEncode(metadata.toJson());
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_syncMetadataKey, encoded);
@@ -117,6 +167,7 @@ class FileBackedLocalStore implements LocalStore {
   }
 
   Future<Directory> _baseTodoDirectory() async {
+    if (_baseDirectoryOverride != null) return _baseDirectoryOverride;
     if (Platform.isAndroid || Platform.isIOS) {
       final support = await getApplicationSupportDirectory();
       return Directory('${support.path}${Platform.pathSeparator}Todo');

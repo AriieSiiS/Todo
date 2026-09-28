@@ -12,24 +12,32 @@ import 'todo_theme.dart';
 class TodoApp extends StatefulWidget {
   const TodoApp({
     required this.launchIntent,
+    this.workspaceLoader,
     super.key,
   });
 
   final AppLaunchIntent launchIntent;
+  final Future<TodoWorkspace> Function()? workspaceLoader;
 
   @override
   State<TodoApp> createState() => _TodoAppState();
 }
 
 class _TodoAppState extends State<TodoApp> {
-  late final Future<TodoWorkspace> _controllerFuture;
+  late Future<TodoWorkspace> _controllerFuture;
 
   @override
   void initState() {
     super.initState();
-    _controllerFuture = TodoWorkspace.create(
-      initialImportantAlarmId: widget.launchIntent.importantAlarmId,
-    ).then((controller) async {
+    _controllerFuture = _loadWorkspace();
+  }
+
+  Future<TodoWorkspace> _loadWorkspace() async {
+    final controller = await (widget.workspaceLoader?.call() ??
+        TodoWorkspace.create(
+          initialImportantAlarmId: widget.launchIntent.importantAlarmId,
+        ));
+    try {
       final requestedSection = widget.launchIntent.section;
       if (requestedSection != null) {
         controller.setSection(requestedSection);
@@ -37,8 +45,12 @@ class _TodoAppState extends State<TodoApp> {
       if (widget.launchIntent.testNotification) {
         await controller.sendTestNotification();
       }
+      if (!mounted) controller.dispose();
       return controller;
-    });
+    } catch (_) {
+      controller.dispose();
+      rethrow;
+    }
   }
 
   @override
@@ -62,7 +74,26 @@ class _TodoAppState extends State<TodoApp> {
             supportedLocales: const [
               Locale('es', 'ES'),
             ],
-            home: const _LoadingScreen(),
+            home: snapshot.connectionState == ConnectionState.done &&
+                    snapshot.hasError
+                ? Scaffold(
+                    body: Center(
+                        child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('No se pudo abrir Todo'),
+                      const SizedBox(height: 12),
+                      const Text('No se pudieron cargar los datos locales.'),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () => setState(() {
+                          _controllerFuture = _loadWorkspace();
+                        }),
+                        child: const Text('Volver a intentar'),
+                      ),
+                    ],
+                  )))
+                : const _LoadingScreen(),
           );
         }
         return ProviderScope(
@@ -76,13 +107,13 @@ class _TodoAppState extends State<TodoApp> {
   }
 }
 
-class _TodoMaterialApp extends ConsumerWidget {
+class _TodoMaterialApp extends StatelessWidget {
   const _TodoMaterialApp({required this.launchIntent});
 
   final AppLaunchIntent launchIntent;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Todo',
       debugShowCheckedModeBanner: false,

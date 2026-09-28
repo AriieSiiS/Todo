@@ -11,6 +11,9 @@ class LocalTodoStateRepository implements TodoStateRepository {
   Future<AppStateSnapshot?> load() => _store.load();
 
   @override
+  Future<AppStateSnapshot?> loadIfChanged() => _store.loadIfChanged();
+
+  @override
   Future<void> save(AppStateSnapshot snapshot) => _store.save(snapshot);
 
   @override

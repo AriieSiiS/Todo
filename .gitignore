@@ -18,3 +18,4 @@ runtime/
 output/
 tmp/
 node_modules/
+.playwright-cli/

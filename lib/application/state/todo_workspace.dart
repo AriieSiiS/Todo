@@ -60,10 +60,15 @@ class TodoWorkspace extends ChangeNotifier {
       TaskFeedbackService(),
       KnowledgeService(),
     );
-    await controller._load();
-    await controller._importantAlarmService.initialize(
-      initialAlarmId: initialImportantAlarmId,
-    );
+    try {
+      await controller._load();
+      await controller._importantAlarmService.initialize(
+        initialAlarmId: initialImportantAlarmId,
+      );
+    } catch (_) {
+      controller.dispose();
+      rethrow;
+    }
     if (!controller._isFlutterTest) {
       unawaited(controller._initializeStartupIntegrations());
       controller._externalWardrobePoll = Timer.periodic(
@@ -4520,7 +4525,7 @@ class TodoWorkspace extends ChangeNotifier {
     if (_checkingExternalWardrobe) return;
     _checkingExternalWardrobe = true;
     try {
-      final snapshot = await _store.load();
+      final snapshot = await _store.loadIfChanged();
       if (snapshot == null) return;
       if (!_mergeExternalWardrobeSnapshot(snapshot.wardrobeItems)) return;
       _syncMetadata = _syncMetadata.copyWith(pendingLocalChanges: true);
@@ -5685,6 +5690,9 @@ class _InMemoryTodoStateRepository implements TodoStateRepository {
 
   @override
   Future<AppStateSnapshot?> load() async => _snapshot;
+
+  @override
+  Future<AppStateSnapshot?> loadIfChanged() => load();
 
   @override
   Future<void> save(AppStateSnapshot snapshot) async {

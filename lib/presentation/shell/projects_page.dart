@@ -490,153 +490,6 @@ class _ReferenceProjectRow extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-class _ReferenceProjectDetailPanel extends StatelessWidget {
-  const _ReferenceProjectDetailPanel({
-    required this.controller,
-    required this.project,
-    required this.tasks,
-  });
-
-  final TodoWorkspace controller;
-  final ProjectModel project;
-  final List<TaskModel> tasks;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeTasks =
-        tasks.where((task) => task.status == TaskStatus.active).toList();
-    return _SurfaceCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: project.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(project.icon, color: project.color),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(project.name,
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          _ReferenceTagChip(
-                            label: _projectStatusLabel(project.status),
-                            color: _projectStatusColor(project.status)
-                                .withValues(alpha: 0.16),
-                            textColor: _projectStatusColor(project.status),
-                          ),
-                          const SizedBox(width: 18),
-                          ...const [
-                            Text('Tareas'),
-                            SizedBox(width: 20),
-                            Text('Detalles'),
-                            SizedBox(width: 20),
-                            Text('Notas'),
-                            SizedBox(width: 20),
-                            Text('Archivos'),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () => showProjectEditor(context, controller,
-                      initialProject: project),
-                  child: const Text('Ver proyecto completo'),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz_rounded),
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Editar')),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      showProjectEditor(context, controller,
-                          initialProject: project);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-            child: Row(
-              children: [
-                Text(
-                  'Tareas del proyecto',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontSize: 18),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: context.visuals.panelAlt,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text('${tasks.length}',
-                      style: TextStyle(color: context.visuals.textMuted)),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () => showTaskEditor(context, controller),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Añadir tarea'),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          ...activeTasks.take(4).map(
-                (task) => Column(
-                  children: [
-                    _ReferenceProjectTaskRow(
-                        controller: controller, task: task),
-                    if (task != activeTasks.take(4).last)
-                      const Divider(height: 1),
-                  ],
-                ),
-              ),
-          InkWell(
-            onTap: () {},
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                      child: Text('Ver todas las tareas (${tasks.length})',
-                          style: TextStyle(color: context.visuals.textMuted))),
-                  const Icon(Icons.chevron_right_rounded),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ReferenceProjectFullView extends StatelessWidget {
   const _ReferenceProjectFullView({
     required this.controller,
@@ -1081,9 +934,15 @@ class _ReferenceProjectTaskRow extends StatelessWidget {
               children: [
                 const Icon(Icons.calendar_today_outlined, size: 16),
                 const SizedBox(width: 8),
-                Text(task.scheduledAt == null
-                    ? 'Sin fecha'
-                    : _friendlyTaskDay(task.scheduledAt!)),
+                Expanded(
+                  child: Text(
+                    task.scheduledAt == null
+                        ? 'Sin fecha'
+                        : _friendlyTaskDay(task.scheduledAt!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1276,9 +1135,7 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
                           .headlineMedium
                           ?.copyWith(fontSize: 21)),
                 ),
-                const Text('Esta semana'),
-                const SizedBox(width: 6),
-                const Icon(Icons.expand_more_rounded),
+                const Text('Por fecha'),
               ],
             ),
           ),
@@ -1362,7 +1219,38 @@ class _ReferenceProjectMilestonesPanel extends StatelessWidget {
               },
             ),
           InkWell(
-            onTap: () {},
+            key: const ValueKey('project-upcoming-all'),
+            onTap: milestones.isEmpty
+                ? null
+                : () => showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Todas las próximas tareas'),
+                        content: SizedBox(
+                          width: 640,
+                          height: 480,
+                          child: AnimatedBuilder(
+                            animation: controller,
+                            builder: (context, _) => ListView.builder(
+                              itemCount: milestones.length,
+                              itemBuilder: (context, index) =>
+                                  _ReferenceProjectTaskRow(
+                                controller: controller,
+                                task:
+                                    controller.taskById(milestones[index].id) ??
+                                        milestones[index],
+                              ),
+                            ),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cerrar'),
+                          )
+                        ],
+                      ),
+                    ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
               child: Row(

@@ -1,5 +1,3 @@
-// ignore_for_file: unused_element
-
 part of 'app_shell.dart';
 
 class CompletedPage extends StatelessWidget {
@@ -174,198 +172,6 @@ class CompletedPage extends StatelessWidget {
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-enum _CompletedDateFilter { all, today, yesterday, thisWeek, lastWeek, older }
-
-enum _CompletedSortOrder { newestFirst, oldestFirst, alphabetical }
-
-class _CompletedToolbar extends StatelessWidget {
-  const _CompletedToolbar({
-    required this.searchController,
-    required this.dateFilterLabel,
-    required this.sortLabel,
-    required this.hideOlderCompleted,
-    required this.onSearchChanged,
-    required this.onDateFilterSelected,
-    required this.onToggleHideOlder,
-    required this.onSortSelected,
-  });
-
-  final TextEditingController searchController;
-  final String dateFilterLabel;
-  final String sortLabel;
-  final bool hideOlderCompleted;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<_CompletedDateFilter> onDateFilterSelected;
-  final VoidCallback onToggleHideOlder;
-  final ValueChanged<_CompletedSortOrder> onSortSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 260,
-          child: _settingsOutlineShell(
-            child: Row(
-              children: [
-                const Icon(Icons.search_rounded, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar completadas...',
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        PopupMenuButton<_CompletedDateFilter>(
-          onSelected: onDateFilterSelected,
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-                value: _CompletedDateFilter.all, child: Text('Todas')),
-            PopupMenuItem(
-                value: _CompletedDateFilter.today, child: Text('Hoy')),
-            PopupMenuItem(
-                value: _CompletedDateFilter.yesterday, child: Text('Ayer')),
-            PopupMenuItem(
-                value: _CompletedDateFilter.thisWeek,
-                child: Text('Esta semana')),
-            PopupMenuItem(
-                value: _CompletedDateFilter.lastWeek,
-                child: Text('Semana pasada')),
-            PopupMenuItem(
-                value: _CompletedDateFilter.older, child: Text('Más antiguas')),
-          ],
-          child: _CompletedToolbarButton(
-            icon: Icons.calendar_month_outlined,
-            label: dateFilterLabel,
-            showsChevron: true,
-          ),
-        ),
-        _CompletedToolbarButton(
-          icon: hideOlderCompleted
-              ? Icons.visibility_rounded
-              : Icons.visibility_off_outlined,
-          label: hideOlderCompleted
-              ? 'Mostrando solo recientes'
-              : 'Ocultar completadas antiguas',
-          active: hideOlderCompleted,
-          onTap: onToggleHideOlder,
-        ),
-        PopupMenuButton<_CompletedSortOrder>(
-          onSelected: onSortSelected,
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-                value: _CompletedSortOrder.newestFirst,
-                child: Text('Más recientes')),
-            PopupMenuItem(
-                value: _CompletedSortOrder.oldestFirst,
-                child: Text('Más antiguas')),
-            PopupMenuItem(
-                value: _CompletedSortOrder.alphabetical, child: Text('A-Z')),
-          ],
-          child: _CompletedToolbarButton(
-            icon: Icons.swap_vert_rounded,
-            label: sortLabel,
-            showsChevron: true,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CompletedToolbarButton extends StatelessWidget {
-  const _CompletedToolbarButton({
-    required this.icon,
-    required this.label,
-    this.active = false,
-    this.showsChevron = false,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final bool showsChevron;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final button = _settingsOutlineShell(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: active ? const Color(0xFF6A8254) : null),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: active ? const Color(0xFF6A8254) : null,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-          if (showsChevron) ...[
-            const SizedBox(width: 6),
-            const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-          ],
-        ],
-      ),
-    );
-    if (onTap == null) {
-      return button;
-    }
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: button,
-    );
-  }
-}
-
-class _CompletedEmptyState extends StatelessWidget {
-  const _CompletedEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        child: Column(
-          children: [
-            const Icon(Icons.done_all_rounded,
-                size: 30, color: Color(0xFF738B57)),
-            const SizedBox(height: 12),
-            Text(
-              'No hay completadas para este filtro.',
-              style: TextStyle(
-                color: context.visuals.textStrong,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Prueba otra búsqueda o vuelve a mostrar las antiguas.',
-              style: TextStyle(color: context.visuals.textMuted),
-            ),
-          ],
         ),
       ),
     );
@@ -1315,25 +1121,6 @@ Future<void> _showCompletedRecoveryDialog(
   }
 }
 
-String _dateFilterLabel(_CompletedDateFilter value) {
-  return switch (value) {
-    _CompletedDateFilter.all => 'Filtrar por fecha',
-    _CompletedDateFilter.today => 'Hoy',
-    _CompletedDateFilter.yesterday => 'Ayer',
-    _CompletedDateFilter.thisWeek => 'Esta semana',
-    _CompletedDateFilter.lastWeek => 'Semana pasada',
-    _CompletedDateFilter.older => 'Más antiguas',
-  };
-}
-
-String _sortOrderLabel(_CompletedSortOrder value) {
-  return switch (value) {
-    _CompletedSortOrder.newestFirst => 'Más recientes',
-    _CompletedSortOrder.oldestFirst => 'Más antiguas',
-    _CompletedSortOrder.alphabetical => 'A-Z',
-  };
-}
-
 String _completedTaskTimeLabel(TaskModel task, DateTime today) {
   final stamp = task.completedAt ?? task.scheduledAt;
   if (stamp == null) {
@@ -1376,16 +1163,6 @@ bool _isCompletedTaskWithoutVisibleTime(TaskModel task) {
       stamp.second == 0 &&
       stamp.millisecond == 0 &&
       stamp.microsecond == 0;
-}
-
-String _completedTimestampLabel(DateTime value, DateTime today) {
-  if (_sameDay(value, today)) {
-    return 'Hoy';
-  }
-  if (_sameDay(value, today.subtract(const Duration(days: 1)))) {
-    return 'Ayer';
-  }
-  return '${_weekdayLong(value)} ${value.day} ${_monthLong(value.month)}';
 }
 
 class _CompletedRecoverCard extends StatelessWidget {

@@ -1256,9 +1256,8 @@ class _CalendarAgendaView extends StatelessWidget {
       ),
     ];
 
-    final dueItems = upcoming.where((entry) => entry.isTask).take(6).toList();
-    final eventItems =
-        upcoming.where((entry) => !entry.isTask).take(4).toList();
+    final dueItems = upcoming.where((entry) => entry.isTask).toList();
+    final eventItems = upcoming.where((entry) => !entry.isTask).toList();
 
     final groupCards = groups
         .where((group) => group.items.isNotEmpty)
@@ -1316,6 +1315,7 @@ class _CalendarAgendaView extends StatelessWidget {
                 _CalendarAgendaSidebarList(
                   title: 'Próximos eventos',
                   items: eventItems,
+                  visibleLimit: 4,
                   emptyLabel: 'No hay eventos próximos.',
                 ),
               ],
@@ -1707,16 +1707,30 @@ class _CalendarSummaryBar extends StatelessWidget {
   }
 }
 
-class _CalendarAgendaSidebarList extends StatelessWidget {
+class _CalendarAgendaSidebarList extends StatefulWidget {
   const _CalendarAgendaSidebarList({
     required this.title,
     required this.items,
     required this.emptyLabel,
+    this.visibleLimit = 6,
   });
 
   final String title;
   final List<_CalendarEntry> items;
   final String emptyLabel;
+  final int visibleLimit;
+
+  @override
+  State<_CalendarAgendaSidebarList> createState() =>
+      _CalendarAgendaSidebarListState();
+}
+
+class _CalendarAgendaSidebarListState
+    extends State<_CalendarAgendaSidebarList> {
+  bool _showAll = false;
+  String get title => widget.title;
+  List<_CalendarEntry> get items => widget.items;
+  String get emptyLabel => widget.emptyLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1736,7 +1750,9 @@ class _CalendarAgendaSidebarList extends StatelessWidget {
             _CalendarEmptyLine(emptyLabel)
           else
             Column(
-              children: items.map((entry) {
+              children: items
+                  .take(_showAll ? items.length : widget.visibleLimit)
+                  .map((entry) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Row(
@@ -1776,20 +1792,23 @@ class _CalendarAgendaSidebarList extends StatelessWidget {
                 );
               }).toList(),
             ),
-          InkWell(
-            onTap: () {},
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Ver todos los ${title.toLowerCase()} (${items.length})',
-                    style: TextStyle(color: context.visuals.textMuted),
+          if (items.length > widget.visibleLimit)
+            InkWell(
+              onTap: () => setState(() => _showAll = !_showAll),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _showAll
+                          ? 'Ver menos'
+                          : 'Ver todos los ${title.toLowerCase()} (${items.length})',
+                      style: TextStyle(color: context.visuals.textMuted),
+                    ),
                   ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

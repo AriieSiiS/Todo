@@ -2312,7 +2312,7 @@ class _LibraryTypeListDialog extends StatelessWidget {
   }
 }
 
-class _LibrarySidePanel extends StatelessWidget {
+class _LibrarySidePanel extends StatefulWidget {
   const _LibrarySidePanel({
     required this.controller,
     required this.items,
@@ -2322,6 +2322,17 @@ class _LibrarySidePanel extends StatelessWidget {
   final TodoWorkspace controller;
   final List<LibraryItem> items;
   final int year;
+
+  @override
+  State<_LibrarySidePanel> createState() => _LibrarySidePanelState();
+}
+
+class _LibrarySidePanelState extends State<_LibrarySidePanel> {
+  bool _showAllRecent = false;
+  bool _showAllYears = false;
+  TodoWorkspace get controller => widget.controller;
+  List<LibraryItem> get items => widget.items;
+  int get year => widget.year;
 
   @override
   Widget build(BuildContext context) {
@@ -2354,7 +2365,8 @@ class _LibrarySidePanel extends StatelessWidget {
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final item in recent.take(4))
+                for (final item
+                    in recent.take(_showAllRecent ? recent.length : 4))
                   GestureDetector(
                     onSecondaryTapDown: (details) => _showLibraryContextMenu(
                       context: context,
@@ -2425,7 +2437,13 @@ class _LibrarySidePanel extends StatelessWidget {
                       ),
                     ),
                   ),
-              _LibrarySideLink(label: 'Ver todos los recientes', onTap: () {}),
+              if (recent.length > 4)
+                _LibrarySideLink(
+                  label: _showAllRecent
+                      ? 'Ver menos recientes'
+                      : 'Ver todos los recientes',
+                  onTap: () => setState(() => _showAllRecent = !_showAllRecent),
+                ),
             ],
           ),
         ),
@@ -2447,7 +2465,8 @@ class _LibrarySidePanel extends StatelessWidget {
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final value in years.take(3))
+                for (final value
+                    in years.take(_showAllYears ? years.length : 3))
                   Container(
                     margin: const EdgeInsets.only(bottom: 5),
                     padding:
@@ -2465,7 +2484,12 @@ class _LibrarySidePanel extends StatelessWidget {
                       ],
                     ),
                   ),
-              _LibrarySideLink(label: 'Ver todos los años', onTap: () {}),
+              if (years.length > 3)
+                _LibrarySideLink(
+                  label:
+                      _showAllYears ? 'Ver menos años' : 'Ver todos los años',
+                  onTap: () => setState(() => _showAllYears = !_showAllYears),
+                ),
             ],
           ),
         ),
@@ -6714,16 +6738,6 @@ List<LibrarySortOrder> _sortOptionsForAll() => const [
       LibrarySortOrder.creatorAsc,
       LibrarySortOrder.genreAsc,
     ];
-
-// ignore: unused_element
-String _searchHint(LibraryItemType type) => switch (type) {
-      LibraryItemType.game =>
-        'Buscar por título, plataforma, desarrollador o género',
-      LibraryItemType.book =>
-        'Buscar por título, autor, género, tipo o formato',
-      LibraryItemType.movieSeries =>
-        'Buscar por título, director, género, país o año',
-    };
 
 int _compareLibraryItems(
   LibraryItem left,

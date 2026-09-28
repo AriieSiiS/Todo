@@ -100,16 +100,15 @@ class MobileTaskController extends ChangeNotifier {
   Future<bool> sync() async {
     final current = _config;
     if (current == null || _syncing) return false;
-    final token = await _store.loadToken();
-    if (token == null || token.isEmpty) {
-      _error = 'Falta la credencial del móvil. Vuelve a emparejarlo.';
-      notifyListeners();
-      return false;
-    }
     _syncing = true;
     _error = '';
     notifyListeners();
     try {
+      final token = await _store.loadToken();
+      if (token == null || token.isEmpty) {
+        _error = 'Falta la credencial del móvil. Vuelve a emparejarlo.';
+        return false;
+      }
       final result = await _client.sync(config: current, token: token);
       var updated = current.copyWith(
         endpoint: result.endpoint,
