@@ -32,7 +32,7 @@ void main() {
 
   for (final size in [const Size(1800, 1000), const Size(1000, 850)]) {
     testWidgets(
-        'las categorías se arrastran directamente con búsqueda a ${size.width}',
+        'las categorías abren hueco al arrastrar con búsqueda a ${size.width}',
         (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
@@ -54,17 +54,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Ordenar'), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
+      final lastCard = find.byKey(ValueKey('categoria-${last.id}'));
+      final initialPosition = tester.getTopLeft(lastCard);
+      final destination = tester.getCenter(lastCard);
       final gesture = await tester.startGesture(tester
           .getCenter(find.byKey(ValueKey('arrastrar-categoria-${first.id}'))));
       await gesture.moveBy(const Offset(20, 0));
       await tester.pump();
-      await gesture.moveTo(
-          tester.getCenter(find.byKey(ValueKey('categoria-${last.id}'))));
-      await tester.pump(const Duration(milliseconds: 200));
+      await gesture.moveTo(destination);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      final intermediatePosition = tester.getTopLeft(lastCard);
+      expect(intermediatePosition.dx, lessThan(initialPosition.dx));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(tester.getTopLeft(lastCard).dx, lessThan(intermediatePosition.dx));
+      expect(controller.categories.map((category) => category.id),
+          [first.id, hidden.id, last.id]);
       await gesture.up();
       await tester.pumpAndSettle();
       expect(controller.categories.map((category) => category.id),
           [last.id, hidden.id, first.id]);
+      expect(find.text('Casa uno'), findsNWidgets(2));
       expect(
           tester.getTopLeft(find.byKey(ValueKey('categoria-${last.id}'))).dx,
           lessThan(tester

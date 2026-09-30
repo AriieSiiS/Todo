@@ -50,8 +50,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
                           controller: controller,
                           categories: categories,
                           selectedCategoryId: selected?.id,
-                          onReorder: () => setState(
-                              () => _selectedCategoryId ??= selected?.id),
+                          onDragStarted: () => setState(
+                              () => _selectedCategoryId = selected?.id),
                           onSelect: (id) =>
                               setState(() => _selectedCategoryId = id),
                         ),
@@ -77,31 +77,25 @@ class _CategoriesPageState extends State<CategoriesPage> {
                       ),
                     ],
                   )
-                : ListView(
-                    children: [
-                      _ReferenceCategoryGrid(
-                        controller: controller,
-                        categories: categories,
-                        selectedCategoryId: selected?.id,
-                        onReorder: () => setState(
-                            () => _selectedCategoryId ??= selected?.id),
-                        shrinkWrap: true,
-                        onSelect: (id) =>
-                            setState(() => _selectedCategoryId = id),
-                      ),
-                      const SizedBox(height: 14),
-                      if (selected != null)
-                        _ReferenceCategoryDetailPanel(
-                          controller: controller,
-                          category: selected,
-                          onEditCategory: () => showCategoryEditor(
-                            context,
-                            controller,
-                            initialCategory: selected,
+                : _ReferenceCategoryGrid(
+                    controller: controller,
+                    categories: categories,
+                    selectedCategoryId: selected?.id,
+                    onDragStarted: () =>
+                        setState(() => _selectedCategoryId = selected?.id),
+                    onSelect: (id) => setState(() => _selectedCategoryId = id),
+                    footer: selected == null
+                        ? null
+                        : _ReferenceCategoryDetailPanel(
+                            controller: controller,
+                            category: selected,
+                            onEditCategory: () => showCategoryEditor(
+                              context,
+                              controller,
+                              initialCategory: selected,
+                            ),
+                            onDeleteCategory: () => _deleteCategory(selected),
                           ),
-                          onDeleteCategory: () => _deleteCategory(selected),
-                        ),
-                    ],
                   ),
           ),
         ],
@@ -187,26 +181,16 @@ class _ReferenceCategoryGrid extends StatelessWidget {
     required this.categories,
     required this.selectedCategoryId,
     required this.onSelect,
-    required this.onReorder,
-    this.shrinkWrap = false,
+    required this.onDragStarted,
+    this.footer,
   });
 
   final TodoWorkspace controller;
   final List<CategoryModel> categories;
   final String? selectedCategoryId;
   final ValueChanged<String> onSelect;
-  final VoidCallback onReorder;
-  final bool shrinkWrap;
-
-  void _moveCategory(String sourceId, String targetId) {
-    final ids = categories.map((category) => category.id).toList();
-    final source = ids.indexOf(sourceId);
-    final target = ids.indexOf(targetId);
-    if (source < 0 || target < 0 || source == target) return;
-    ids.insert(target, ids.removeAt(source));
-    controller.reorderCategories(ids);
-    onReorder();
-  }
+  final VoidCallback onDragStarted;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -219,170 +203,127 @@ class _ReferenceCategoryGrid extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-        builder: (context, constraints) => GridView.builder(
-              shrinkWrap: shrinkWrap,
-              physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisExtent: 190,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final tasks = controller.tasksByCategory(category.id);
-                final rootTasks =
-                    tasks.where((task) => !task.isSubtask).toList();
-                final metrics = (
-                  active: rootTasks
-                      .where((task) => task.status == TaskStatus.active)
-                      .length,
-                  recurring: rootTasks
-                      .where((task) => task.status == TaskStatus.active)
-                      .where((task) => task.recurrence.isRecurring)
-                      .length,
-                  completed: rootTasks
-                      .where((task) => task.status == TaskStatus.completed)
-                      .length,
-                );
-                final selected = category.id == selectedCategoryId;
+    return _AnimatedCatalogGrid<CategoryModel>(
+      items: categories,
+      itemId: (category) => category.id,
+      columns: 2,
+      cardHeight: 190,
+      rightPadding: 0,
+      keyPrefix: 'categoria',
+      footer: footer,
+      dragHandle: Tooltip(
+        message: 'Arrastrar categoría',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(Icons.drag_indicator_rounded,
+                size: 18, color: context.visuals.textMuted),
+          ),
+        ),
+      ),
+      onDragStarted: (_) => onDragStarted(),
+      onReorder: controller.reorderCategories,
+      cardBuilder: (category, dragHandle) =>
+          _buildCard(context, category, dragHandle),
+    );
+  }
 
-                Widget card({bool preview = false, bool hovering = false}) =>
-                    InkWell(
-                      onTap: preview ? null : () => onSelect(category.id),
-                      borderRadius: BorderRadius.circular(20),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: selected || hovering
-                                ? const Color(0xFF93A37C)
-                                : const Color(0xFFE5D8C7),
-                            width: selected ? 1.4 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        category.color.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(category.icon,
-                                      color: category.color),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(category.name,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        category.description.isNotEmpty
-                                            ? category.description
-                                            : _categoryDescription(
-                                                category.name),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            color: context.visuals.textMuted,
-                                            height: 1.3),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (selected)
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: Color(0xFF70835D), size: 22),
-                                const SizedBox(width: 6),
-                                if (preview)
-                                  const Icon(Icons.drag_indicator_rounded,
-                                      size: 18)
-                                else
-                                  Tooltip(
-                                    message: 'Arrastrar categoría',
-                                    child: MouseRegion(
-                                      cursor: SystemMouseCursors.grab,
-                                      child: Draggable<String>(
-                                        key: ValueKey(
-                                            'arrastrar-categoria-${category.id}'),
-                                        data: category.id,
-                                        maxSimultaneousDrags: 1,
-                                        feedback: Material(
-                                          color: Colors.transparent,
-                                          child: SizedBox(
-                                            width:
-                                                (constraints.maxWidth - 12) / 2,
-                                            height: 190,
-                                            child: card(preview: true),
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(4),
-                                          child: Icon(
-                                              Icons.drag_indicator_rounded,
-                                              size: 18,
-                                              color: context.visuals.textMuted),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            const Divider(height: 1),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                    child: _CategoryMetric(
-                                        value: '${metrics.active}',
-                                        label: 'Tareas activas')),
-                                Expanded(
-                                    child: _CategoryMetric(
-                                        value: '${metrics.recurring}',
-                                        label: 'Rutinas')),
-                                Expanded(
-                                    child: _CategoryMetric(
-                                        value: '${metrics.completed}',
-                                        label: 'Completadas')),
-                              ],
-                            ),
-                          ],
-                        ),
+  Widget _buildCard(
+      BuildContext context, CategoryModel category, Widget dragHandle) {
+    final tasks = controller.tasksByCategory(category.id);
+    final rootTasks = tasks.where((task) => !task.isSubtask).toList();
+    final metrics = (
+      active:
+          rootTasks.where((task) => task.status == TaskStatus.active).length,
+      recurring: rootTasks
+          .where((task) => task.status == TaskStatus.active)
+          .where((task) => task.recurrence.isRecurring)
+          .length,
+      completed:
+          rootTasks.where((task) => task.status == TaskStatus.completed).length,
+    );
+    final selected = category.id == selectedCategoryId;
+
+    return InkWell(
+      onTap: () => onSelect(category.id),
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFF93A37C) : const Color(0xFFE5D8C7),
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: category.color.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(category.icon, color: category.color),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(category.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(
+                        category.description.isNotEmpty
+                            ? category.description
+                            : _categoryDescription(category.name),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: context.visuals.textMuted, height: 1.3),
                       ),
-                    );
-                return DragTarget<String>(
-                  key: ValueKey('categoria-${category.id}'),
-                  onWillAcceptWithDetails: (details) =>
-                      details.data != category.id &&
-                      categories.any((item) => item.id == details.data),
-                  onAcceptWithDetails: (details) =>
-                      _moveCategory(details.data, category.id),
-                  builder: (context, candidates, rejected) =>
-                      card(hovering: candidates.isNotEmpty),
-                );
-              },
-            ));
+                    ],
+                  ),
+                ),
+                if (selected)
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF70835D), size: 22),
+                const SizedBox(width: 6),
+                dragHandle,
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                    child: _CategoryMetric(
+                        value: '${metrics.active}', label: 'Tareas activas')),
+                Expanded(
+                    child: _CategoryMetric(
+                        value: '${metrics.recurring}', label: 'Rutinas')),
+                Expanded(
+                    child: _CategoryMetric(
+                        value: '${metrics.completed}', label: 'Completadas')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

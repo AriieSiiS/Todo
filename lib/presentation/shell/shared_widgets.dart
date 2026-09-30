@@ -1,5 +1,249 @@
 part of 'app_shell.dart';
 
+class _AnimatedCatalogGrid<T> extends StatefulWidget {
+  const _AnimatedCatalogGrid(
+      {required this.items,
+      required this.itemId,
+      required this.dragHandle,
+      required this.keyPrefix,
+      this.groupKey,
+      this.cardHeight = 178,
+      this.rightPadding = 14,
+      this.footer,
+      required this.columns,
+      required this.cardBuilder,
+      required this.onDragStarted,
+      required this.onReorder});
+
+  final List<T> items;
+  final String Function(T) itemId;
+  final Object? Function(T)? groupKey;
+  final Widget dragHandle;
+  final String keyPrefix;
+  final double cardHeight;
+  final double rightPadding;
+  final Widget? footer;
+  final int columns;
+  final Widget Function(T, Widget) cardBuilder;
+  final ValueChanged<T> onDragStarted;
+  final ValueChanged<List<String>> onReorder;
+
+  @override
+  State<_AnimatedCatalogGrid<T>> createState() =>
+      _AnimatedCatalogGridState<T>();
+}
+
+class _AnimatedCatalogGridState<T> extends State<_AnimatedCatalogGrid<T>>
+    with SingleTickerProviderStateMixin {
+  final _scroll = ScrollController();
+  final _viewportKey = GlobalKey();
+  final _stackKey = GlobalKey();
+  final _cardKeys = <String, GlobalKey>{};
+  late final AnimationController _autoScroll;
+  late List<T> _draft;
+  String? _draggedId;
+  Offset? _pointer;
+  double _cardWidth = 0;
+  double _scrollSpeed = 0;
+  Duration _lastTick = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.items.toList();
+    _autoScroll =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..addListener(_scrollDuringDrag);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedCatalogGrid<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final byId = {for (final note in widget.items) widget.itemId(note): note};
+    if (_draggedId != null &&
+        byId.length == _draft.length &&
+        _draft.every((note) => byId.containsKey(widget.itemId(note)))) {
+      _draft = _draft.map((note) => byId[widget.itemId(note)]!).toList();
+    } else {
+      _autoScroll.stop();
+      _draggedId = null;
+      _draft = widget.items.toList();
+    }
+    _cardKeys.removeWhere((id, _) => !byId.containsKey(id));
+  }
+
+  @override
+  void dispose() {
+    _autoScroll.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _updateDestination(Offset position) {
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    final source =
+        _draft.indexWhere((note) => widget.itemId(note) == _draggedId);
+    if (box == null || source < 0) return;
+    final local = box.globalToLocal(position);
+    final column =
+        (local.dx / (_cardWidth + 12)).floor().clamp(0, widget.columns - 1);
+    final row = max(0, (local.dy / (widget.cardHeight + 12)).floor());
+    final sameGroup = _draft
+        .asMap()
+        .entries
+        .where((entry) =>
+            widget.groupKey?.call(entry.value) ==
+            widget.groupKey?.call(_draft[source]))
+        .map((entry) => entry.key)
+        .toList();
+    final target =
+        (row * widget.columns + column).clamp(sameGroup.first, sameGroup.last);
+    if (source != target) {
+      setState(() => _draft.insert(target, _draft.removeAt(source)));
+    }
+  }
+
+  void _updatePointer(Offset position) {
+    _pointer = position;
+    _updateDestination(position);
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final local = box.globalToLocal(position);
+    _scrollSpeed = local.dy < 48
+        ? -550 * ((48 - local.dy) / 48).clamp(0, 1)
+        : local.dy > box.size.height - 48
+            ? 550 * ((local.dy - box.size.height + 48) / 48).clamp(0, 1)
+            : 0;
+    if (_scrollSpeed == 0) {
+      _autoScroll.stop();
+    } else if (!_autoScroll.isAnimating) {
+      _lastTick = Duration.zero;
+      _autoScroll.repeat();
+    }
+  }
+
+  void _scrollDuringDrag() {
+    if (_draggedId == null || !_scroll.hasClients || _pointer == null) return;
+    final elapsed = _autoScroll.lastElapsedDuration ?? Duration.zero;
+    final seconds =
+        ((elapsed - _lastTick).inMicroseconds / 1000000).clamp(0.0, 0.05);
+    _lastTick = elapsed;
+    final next = (_scroll.offset + _scrollSpeed * seconds)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    if (next == _scroll.offset && seconds > 0) {
+      _autoScroll.stop();
+      return;
+    }
+    _scroll.jumpTo(next);
+    _updateDestination(_pointer!);
+  }
+
+  void _finish(bool accepted) {
+    _autoScroll.stop();
+    if (_draggedId == null) return;
+    final ids = _draft.map((note) => widget.itemId(note)).toList();
+    setState(() {
+      _draggedId = null;
+      _pointer = null;
+      if (!accepted) _draft = widget.items.toList();
+    });
+    if (accepted) widget.onReorder(ids);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        _cardWidth = (constraints.maxWidth -
+                widget.rightPadding -
+                (widget.columns - 1) * 12) /
+            widget.columns;
+        return DragTarget<String>(
+          onWillAcceptWithDetails: (details) =>
+              widget.items.any((note) => widget.itemId(note) == details.data),
+          builder: (context, candidates, rejected) => SingleChildScrollView(
+            key: _viewportKey,
+            controller: _scroll,
+            padding: EdgeInsets.only(right: widget.rightPadding, bottom: 4),
+            child: Column(
+              children: [
+                SizedBox(
+                  height:
+                      ((_draft.length + widget.columns - 1) ~/ widget.columns) *
+                              (widget.cardHeight + 12) -
+                          12,
+                  child: Stack(
+                    key: _stackKey,
+                    children: [
+                      for (var index = 0; index < _draft.length; index++)
+                        AnimatedPositioned(
+                          key: ValueKey(
+                              'posicion-${widget.keyPrefix}-${widget.itemId(_draft[index])}'),
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          top: (index ~/ widget.columns) *
+                              (widget.cardHeight + 12),
+                          left: (index % widget.columns) * (_cardWidth + 12),
+                          width: _cardWidth,
+                          height: widget.cardHeight,
+                          child: SizedBox(
+                            key: _cardKeys.putIfAbsent(
+                                widget.itemId(_draft[index]),
+                                () => GlobalKey()),
+                            child: Opacity(
+                              key: ValueKey(
+                                  '${widget.keyPrefix}-${widget.itemId(_draft[index])}'),
+                              opacity:
+                                  widget.itemId(_draft[index]) == _draggedId
+                                      ? 0.18
+                                      : 1,
+                              child: _buildCard(_draft[index]),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (widget.footer != null) ...[
+                  const SizedBox(height: 14),
+                  widget.footer!,
+                ],
+              ],
+            ),
+          ),
+        );
+      });
+
+  Widget _buildCard(T note) => widget.cardBuilder(
+      note,
+      Draggable<String>(
+        key: ValueKey('arrastrar-${widget.keyPrefix}-${widget.itemId(note)}'),
+        data: widget.itemId(note),
+        maxSimultaneousDrags: 1,
+        dragAnchorStrategy: (draggable, context, position) {
+          final box = _cardKeys[widget.itemId(note)]!
+              .currentContext!
+              .findRenderObject() as RenderBox;
+          return box.globalToLocal(position);
+        },
+        onDragStarted: () {
+          setState(() => _draggedId = widget.itemId(note));
+          widget.onDragStarted(note);
+        },
+        onDragUpdate: (details) => _updatePointer(details.globalPosition),
+        onDragEnd: (details) => _finish(details.wasAccepted),
+        feedback: Material(
+          color: Colors.transparent,
+          elevation: 8,
+          borderRadius: BorderRadius.circular(18),
+          child: SizedBox(
+              width: _cardWidth,
+              height: widget.cardHeight,
+              child: widget.cardBuilder(note, widget.dragHandle)),
+        ),
+        child: widget.dragHandle,
+      ));
+}
+
 final _compactNoteBlockConfiguration =
     standardBlockComponentConfiguration.copyWith(
   padding: (_) => EdgeInsets.zero,
