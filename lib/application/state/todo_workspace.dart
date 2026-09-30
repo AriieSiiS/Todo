@@ -1550,6 +1550,56 @@ class TodoWorkspace extends ChangeNotifier {
     return _plantAssets.absolutePath(path);
   }
 
+  Future<String> plantPhotoAbsolutePath(PlantPhoto photo,
+          {bool thumbnail = false}) =>
+      _plantAssets
+          .absolutePath(thumbnail ? photo.thumbnailPath : photo.imagePath);
+
+  Future<PlantPhoto> addPlantPhoto(
+    String id,
+    Uint8List bytes, {
+    required DateTime takenAt,
+    String notes = '',
+  }) async {
+    if (plantById(id) == null) throw StateError('No se encuentra la planta.');
+    final photoId = _id('plant-photo');
+    final imported = await _plantAssets.importImageBytes('$id-$photoId', bytes);
+    final index = _plants.indexWhere((plant) => plant.id == id);
+    if (index == -1) {
+      await _plantAssets.deleteAsset(imported.imagePath);
+      await _plantAssets.deleteAsset(imported.thumbnailPath);
+      throw StateError('La planta ya no está disponible.');
+    }
+    final photo = PlantPhoto(
+        id: photoId,
+        takenAt: takenAt,
+        imagePath: imported.imagePath,
+        thumbnailPath: imported.thumbnailPath,
+        imageSha256: imported.sha256,
+        notes: notes.trim());
+    final photos = [..._plants[index].photos, photo]
+      ..sort((left, right) => right.takenAt.compareTo(left.takenAt));
+    _plants[index] =
+        _plants[index].copyWith(photos: photos, updatedAt: DateTime.now());
+    _commit();
+    return photo;
+  }
+
+  Future<void> removePlantPhoto(String plantId, String photoId) async {
+    final index = _plants.indexWhere((plant) => plant.id == plantId);
+    if (index == -1) return;
+    final plant = _plants[index];
+    final photo =
+        plant.photos.where((photo) => photo.id == photoId).firstOrNull;
+    if (photo == null) return;
+    _plants[index] = plant.copyWith(
+        photos: plant.photos.where((photo) => photo.id != photoId).toList(),
+        updatedAt: DateTime.now());
+    _commit();
+    await _plantAssets.deleteAsset(photo.imagePath);
+    await _plantAssets.deleteAsset(photo.thumbnailPath);
+  }
+
   Plant createPlant({
     required String name,
     required String commonName,
@@ -1622,6 +1672,7 @@ class TodoWorkspace extends ChangeNotifier {
       imagePath: previous.imagePath,
       thumbnailPath: previous.thumbnailPath,
       imageSha256: previous.imageSha256,
+      photos: previous.photos,
       updatedAt: DateTime.now(),
     );
     _plants[index] = next;
@@ -1687,7 +1738,11 @@ class TodoWorkspace extends ChangeNotifier {
     _plants.removeWhere((value) => value.id == id);
     _tasks.removeWhere((task) => task.sourcePlantId == id);
     _commit();
-    for (final path in <String>[plant.imagePath, plant.thumbnailPath]) {
+    for (final path in <String>[
+      plant.imagePath,
+      plant.thumbnailPath,
+      ...plant.photos.expand((photo) => [photo.imagePath, photo.thumbnailPath])
+    ]) {
       if (path.isNotEmpty) unawaited(_plantAssets.deleteAsset(path));
     }
   }

@@ -89,6 +89,40 @@ class PlantCareRoutine {
       );
 }
 
+class PlantPhoto {
+  const PlantPhoto(
+      {required this.id,
+      required this.takenAt,
+      required this.imagePath,
+      required this.thumbnailPath,
+      required this.imageSha256,
+      this.notes = ''});
+  final String id;
+  final DateTime takenAt;
+  final String imagePath;
+  final String thumbnailPath;
+  final String imageSha256;
+  final String notes;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'takenAt': takenAt.toIso8601String(),
+        'imagePath': imagePath,
+        'thumbnailPath': thumbnailPath,
+        'imageSha256': imageSha256,
+        'notes': notes,
+      };
+  factory PlantPhoto.fromJson(Map<String, dynamic> json) => PlantPhoto(
+        id: json['id'] as String? ?? '',
+        takenAt: DateTime.tryParse(json['takenAt'] as String? ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0),
+        imagePath: json['imagePath'] as String? ?? '',
+        thumbnailPath: json['thumbnailPath'] as String? ?? '',
+        imageSha256: json['imageSha256'] as String? ?? '',
+        notes: json['notes'] as String? ?? '',
+      );
+}
+
 class Plant {
   const Plant({
     required this.id,
@@ -120,6 +154,7 @@ class Plant {
     this.imagePath = '',
     this.thumbnailPath = '',
     this.imageSha256 = '',
+    this.photos = const <PlantPhoto>[],
     this.archived = false,
   });
 
@@ -150,6 +185,7 @@ class Plant {
   final String imagePath;
   final String thumbnailPath;
   final String imageSha256;
+  final List<PlantPhoto> photos;
   final bool archived;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -182,6 +218,7 @@ class Plant {
     String? imagePath,
     String? thumbnailPath,
     String? imageSha256,
+    List<PlantPhoto>? photos,
     bool? archived,
     DateTime? updatedAt,
   }) {
@@ -213,6 +250,7 @@ class Plant {
       imagePath: imagePath ?? this.imagePath,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       imageSha256: imageSha256 ?? this.imageSha256,
+      photos: photos ?? this.photos,
       archived: archived ?? this.archived,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -247,6 +285,7 @@ class Plant {
         'imagePath': imagePath,
         'thumbnailPath': thumbnailPath,
         'imageSha256': imageSha256,
+        'photos': photos.map((photo) => photo.toJson()).toList(),
         'archived': archived,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -291,6 +330,10 @@ class Plant {
         imagePath: json['imagePath'] as String? ?? '',
         thumbnailPath: json['thumbnailPath'] as String? ?? '',
         imageSha256: json['imageSha256'] as String? ?? '',
+        photos: (json['photos'] as List<dynamic>? ?? const [])
+            .map((photo) =>
+                PlantPhoto.fromJson((photo as Map).cast<String, dynamic>()))
+            .toList(),
         archived: json['archived'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.fromMillisecondsSinceEpoch(0),
