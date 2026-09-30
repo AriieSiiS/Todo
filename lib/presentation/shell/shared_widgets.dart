@@ -311,7 +311,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
   ];
 
   late final TextEditingController _titleController;
-  late final EditorState _editorState;
+  late EditorState _editorState;
   late String _emoji;
   late bool _isPinned;
   late List<String> _categoryIds;
@@ -394,6 +394,27 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                         ],
                       ),
                     ),
+                    if (!_isEditing)
+                      PopupMenuButton<String>(
+                        tooltip: 'Usar plantilla',
+                        onSelected: _aplicarPlantilla,
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'ideas', child: Text('Ideas')),
+                          PopupMenuItem(
+                              value: 'reunion', child: Text('Reunión')),
+                          PopupMenuItem(
+                              value: 'compras', child: Text('Compras')),
+                          PopupMenuItem(value: 'diario', child: Text('Diario')),
+                        ],
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.auto_awesome_outlined, size: 18),
+                            SizedBox(width: 6),
+                            Text('Plantillas'),
+                          ]),
+                        ),
+                      ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
@@ -506,6 +527,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                 const SizedBox(height: 8),
                 Expanded(
                   child: Container(
+                    key: const ValueKey('editorContenidoNota'),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFFCF8),
                       borderRadius: BorderRadius.circular(18),
@@ -513,7 +535,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: AppFlowyEditor(
-                      key: const ValueKey('editorContenidoNota'),
+                      key: ObjectKey(_editorState),
                       editorState: _editorState,
                       editable: true,
                       blockComponentBuilders:
@@ -588,6 +610,60 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
       );
     }
     Navigator.of(context).pop();
+  }
+
+  Future<void> _aplicarPlantilla(String tipo) async {
+    if (_titleController.text.trim().isNotEmpty ||
+        documentToMarkdown(_editorState.document).trim().isNotEmpty) {
+      final sustituir = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Aplicar plantilla'),
+          content: const Text(
+              'La plantilla sustituirá el título y el contenido del borrador.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Sustituir')),
+          ],
+        ),
+      );
+      if (sustituir != true || !mounted) return;
+    }
+    final fecha = widget.controller.logicalDate();
+    final plantilla = switch (tipo) {
+      'reunion' => (
+          'Reunión',
+          '📝',
+          '## Participantes\n\n## Temas\n- \n\n## Acuerdos\n- \n\n## Próximos pasos\n- [ ] '
+        ),
+      'compras' => (
+          'Lista de compra',
+          '🛒',
+          '## Productos\n- [ ] \n\n## Tiendas\n- \n\n## Presupuesto\n'
+        ),
+      'diario' => (
+          'Diario · ${fecha.day}/${fecha.month}/${fecha.year}',
+          '📚',
+          '## Cómo me encuentro\n\n## Lo que ha pasado\n\n## Algo que agradezco\n\n## Para mañana\n- '
+        ),
+      _ => (
+          'Ideas',
+          '💡',
+          '## La idea\n\n## Por qué me interesa\n\n## Qué necesito\n- \n\n## Primer paso\n- [ ] '
+        ),
+    };
+    final anterior = _editorState;
+    setState(() {
+      _titleController.text = plantilla.$1;
+      _emoji = plantilla.$2;
+      _editorState = EditorState(document: markdownToDocument(plantilla.$3));
+      _editorState.logConfiguration.level = AppFlowyEditorLogLevel.off;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => anterior.dispose());
   }
 
   Future<void> _pickCategories() async {

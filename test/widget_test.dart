@@ -291,6 +291,31 @@ void main() {
     );
   });
 
+  testWidgets(
+      'una plantilla de reunión crea una nota editable con su estructura',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    controller.setSection(AppSection.inbox);
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nueva nota'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Usar plantilla'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reunión'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Título de la nota'),
+        'Reunión del proyecto');
+    await tester.tap(find.text('Guardar nota'));
+    await tester.pumpAndSettle();
+    expect(
+        controller.notes.single.content, startsWith('Reunión del proyecto\n'));
+    expect(controller.notes.single.content, contains('Participantes'));
+    expect(controller.notes.single.content, contains('Próximos pasos'));
+    expect(controller.notes.single.emoji, '📝');
+  });
+
   testWidgets('Notas filtra por categoría y cambia de vista',
       (WidgetTester tester) async {
     const category = CategoryModel(
