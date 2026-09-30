@@ -231,8 +231,9 @@ Future<void> _showReserveTaskBlock(BuildContext context,
                               tasks.firstWhere((task) => task.id == taskId);
                           minutes = task.timeBlockMinutes ?? 60;
                           if (task.timeBlockMinutes != null &&
-                              task.scheduledAt != null)
+                              task.scheduledAt != null) {
                             start = task.scheduledAt!;
+                          }
                         }),
                       ),
                       const SizedBox(height: 12),
@@ -248,13 +249,14 @@ Future<void> _showReserveTaskBlock(BuildContext context,
                                 initialDate: start,
                                 firstDate: DateTime(2020),
                                 lastDate: DateTime(2100));
-                            if (date != null && context.mounted)
+                            if (date != null && context.mounted) {
                               actualizar(() => start = DateTime(
                                   date.year,
                                   date.month,
                                   date.day,
                                   start.hour,
                                   start.minute));
+                            }
                           },
                         )),
                         const SizedBox(width: 8),
@@ -265,13 +267,14 @@ Future<void> _showReserveTaskBlock(BuildContext context,
                             final time = await showTimePicker(
                                 context: context,
                                 initialTime: TimeOfDay.fromDateTime(start));
-                            if (time != null && context.mounted)
+                            if (time != null && context.mounted) {
                               actualizar(() => start = DateTime(
                                   start.year,
                                   start.month,
                                   start.day,
                                   time.hour,
                                   time.minute));
+                            }
                           },
                         ),
                       ]),
@@ -927,11 +930,12 @@ class _CalendarDropZone extends StatelessWidget {
             );
             onMoved();
           } catch (_) {
-            if (context.mounted)
+            if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                     content: Text('No se pudo reprogramar el elemento.')),
               );
+            }
           }
         },
         builder: (context, candidates, rejected) => DecoratedBox(
@@ -2393,8 +2397,9 @@ String _entryTimeLabel(_CalendarEntry entry) {
   if (_isTaskWithoutVisibleTime(entry)) {
     return '–';
   }
-  if (entry.isTimeBlock)
+  if (entry.isTimeBlock) {
     return '${_timeLabel(entry.start)}–${_timeLabel(entry.end)}';
+  }
   return _timeLabel(entry.start);
 }
 

@@ -285,8 +285,9 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void setTabVisible(AppSection section, String tab, bool visible) {
-    if (!(AppVisibilitySettings.tabs[section]?.containsKey(tab) ?? false))
+    if (!(AppVisibilitySettings.tabs[section]?.containsKey(tab) ?? false)) {
       return;
+    }
     final current = _visibilitySettings.visibleTabs(section);
     if (!visible && current.length == 1 && current.contains(tab)) return;
     final hidden = (_visibilitySettings.hiddenTabs[section.name] ?? []).toSet();
@@ -1121,8 +1122,9 @@ class TodoWorkspace extends ChangeNotifier {
     final original =
         _wardrobePackingLists.where((list) => list.id == listId).firstOrNull;
     if (original == null) return null;
-    if (endDate.isBefore(startDate))
+    if (endDate.isBefore(startDate)) {
       throw ArgumentError('La fecha de fin debe ser posterior al inicio.');
+    }
     final copy = WardrobePackingList(
       id: _id('wardrobe-packing'),
       name: name.trim().isEmpty ? '${original.name} · otro viaje' : name.trim(),
@@ -2594,7 +2596,9 @@ class TodoWorkspace extends ChangeNotifier {
       if (task.id == excludeTaskId ||
           task.status != TaskStatus.active ||
           task.scheduledAt == null ||
-          (task.timeBlockMinutes ?? 0) <= 0) continue;
+          (task.timeBlockMinutes ?? 0) <= 0) {
+        continue;
+      }
       if (overlaps(task.scheduledAt!,
           task.scheduledAt!.add(Duration(minutes: task.timeBlockMinutes!)))) {
         conflicts.add(task.title);
@@ -2602,13 +2606,15 @@ class TodoWorkspace extends ChangeNotifier {
     }
     for (final event in _calendarEvents) {
       if (event.id == excludeEventId ||
-          event.originTaskId == excludeTaskId && excludeTaskId != null)
+          event.originTaskId == excludeTaskId && excludeTaskId != null) {
         continue;
+      }
       final allDay = event.startAt.hour == 0 &&
           event.startAt.minute == 0 &&
           event.endAt.difference(event.startAt) >= const Duration(hours: 24);
-      if (!allDay && overlaps(event.startAt, event.endAt))
+      if (!allDay && overlaps(event.startAt, event.endAt)) {
         conflicts.add(event.title);
+      }
     }
     return conflicts;
   }

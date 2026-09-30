@@ -539,10 +539,11 @@ class _PlantPhotoHistoryState extends State<_PlantPhotoHistory> {
             context, widget.controller, widget.plantId, bytes);
       }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No se pudo añadir la foto: $error')),
         );
+      }
     }
   }
 
@@ -821,8 +822,9 @@ Future<void> _savePlantHistoryPhoto(BuildContext context,
                                         initialDate: date,
                                         firstDate: DateTime(2000),
                                         lastDate: DateTime.now());
-                                    if (picked != null && context.mounted)
+                                    if (picked != null && context.mounted) {
                                       actualizar(() => date = picked);
+                                    }
                                   }),
                         TextField(
                             controller: notes,
@@ -856,12 +858,13 @@ Future<void> _savePlantHistoryPhoto(BuildContext context,
                                     Navigator.pop(context);
                                   }
                                 } catch (exception) {
-                                  if (context.mounted)
+                                  if (context.mounted) {
                                     actualizar(() {
                                       busy = false;
                                       error =
                                           'No se pudo guardar la foto: $exception';
                                     });
+                                  }
                                 }
                               },
                         child: Text(busy ? 'Guardando…' : 'Guardar foto')),

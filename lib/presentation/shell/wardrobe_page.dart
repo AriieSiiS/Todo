@@ -764,13 +764,14 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
 
   Future<void> _duplicarMaleta(WardrobePackingList list) async {
     final copy = await _showDuplicatePackingList(context, controller, list);
-    if (copy != null && mounted)
+    if (copy != null && mounted) {
       setState(() {
         _selectedListId = copy.id;
         _view = 0;
         _query = '';
         _category = null;
       });
+    }
   }
 
   @override
@@ -1105,12 +1106,13 @@ Future<void> _showAddPackingOutfit(
           ));
   if (outfitId == null) return;
   final count = controller.addWardrobeOutfitToPackingList(listId, outfitId);
-  if (context.mounted)
+  if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(count == 0
           ? 'Las prendas del conjunto ya están en la maleta o están archivadas.'
           : 'Se añadieron $count prendas. Las que ya estaban se conservaron.'),
     ));
+  }
 }
 
 class _WardrobeStatsTab extends StatelessWidget {
@@ -2653,8 +2655,9 @@ Future<void> _showCreateOutfit(
                             controller: controller,
                             selected: selected,
                             onToggle: (item) => setDialogState(() {
-                              if (!selected.add(item.id))
+                              if (!selected.add(item.id)) {
                                 selected.remove(item.id);
+                              }
                             }),
                           ),
                         )
@@ -3032,12 +3035,13 @@ Future<WardrobePackingList?> _showDuplicatePackingList(BuildContext context,
                               initialDate: start,
                               firstDate: DateTime(2020),
                               lastDate: DateTime(2100));
-                          if (date != null && context.mounted)
+                          if (date != null && context.mounted) {
                             actualizar(() {
                               final duration = end.difference(start);
                               start = date;
                               end = date.add(duration);
                             });
+                          }
                         }),
                     ListTile(
                         title: const Text('Fin'),
@@ -3049,8 +3053,9 @@ Future<WardrobePackingList?> _showDuplicatePackingList(BuildContext context,
                               initialDate: end,
                               firstDate: start,
                               lastDate: DateTime(2100));
-                          if (date != null && context.mounted)
+                          if (date != null && context.mounted) {
                             actualizar(() => end = date);
+                          }
                         }),
                     CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
