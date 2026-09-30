@@ -21,6 +21,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs =
+        controller.visibilitySettings.visibleTabs(AppSection.household);
     final active =
         controller.householdItems.where((item) => !item.archived).toList();
     final categories = <String>{
@@ -58,7 +60,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
             : left.name.toLowerCase().compareTo(right.name.toLowerCase());
       });
     return DefaultTabController(
-      length: 3,
+      key: ValueKey(tabs.join(',')),
+      length: tabs.length,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
@@ -79,23 +82,29 @@ class _HouseholdPageState extends State<HouseholdPage> {
               ),
             ),
             const SizedBox(height: 6),
-            const _SectionTabBar(
-              labels: ['Inventario', 'Gemelo 3D', 'Códigos QR'],
+            _SectionTabBar(
+              labels: tabs
+                  .map((id) =>
+                      AppVisibilitySettings.tabs[AppSection.household]![id]!)
+                  .toList(),
             ),
             const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
                 children: [
-                  _inventoryView(
-                    active: active,
-                    categories: categories,
-                    selectedCategory: selectedCategory,
-                    items: items,
-                  ),
-                  HomeTwinPage(
-                      controller: controller,
-                      homeAssistant: widget.homeAssistant),
-                  _HouseholdQrTab(controller: controller),
+                  if (tabs.contains('inventory'))
+                    _inventoryView(
+                      active: active,
+                      categories: categories,
+                      selectedCategory: selectedCategory,
+                      items: items,
+                    ),
+                  if (tabs.contains('twin'))
+                    HomeTwinPage(
+                        controller: controller,
+                        homeAssistant: widget.homeAssistant),
+                  if (tabs.contains('qr'))
+                    _HouseholdQrTab(controller: controller),
                 ],
               ),
             ),

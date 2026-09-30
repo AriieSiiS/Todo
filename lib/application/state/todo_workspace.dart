@@ -182,6 +182,7 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItemStatus _libraryStatusView = LibraryItemStatus.completed;
   LibraryAreaView _libraryAreaView = LibraryAreaView.library;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
+  AppVisibilitySettings _visibilitySettings = const AppVisibilitySettings();
   DateTime? _manualLogicalDate;
   DateTime? _manualLogicalDateStartedAt;
   DateTime? _lastSavedAt;
@@ -260,6 +261,50 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItemStatus get libraryStatusView => _libraryStatusView;
   LibraryAreaView get libraryAreaView => _libraryAreaView;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
+  AppVisibilitySettings get visibilitySettings => _visibilitySettings;
+  List<AppSection> get visibleNavOrder =>
+      navOrder.where(_visibilitySettings.sectionVisible).toList();
+
+  void setSectionVisible(AppSection section, bool visible) {
+    if (section == AppSection.settings) return;
+    final hidden = _visibilitySettings.hiddenSections.toSet();
+    if (visible) {
+      hidden.remove(section.name);
+    } else {
+      hidden.add(section.name);
+    }
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: hidden.toList(),
+      hiddenTabs: _visibilitySettings.hiddenTabs,
+    );
+    if (!_visibilitySettings.sectionVisible(_section)) {
+      _section = visibleNavOrder.first;
+      _openKnowledgeLibraryItem = null;
+    }
+    _commit();
+  }
+
+  void setTabVisible(AppSection section, String tab, bool visible) {
+    if (!(AppVisibilitySettings.tabs[section]?.containsKey(tab) ?? false))
+      return;
+    final current = _visibilitySettings.visibleTabs(section);
+    if (!visible && current.length == 1 && current.contains(tab)) return;
+    final hidden = (_visibilitySettings.hiddenTabs[section.name] ?? []).toSet();
+    if (visible) {
+      hidden.remove(tab);
+    } else {
+      hidden.add(tab);
+    }
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: _visibilitySettings.hiddenSections,
+      hiddenTabs: {
+        ..._visibilitySettings.hiddenTabs,
+        section.name: hidden.toList()
+      },
+    );
+    _commit();
+  }
+
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
   bool get hasManualLogicalDate => manualLogicalDate != null;
   DateTime? get lastSavedAt => _lastSavedAt;
@@ -326,7 +371,9 @@ class TodoWorkspace extends ChangeNotifier {
 
   void setSection(AppSection value) {
     _openKnowledgeLibraryItem = null;
-    _section = value;
+    _section = _visibilitySettings.sectionVisible(value)
+        ? value
+        : visibleNavOrder.first;
     _commit();
   }
 
@@ -345,7 +392,7 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void reorderNavigation(int oldIndex, int newIndex) {
-    final next = List<AppSection>.of(_navOrder);
+    final next = List<AppSection>.of(visibleNavOrder);
     if (oldIndex < 0 || oldIndex >= next.length) {
       return;
     }
@@ -357,7 +404,12 @@ class TodoWorkspace extends ChangeNotifier {
     }
     final moved = next.removeAt(oldIndex);
     next.insert(newIndex.clamp(0, next.length), moved);
-    _navOrder = _normalizeNavOrder(next);
+    var visibleIndex = 0;
+    _navOrder = _navOrder
+        .map((section) => _visibilitySettings.sectionVisible(section)
+            ? next[visibleIndex++]
+            : section)
+        .toList();
     _commit();
   }
 
@@ -585,6 +637,7 @@ class TodoWorkspace extends ChangeNotifier {
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
+      visibilitySettings: visibilitySettings,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       navOrder: navOrder,
@@ -4937,6 +4990,7 @@ class TodoWorkspace extends ChangeNotifier {
       ..addAll(snapshot.calendarEvents);
     _daySettings = snapshot.daySettings;
     _wardrobeDisplaySettings = snapshot.wardrobeDisplaySettings;
+    _visibilitySettings = snapshot.visibilitySettings;
     _notificationSettings = snapshot.schemaVersion < 4
         ? const DeviceNotificationSettings()
         : snapshot.notificationSettings;
@@ -4948,6 +5002,9 @@ class TodoWorkspace extends ChangeNotifier {
     _manualLogicalDate = snapshot.manualLogicalDate;
     _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
     _navOrder = _normalizeNavOrder(snapshot.navOrder);
+    if (!_visibilitySettings.sectionVisible(_section)) {
+      _section = visibleNavOrder.first;
+    }
     _syncCompletedLibraryGoalsIntoItems();
   }
 
@@ -5395,6 +5452,7 @@ class TodoWorkspace extends ChangeNotifier {
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
+      visibilitySettings: visibilitySettings,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       section: section,
@@ -5653,6 +5711,7 @@ class TodoWorkspace extends ChangeNotifier {
     _calendarEvents.clear();
     _daySettings = const DaySettings();
     _wardrobeDisplaySettings = const WardrobeDisplaySettings();
+    _visibilitySettings = const AppVisibilitySettings();
     _notificationSettings = const DeviceNotificationSettings();
     _calendarSettings = const CalendarIntegrationSettings();
     _calendarAccount = null;

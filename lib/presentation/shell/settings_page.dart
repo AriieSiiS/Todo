@@ -171,6 +171,62 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
+    final visibility = _SettingsSectionCard(
+      icon: Icons.visibility_outlined,
+      title: 'Secciones y pestañas',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+              'Elige lo que quieres ver. Puedes recuperarlo aquí en cualquier momento. Ajustes estará siempre disponible y cada sección conservará al menos una pestaña.'),
+          const SizedBox(height: 12),
+          for (final section in controller.navOrder)
+            CheckboxListTile(
+              key: ValueKey('visible-section-${section.name}'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(_sidebarDestinationFor(section).label),
+              value: controller.visibilitySettings.sectionVisible(section),
+              onChanged: section == AppSection.settings
+                  ? null
+                  : (value) {
+                      controller.setSectionVisible(section, value!);
+                      setState(() {});
+                    },
+            ),
+          const Divider(height: 24),
+          for (final entry in AppVisibilitySettings.tabs.entries)
+            ExpansionTile(
+              title: Text(
+                  'Pestañas de ${_sidebarDestinationFor(entry.key).label}'),
+              tilePadding: EdgeInsets.zero,
+              children: [
+                for (final tab in entry.value.entries)
+                  CheckboxListTile(
+                    key: ValueKey('visible-tab-${entry.key.name}-${tab.key}'),
+                    title: Text(tab.value),
+                    value: controller.visibilitySettings
+                        .visibleTabs(entry.key)
+                        .contains(tab.key),
+                    onChanged: controller.visibilitySettings
+                                    .visibleTabs(entry.key)
+                                    .length ==
+                                1 &&
+                            controller.visibilitySettings
+                                .visibleTabs(entry.key)
+                                .contains(tab.key)
+                        ? null
+                        : (value) {
+                            controller.setTabVisible(
+                                entry.key, tab.key, value!);
+                            setState(() {});
+                          },
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+
     final homeAssistant = widget.homeAssistant == null
         ? null
         : HomeAssistantSettingsCard(controller: widget.homeAssistant!);
@@ -657,6 +713,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                       wardrobe,
                       const SizedBox(height: 16),
+                      visibility,
+                      const SizedBox(height: 16),
                       backup,
                       const SizedBox(height: 16),
                       data,
@@ -695,6 +753,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: ListView(
                         children: [
                           wardrobe,
+                          const SizedBox(height: 16),
+                          visibility,
                           const SizedBox(height: 16),
                           status,
                           const SizedBox(height: 16),

@@ -27,6 +27,11 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = controller.visibilitySettings.visibleTabs(AppSection.calendar);
+    final modes = _CalendarViewMode.values
+        .where((mode) => tabs.contains(mode.name))
+        .toList();
+    if (!modes.contains(_mode)) _mode = modes.first;
     final today = controller.logicalDate();
     final entries = _calendarEntriesFromController(controller);
 
@@ -41,6 +46,7 @@ class _CalendarPageState extends State<CalendarPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _CalendarTopHeader(
+            visibleModes: modes,
             mode: _mode,
             onReserve: () async {
               await _showReserveTaskBlock(context, controller, _selectedDay);
@@ -108,13 +114,15 @@ class _CalendarPageState extends State<CalendarPage> {
                       );
                     });
                   },
-                  onOpenAgenda: () {
-                    setState(() {
-                      _mode = _CalendarViewMode.agenda;
-                      _visibleMonth =
-                          DateTime(_selectedDay.year, _selectedDay.month);
-                    });
-                  },
+                  onOpenAgenda: !tabs.contains('agenda')
+                      ? null
+                      : () {
+                          setState(() {
+                            _mode = _CalendarViewMode.agenda;
+                            _visibleMonth =
+                                DateTime(_selectedDay.year, _selectedDay.month);
+                          });
+                        },
                 ),
               _CalendarViewMode.week => _CalendarWeekView(
                   controller: controller,
@@ -336,6 +344,7 @@ class _CalendarTopHeader extends StatelessWidget {
     required this.onCreate,
     required this.onTodayPressed,
     required this.onReserve,
+    required this.visibleModes,
   });
 
   final _CalendarViewMode mode;
@@ -343,6 +352,7 @@ class _CalendarTopHeader extends StatelessWidget {
   final VoidCallback onCreate;
   final VoidCallback onTodayPressed;
   final VoidCallback onReserve;
+  final List<_CalendarViewMode> visibleModes;
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +389,7 @@ class _CalendarTopHeader extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 390),
                   child: _CalendarModeSwitcher(
+                    visibleModes: visibleModes,
                     selected: mode,
                     onSelected: onModeSelected,
                   ),
@@ -404,10 +415,12 @@ class _CalendarModeSwitcher extends StatelessWidget {
   const _CalendarModeSwitcher({
     required this.selected,
     required this.onSelected,
+    required this.visibleModes,
   });
 
   final _CalendarViewMode selected;
   final ValueChanged<_CalendarViewMode> onSelected;
+  final List<_CalendarViewMode> visibleModes;
 
   @override
   Widget build(BuildContext context) {
@@ -419,20 +432,24 @@ class _CalendarModeSwitcher extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: _calendarModeChip('Mes', selected == _CalendarViewMode.month,
-                onTap: () => onSelected(_CalendarViewMode.month)),
-          ),
-          Expanded(
-            child: _calendarModeChip(
-                'Semana', selected == _CalendarViewMode.week,
-                onTap: () => onSelected(_CalendarViewMode.week)),
-          ),
-          Expanded(
-            child: _calendarModeChip(
-                'Agenda', selected == _CalendarViewMode.agenda,
-                onTap: () => onSelected(_CalendarViewMode.agenda)),
-          ),
+          if (visibleModes.contains(_CalendarViewMode.month))
+            Expanded(
+              child: _calendarModeChip(
+                  'Mes', selected == _CalendarViewMode.month,
+                  onTap: () => onSelected(_CalendarViewMode.month)),
+            ),
+          if (visibleModes.contains(_CalendarViewMode.week))
+            Expanded(
+              child: _calendarModeChip(
+                  'Semana', selected == _CalendarViewMode.week,
+                  onTap: () => onSelected(_CalendarViewMode.week)),
+            ),
+          if (visibleModes.contains(_CalendarViewMode.agenda))
+            Expanded(
+              child: _calendarModeChip(
+                  'Agenda', selected == _CalendarViewMode.agenda,
+                  onTap: () => onSelected(_CalendarViewMode.agenda)),
+            ),
         ],
       ),
     );
@@ -483,7 +500,7 @@ class _CalendarMonthView extends StatelessWidget {
   final ValueChanged<DateTime> onSelectDay;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
-  final VoidCallback onOpenAgenda;
+  final VoidCallback? onOpenAgenda;
 
   @override
   Widget build(BuildContext context) {
@@ -942,7 +959,7 @@ class _CalendarMonthSidePanel extends StatelessWidget {
   final TodoWorkspace controller;
   final DateTime selectedDay;
   final List<_CalendarEntry> entries;
-  final VoidCallback onOpenAgenda;
+  final VoidCallback? onOpenAgenda;
 
   @override
   Widget build(BuildContext context) {

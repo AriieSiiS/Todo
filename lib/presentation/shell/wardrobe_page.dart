@@ -18,8 +18,18 @@ class _WardrobePageState extends State<WardrobePage> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = controller.visibilitySettings.visibleTabs(AppSection.wardrobe);
+    final views = <String, Widget>{
+      'wardrobe': _wardrobeGrid(),
+      'outfits': _WardrobeOutfitsTab(controller: controller),
+      'planner': _WardrobePlannerTab(controller: controller),
+      'laundry': _WardrobeLaundryTab(controller: controller),
+      'packing': _WardrobePackingTab(controller: controller),
+      'stats': _WardrobeStatsTab(controller: controller),
+    };
     return DefaultTabController(
-      length: 6,
+      key: ValueKey(tabs.join(',')),
+      length: tabs.length,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
@@ -53,27 +63,16 @@ class _WardrobePageState extends State<WardrobePage> {
               ),
             ),
             const SizedBox(height: 6),
-            const _SectionTabBar(
-              labels: [
-                'Armario',
-                'Conjuntos',
-                'Planificador',
-                'Lavandería',
-                'Maletas',
-                'Estadísticas',
-              ],
+            _SectionTabBar(
+              labels: tabs
+                  .map((id) =>
+                      AppVisibilitySettings.tabs[AppSection.wardrobe]![id]!)
+                  .toList(),
             ),
             const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
-                children: [
-                  _wardrobeGrid(),
-                  _WardrobeOutfitsTab(controller: controller),
-                  _WardrobePlannerTab(controller: controller),
-                  _WardrobeLaundryTab(controller: controller),
-                  _WardrobePackingTab(controller: controller),
-                  _WardrobeStatsTab(controller: controller),
-                ],
+                children: tabs.map((id) => views[id]!).toList(),
               ),
             ),
           ],

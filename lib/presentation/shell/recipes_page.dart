@@ -19,6 +19,7 @@ class _RecipesPageState extends State<RecipesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = controller.visibilitySettings.visibleTabs(AppSection.recipes);
     final active =
         controller.recipes.where((recipe) => !recipe.archived).toList();
     final weeklyMenus = controller.weeklyMenus
@@ -56,7 +57,8 @@ class _RecipesPageState extends State<RecipesPage> {
       });
     final favoriteCount = active.where((recipe) => recipe.favorite).length;
     return DefaultTabController(
-      length: 2,
+      key: ValueKey(tabs.join(',')),
+      length: tabs.length,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
@@ -119,30 +121,36 @@ class _RecipesPageState extends State<RecipesPage> {
               ),
             ),
             const SizedBox(height: 6),
-            const _SectionTabBar(labels: ['Recetas', 'Menús semanales']),
+            _SectionTabBar(
+                labels: tabs
+                    .map((id) =>
+                        AppVisibilitySettings.tabs[AppSection.recipes]![id]!)
+                    .toList()),
             const SizedBox(height: 8),
             Expanded(
               child: TabBarView(
                 children: [
-                  _recipesCatalog(
-                    active: active,
-                    categories: categories,
-                    selectedCategory: selectedCategory,
-                    recipes: recipes,
-                    favoriteCount: favoriteCount,
-                  ),
-                  _WeeklyMenusCatalog(
-                    controller: controller,
-                    menus: weeklyMenus,
-                    onOpenRecipe: _openRecipe,
-                    onCreateShoppingTask: (menu, selectedEntryIds) =>
-                        _createTask(
-                      () => controller.createWeeklyMenuShoppingTask(
-                        menu.id,
-                        selectedEntryIds: selectedEntryIds,
+                  if (tabs.contains('recipes'))
+                    _recipesCatalog(
+                      active: active,
+                      categories: categories,
+                      selectedCategory: selectedCategory,
+                      recipes: recipes,
+                      favoriteCount: favoriteCount,
+                    ),
+                  if (tabs.contains('menus'))
+                    _WeeklyMenusCatalog(
+                      controller: controller,
+                      menus: weeklyMenus,
+                      onOpenRecipe: _openRecipe,
+                      onCreateShoppingTask: (menu, selectedEntryIds) =>
+                          _createTask(
+                        () => controller.createWeeklyMenuShoppingTask(
+                          menu.id,
+                          selectedEntryIds: selectedEntryIds,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

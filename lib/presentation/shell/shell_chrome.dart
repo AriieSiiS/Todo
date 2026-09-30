@@ -416,7 +416,7 @@ class _Sidebar extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final destinations =
-        controller.navOrder.map(_sidebarDestinationFor).toList();
+        controller.visibleNavOrder.map(_sidebarDestinationFor).toList();
     return SizedBox(
       width: 230,
       child: Padding(
@@ -680,19 +680,14 @@ class _MobileNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primarySections = <AppSection>[
-      AppSection.today,
-      AppSection.inbox,
-      AppSection.calendar,
-      AppSection.projects,
-    ];
+    final primarySections = controller.visibleNavOrder.take(4).toList();
     final selectedIndex = primarySections.contains(controller.section)
         ? primarySections.indexOf(controller.section)
-        : 4;
+        : primarySections.length;
     return NavigationBar(
       selectedIndex: selectedIndex,
       onDestinationSelected: (index) {
-        if (index == 4) {
+        if (index == primarySections.length) {
           _showMoreSections(context);
           return;
         }
@@ -710,14 +705,7 @@ class _MobileNav extends StatelessWidget {
   }
 
   Future<void> _showMoreSections(BuildContext context) async {
-    final moreSections = controller.navOrder
-        .where((section) => !const <AppSection>{
-              AppSection.today,
-              AppSection.inbox,
-              AppSection.calendar,
-              AppSection.projects,
-            }.contains(section))
-        .toList();
+    final moreSections = controller.visibleNavOrder.skip(4).toList();
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
