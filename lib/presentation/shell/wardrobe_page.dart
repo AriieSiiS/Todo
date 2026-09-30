@@ -232,11 +232,13 @@ class _WardrobeItemsGrid extends StatelessWidget {
     required this.controller,
     required this.items,
     this.actionsForItem,
+    this.onTapForItem,
   });
 
   final TodoWorkspace controller;
   final List<WardrobeItem> items;
   final List<Widget> Function(WardrobeItem)? actionsForItem;
+  final ValueChanged<WardrobeItem>? onTapForItem;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -252,6 +254,8 @@ class _WardrobeItemsGrid extends StatelessWidget {
             controller: controller,
             item: items[index],
             actions: actionsForItem?.call(items[index]),
+            onTap:
+                onTapForItem == null ? null : () => onTapForItem!(items[index]),
           ),
         ),
       );
@@ -262,17 +266,20 @@ class _WardrobeItemCard extends StatelessWidget {
     required this.controller,
     required this.item,
     this.actions,
+    this.onTap,
   });
   final TodoWorkspace controller;
   final WardrobeItem item;
   final List<Widget>? actions;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _showWardrobeItemDetail(context, controller, item),
+        onTap:
+            onTap ?? () => _showWardrobeItemDetail(context, controller, item),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2417,6 +2424,124 @@ Future<bool> _pasteOutfitRender(
   }
 }
 
+class _WardrobeOutfitSelector extends StatefulWidget {
+  const _WardrobeOutfitSelector(
+      {required this.controller,
+      required this.selected,
+      required this.onToggle});
+  final TodoWorkspace controller;
+  final Set<String> selected;
+  final ValueChanged<WardrobeItem> onToggle;
+
+  @override
+  State<_WardrobeOutfitSelector> createState() =>
+      _WardrobeOutfitSelectorState();
+}
+
+class _WardrobeOutfitSelectorState extends State<_WardrobeOutfitSelector> {
+  String _query = '';
+  String? _category;
+  bool _selectedOnly = false;
+  bool _favoritesOnly = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final all = widget.controller.wardrobeItems
+        .where((item) => !item.archived)
+        .toList();
+    final categories = all.map((item) => item.category).toSet().toList()
+      ..sort(WardrobeTaxonomy.compareCategories);
+    final query = _query.trim().toLowerCase();
+    final items = all.where((item) {
+      if (_category != null && item.category != _category) return false;
+      if (_selectedOnly && !widget.selected.contains(item.id)) return false;
+      if (_favoritesOnly && !item.favorite) return false;
+      return [
+        item.name,
+        item.category,
+        item.material,
+        ...item.colors,
+        ...item.tags,
+        ...item.seasons,
+        ...item.occasions
+      ].join(' ').toLowerCase().contains(query);
+    }).toList()
+      ..sort((left, right) {
+        if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
+        final order =
+            WardrobeTaxonomy.compareCategories(left.category, right.category);
+        return order != 0
+            ? order
+            : left.name.toLowerCase().compareTo(right.name.toLowerCase());
+      });
+    return Column(children: [
+      _CatalogSearchField(
+          label: 'Buscar prendas para añadir',
+          hint: 'Pantalón beige, camisa azul…',
+          onChanged: (value) => setState(() => _query = value)),
+      const SizedBox(height: 10),
+      SizedBox(
+          height: 40,
+          child: ListView(scrollDirection: Axis.horizontal, children: [
+            _FilterPill(
+                label: 'Todas',
+                selected:
+                    _category == null && !_selectedOnly && !_favoritesOnly,
+                onTap: () => setState(() {
+                      _category = null;
+                      _selectedOnly = false;
+                      _favoritesOnly = false;
+                    })),
+            const SizedBox(width: 7),
+            _FilterPill(
+                label: 'En el conjunto (${widget.selected.length})',
+                selected: _selectedOnly,
+                onTap: () => setState(() {
+                      _selectedOnly = !_selectedOnly;
+                      _category = null;
+                      _favoritesOnly = false;
+                    })),
+            const SizedBox(width: 7),
+            _FilterPill(
+                label: 'Favoritos',
+                selected: _favoritesOnly,
+                onTap: () => setState(() {
+                      _favoritesOnly = !_favoritesOnly;
+                      _category = null;
+                      _selectedOnly = false;
+                    })),
+            for (final category in categories) ...[
+              const SizedBox(width: 7),
+              _FilterPill(
+                  label: category,
+                  selected: _category == category,
+                  onTap: () => setState(() => _category = category)),
+            ],
+          ])),
+      const SizedBox(height: 10),
+      Expanded(
+          child: items.isEmpty
+              ? const Center(child: Text('No hay prendas con estos filtros.'))
+              : _WardrobeItemsGrid(
+                  controller: widget.controller,
+                  items: items,
+                  onTapForItem: widget.onToggle,
+                  actionsForItem: (item) => [
+                    IconButton.filledTonal(
+                      tooltip: widget.selected.contains(item.id)
+                          ? 'Quitar del conjunto'
+                          : 'Añadir al conjunto',
+                      onPressed: () => widget.onToggle(item),
+                      icon: Icon(widget.selected.contains(item.id)
+                          ? Icons.check_circle_rounded
+                          : Icons.add_circle_outline_rounded),
+                    )
+                  ],
+                )),
+    ]);
+  }
+}
+
 Future<void> _showCreateOutfit(
     BuildContext context, TodoWorkspace controller) async {
   final name = TextEditingController();
@@ -2427,8 +2552,8 @@ Future<void> _showCreateOutfit(
           builder: (context, setDialogState) => AlertDialog(
                   title: const Text('Nuevo conjunto'),
                   content: SizedBox(
-                      width: 480,
-                      height: 470,
+                      width: 1040,
+                      height: 650,
                       child: Column(children: [
                         TextField(
                             controller: name,
@@ -2436,18 +2561,15 @@ Future<void> _showCreateOutfit(
                                 const InputDecoration(labelText: 'Nombre')),
                         const SizedBox(height: 10),
                         Expanded(
-                            child: ListView(
-                                children: controller.wardrobeItems
-                                    .where((item) => !item.archived)
-                                    .map((item) => CheckboxListTile(
-                                        value: selected.contains(item.id),
-                                        title: Text(item.name),
-                                        subtitle: Text(item.category),
-                                        onChanged: (value) => setDialogState(
-                                            () => value == true
-                                                ? selected.add(item.id)
-                                                : selected.remove(item.id))))
-                                    .toList()))
+                          child: _WardrobeOutfitSelector(
+                            controller: controller,
+                            selected: selected,
+                            onToggle: (item) => setDialogState(() {
+                              if (!selected.add(item.id))
+                                selected.remove(item.id);
+                            }),
+                          ),
+                        )
                       ])),
                   actions: [
                     TextButton(
@@ -2508,7 +2630,7 @@ Future<void> _showEditOutfit(BuildContext context, TodoWorkspace controller,
         return AlertDialog(
           title: const Text('Editar conjunto'),
           content: SizedBox(
-            width: 760,
+            width: 1040,
             height: 680,
             child: Column(children: [
               Row(children: [
@@ -2627,57 +2749,19 @@ Future<void> _showEditOutfit(BuildContext context, TodoWorkspace controller,
                             ? 'No quedan prendas en esta categoría.'
                             : 'No hay prendas que coincidan con la búsqueda.'),
                       )
-                    : GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 4.6,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: availableItems.length,
-                        itemBuilder: (context, index) {
-                          final item = availableItems[index];
-                          return Card(
-                            margin: EdgeInsets.zero,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () =>
-                                  setDialogState(() => selected.add(item.id)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(7),
-                                child: Row(children: [
-                                  _OutfitPickerImage(
-                                      controller: controller, item: item),
-                                  const SizedBox(width: 9),
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(item.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w700)),
-                                        Text(item.category,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                                color:
-                                                    context.visuals.textMuted,
-                                                fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.add_circle_outline_rounded),
-                                ]),
-                              ),
-                            ),
-                          );
-                        },
+                    : _WardrobeItemsGrid(
+                        controller: controller,
+                        items: availableItems,
+                        onTapForItem: (item) =>
+                            setDialogState(() => selected.add(item.id)),
+                        actionsForItem: (item) => [
+                          IconButton.filledTonal(
+                            tooltip: 'Añadir al conjunto',
+                            onPressed: () =>
+                                setDialogState(() => selected.add(item.id)),
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                          )
+                        ],
                       ),
               ),
             ]),
