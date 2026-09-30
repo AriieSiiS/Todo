@@ -32,6 +32,10 @@ class _ExpensesPageState extends State<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = controller.visibilitySettings.visibleTabs(AppSection.expenses);
+    if (!tabs.contains(_tab.name)) {
+      _tab = _ExpenseTab.values.firstWhere((tab) => tabs.contains(tab.name));
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
       child: Column(
@@ -50,6 +54,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
           ),
           const SizedBox(height: 16),
           _ExpenseTabs(
+            visibleTabs: tabs,
             selected: _tab,
             onChanged: (value) => setState(() => _tab = value),
           ),
@@ -422,10 +427,14 @@ class _HeaderSelectPill<T> extends StatelessWidget {
 }
 
 class _ExpenseTabs extends StatelessWidget {
-  const _ExpenseTabs({required this.selected, required this.onChanged});
+  const _ExpenseTabs(
+      {required this.selected,
+      required this.onChanged,
+      required this.visibleTabs});
 
   final _ExpenseTab selected;
   final ValueChanged<_ExpenseTab> onChanged;
+  final List<String> visibleTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -459,7 +468,9 @@ class _ExpenseTabs extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: tabs.map((item) {
+        children: tabs
+            .where((item) => visibleTabs.contains(item.tab.name))
+            .map((item) {
           final isSelected = item.tab == selected;
           return Padding(
             padding: const EdgeInsets.only(right: 8),

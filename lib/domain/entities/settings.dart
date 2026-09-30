@@ -1,3 +1,69 @@
+import 'enums.dart';
+
+class AppVisibilitySettings {
+  const AppVisibilitySettings({
+    this.hiddenSections = const [],
+    this.hiddenTabs = const {},
+  });
+
+  final List<String> hiddenSections;
+  final Map<String, List<String>> hiddenTabs;
+
+  static const tabs = <AppSection, Map<String, String>>{
+    AppSection.wardrobe: {
+      'wardrobe': 'Armario',
+      'outfits': 'Conjuntos',
+      'planner': 'Planificador',
+      'laundry': 'Lavandería',
+      'packing': 'Maletas',
+      'stats': 'Estadísticas',
+    },
+    AppSection.household: {
+      'inventory': 'Inventario',
+      'twin': 'Gemelo 3D',
+      'qr': 'Códigos QR',
+    },
+    AppSection.library: {'library': 'Biblioteca', 'goals': 'Propósitos'},
+    AppSection.recipes: {'recipes': 'Recetas', 'menus': 'Menús semanales'},
+    AppSection.expenses: {
+      'monthly': 'Vista mensual',
+      'annual': 'Resumen anual',
+      'fixed': 'Pagos fijos',
+      'categories': 'Categorías',
+      'methods': 'Métodos de pago',
+    },
+    AppSection.calendar: {'month': 'Mes', 'week': 'Semana', 'agenda': 'Agenda'},
+  };
+
+  bool sectionVisible(AppSection section) =>
+      section == AppSection.settings || !hiddenSections.contains(section.name);
+
+  List<String> visibleTabs(AppSection section) {
+    final available = tabs[section]?.keys.toList() ?? <String>[];
+    final visible = available
+        .where((id) => !(hiddenTabs[section.name] ?? const []).contains(id))
+        .toList();
+    return visible.isEmpty && available.isNotEmpty
+        ? [available.first]
+        : visible;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'hiddenSections': hiddenSections,
+        'hiddenTabs': hiddenTabs,
+      };
+
+  factory AppVisibilitySettings.fromJson(Map<String, dynamic> json) =>
+      AppVisibilitySettings(
+        hiddenSections: (json['hiddenSections'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .toList(),
+        hiddenTabs: (json['hiddenTabs'] as Map<String, dynamic>? ?? const {})
+            .map((section, value) => MapEntry(section,
+                (value as List<dynamic>).whereType<String>().toList())),
+      );
+}
+
 class DaySettings {
   const DaySettings({
     this.dayEndsAtHour = 5,

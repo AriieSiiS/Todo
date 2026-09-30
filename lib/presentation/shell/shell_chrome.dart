@@ -416,7 +416,7 @@ class _Sidebar extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final destinations =
-        controller.navOrder.map(_sidebarDestinationFor).toList();
+        controller.visibleNavOrder.map(_sidebarDestinationFor).toList();
     return SizedBox(
       width: 230,
       child: Padding(
@@ -680,19 +680,28 @@ class _MobileNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primarySections = <AppSection>[
+    final primarySections = const [
       AppSection.today,
       AppSection.inbox,
       AppSection.calendar,
       AppSection.projects,
-    ];
+    ].where(controller.visibilitySettings.sectionVisible).toList();
+    if (primarySections.isEmpty) {
+      return SafeArea(
+        child: TextButton.icon(
+          onPressed: () => _showMoreSections(context),
+          icon: const Icon(Icons.menu_rounded),
+          label: const Text('Secciones'),
+        ),
+      );
+    }
     final selectedIndex = primarySections.contains(controller.section)
         ? primarySections.indexOf(controller.section)
-        : 4;
+        : primarySections.length;
     return NavigationBar(
       selectedIndex: selectedIndex,
       onDestinationSelected: (index) {
-        if (index == 4) {
+        if (index == primarySections.length) {
           _showMoreSections(context);
           return;
         }
@@ -710,8 +719,8 @@ class _MobileNav extends StatelessWidget {
   }
 
   Future<void> _showMoreSections(BuildContext context) async {
-    final moreSections = controller.navOrder
-        .where((section) => !const <AppSection>{
+    final moreSections = controller.visibleNavOrder
+        .where((section) => !const {
               AppSection.today,
               AppSection.inbox,
               AppSection.calendar,

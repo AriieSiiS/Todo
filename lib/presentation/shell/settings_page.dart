@@ -1,5 +1,72 @@
 part of 'app_shell.dart';
 
+Future<void> _showVisibilityPreferences(
+    BuildContext context, TodoWorkspace controller) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => AlertDialog(
+        title: const Text('Secciones y pestañas'),
+        content: SizedBox(
+          width: 700,
+          height: 600,
+          child: ListView(
+            children: [
+              const Text(
+                  'Ajustes estará siempre disponible. Cada sección conservará al menos una pestaña.'),
+              const SizedBox(height: 12),
+              for (final section in controller.navOrder)
+                CheckboxListTile(
+                  key: ValueKey('visible-section-${section.name}'),
+                  title: Text(_sidebarDestinationFor(section).label),
+                  value: controller.visibilitySettings.sectionVisible(section),
+                  onChanged: section == AppSection.settings
+                      ? null
+                      : (value) =>
+                          controller.setSectionVisible(section, value!),
+                ),
+              const Divider(height: 24),
+              for (final entry in AppVisibilitySettings.tabs.entries)
+                ExpansionTile(
+                  key: ValueKey('visible-tabs-${entry.key.name}'),
+                  title: Text(
+                      'Pestañas de ${_sidebarDestinationFor(entry.key).label}'),
+                  children: [
+                    for (final tab in entry.value.entries)
+                      CheckboxListTile(
+                        key: ValueKey(
+                            'visible-tab-${entry.key.name}-${tab.key}'),
+                        title: Text(tab.value),
+                        value: controller.visibilitySettings
+                            .visibleTabs(entry.key)
+                            .contains(tab.key),
+                        onChanged: controller.visibilitySettings
+                                        .visibleTabs(entry.key)
+                                        .length ==
+                                    1 &&
+                                controller.visibilitySettings
+                                    .visibleTabs(entry.key)
+                                    .contains(tab.key)
+                            ? null
+                            : (value) => controller.setTabVisible(
+                                entry.key, tab.key, value!),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar'))
+        ],
+      ),
+    ),
+  );
+}
+
 class _LanSyncNotice extends StatelessWidget {
   const _LanSyncNotice({required this.icon, required this.text});
 
@@ -168,6 +235,24 @@ class _SettingsPageState extends State<SettingsPage> {
           );
           setState(() {});
         },
+      ),
+    );
+
+    final visibility = _SettingsSectionCard(
+      icon: Icons.visibility_outlined,
+      title: 'Secciones y pestañas',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+              'Elige lo que quieres ver. Puedes recuperarlo aquí en cualquier momento. Ajustes estará siempre disponible y cada sección conservará al menos una pestaña.'),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.tune_rounded),
+            label: const Text('Personalizar'),
+            onPressed: () => _showVisibilityPreferences(context, controller),
+          ),
+        ],
       ),
     );
 
@@ -657,6 +742,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                       wardrobe,
                       const SizedBox(height: 16),
+                      visibility,
+                      const SizedBox(height: 16),
                       backup,
                       const SizedBox(height: 16),
                       data,
@@ -695,6 +782,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: ListView(
                         children: [
                           wardrobe,
+                          const SizedBox(height: 16),
+                          visibility,
                           const SizedBox(height: 16),
                           status,
                           const SizedBox(height: 16),

@@ -39,6 +39,7 @@ class ExportSnapshot {
     required this.calendarEvents,
     required this.daySettings,
     this.wardrobeDisplaySettings = const WardrobeDisplaySettings(),
+    this.visibilitySettings = const AppVisibilitySettings(),
     required this.notificationSettings,
     required this.calendarSettings,
     this.navOrder = const <AppSection>[],
@@ -66,6 +67,7 @@ class ExportSnapshot {
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final WardrobeDisplaySettings wardrobeDisplaySettings;
+  final AppVisibilitySettings visibilitySettings;
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
   final List<AppSection> navOrder;
@@ -100,6 +102,7 @@ class ExportSnapshot {
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'wardrobeDisplaySettings': wardrobeDisplaySettings.toJson(),
+      'visibilitySettings': visibilitySettings.toJson(),
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
       'navOrder': navOrder.map((section) => section.name).toList(),

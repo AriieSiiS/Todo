@@ -75,6 +75,7 @@ void main() {
     expect(find.text('Enviar prueba'), findsOneWidget);
     expect(find.text('Probar alarma importante'), findsOneWidget);
     expect(find.text('Ropa'), findsOneWidget);
+    expect(find.text('Secciones y pestañas'), findsOneWidget);
     expect(find.text('Copias de seguridad'), findsOneWidget);
     expect(find.text('Crear copia ahora'), findsOneWidget);
     expect(find.text('Abrir carpeta'), findsOneWidget);

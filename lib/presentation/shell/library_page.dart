@@ -39,7 +39,13 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final area = controller.libraryAreaView;
+    final tabs = controller.visibilitySettings.visibleTabs(AppSection.library);
+    final areas = LibraryAreaView.values
+        .where((area) => tabs.contains(area.name))
+        .toList();
+    final area = areas.contains(controller.libraryAreaView)
+        ? controller.libraryAreaView
+        : areas.first;
     final status = _showAllStatuses ? null : controller.libraryStatusView;
     final statusFilteredItems = _filteredItems(controller.libraryItems, status);
     final items = _typeFilter == null
@@ -66,8 +72,9 @@ class _LibraryPageState extends State<LibraryPage> {
     final wide = MediaQuery.sizeOf(context).width >= 1320;
 
     return DefaultTabController(
-      length: 2,
-      initialIndex: area.index,
+      key: ValueKey(tabs.join(',')),
+      length: tabs.length,
+      initialIndex: areas.indexOf(area),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
         child: Column(
@@ -89,9 +96,12 @@ class _LibraryPageState extends State<LibraryPage> {
             ),
             const SizedBox(height: 6),
             _SectionTabBar(
-              labels: const ['Biblioteca', 'Propósitos'],
+              labels: tabs
+                  .map((id) =>
+                      AppVisibilitySettings.tabs[AppSection.library]![id]!)
+                  .toList(),
               onTap: (index) {
-                final next = LibraryAreaView.values[index];
+                final next = areas[index];
                 controller.setLibraryAreaView(next);
                 setState(() {});
               },
