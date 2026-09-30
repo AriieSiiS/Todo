@@ -453,6 +453,14 @@ Future<void> _showPlantDetails(
                       icon: const Icon(Icons.delete_outline_rounded),
                       label: const Text('Eliminar'),
                     ),
+                    TextButton.icon(
+                      onPressed: () => showDialog<void>(
+                          context: dialogContext,
+                          builder: (_) => _PlantPhotoHistory(
+                              controller: controller, plantId: plantId)),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Historial visual'),
+                    ),
                     const Spacer(),
                     FilledButton.icon(
                       onPressed: () => Navigator.pop(dialogContext, 'edit'),
@@ -480,7 +488,7 @@ Future<void> _showPlantDetails(
       builder: (context) => AlertDialog(
         title: const Text('Eliminar planta'),
         content: const Text(
-          'Se eliminarán también su imagen y todas las tareas de cuidado enlazadas.',
+          'Se eliminarán también su imagen, el historial de fotos y todas las tareas de cuidado enlazadas.',
         ),
         actions: [
           TextButton(
@@ -496,6 +504,370 @@ Future<void> _showPlantDetails(
     );
     if (confirmed == true) controller.deletePlant(plantId);
   }
+}
+
+class _PlantPhotoHistory extends StatefulWidget {
+  const _PlantPhotoHistory({required this.controller, required this.plantId});
+  final TodoWorkspace controller;
+  final String plantId;
+  @override
+  State<_PlantPhotoHistory> createState() => _PlantPhotoHistoryState();
+}
+
+class _PlantPhotoHistoryState extends State<_PlantPhotoHistory> {
+  final _selected = <String>{};
+
+  Future<void> _add(bool clipboard) async {
+    try {
+      Uint8List? bytes;
+      if (clipboard) {
+        final result = await readClipboardImage();
+        if (!result.hasImage) {
+          throw StateError(
+              result.errorMessage ?? 'No hay una imagen en el portapapeles.');
+        }
+        bytes = result.bytes;
+      } else {
+        final file = await openFile(acceptedTypeGroups: const [
+          XTypeGroup(
+              label: 'Imágenes', extensions: ['png', 'jpg', 'jpeg', 'webp']),
+        ]);
+        if (file != null) bytes = await file.readAsBytes();
+      }
+      if (bytes != null && mounted) {
+        await _savePlantHistoryPhoto(
+            context, widget.controller, widget.plantId, bytes);
+      }
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo añadir la foto: $error')),
+        );
+    }
+  }
+
+  Future<void> _delete(PlantPhoto photo) async {
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Eliminar foto del historial'),
+              content: const Text(
+                  'Se eliminarán esta foto y su nota del historial de la planta.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Eliminar')),
+              ],
+            ));
+    if (confirmed != true) return;
+    await widget.controller.removePlantPhoto(widget.plantId, photo.id);
+    if (mounted) setState(() => _selected.remove(photo.id));
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+        insetPadding: const EdgeInsets.all(28),
+        child: SizedBox(
+            width: 1040,
+            height: 760,
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: ListenableBuilder(
+                  listenable: widget.controller,
+                  builder: (context, _) {
+                    final plant = widget.controller.plantById(widget.plantId);
+                    final photos = plant?.photos ?? const <PlantPhoto>[];
+                    final selected = photos
+                        .where((photo) => _selected.contains(photo.id))
+                        .toList();
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                                child: Text(
+                                    'Historial visual · ${plant?.name ?? 'Planta'}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge)),
+                            IconButton(
+                                tooltip: 'Cerrar',
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.close)),
+                          ]),
+                          const SizedBox(height: 10),
+                          Wrap(spacing: 8, runSpacing: 8, children: [
+                            FilledButton.icon(
+                                onPressed: () => _add(false),
+                                icon: const Icon(
+                                    Icons.add_photo_alternate_outlined),
+                                label: const Text('Añadir foto')),
+                            OutlinedButton.icon(
+                                onPressed: () => _add(true),
+                                icon: const Icon(Icons.content_paste_rounded),
+                                label: const Text('Pegar foto')),
+                            OutlinedButton.icon(
+                                onPressed: selected.length == 2
+                                    ? () => _comparePlantPhotos(
+                                        context, widget.controller, selected)
+                                    : null,
+                                icon: const Icon(Icons.compare_outlined),
+                                label: Text('Comparar (${selected.length}/2)')),
+                          ]),
+                          const SizedBox(height: 12),
+                          const Text(
+                              'Marca dos fotos para comparar la evolución. Pulsa una imagen para ampliarla.'),
+                          const SizedBox(height: 12),
+                          Expanded(
+                              child: photos.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                          'Todavía no hay fotos fechadas de este ejemplar.'))
+                                  : LayoutBuilder(
+                                      builder: (context, constraints) =>
+                                          GridView.builder(
+                                            gridDelegate:
+                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: max(
+                                                  2,
+                                                  (constraints.maxWidth / 250)
+                                                      .floor()),
+                                              childAspectRatio: .78,
+                                              crossAxisSpacing: 12,
+                                              mainAxisSpacing: 12,
+                                            ),
+                                            itemCount: photos.length,
+                                            itemBuilder: (context, index) {
+                                              final photo = photos[index];
+                                              return Card(
+                                                  clipBehavior: Clip.antiAlias,
+                                                  child: Column(children: [
+                                                    Expanded(
+                                                        child: InkWell(
+                                                            onTap: () =>
+                                                                _comparePlantPhotos(
+                                                                    context,
+                                                                    widget
+                                                                        .controller,
+                                                                    [
+                                                                      photo
+                                                                    ]),
+                                                            child: _PlantHistoryImage(
+                                                                controller: widget
+                                                                    .controller,
+                                                                photo: photo,
+                                                                thumbnail:
+                                                                    true))),
+                                                    Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 10),
+                                                        child: Row(children: [
+                                                          Checkbox(
+                                                              value: _selected
+                                                                  .contains(
+                                                                      photo.id),
+                                                              onChanged: selected
+                                                                              .length ==
+                                                                          2 &&
+                                                                      !_selected
+                                                                          .contains(photo
+                                                                              .id)
+                                                                  ? null
+                                                                  : (value) =>
+                                                                      setState(
+                                                                          () {
+                                                                        if (value ==
+                                                                            true) {
+                                                                          _selected
+                                                                              .add(photo.id);
+                                                                        } else {
+                                                                          _selected
+                                                                              .remove(photo.id);
+                                                                        }
+                                                                      })),
+                                                          Expanded(
+                                                              child: Text(
+                                                                  _shortPlantDate(
+                                                                      photo
+                                                                          .takenAt))),
+                                                          IconButton(
+                                                              tooltip:
+                                                                  'Eliminar foto',
+                                                              onPressed: () =>
+                                                                  _delete(
+                                                                      photo),
+                                                              icon: const Icon(Icons
+                                                                  .delete_outline)),
+                                                        ])),
+                                                    if (photo.notes.isNotEmpty)
+                                                      Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .fromLTRB(10,
+                                                                  0, 10, 10),
+                                                          child: Text(
+                                                              photo.notes,
+                                                              maxLines: 2,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis)),
+                                                  ]));
+                                            },
+                                          ))),
+                        ]);
+                  }),
+            )),
+      );
+}
+
+class _PlantHistoryImage extends StatelessWidget {
+  const _PlantHistoryImage(
+      {required this.controller, required this.photo, this.thumbnail = false});
+  final TodoWorkspace controller;
+  final PlantPhoto photo;
+  final bool thumbnail;
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+        future: controller.plantPhotoAbsolutePath(photo, thumbnail: thumbnail),
+        builder: (context, snapshot) => snapshot.data?.isNotEmpty == true
+            ? Image.file(File(snapshot.data!),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const _MissingPlantImage())
+            : const _MissingPlantImage(),
+      );
+}
+
+Future<void> _comparePlantPhotos(BuildContext context, TodoWorkspace controller,
+        List<PlantPhoto> photos) =>
+    showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+              insetPadding: const EdgeInsets.all(28),
+              child: SizedBox(
+                  width: 1100,
+                  height: 760,
+                  child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(children: [
+                        Row(children: [
+                          Expanded(
+                              child: Text(
+                                  photos.length == 2
+                                      ? 'Comparar evolución'
+                                      : 'Foto del ejemplar',
+                                  style:
+                                      Theme.of(context).textTheme.titleLarge)),
+                          IconButton(
+                              tooltip: 'Cerrar',
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close))
+                        ]),
+                        Expanded(
+                            child: Row(children: [
+                          for (final photo in photos)
+                            Expanded(
+                                child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Column(children: [
+                                      Text(_shortPlantDate(photo.takenAt),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w700)),
+                                      Expanded(
+                                          child: _PlantHistoryImage(
+                                              controller: controller,
+                                              photo: photo)),
+                                      if (photo.notes.isNotEmpty)
+                                        Text(photo.notes,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis),
+                                    ]))),
+                        ])),
+                      ]))),
+            ));
+
+Future<void> _savePlantHistoryPhoto(BuildContext context,
+    TodoWorkspace controller, String plantId, Uint8List bytes) async {
+  var date = DateUtils.dateOnly(DateTime.now());
+  final notes = TextEditingController();
+  var busy = false;
+  String? error;
+  await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+          builder: (context, actualizar) => PopScope(
+                canPop: !busy,
+                child: AlertDialog(
+                  title: const Text('Guardar foto del ejemplar'),
+                  content: SizedBox(
+                      width: 480,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        SizedBox(
+                            height: 180,
+                            child: Image.memory(bytes, fit: BoxFit.contain)),
+                        TextButton.icon(
+                            icon: const Icon(Icons.calendar_today_outlined),
+                            label: Text(_shortPlantDate(date)),
+                            onPressed: busy
+                                ? null
+                                : () async {
+                                    final picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: date,
+                                        firstDate: DateTime(2000),
+                                        lastDate: DateTime.now());
+                                    if (picked != null && context.mounted)
+                                      actualizar(() => date = picked);
+                                  }),
+                        TextField(
+                            controller: notes,
+                            enabled: !busy,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                                labelText: 'Observaciones',
+                                hintText:
+                                    'Hojas nuevas, trasplante, cambios…')),
+                        if (error != null)
+                          Text(error!,
+                              style: const TextStyle(color: Colors.red)),
+                      ])),
+                  actions: [
+                    TextButton(
+                        onPressed: busy ? null : () => Navigator.pop(context),
+                        child: const Text('Cancelar')),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                actualizar(() {
+                                  busy = true;
+                                  error = null;
+                                });
+                                try {
+                                  await controller.addPlantPhoto(plantId, bytes,
+                                      takenAt: date, notes: notes.text);
+                                  if (context.mounted) {
+                                    actualizar(() => busy = false);
+                                    Navigator.pop(context);
+                                  }
+                                } catch (exception) {
+                                  if (context.mounted)
+                                    actualizar(() {
+                                      busy = false;
+                                      error =
+                                          'No se pudo guardar la foto: $exception';
+                                    });
+                                }
+                              },
+                        child: Text(busy ? 'Guardando…' : 'Guardar foto')),
+                  ],
+                ),
+              )));
 }
 
 class _PlantDetailContent extends StatelessWidget {

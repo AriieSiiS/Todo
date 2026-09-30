@@ -29,6 +29,42 @@ void main() {
         enabled: enabled,
       );
 
+  test(
+      'el historial conserva fotos fechadas al editar la ficha o sustituir su imagen',
+      () async {
+    final temp =
+        await Directory.systemTemp.createTemp('todo-historial-planta-');
+    addTearDown(() => temp.delete(recursive: true));
+    final service = PlantAssetService(rootOverride: temp);
+    final controller = TodoWorkspace.createForTest(plantAssets: service);
+    final plant = controller.createPlant(
+        name: 'Mi planta', commonName: 'Ejemplar', scientificName: 'Especie');
+    final image = img.Image(width: 400, height: 400);
+    final bytes = Uint8List.fromList(img.encodePng(image));
+    await controller.importPlantImageBytes(plant.id, bytes);
+    final first = await controller.addPlantPhoto(plant.id, bytes,
+        takenAt: DateTime(2026, 9, 1), notes: 'Hojas nuevas');
+    image.setPixelRgb(0, 0, 255, 0, 0);
+    final other = Uint8List.fromList(img.encodePng(image));
+    final second = await controller.addPlantPhoto(plant.id, other,
+        takenAt: DateTime(2026, 9, 20));
+    await controller.importPlantImageBytes(plant.id, other);
+    controller.updatePlant(plant.copyWith(name: 'Mi planta actualizada'));
+    final current = controller.plantById(plant.id)!;
+    expect(current.photos.map((photo) => photo.id), [second.id, first.id]);
+    expect(Plant.fromJson(current.toJson()).photos.last.notes, 'Hojas nuevas');
+    expect(
+        File(await service.absolutePath(first.imagePath)).existsSync(), isTrue);
+    await controller.removePlantPhoto(plant.id, first.id);
+    expect(File(await service.absolutePath(first.imagePath)).existsSync(),
+        isFalse);
+    expect(File(await service.absolutePath(second.imagePath)).existsSync(),
+        isTrue);
+    expect(controller.plantById(plant.id)!.photos.single.id, second.id);
+    expect(Plant.fromJson(plant.toJson()).photos, isEmpty);
+    controller.dispose();
+  });
+
   test('el snapshot conserva plantas y admite datos anteriores al esquema 10',
       () {
     final instant = DateTime.utc(2026, 9, 22);
@@ -279,5 +315,10 @@ void main() {
     expect(find.text('No tóxica para gatos según una fuente veterinaria.'),
         findsOneWidget);
     expect(find.text('ASPCA'), findsOneWidget);
+    await tester.tap(find.text('Historial visual'));
+    await tester.pumpAndSettle();
+    expect(find.text('Añadir foto'), findsOneWidget);
+    expect(find.text('Pegar foto'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
