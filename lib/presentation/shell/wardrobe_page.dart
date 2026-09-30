@@ -402,9 +402,11 @@ class _WardrobeOutfitsTab extends StatelessWidget {
 }
 
 class _WardrobeOutfitCard extends StatefulWidget {
-  const _WardrobeOutfitCard({required this.controller, required this.outfit});
+  const _WardrobeOutfitCard(
+      {required this.controller, required this.outfit, this.onTap});
   final TodoWorkspace controller;
   final WardrobeOutfit outfit;
+  final VoidCallback? onTap;
 
   @override
   State<_WardrobeOutfitCard> createState() => _WardrobeOutfitCardState();
@@ -422,7 +424,8 @@ class _WardrobeOutfitCardState extends State<_WardrobeOutfitCard> {
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => _showWardrobeOutfit(context, widget.controller, outfit),
+          onTap: widget.onTap ??
+              () => _showWardrobeOutfit(context, widget.controller, outfit),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -465,10 +468,16 @@ class _WardrobeOutfitCardState extends State<_WardrobeOutfitCard> {
                 duration: const Duration(milliseconds: 160),
                 child: ColoredBox(
                   color: Colors.black.withValues(alpha: .16),
-                  child: const Center(
+                  child: Center(
                     child: Chip(
-                      avatar: Icon(Icons.visibility_outlined, size: 18),
-                      label: Text('Ver conjunto'),
+                      avatar: Icon(
+                          widget.onTap == null
+                              ? Icons.visibility_outlined
+                              : Icons.luggage_outlined,
+                          size: 18),
+                      label: Text(widget.onTap == null
+                          ? 'Ver conjunto'
+                          : 'Añadir conjunto'),
                     ),
                   ),
                 ),
@@ -881,6 +890,14 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
             ),
           ],
         )),
+        _HeaderSecondaryButton(
+          label: 'Añadir conjunto',
+          icon: Icons.style_outlined,
+          onPressed: () async {
+            await _showAddPackingOutfit(context, controller, selected.id);
+            if (mounted) setState(() {});
+          },
+        ),
       ]),
       const SizedBox(height: 12),
       Wrap(spacing: 8, runSpacing: 8, children: [
@@ -1023,6 +1040,55 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
       ),
     ]);
   }
+}
+
+Future<void> _showAddPackingOutfit(
+    BuildContext context, TodoWorkspace controller, String listId) async {
+  final outfitId = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+            title: const Text('Añadir un conjunto a la maleta'),
+            content: SizedBox(
+              width: 980,
+              height: 600,
+              child: controller.wardrobeOutfits.isEmpty
+                  ? const Center(
+                      child: Text('Crea un conjunto en la pestaña Conjuntos.'))
+                  : LayoutBuilder(
+                      builder: (context, constraints) => GridView.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount:
+                                  max(2, (constraints.maxWidth / 300).floor()),
+                              childAspectRatio: .73,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            itemCount: controller.wardrobeOutfits.length,
+                            itemBuilder: (context, index) {
+                              final outfit = controller.wardrobeOutfits[index];
+                              return _WardrobeOutfitCard(
+                                  controller: controller,
+                                  outfit: outfit,
+                                  onTap: () =>
+                                      Navigator.pop(context, outfit.id));
+                            },
+                          )),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cerrar'))
+            ],
+          ));
+  if (outfitId == null) return;
+  final count = controller.addWardrobeOutfitToPackingList(listId, outfitId);
+  if (context.mounted)
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(count == 0
+          ? 'Las prendas del conjunto ya están en la maleta o están archivadas.'
+          : 'Se añadieron $count prendas. Las que ya estaban se conservaron.'),
+    ));
 }
 
 class _WardrobeStatsTab extends StatelessWidget {

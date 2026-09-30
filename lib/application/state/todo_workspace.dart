@@ -1090,6 +1090,31 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  int addWardrobeOutfitToPackingList(String listId, String outfitId) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    final outfit =
+        _wardrobeOutfits.where((outfit) => outfit.id == outfitId).firstOrNull;
+    if (index == -1 || outfit == null) return 0;
+    final list = _wardrobePackingLists[index];
+    final included = list.entries.map((entry) => entry.itemId).toSet();
+    final additions = outfit.itemIds
+        .toSet()
+        .where((id) =>
+            !included.contains(id) && wardrobeItemById(id)?.archived == false)
+        .toSet();
+    if (additions.isEmpty) return 0;
+    _wardrobePackingLists[index] = list.copyWith(
+      entries: [
+        ...list.entries,
+        ...additions.map((id) => WardrobePackingEntry(itemId: id))
+      ],
+      discardedItemIds:
+          list.discardedItemIds.where((id) => !additions.contains(id)).toList(),
+    );
+    _commit();
+    return additions.length;
+  }
+
   void discardWardrobePackingItem(String listId, String itemId) {
     final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
     if (index == -1 || wardrobeItemById(itemId) == null) return;
