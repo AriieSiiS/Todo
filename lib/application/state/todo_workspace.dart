@@ -568,8 +568,7 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   List<QuickNote> inboxNotes() {
-    return _notes.where((note) => note.status == NoteStatus.inbox).toList()
-      ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+    return _notes.where((note) => note.status == NoteStatus.inbox).toList();
   }
 
   CategoryModel? categoryById(String id) {
@@ -3087,15 +3086,15 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
-  void reorderCategories(List<String> orderedIds) {
-    final byId = {for (final category in _categories) category.id: category};
-    final ordered = <CategoryModel>[];
+  void reorderNotes(List<String> orderedIds) {
+    final byId = {for (final note in _notes) note.id: note};
+    final ordered = <QuickNote>[];
     for (final id in orderedIds) {
-      final category = byId.remove(id);
-      if (category != null) ordered.add(category);
+      final note = byId.remove(id);
+      if (note != null) ordered.add(note);
     }
     ordered.addAll(byId.values);
-    _categories
+    _notes
       ..clear()
       ..addAll(ordered);
     _commit();

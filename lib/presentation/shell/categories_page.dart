@@ -31,7 +31,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
         children: [
           _ReferenceCategoriesHeader(
             onCreateCategory: () => showCategoryEditor(context, controller),
-            onReorder: _ordenarCategorias,
           ),
           const SizedBox(height: 10),
           _CatalogSearchField(
@@ -149,57 +148,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _selectedCategoryId = null;
     });
   }
-
-  Future<void> _ordenarCategorias() async {
-    final orden = controller.categories.toList();
-    final guardar = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, actualizar) => AlertDialog(
-          title: const Text('Ordenar categorías'),
-          content: SizedBox(
-            width: 480,
-            height: min(480, orden.length * 64).toDouble(),
-            child: ReorderableListView.builder(
-              itemCount: orden.length,
-              onReorder: (origen, destino) => actualizar(() {
-                if (destino > origen) destino--;
-                orden.insert(destino, orden.removeAt(origen));
-              }),
-              itemBuilder: (context, index) => ListTile(
-                key: ValueKey(orden[index].id),
-                leading: Icon(orden[index].icon, color: orden[index].color),
-                title: Text(orden[index].name),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Guardar orden')),
-          ],
-        ),
-      ),
-    );
-    if (guardar == true) {
-      controller
-          .reorderCategories(orden.map((category) => category.id).toList());
-      if (mounted) setState(() {});
-    }
-  }
 }
 
 class _ReferenceCategoriesHeader extends StatelessWidget {
   const _ReferenceCategoriesHeader({
     required this.onCreateCategory,
-    required this.onReorder,
   });
 
   final VoidCallback onCreateCategory;
-  final VoidCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -210,18 +166,11 @@ class _ReferenceCategoriesHeader extends StatelessWidget {
         subtitle: '',
         compact: true,
         pinTrailingToEdge: true,
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          _HeaderSecondaryButton(
-              label: 'Ordenar',
-              icon: Icons.swap_vert_rounded,
-              onPressed: onReorder),
-          const SizedBox(width: 10),
-          _HeaderActionButton(
-            label: 'Nueva categoría',
-            icon: Icons.add_rounded,
-            onPressed: onCreateCategory,
-          ),
-        ]),
+        trailing: _HeaderActionButton(
+          label: 'Nueva categoría',
+          icon: Icons.add_rounded,
+          onPressed: onCreateCategory,
+        ),
       ),
     );
   }
