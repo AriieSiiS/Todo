@@ -2844,6 +2844,20 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void reorderCategories(List<String> orderedIds) {
+    final byId = {for (final category in _categories) category.id: category};
+    final ordered = <CategoryModel>[];
+    for (final id in orderedIds) {
+      final category = byId.remove(id);
+      if (category != null) ordered.add(category);
+    }
+    ordered.addAll(byId.values);
+    _categories
+      ..clear()
+      ..addAll(ordered);
+    _commit();
+  }
+
   void toggleCategory(String categoryId) {
     final index =
         _categories.indexWhere((category) => category.id == categoryId);
