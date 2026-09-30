@@ -12,6 +12,7 @@ class TaskModel {
     this.categoryIds = const <String>[],
     this.projectIds = const <String>[],
     this.scheduledAt,
+    this.timeBlockMinutes,
     this.priority = TaskPriority.medium,
     this.status = TaskStatus.active,
     this.recurrence = const RecurrenceRule(),
@@ -37,6 +38,7 @@ class TaskModel {
   final List<String> categoryIds;
   final List<String> projectIds;
   final DateTime? scheduledAt;
+  final int? timeBlockMinutes;
   final TaskPriority priority;
   final TaskStatus status;
   final RecurrenceRule recurrence;
@@ -68,6 +70,8 @@ class TaskModel {
     List<String>? projectIds,
     DateTime? scheduledAt,
     bool clearScheduledAt = false,
+    int? timeBlockMinutes,
+    bool clearTimeBlock = false,
     TaskPriority? priority,
     TaskStatus? status,
     RecurrenceRule? recurrence,
@@ -99,6 +103,8 @@ class TaskModel {
       categoryIds: categoryIds ?? this.categoryIds,
       projectIds: projectIds ?? this.projectIds,
       scheduledAt: clearScheduledAt ? null : scheduledAt ?? this.scheduledAt,
+      timeBlockMinutes:
+          clearTimeBlock ? null : timeBlockMinutes ?? this.timeBlockMinutes,
       priority: priority ?? this.priority,
       status: status ?? this.status,
       recurrence: recurrence ?? this.recurrence,
@@ -136,6 +142,7 @@ class TaskModel {
       'categoryIds': categoryIds,
       'projectIds': projectIds,
       'scheduledAt': scheduledAt?.toIso8601String(),
+      'timeBlockMinutes': timeBlockMinutes,
       'priority': priority.name,
       'status': status.name,
       'recurrence': recurrence.toJson(),
@@ -172,6 +179,7 @@ class TaskModel {
       scheduledAt: json['scheduledAt'] == null
           ? null
           : DateTime.tryParse(json['scheduledAt'] as String),
+      timeBlockMinutes: (json['timeBlockMinutes'] as num?)?.toInt(),
       priority: enumByName(TaskPriority.values, json['priority'] as String?,
           TaskPriority.medium),
       status: enumByName(

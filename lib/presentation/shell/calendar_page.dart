@@ -42,6 +42,10 @@ class _CalendarPageState extends State<CalendarPage> {
         children: [
           _CalendarTopHeader(
             mode: _mode,
+            onReserve: () async {
+              await _showReserveTaskBlock(context, controller, _selectedDay);
+              if (mounted) setState(() {});
+            },
             onModeSelected: (mode) {
               setState(() {
                 if (mode == _CalendarViewMode.week &&
@@ -169,18 +173,176 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 }
 
+Future<void> _showReserveTaskBlock(BuildContext context,
+    TodoWorkspace controller, DateTime initialStart) async {
+  final tasks = controller.tasks
+      .where((task) => !task.isSubtask && task.status == TaskStatus.active)
+      .toList();
+  if (tasks.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('Crea una tarea antes de reservar un bloque.')),
+    );
+    return;
+  }
+  var taskId = tasks.first.id;
+  var start = initialStart.hour == 0 && initialStart.minute == 0
+      ? DateTime(initialStart.year, initialStart.month, initialStart.day, 10)
+      : initialStart;
+  var minutes = tasks.first.timeBlockMinutes ?? 60;
+  if (tasks.first.timeBlockMinutes != null && tasks.first.scheduledAt != null) {
+    start = tasks.first.scheduledAt!;
+  }
+  await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+            builder: (context, actualizar) {
+              final conflicts = controller.calendarConflicts(
+                start: start,
+                end: start.add(Duration(minutes: minutes)),
+                excludeTaskId: taskId,
+              );
+              return AlertDialog(
+                title: const Text('Reservar tiempo para una tarea'),
+                content: SizedBox(
+                    width: 480,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: taskId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Tarea'),
+                        items: tasks
+                            .map((task) => DropdownMenuItem(
+                                value: task.id,
+                                child: Text(task.title,
+                                    overflow: TextOverflow.ellipsis)))
+                            .toList(),
+                        onChanged: (value) => actualizar(() {
+                          taskId = value ?? taskId;
+                          final task =
+                              tasks.firstWhere((task) => task.id == taskId);
+                          minutes = task.timeBlockMinutes ?? 60;
+                          if (task.timeBlockMinutes != null &&
+                              task.scheduledAt != null)
+                            start = task.scheduledAt!;
+                        }),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(
+                            child: OutlinedButton.icon(
+                          icon: const Icon(Icons.calendar_today_outlined),
+                          label:
+                              Text('${start.day}/${start.month}/${start.year}'),
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                                context: context,
+                                initialDate: start,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100));
+                            if (date != null && context.mounted)
+                              actualizar(() => start = DateTime(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                  start.hour,
+                                  start.minute));
+                          },
+                        )),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.schedule),
+                          label: Text(_timeLabel(start)),
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(start));
+                            if (time != null && context.mounted)
+                              actualizar(() => start = DateTime(
+                                  start.year,
+                                  start.month,
+                                  start.day,
+                                  time.hour,
+                                  time.minute));
+                          },
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        initialValue: minutes,
+                        decoration:
+                            const InputDecoration(labelText: 'Duración'),
+                        items: ({
+                          15,
+                          30,
+                          45,
+                          60,
+                          90,
+                          120,
+                          180,
+                          240,
+                          480,
+                          minutes
+                        }.toList()
+                              ..sort())
+                            .map((value) => DropdownMenuItem(
+                                value: value, child: Text('$value minutos')))
+                            .toList(),
+                        onChanged: (value) =>
+                            actualizar(() => minutes = value ?? minutes),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                          'Hasta las ${_timeLabel(start.add(Duration(minutes: minutes)))}'),
+                      if (conflicts.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                            'Se solapa con ${conflicts.join(', ')}. Puedes ajustar la hora o guardar igualmente.',
+                            style: const TextStyle(color: Color(0xFFB05A2C))),
+                      ],
+                    ])),
+                actions: [
+                  if (tasks
+                          .firstWhere((task) => task.id == taskId)
+                          .timeBlockMinutes !=
+                      null)
+                    TextButton(
+                        onPressed: () {
+                          controller.updateTask(tasks
+                              .firstWhere((task) => task.id == taskId)
+                              .copyWith(clearTimeBlock: true));
+                          Navigator.pop(dialogContext);
+                        },
+                        child: const Text('Quitar bloque')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancelar')),
+                  FilledButton(
+                      onPressed: () {
+                        controller.reserveTaskTimeBlock(taskId, start, minutes);
+                        Navigator.pop(dialogContext);
+                      },
+                      child: const Text('Reservar')),
+                ],
+              );
+            },
+          ));
+}
+
 class _CalendarTopHeader extends StatelessWidget {
   const _CalendarTopHeader({
     required this.mode,
     required this.onModeSelected,
     required this.onCreate,
     required this.onTodayPressed,
+    required this.onReserve,
   });
 
   final _CalendarViewMode mode;
   final ValueChanged<_CalendarViewMode> onModeSelected;
   final VoidCallback onCreate;
   final VoidCallback onTodayPressed;
+  final VoidCallback onReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -194,11 +356,18 @@ class _CalendarTopHeader extends StatelessWidget {
             subtitle: '',
             compact: true,
             pinTrailingToEdge: true,
-            trailing: _HeaderActionButton(
-              label: 'Nueva tarea o evento',
-              icon: Icons.add_rounded,
-              onPressed: onCreate,
-            ),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              _HeaderSecondaryButton(
+                  label: 'Reservar bloque',
+                  icon: Icons.schedule_rounded,
+                  onPressed: onReserve),
+              const SizedBox(width: 10),
+              _HeaderActionButton(
+                label: 'Nueva tarea o evento',
+                icon: Icons.add_rounded,
+                onPressed: onCreate,
+              ),
+            ]),
           ),
         ),
         const SizedBox(height: 10),
@@ -675,6 +844,11 @@ class _CalendarMonthEntryChip extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (entry.conflicts.isNotEmpty)
+                  Tooltip(
+                      message: 'Se solapa con ${entry.conflicts.join(', ')}',
+                      child: const Icon(Icons.warning_amber_rounded,
+                          size: 16, color: Color(0xFFB05A2C))),
               ],
             ),
           ),
@@ -782,6 +956,8 @@ class _CalendarMonthSidePanel extends StatelessWidget {
     final completedTasks =
         dayEntries.where((entry) => entry.isTask && entry.isCompleted).toList();
     final events = dayEntries.where((entry) => !entry.isTask).toList();
+    final conflicts =
+        dayEntries.where((entry) => entry.conflicts.isNotEmpty).toList();
     final upcoming = entries
         .where((entry) => entry.start.isAfter(_endOfDay(selectedDay)))
         .where((entry) => !entry.isCompleted)
@@ -875,6 +1051,12 @@ class _CalendarMonthSidePanel extends StatelessWidget {
                                 .toList(),
                           ),
                   ),
+                  if (conflicts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                        'Hay solapamientos: ${conflicts.map((entry) => entry.title).join(', ')}.',
+                        style: const TextStyle(color: Color(0xFFB05A2C))),
+                  ],
                   const SizedBox(height: 18),
                   _CalendarSideSection(
                     title: 'Próximos',
@@ -1363,31 +1545,46 @@ class _CalendarHourScheduleState extends State<_CalendarHourSchedule> {
                           DateTime(day.year, day.month, day.day, hora, minuto);
                       final elementos = widget.entries
                           .where((entry) =>
-                              _sameDay(entry.start, day) &&
-                              entry.start.hour == hora &&
-                              entry.start.minute ~/ 30 == minuto ~/ 30)
+                              !entry.allDay &&
+                              (entry.isTimeBlock && !entry.isCompleted
+                                  ? entry.start.isBefore(destino
+                                          .add(const Duration(minutes: 30))) &&
+                                      entry.end.isAfter(destino)
+                                  : _sameDay(entry.start, day) &&
+                                      entry.start.hour == hora &&
+                                      entry.start.minute ~/ 30 == minuto ~/ 30))
                           .toList();
                       return _CalendarDropZone(
                         controller: widget.controller,
                         destination: destino,
                         onMoved: () => widget.onSelectDay(day),
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                              border: Border(
-                            top: BorderSide(color: Color(0xFFE8DCCB)),
-                            right: BorderSide(color: Color(0xFFE8DCCB)),
-                          )),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (elementos.isNotEmpty)
-                                  _CalendarMonthEntryChip(
-                                      entry: elementos.first),
-                                if (elementos.length > 1)
-                                  Text('+${elementos.length - 1} más',
-                                      style: const TextStyle(fontSize: 11)),
-                              ]),
+                        child: InkWell(
+                          onDoubleTap: () async {
+                            await _showReserveTaskBlock(
+                                context, widget.controller, destino);
+                            widget.onSelectDay(day);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                                color: elementos.isEmpty
+                                    ? null
+                                    : elementos.first.background,
+                                border: const Border(
+                                  top: BorderSide(color: Color(0xFFE8DCCB)),
+                                  right: BorderSide(color: Color(0xFFE8DCCB)),
+                                )),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (elementos.isNotEmpty)
+                                    _CalendarMonthEntryChip(
+                                        entry: elementos.first),
+                                  if (elementos.length > 1)
+                                    Text('+${elementos.length - 1} más',
+                                        style: const TextStyle(fontSize: 11)),
+                                ]),
+                          ),
                         ),
                       );
                     })),
@@ -2040,6 +2237,8 @@ class _CalendarEntry {
     this.categoryLabel,
     this.projectLabel,
     this.trailingLabel,
+    this.isTimeBlock = false,
+    this.conflicts = const [],
   });
 
   final String id;
@@ -2058,6 +2257,8 @@ class _CalendarEntry {
   final String? categoryLabel;
   final String? projectLabel;
   final String? trailingLabel;
+  final bool isTimeBlock;
+  final List<String> conflicts;
 }
 
 List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
@@ -2087,7 +2288,15 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
       id: task.id,
       title: task.title,
       start: scheduled,
-      end: scheduled.add(const Duration(hours: 1)),
+      end: scheduled.add(Duration(minutes: task.timeBlockMinutes ?? 60)),
+      isTimeBlock: (task.timeBlockMinutes ?? 0) > 0,
+      conflicts:
+          (task.timeBlockMinutes ?? 0) > 0 && task.status == TaskStatus.active
+              ? controller.calendarConflicts(
+                  start: scheduled,
+                  end: scheduled.add(Duration(minutes: task.timeBlockMinutes!)),
+                  excludeTaskId: task.id)
+              : const [],
       allDay: false,
       isTask: true,
       isCompleted: task.status == TaskStatus.completed,
@@ -2121,6 +2330,15 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
       title: event.title,
       start: event.startAt,
       end: event.endAt,
+      isTimeBlock: !isAllDay,
+      conflicts: isAllDay
+          ? const []
+          : controller.calendarConflicts(
+              start: event.startAt,
+              end: event.endAt,
+              excludeEventId: event.id,
+              excludeTaskId: event.originTaskId,
+            ),
       allDay: isAllDay,
       isTask: false,
       isCompleted: false,
@@ -2143,6 +2361,7 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
 
 bool _isTaskWithoutVisibleTime(_CalendarEntry entry) {
   return entry.isTask &&
+      !entry.isTimeBlock &&
       entry.start.hour == 0 &&
       entry.start.minute == 0 &&
       entry.start.second == 0 &&
@@ -2157,6 +2376,8 @@ String _entryTimeLabel(_CalendarEntry entry) {
   if (_isTaskWithoutVisibleTime(entry)) {
     return '–';
   }
+  if (entry.isTimeBlock)
+    return '${_timeLabel(entry.start)}–${_timeLabel(entry.end)}';
   return _timeLabel(entry.start);
 }
 
