@@ -621,6 +621,41 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
+  testWidgets(
+      'crear un conjunto usa tarjetas y conserva la selección al buscar',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    final shirt =
+        controller.createWardrobeItem(name: 'Camisa azul', category: 'Camisas');
+    final trousers = controller.createWardrobeItem(
+        name: 'Pantalón beige', category: 'Pantalones');
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        theme: buildTodoTheme(),
+        home: Scaffold(body: WardrobePage(controller: controller))));
+    await tester.tap(find.text('Conjuntos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nuevo conjunto'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Nombre'), 'Viaje cómodo');
+    await tester.tap(find.text('Camisa azul'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Buscar prendas para añadir'), 'beige');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pantalón beige'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crear'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.wardrobeOutfits.single.itemIds.toSet(),
+        {shirt.id, trousers.id});
+    expect(controller.wardrobeItems, hasLength(2));
+  });
+
   testWidgets('al pulsar una prenda abre su detalle visual antes de editar',
       (tester) async {
     final controller = TodoWorkspace.createForTest();
