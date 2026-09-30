@@ -2411,6 +2411,47 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
+  void reserveTaskTimeBlock(String taskId, DateTime start, int minutes) {
+    if (minutes < 1 || minutes > 1440) {
+      throw ArgumentError('La duración debe estar entre 1 y 1440 minutos.');
+    }
+    final task = _tasks.where((task) => task.id == taskId).firstOrNull;
+    if (task == null) return;
+    updateTask(task.copyWith(scheduledAt: start, timeBlockMinutes: minutes));
+  }
+
+  List<String> calendarConflicts({
+    required DateTime start,
+    required DateTime end,
+    String? excludeTaskId,
+    String? excludeEventId,
+  }) {
+    bool overlaps(DateTime from, DateTime to) =>
+        from.isBefore(end) && to.isAfter(start);
+    final conflicts = <String>[];
+    for (final task in _tasks) {
+      if (task.id == excludeTaskId ||
+          task.status != TaskStatus.active ||
+          task.scheduledAt == null ||
+          (task.timeBlockMinutes ?? 0) <= 0) continue;
+      if (overlaps(task.scheduledAt!,
+          task.scheduledAt!.add(Duration(minutes: task.timeBlockMinutes!)))) {
+        conflicts.add(task.title);
+      }
+    }
+    for (final event in _calendarEvents) {
+      if (event.id == excludeEventId ||
+          event.originTaskId == excludeTaskId && excludeTaskId != null)
+        continue;
+      final allDay = event.startAt.hour == 0 &&
+          event.startAt.minute == 0 &&
+          event.endAt.difference(event.startAt) >= const Duration(hours: 24);
+      if (!allDay && overlaps(event.startAt, event.endAt))
+        conflicts.add(event.title);
+    }
+    return conflicts;
+  }
+
   void deleteTask(String taskId) {
     _tasks.removeWhere(
         (task) => task.id == taskId || task.parentTaskId == taskId);
