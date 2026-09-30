@@ -282,29 +282,34 @@ class WardrobePackingList {
       required this.name,
       required this.startDate,
       required this.endDate,
-      this.entries = const <WardrobePackingEntry>[]});
+      this.entries = const <WardrobePackingEntry>[],
+      this.discardedItemIds = const <String>[]});
   final String id;
   final String name;
   final DateTime startDate;
   final DateTime endDate;
   final List<WardrobePackingEntry> entries;
+  final List<String> discardedItemIds;
   WardrobePackingList copyWith(
           {String? name,
           DateTime? startDate,
           DateTime? endDate,
-          List<WardrobePackingEntry>? entries}) =>
+          List<WardrobePackingEntry>? entries,
+          List<String>? discardedItemIds}) =>
       WardrobePackingList(
           id: id,
           name: name ?? this.name,
           startDate: startDate ?? this.startDate,
           endDate: endDate ?? this.endDate,
-          entries: entries ?? this.entries);
+          entries: entries ?? this.entries,
+          discardedItemIds: discardedItemIds ?? this.discardedItemIds);
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
         'name': name,
         'startDate': startDate.toIso8601String(),
         'endDate': endDate.toIso8601String(),
-        'entries': entries.map((entry) => entry.toJson()).toList()
+        'entries': entries.map((entry) => entry.toJson()).toList(),
+        'discardedItemIds': discardedItemIds
       };
   factory WardrobePackingList.fromJson(Map<String, dynamic> json) =>
       WardrobePackingList(
@@ -317,7 +322,8 @@ class WardrobePackingList {
           entries: (json['entries'] as List<dynamic>? ?? const <dynamic>[])
               .map((value) => WardrobePackingEntry.fromJson(
                   (value as Map).cast<String, dynamic>()))
-              .toList());
+              .toList(),
+          discardedItemIds: stringList(json['discardedItemIds']));
 }
 
 class WardrobeImportItem {

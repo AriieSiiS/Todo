@@ -193,6 +193,60 @@ void main() {
     );
   });
 
+  test('cada maleta separa prendas disponibles, incluidas y descartadas', () {
+    final controller = TodoWorkspace.createForTest();
+    final shirt = controller.createWardrobeItem(
+      name: 'Camisa blanca',
+      category: 'Camisas',
+    );
+    final trousers = controller.createWardrobeItem(
+      name: 'Pantalón azul',
+      category: 'Pantalones',
+    );
+    final first = controller.createWardrobePackingList(
+      name: 'Viaje corto',
+      startDate: DateTime(2026, 9, 29),
+      endDate: DateTime(2026, 10, 1),
+    );
+    final second = controller.createWardrobePackingList(
+      name: 'Otro viaje',
+      startDate: DateTime(2026, 10, 2),
+      endDate: DateTime(2026, 10, 5),
+    );
+
+    controller.addWardrobePackingItem(first.id, shirt.id);
+    controller.addWardrobePackingItem(first.id, shirt.id);
+    controller.discardWardrobePackingItem(first.id, trousers.id);
+    var current = controller.wardrobePackingLists.first;
+    expect(current.entries.map((entry) => entry.itemId), [shirt.id]);
+    expect(current.discardedItemIds, [trousers.id]);
+    expect(controller.wardrobePackingLists.last.entries, isEmpty);
+    expect(controller.wardrobePackingLists.last.discardedItemIds, isEmpty);
+    expect(controller.wardrobeItems, hasLength(2));
+
+    final decoded = WardrobePackingList.fromJson(current.toJson());
+    expect(decoded.discardedItemIds, [trousers.id]);
+    expect(
+        WardrobePackingList.fromJson({
+          'id': second.id,
+          'name': second.name,
+        }).discardedItemIds,
+        isEmpty);
+
+    controller.restoreWardrobePackingItem(first.id, trousers.id);
+    controller.removeWardrobePackingItem(first.id, shirt.id);
+    current = controller.wardrobePackingLists.first;
+    expect(current.entries, isEmpty);
+    expect(current.discardedItemIds, isEmpty);
+    controller.discardWardrobePackingItem(first.id, shirt.id);
+    controller.addWardrobePackingItem(first.id, shirt.id);
+    expect(controller.wardrobePackingLists.first.discardedItemIds, isEmpty);
+    controller.discardWardrobePackingItem(first.id, trousers.id);
+    controller.deleteWardrobeItem(trousers.id);
+    expect(controller.wardrobeItems, hasLength(1));
+    expect(controller.wardrobePackingLists.first.discardedItemIds, isEmpty);
+  });
+
   test('el servicio prepara y aprueba un lote PNG transparente', () async {
     final temp = await Directory.systemTemp.createTemp('todo-wardrobe-test-');
     addTearDown(() => temp.delete(recursive: true));
@@ -391,6 +445,63 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Importar ropa'), findsOneWidget);
     expect(find.text('Importar lote desde carpeta'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Maletas permite añadir, quitar, descartar y recuperar desde tarjetas',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    controller.createWardrobeItem(name: 'Camisa blanca', category: 'Camisas');
+    controller.createWardrobeItem(
+        name: 'Pantalón azul', category: 'Pantalones');
+    controller.createWardrobePackingList(
+      name: 'Viaje corto',
+      startDate: DateTime(2026, 9, 29),
+      endDate: DateTime(2026, 10, 1),
+    );
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(
+          body: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => WardrobePage(controller: controller),
+      )),
+    ));
+    await tester.tap(find.text('Maletas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Viaje corto'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Añadir a la maleta'), findsNWidgets(2));
+    expect(find.byTooltip('Descartar para este viaje'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Añadir a la maleta').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Añadir a la maleta'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('packing-view-included')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Quitar de la maleta'), findsOneWidget);
+    await tester.tap(find.byTooltip('Quitar de la maleta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('packing-view-available')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Añadir a la maleta'), findsNWidgets(2));
+
+    await tester.tap(find.byTooltip('Descartar para este viaje').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Descartar para este viaje'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('packing-view-discarded')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Volver a disponibles'), findsOneWidget);
+    await tester.tap(find.byTooltip('Volver a disponibles'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('packing-view-available')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Añadir a la maleta'), findsNWidgets(2));
   });
 
   testWidgets('editar conjunto mantiene selección y ofrece búsqueda y filtros',

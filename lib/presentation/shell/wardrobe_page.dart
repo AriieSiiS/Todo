@@ -220,33 +220,52 @@ class _WardrobePageState extends State<WardrobePage> {
                       ? 'Añade una prenda o importa un lote preparado por Codex.'
                       : 'Prueba otra categoría o cambia la búsqueda.',
                 )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns =
-                        max(2, (constraints.maxWidth / 220).floor());
-                    return GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        childAspectRatio: .72,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) => _WardrobeItemCard(
-                          controller: controller, item: items[index]),
-                    );
-                  },
-                ),
+              : _WardrobeItemsGrid(controller: controller, items: items),
         ),
       ],
     );
   }
 }
 
+class _WardrobeItemsGrid extends StatelessWidget {
+  const _WardrobeItemsGrid({
+    required this.controller,
+    required this.items,
+    this.actionsForItem,
+  });
+
+  final TodoWorkspace controller;
+  final List<WardrobeItem> items;
+  final List<Widget> Function(WardrobeItem)? actionsForItem;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) => GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: max(2, (constraints.maxWidth / 220).floor()),
+            childAspectRatio: .72,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) => _WardrobeItemCard(
+            controller: controller,
+            item: items[index],
+            actions: actionsForItem?.call(items[index]),
+          ),
+        ),
+      );
+}
+
 class _WardrobeItemCard extends StatelessWidget {
-  const _WardrobeItemCard({required this.controller, required this.item});
+  const _WardrobeItemCard({
+    required this.controller,
+    required this.item,
+    this.actions,
+  });
   final TodoWorkspace controller;
   final WardrobeItem item;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -280,15 +299,21 @@ class _WardrobeItemCard extends StatelessWidget {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: IconButton.filledTonal(
-                      tooltip: item.favorite
-                          ? 'Quitar de favoritos'
-                          : 'Añadir a favoritos',
-                      onPressed: () =>
-                          controller.toggleWardrobeFavorite(item.id),
-                      icon: Icon(item.favorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: actions ??
+                          [
+                            IconButton.filledTonal(
+                              tooltip: item.favorite
+                                  ? 'Quitar de favoritos'
+                                  : 'Añadir a favoritos',
+                              onPressed: () =>
+                                  controller.toggleWardrobeFavorite(item.id),
+                              icon: Icon(item.favorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded),
+                            ),
+                          ],
                     ),
                   ),
                 ],
@@ -706,51 +731,289 @@ class _WardrobeLaundryTab extends StatelessWidget {
   }
 }
 
-class _WardrobePackingTab extends StatelessWidget {
+class _WardrobePackingTab extends StatefulWidget {
   const _WardrobePackingTab({required this.controller});
   final TodoWorkspace controller;
+
+  @override
+  State<_WardrobePackingTab> createState() => _WardrobePackingTabState();
+}
+
+class _WardrobePackingTabState extends State<_WardrobePackingTab> {
+  String? _selectedListId;
+  String _query = '';
+  String? _category;
+  int _view = 0;
+
+  TodoWorkspace get controller => widget.controller;
+
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Align(
+    final selected = controller.wardrobePackingLists
+        .where((list) => list.id == _selectedListId)
+        .firstOrNull;
+    if (selected == null) {
+      return Column(children: [
+        Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
-              onPressed: () => _showCreatePackingList(context, controller),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Nueva maleta'))),
-      const SizedBox(height: 12),
-      Expanded(
+            onPressed: () async {
+              final created = await _showCreatePackingList(context, controller);
+              if (created != null && mounted) {
+                setState(() {
+                  _selectedListId = created.id;
+                  _view = 0;
+                  _query = '';
+                  _category = null;
+                });
+              }
+            },
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Nueva maleta'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
           child: controller.wardrobePackingLists.isEmpty
               ? const _WardrobeEmpty(
                   icon: Icons.luggage_outlined,
                   title: 'No hay viajes preparados',
                   subtitle:
-                      'Crea una maleta y añade las prendas que quieres llevar.')
+                      'Crea una maleta y añade las prendas que quieres llevar.',
+                )
               : ListView(
                   children: controller.wardrobePackingLists
-                      .map((list) => ExpansionTile(
-                          title: Text(list.name),
-                          subtitle: Text(
-                              '${list.startDate.day}/${list.startDate.month} – ${list.endDate.day}/${list.endDate.month} · ${list.entries.where((entry) => entry.packed).length}/${list.entries.length} preparadas'),
-                          trailing: IconButton(
-                              icon: const Icon(Icons.add_rounded),
-                              tooltip: 'Añadir prenda',
-                              onPressed: controller.wardrobeItems.isEmpty
-                                  ? null
-                                  : () => _showAddPackingItem(
-                                      context, controller, list)),
-                          children: list.entries.map((entry) {
-                            final item =
-                                controller.wardrobeItemById(entry.itemId);
-                            return CheckboxListTile(
-                                value: entry.packed,
-                                onChanged: (_) =>
-                                    controller.toggleWardrobePackingItem(
-                                        list.id, entry.itemId),
-                                title: Text(item?.name ?? 'Prenda eliminada'),
-                                subtitle: Text('Cantidad: ${entry.quantity}'));
-                          }).toList()))
-                      .toList()))
+                      .map((list) => Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.luggage_outlined),
+                              title: Text(list.name),
+                              subtitle: Text(
+                                '${list.startDate.day}/${list.startDate.month} – ${list.endDate.day}/${list.endDate.month} · ${list.entries.length} prendas · ${list.entries.where((entry) => entry.packed).length} preparadas',
+                              ),
+                              trailing: const Icon(Icons.chevron_right_rounded),
+                              onTap: () => setState(() {
+                                _selectedListId = list.id;
+                                _view = 0;
+                                _query = '';
+                                _category = null;
+                              }),
+                            ),
+                          ))
+                      .toList(),
+                ),
+        ),
+      ]);
+    }
+
+    final includedIds = selected.entries.map((entry) => entry.itemId).toSet();
+    final discardedIds = selected.discardedItemIds.toSet();
+    final allItems =
+        controller.wardrobeItems.where((item) => !item.archived).toList();
+    final availableCount = allItems
+        .where((item) =>
+            !includedIds.contains(item.id) && !discardedIds.contains(item.id))
+        .length;
+    final includedCount =
+        allItems.where((item) => includedIds.contains(item.id)).length;
+    final discardedCount =
+        allItems.where((item) => discardedIds.contains(item.id)).length;
+    final visibleGroup = allItems
+        .where((item) => switch (_view) {
+              0 => !includedIds.contains(item.id) &&
+                  !discardedIds.contains(item.id),
+              1 => includedIds.contains(item.id),
+              _ => discardedIds.contains(item.id),
+            })
+        .toList();
+    final categories = visibleGroup
+        .map((item) => item.category.trim())
+        .where((category) => category.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort(WardrobeTaxonomy.compareCategories);
+    final query = _query.trim().toLowerCase();
+    final items = visibleGroup.where((item) {
+      if (_category != null && item.category != _category) return false;
+      if (query.isEmpty) return true;
+      return <String>[
+        item.name,
+        item.category,
+        item.material,
+        ...item.colors,
+        ...item.tags,
+        ...item.seasons,
+        ...item.occasions,
+      ].join(' ').toLowerCase().contains(query);
+    }).toList()
+      ..sort((left, right) {
+        if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
+        final categoryOrder = WardrobeTaxonomy.compareCategories(
+          left.category,
+          right.category,
+        );
+        if (categoryOrder != 0) return categoryOrder;
+        return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+      });
+
+    return Column(children: [
+      Row(children: [
+        IconButton(
+          tooltip: 'Volver a maletas',
+          onPressed: () => setState(() => _selectedListId = null),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+            child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(selected.name, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              '${selected.entries.where((entry) => entry.packed).length} de ${selected.entries.length} prendas preparadas',
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+          ],
+        )),
+      ]),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        _FilterPill(
+          key: const ValueKey('packing-view-available'),
+          label: 'Disponibles ($availableCount)',
+          selected: _view == 0,
+          onTap: () => setState(() {
+            _view = 0;
+            _category = null;
+          }),
+        ),
+        _FilterPill(
+          key: const ValueKey('packing-view-included'),
+          label: 'En la maleta ($includedCount)',
+          selected: _view == 1,
+          onTap: () => setState(() {
+            _view = 1;
+            _category = null;
+          }),
+        ),
+        _FilterPill(
+          key: const ValueKey('packing-view-discarded'),
+          label: 'Descartadas ($discardedCount)',
+          selected: _view == 2,
+          onTap: () => setState(() {
+            _view = 2;
+            _category = null;
+          }),
+        ),
+      ]),
+      const SizedBox(height: 10),
+      _CatalogSearchField(
+        key: ValueKey('packing-search-${selected.id}'),
+        label: 'Buscar ropa',
+        hint: 'Pantalón beige, zapatillas, camiseta granate…',
+        onChanged: (value) => setState(() => _query = value),
+      ),
+      const SizedBox(height: 10),
+      SizedBox(
+        height: 40,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: categories.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 7),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return _FilterPill(
+                label: 'Todo (${visibleGroup.length})',
+                selected: _category == null,
+                onTap: () => setState(() => _category = null),
+              );
+            }
+            final category = categories[index - 1];
+            return _FilterPill(
+              label:
+                  '$category (${visibleGroup.where((item) => item.category == category).length})',
+              selected: _category == category,
+              onTap: () => setState(() => _category = category),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 10),
+      Expanded(
+        child: items.isEmpty
+            ? _WardrobeEmpty(
+                icon: _view == 1
+                    ? Icons.luggage_outlined
+                    : Icons.search_off_rounded,
+                title: query.isNotEmpty || _category != null
+                    ? 'No hay prendas con estos filtros'
+                    : switch (_view) {
+                        0 => 'No quedan prendas disponibles',
+                        1 => 'La maleta está vacía',
+                        _ => 'No hay prendas descartadas',
+                      },
+                subtitle: query.isNotEmpty || _category != null
+                    ? 'Prueba otra categoría o cambia la búsqueda.'
+                    : switch (_view) {
+                        0 =>
+                          'Puedes recuperar prendas desde Descartadas o quitar alguna de la maleta.',
+                        1 => 'Añade prendas desde Disponibles.',
+                        _ =>
+                          'Descarta prendas desde Disponibles para ocultarlas de este viaje.',
+                      },
+              )
+            : _WardrobeItemsGrid(
+                controller: controller,
+                items: items,
+                actionsForItem: (item) => switch (_view) {
+                  0 => [
+                      IconButton.filledTonal(
+                        tooltip: 'Añadir a la maleta',
+                        icon: const Icon(Icons.luggage_rounded),
+                        onPressed: () => controller.addWardrobePackingItem(
+                            selected.id, item.id),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.filledTonal(
+                        tooltip: 'Descartar para este viaje',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => controller.discardWardrobePackingItem(
+                            selected.id, item.id),
+                      ),
+                    ],
+                  1 => [
+                      IconButton.filledTonal(
+                        tooltip: selected.entries
+                                .firstWhere((entry) => entry.itemId == item.id)
+                                .packed
+                            ? 'Marcar como pendiente'
+                            : 'Marcar como preparada',
+                        icon: Icon(selected.entries
+                                .firstWhere((entry) => entry.itemId == item.id)
+                                .packed
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded),
+                        onPressed: () => controller.toggleWardrobePackingItem(
+                            selected.id, item.id),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.filledTonal(
+                        tooltip: 'Quitar de la maleta',
+                        icon: const Icon(Icons.remove_circle_outline_rounded),
+                        onPressed: () => controller.removeWardrobePackingItem(
+                            selected.id, item.id),
+                      ),
+                    ],
+                  _ => [
+                      IconButton.filledTonal(
+                        tooltip: 'Volver a disponibles',
+                        icon: const Icon(Icons.undo_rounded),
+                        onPressed: () => controller.restoreWardrobePackingItem(
+                            selected.id, item.id),
+                      ),
+                    ],
+                },
+              ),
+      ),
     ]);
   }
 }
@@ -2537,7 +2800,7 @@ Future<void> _showPlanDay(
   }
 }
 
-Future<void> _showCreatePackingList(
+Future<WardrobePackingList?> _showCreatePackingList(
     BuildContext context, TodoWorkspace controller) async {
   final name = TextEditingController();
   final result = await showDialog<bool>(
@@ -2558,31 +2821,12 @@ Future<void> _showCreatePackingList(
                     child: const Text('Crear'))
               ]));
   if (result == true) {
-    controller.createWardrobePackingList(
+    return controller.createWardrobePackingList(
         name: name.text,
         startDate: DateTime.now(),
         endDate: DateTime.now().add(const Duration(days: 3)));
   }
-}
-
-Future<void> _showAddPackingItem(BuildContext context, TodoWorkspace controller,
-    WardrobePackingList list) async {
-  final available = controller.wardrobeItems
-      .where((item) =>
-          !item.archived &&
-          !list.entries.any((entry) => entry.itemId == item.id))
-      .toList();
-  final selected = await showDialog<String>(
-      context: context,
-      builder: (context) => SimpleDialog(
-          title: const Text('Añadir prenda'),
-          children: available
-              .map((item) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, item.id),
-                  child: ListTile(
-                      title: Text(item.name), subtitle: Text(item.category))))
-              .toList()));
-  if (selected != null) controller.addWardrobePackingItem(list.id, selected);
+  return null;
 }
 
 Future<void> _importWardrobeDirectory(

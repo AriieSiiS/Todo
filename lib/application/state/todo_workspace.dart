@@ -876,6 +876,8 @@ class TodoWorkspace extends ChangeNotifier {
       final list = _wardrobePackingLists[index];
       _wardrobePackingLists[index] = list.copyWith(
         entries: list.entries.where((entry) => entry.itemId != id).toList(),
+        discardedItemIds:
+            list.discardedItemIds.where((itemId) => itemId != id).toList(),
       );
     }
     _commit();
@@ -1060,12 +1062,56 @@ class TodoWorkspace extends ChangeNotifier {
   void addWardrobePackingItem(String listId, String itemId,
       {int quantity = 1}) {
     final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
-    if (index == -1 || wardrobeItemById(itemId) == null) return;
+    if (index == -1 ||
+        wardrobeItemById(itemId) == null ||
+        _wardrobePackingLists[index]
+            .entries
+            .any((entry) => entry.itemId == itemId)) {
+      return;
+    }
     final list = _wardrobePackingLists[index];
     final entries = List<WardrobePackingEntry>.from(list.entries)
-      ..removeWhere((entry) => entry.itemId == itemId)
       ..add(WardrobePackingEntry(itemId: itemId, quantity: max(1, quantity)));
-    _wardrobePackingLists[index] = list.copyWith(entries: entries);
+    _wardrobePackingLists[index] = list.copyWith(
+      entries: entries,
+      discardedItemIds:
+          list.discardedItemIds.where((id) => id != itemId).toList(),
+    );
+    _commit();
+  }
+
+  void removeWardrobePackingItem(String listId, String itemId) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    if (index == -1) return;
+    final list = _wardrobePackingLists[index];
+    if (!list.entries.any((entry) => entry.itemId == itemId)) return;
+    _wardrobePackingLists[index] = list.copyWith(
+      entries: list.entries.where((entry) => entry.itemId != itemId).toList(),
+    );
+    _commit();
+  }
+
+  void discardWardrobePackingItem(String listId, String itemId) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    if (index == -1 || wardrobeItemById(itemId) == null) return;
+    final list = _wardrobePackingLists[index];
+    if (list.discardedItemIds.contains(itemId)) return;
+    _wardrobePackingLists[index] = list.copyWith(
+      entries: list.entries.where((entry) => entry.itemId != itemId).toList(),
+      discardedItemIds: [...list.discardedItemIds, itemId],
+    );
+    _commit();
+  }
+
+  void restoreWardrobePackingItem(String listId, String itemId) {
+    final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);
+    if (index == -1) return;
+    final list = _wardrobePackingLists[index];
+    if (!list.discardedItemIds.contains(itemId)) return;
+    _wardrobePackingLists[index] = list.copyWith(
+      discardedItemIds:
+          list.discardedItemIds.where((id) => id != itemId).toList(),
+    );
     _commit();
   }
 
