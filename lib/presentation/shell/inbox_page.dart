@@ -1,6 +1,6 @@
 part of 'app_shell.dart';
 
-enum _InboxSort { newest, oldest }
+enum _InboxSort { manual, newest, oldest }
 
 enum _InboxViewMode { list, grid }
 
@@ -19,7 +19,7 @@ class _InboxPageState extends State<InboxPage> {
   String? _selectedNoteId;
   String? _editingNoteId;
   String? _selectedCategoryId;
-  _InboxSort _sort = _InboxSort.newest;
+  _InboxSort _sort = _InboxSort.manual;
   _InboxViewMode _viewMode = _InboxViewMode.list;
 
   TodoWorkspace get controller => widget.controller;
@@ -48,8 +48,9 @@ class _InboxPageState extends State<InboxPage> {
         return true;
       }
       return note.content.toLowerCase().contains(_query.trim().toLowerCase());
-    }).toList()
-      ..sort(
+    }).toList();
+    if (_sort != _InboxSort.manual) {
+      filteredNotes.sort(
         (left, right) {
           if (left.isPinned != right.isPinned) return left.isPinned ? -1 : 1;
           return _sort == _InboxSort.newest
@@ -57,6 +58,7 @@ class _InboxPageState extends State<InboxPage> {
               : left.effectiveUpdatedAt.compareTo(right.effectiveUpdatedAt);
         },
       );
+    }
     final selectedNote = _resolveSelectedNote(filteredNotes);
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
@@ -65,6 +67,7 @@ class _InboxPageState extends State<InboxPage> {
         children: [
           _InboxHeader(
             noteCount: notes.length,
+            onReorder: _ordenarNotas,
             onCreate: () async {
               await showQuickNoteComposer(context, controller);
               if (mounted) setState(() {});
@@ -159,6 +162,49 @@ class _InboxPageState extends State<InboxPage> {
       _selectedNoteId = note.id;
       if (_editingNoteId != note.id) _editingNoteId = null;
     });
+  }
+
+  Future<void> _ordenarNotas() async {
+    final orden = controller.inboxNotes().toList();
+    final guardar = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, actualizar) => AlertDialog(
+          title: const Text('Ordenar notas'),
+          content: SizedBox(
+            width: 520,
+            height: min(480, max(160, orden.length * 64 + 64)).toDouble(),
+            child: orden.isEmpty
+                ? const Center(child: Text('Todavía no tienes notas.'))
+                : ReorderableListView.builder(
+                    itemCount: orden.length,
+                    onReorder: (origen, destino) => actualizar(() {
+                      if (destino > origen) destino--;
+                      orden.insert(destino, orden.removeAt(origen));
+                    }),
+                    itemBuilder: (context, index) => ListTile(
+                      key: ValueKey(orden[index].id),
+                      leading: const Icon(Icons.notes_rounded),
+                      title: Text(_noteTitleFromContent(orden[index].content),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Guardar orden')),
+          ],
+        ),
+      ),
+    );
+    if (guardar == true) {
+      controller.reorderNotes(orden.map((note) => note.id).toList());
+      if (mounted) setState(() => _sort = _InboxSort.manual);
+    }
   }
 
   Future<void> _startEditingNote(QuickNote note) async {
@@ -365,10 +411,14 @@ class _InboxPageState extends State<InboxPage> {
 }
 
 class _InboxHeader extends StatelessWidget {
-  const _InboxHeader({required this.noteCount, required this.onCreate});
+  const _InboxHeader(
+      {required this.noteCount,
+      required this.onCreate,
+      required this.onReorder});
 
   final int noteCount;
   final VoidCallback onCreate;
+  final VoidCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -433,6 +483,11 @@ class _InboxHeader extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 20),
+            _HeaderSecondaryButton(
+                label: 'Ordenar notas',
+                icon: Icons.swap_vert_rounded,
+                onPressed: onReorder),
+            const SizedBox(width: 10),
             _HeaderActionButton(
               label: 'Nueva nota',
               icon: Icons.add_rounded,
@@ -695,6 +750,7 @@ class _InboxSortButton extends StatelessWidget {
       initialValue: value,
       onSelected: onChanged,
       itemBuilder: (context) => const [
+        PopupMenuItem(value: _InboxSort.manual, child: Text('Orden manual')),
         PopupMenuItem(
           value: _InboxSort.newest,
           child: Text('Última edición'),
@@ -718,7 +774,11 @@ class _InboxSortButton extends StatelessWidget {
             const Icon(Icons.sort_rounded, size: 20),
             const SizedBox(width: 10),
             Text(
-              value == _InboxSort.newest ? 'Última edición' : 'Más antiguas',
+              switch (value) {
+                _InboxSort.manual => 'Orden manual',
+                _InboxSort.newest => 'Última edición',
+                _InboxSort.oldest => 'Más antiguas',
+              },
             ),
             const SizedBox(width: 10),
             const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
