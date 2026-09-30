@@ -3106,6 +3106,25 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  void reorderCategories(List<String> orderedIds) {
+    final byId = {for (final category in _categories) category.id: category};
+    final ids = orderedIds.where(byId.containsKey).toSet().toList();
+    final included = ids.toSet();
+    var index = 0;
+    final ordered = _categories
+        .map((category) =>
+            included.contains(category.id) ? byId[ids[index++]]! : category)
+        .toList();
+    if (List.generate(ordered.length, (i) => ordered[i].id == _categories[i].id)
+        .every((same) => same)) {
+      return;
+    }
+    _categories
+      ..clear()
+      ..addAll(ordered);
+    _commit();
+  }
+
   void toggleCategory(String categoryId) {
     final index =
         _categories.indexWhere((category) => category.id == categoryId);
