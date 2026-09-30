@@ -67,7 +67,6 @@ class _InboxPageState extends State<InboxPage> {
         children: [
           _InboxHeader(
             noteCount: notes.length,
-            onReorder: _ordenarNotas,
             onCreate: () async {
               await showQuickNoteComposer(context, controller);
               if (mounted) setState(() {});
@@ -106,6 +105,12 @@ class _InboxPageState extends State<InboxPage> {
                   onArchive: _archiveNote,
                   onDelete: _deleteNote,
                   onTogglePin: _togglePinned,
+                  onDragStarted: (note) =>
+                      setState(() => _selectedNoteId ??= selectedNote?.id),
+                  onReorder: (ids) {
+                    controller.reorderNotes(ids);
+                    setState(() => _sort = _InboxSort.manual);
+                  },
                 );
                 if (!showDetail) return list;
                 return Row(
@@ -162,49 +167,6 @@ class _InboxPageState extends State<InboxPage> {
       _selectedNoteId = note.id;
       if (_editingNoteId != note.id) _editingNoteId = null;
     });
-  }
-
-  Future<void> _ordenarNotas() async {
-    final orden = controller.inboxNotes().toList();
-    final guardar = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, actualizar) => AlertDialog(
-          title: const Text('Ordenar notas'),
-          content: SizedBox(
-            width: 520,
-            height: min(480, max(160, orden.length * 64 + 64)).toDouble(),
-            child: orden.isEmpty
-                ? const Center(child: Text('Todavía no tienes notas.'))
-                : ReorderableListView.builder(
-                    itemCount: orden.length,
-                    onReorder: (origen, destino) => actualizar(() {
-                      if (destino > origen) destino--;
-                      orden.insert(destino, orden.removeAt(origen));
-                    }),
-                    itemBuilder: (context, index) => ListTile(
-                      key: ValueKey(orden[index].id),
-                      leading: const Icon(Icons.notes_rounded),
-                      title: Text(_noteTitleFromContent(orden[index].content),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Guardar orden')),
-          ],
-        ),
-      ),
-    );
-    if (guardar == true) {
-      controller.reorderNotes(orden.map((note) => note.id).toList());
-      if (mounted) setState(() => _sort = _InboxSort.manual);
-    }
   }
 
   Future<void> _startEditingNote(QuickNote note) async {
@@ -411,14 +373,10 @@ class _InboxPageState extends State<InboxPage> {
 }
 
 class _InboxHeader extends StatelessWidget {
-  const _InboxHeader(
-      {required this.noteCount,
-      required this.onCreate,
-      required this.onReorder});
+  const _InboxHeader({required this.noteCount, required this.onCreate});
 
   final int noteCount;
   final VoidCallback onCreate;
-  final VoidCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -483,11 +441,6 @@ class _InboxHeader extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 20),
-            _HeaderSecondaryButton(
-                label: 'Ordenar notas',
-                icon: Icons.swap_vert_rounded,
-                onPressed: onReorder),
-            const SizedBox(width: 10),
             _HeaderActionButton(
               label: 'Nueva nota',
               icon: Icons.add_rounded,
@@ -803,6 +756,8 @@ class _InboxNotesList extends StatelessWidget {
     required this.onArchive,
     required this.onDelete,
     required this.onTogglePin,
+    required this.onDragStarted,
+    required this.onReorder,
   });
 
   final List<QuickNote> notes;
@@ -817,6 +772,16 @@ class _InboxNotesList extends StatelessWidget {
   final Future<void> Function(QuickNote) onArchive;
   final Future<void> Function(QuickNote) onDelete;
   final Future<void> Function(QuickNote) onTogglePin;
+  final ValueChanged<QuickNote> onDragStarted;
+  final ValueChanged<List<String>> onReorder;
+
+  void _reorderGroup(List<QuickNote> group, int source, int destination) {
+    if (destination > source) destination--;
+    if (source == destination) return;
+    final ordered = group.map((note) => note.id).toList();
+    ordered.insert(destination, ordered.removeAt(source));
+    onReorder(ordered);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -836,194 +801,214 @@ class _InboxNotesList extends StatelessWidget {
     if (viewMode == _InboxViewMode.grid) {
       return _buildGrid(context);
     }
-    final rows = <Object>[
-      if (pinned.isNotEmpty) ...[
-        _InboxListSection('Fijadas', pinned.length, Icons.push_pin_rounded),
-        ...pinned,
-      ],
-      if (regular.isNotEmpty) ...[
-        _InboxListSection(
-          'Todas',
-          regular.length,
-          Icons.notes_rounded,
-        ),
-        ...regular,
-      ],
-    ];
-    return ListView.separated(
-      padding: const EdgeInsets.only(right: 14, bottom: 4),
-      itemCount: rows.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final row = rows[index];
-        if (row is _InboxListSection) {
-          return Padding(
-            padding: EdgeInsets.only(top: index == 0 ? 0 : 12, bottom: 2),
-            child: Row(
-              children: [
-                Icon(row.icon, size: 18, color: const Color(0xFF31472F)),
-                const SizedBox(width: 8),
-                Text(
-                  row.label,
-                  style: TextStyle(
-                    color: visuals.textStrong,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text('${row.count}',
-                    style: TextStyle(color: visuals.textMuted)),
-              ],
-            ),
-          );
-        }
-        final note = row as QuickNote;
-        final parts = _splitNoteContent(note.content);
-        final selected = selectedNoteId == note.id;
-        final noteCategories = categories
-            .where((category) => note.categoryIds.contains(category.id))
-            .take(3)
-            .toList();
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onSecondaryTapDown: (details) => _showActions(
-            context,
-            details.globalPosition,
-            note,
-          ),
-          onLongPressStart: (details) => _showActions(
-            context,
-            details.globalPosition,
-            note,
-          ),
-          child: Material(
-            color: selected ? const Color(0xFFF2F6ED) : visuals.panel,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: BorderSide(
-                color: selected
-                    ? const Color(0xFF90A884)
-                    : const Color(0xFFE3D7C8),
-                width: selected ? 1.4 : 1,
+    return CustomScrollView(
+      key: const ValueKey('lista-notas-arrastrable'),
+      slivers: [
+        for (final group in [pinned, regular])
+          if (group.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 10),
+                child: Row(children: [
+                  Icon(
+                      group.first.isPinned
+                          ? Icons.push_pin_rounded
+                          : Icons.notes_rounded,
+                      size: 18,
+                      color: const Color(0xFF31472F)),
+                  const SizedBox(width: 8),
+                  Text(group.first.isPinned ? 'Fijadas' : 'Todas',
+                      style: TextStyle(
+                          color: visuals.textStrong,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(width: 8),
+                  Text('${group.length}',
+                      style: TextStyle(color: visuals.textMuted)),
+                ]),
               ),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => onSelect(note),
-              onDoubleTap: () => onOpen(note),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 10, 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? const Color(0xFFDDE9D2)
-                            : const Color(0xFFF5F0E8),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: note.emoji.isNotEmpty
-                          ? Center(
-                              child: Text(
-                                note.emoji,
-                                style: const TextStyle(fontSize: 21),
-                              ),
-                            )
-                          : Icon(
-                              Icons.description_outlined,
-                              size: 21,
-                              color: selected
-                                  ? const Color(0xFF506A49)
-                                  : visuals.textMuted,
-                            ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  parts.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: visuals.textStrong,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              if (note.isPinned) ...[
-                                const SizedBox(width: 6),
-                                const Icon(
-                                  Icons.push_pin_rounded,
-                                  size: 16,
-                                  color: Color(0xFF607A5A),
-                                ),
-                              ],
-                            ],
+            SliverPadding(
+              padding: const EdgeInsets.only(right: 14, bottom: 4),
+              sliver: SliverReorderableList(
+                itemCount: group.length,
+                onReorderStart: (index) => onDragStarted(group[index]),
+                onReorder: (source, destination) =>
+                    _reorderGroup(group, source, destination),
+                proxyDecorator: (child, index, animation) => Material(
+                  color: Colors.transparent,
+                  child: ScaleTransition(
+                    scale:
+                        Tween<double>(begin: 1, end: 1.02).animate(animation),
+                    child: child,
+                  ),
+                ),
+                itemBuilder: (context, index) => Padding(
+                  key: ValueKey('nota-${group[index].id}'),
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildListCard(
+                      context,
+                      group[index],
+                      ReorderableDragStartListener(
+                        key: ValueKey('arrastrar-nota-${group[index].id}'),
+                        index: index,
+                        child: const _InboxDragHandle(),
+                      )),
+                ),
+              ),
+            ),
+          ],
+      ],
+    );
+  }
+
+  Widget _buildListCard(
+      BuildContext context, QuickNote note, Widget dragHandle) {
+    final visuals = context.visuals;
+    final parts = _splitNoteContent(note.content);
+    final selected = selectedNoteId == note.id;
+    final noteCategories = categories
+        .where((category) => note.categoryIds.contains(category.id))
+        .take(3)
+        .toList();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) => _showActions(
+        context,
+        details.globalPosition,
+        note,
+      ),
+      onLongPressStart: (details) => _showActions(
+        context,
+        details.globalPosition,
+        note,
+      ),
+      child: Material(
+        color: selected ? const Color(0xFFF2F6ED) : visuals.panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: selected ? const Color(0xFF90A884) : const Color(0xFFE3D7C8),
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onSelect(note),
+          onDoubleTap: () => onOpen(note),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 10, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFFDDE9D2)
+                        : const Color(0xFFF5F0E8),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: note.emoji.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            note.emoji,
+                            style: const TextStyle(fontSize: 21),
                           ),
-                          if (parts.body != null) ...[
-                            const SizedBox(height: 5),
-                            Text(
-                              _collapseNoteText(parts.body!),
-                              maxLines: 2,
+                        )
+                      : Icon(
+                          Icons.description_outlined,
+                          size: 21,
+                          color: selected
+                              ? const Color(0xFF506A49)
+                              : visuals.textMuted,
+                        ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              parts.title,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: visuals.textMuted,
-                                fontSize: 14,
-                                height: 1.35,
+                                color: visuals.textStrong,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ],
-                          if (noteCategories.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                for (final category in noteCategories)
-                                  _InboxCategoryChip(category: category),
-                              ],
+                          ),
+                          if (note.isPinned) ...[
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.push_pin_rounded,
+                              size: 16,
+                              color: Color(0xFF607A5A),
                             ),
                           ],
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
+                      if (parts.body != null) ...[
+                        const SizedBox(height: 5),
                         Text(
-                          _formatInboxCreatedAt(note.effectiveUpdatedAt),
+                          _collapseNoteText(parts.body!),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: visuals.textMuted,
-                            fontSize: 13,
+                            fontSize: 14,
+                            height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        PopupMenuButton<String>(
-                          tooltip: 'Opciones de la nota',
-                          icon: const Icon(Icons.more_horiz_rounded, size: 20),
-                          itemBuilder: (_) => _inboxActionItems(note),
-                          onSelected: (action) => _runAction(action, note),
+                      ],
+                      if (noteCategories.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final category in noteCategories)
+                              _InboxCategoryChip(category: category),
+                          ],
                         ),
                       ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatInboxCreatedAt(note.effectiveUpdatedAt),
+                      style: TextStyle(
+                        color: visuals.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      dragHandle,
+                      PopupMenuButton<String>(
+                        tooltip: 'Opciones de la nota',
+                        icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                        itemBuilder: (_) => _inboxActionItems(note),
+                        onSelected: (action) => _runAction(action, note),
+                      ),
+                    ]),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1031,22 +1016,22 @@ class _InboxNotesList extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 540 ? 2 : 1;
-        return GridView.builder(
-          padding: const EdgeInsets.only(right: 14, bottom: 4),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: 178,
-          ),
-          itemCount: notes.length,
-          itemBuilder: (context, index) => _InboxNoteGridCard(
-            note: notes[index],
+        return _InboxAnimatedGrid(
+          notes: [
+            ...notes.where((note) => note.isPinned),
+            ...notes.where((note) => !note.isPinned)
+          ],
+          columns: columns,
+          onDragStarted: onDragStarted,
+          onReorder: onReorder,
+          cardBuilder: (note, dragHandle) => _InboxNoteGridCard(
+            note: note,
             categories: categories,
-            selected: selectedNoteId == notes[index].id,
+            selected: selectedNoteId == note.id,
             onSelect: onSelect,
             onOpen: onOpen,
             onAction: _runAction,
+            dragHandle: dragHandle,
           ),
         );
       },
@@ -1099,6 +1084,229 @@ class _InboxNotesList extends StatelessWidget {
   }
 }
 
+class _InboxDragHandle extends StatelessWidget {
+  const _InboxDragHandle();
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: 'Arrastrar nota',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(Icons.drag_indicator_rounded,
+                size: 18, color: context.visuals.textMuted),
+          ),
+        ),
+      );
+}
+
+class _InboxAnimatedGrid extends StatefulWidget {
+  const _InboxAnimatedGrid(
+      {required this.notes,
+      required this.columns,
+      required this.cardBuilder,
+      required this.onDragStarted,
+      required this.onReorder});
+
+  final List<QuickNote> notes;
+  final int columns;
+  final Widget Function(QuickNote, Widget) cardBuilder;
+  final ValueChanged<QuickNote> onDragStarted;
+  final ValueChanged<List<String>> onReorder;
+
+  @override
+  State<_InboxAnimatedGrid> createState() => _InboxAnimatedGridState();
+}
+
+class _InboxAnimatedGridState extends State<_InboxAnimatedGrid>
+    with SingleTickerProviderStateMixin {
+  final _scroll = ScrollController();
+  final _viewportKey = GlobalKey();
+  final _stackKey = GlobalKey();
+  final _cardKeys = <String, GlobalKey>{};
+  late final AnimationController _autoScroll;
+  late List<QuickNote> _draft;
+  String? _draggedId;
+  Offset? _pointer;
+  double _cardWidth = 0;
+  double _scrollSpeed = 0;
+  Duration _lastTick = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft = widget.notes.toList();
+    _autoScroll =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..addListener(_scrollDuringDrag);
+  }
+
+  @override
+  void didUpdateWidget(covariant _InboxAnimatedGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final byId = {for (final note in widget.notes) note.id: note};
+    if (_draggedId != null &&
+        byId.length == _draft.length &&
+        _draft.every((note) => byId.containsKey(note.id))) {
+      _draft = _draft.map((note) => byId[note.id]!).toList();
+    } else {
+      _autoScroll.stop();
+      _draggedId = null;
+      _draft = widget.notes.toList();
+    }
+    _cardKeys.removeWhere((id, _) => !byId.containsKey(id));
+  }
+
+  @override
+  void dispose() {
+    _autoScroll.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _updateDestination(Offset position) {
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    final source = _draft.indexWhere((note) => note.id == _draggedId);
+    if (box == null || source < 0) return;
+    final local = box.globalToLocal(position);
+    final column =
+        (local.dx / (_cardWidth + 12)).floor().clamp(0, widget.columns - 1);
+    final row = max(0, (local.dy / 190).floor());
+    final sameGroup = _draft
+        .asMap()
+        .entries
+        .where((entry) => entry.value.isPinned == _draft[source].isPinned)
+        .map((entry) => entry.key)
+        .toList();
+    final target =
+        (row * widget.columns + column).clamp(sameGroup.first, sameGroup.last);
+    if (source != target) {
+      setState(() => _draft.insert(target, _draft.removeAt(source)));
+    }
+  }
+
+  void _updatePointer(Offset position) {
+    _pointer = position;
+    _updateDestination(position);
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final local = box.globalToLocal(position);
+    _scrollSpeed = local.dy < 48
+        ? -550 * ((48 - local.dy) / 48).clamp(0, 1)
+        : local.dy > box.size.height - 48
+            ? 550 * ((local.dy - box.size.height + 48) / 48).clamp(0, 1)
+            : 0;
+    if (_scrollSpeed == 0) {
+      _autoScroll.stop();
+    } else if (!_autoScroll.isAnimating) {
+      _lastTick = Duration.zero;
+      _autoScroll.repeat();
+    }
+  }
+
+  void _scrollDuringDrag() {
+    if (_draggedId == null || !_scroll.hasClients || _pointer == null) return;
+    final elapsed = _autoScroll.lastElapsedDuration ?? Duration.zero;
+    final seconds =
+        ((elapsed - _lastTick).inMicroseconds / 1000000).clamp(0.0, 0.05);
+    _lastTick = elapsed;
+    final next = (_scroll.offset + _scrollSpeed * seconds)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    if (next == _scroll.offset && seconds > 0) {
+      _autoScroll.stop();
+      return;
+    }
+    _scroll.jumpTo(next);
+    _updateDestination(_pointer!);
+  }
+
+  void _finish(bool accepted) {
+    _autoScroll.stop();
+    if (_draggedId == null) return;
+    final ids = _draft.map((note) => note.id).toList();
+    setState(() {
+      _draggedId = null;
+      _pointer = null;
+      if (!accepted) _draft = widget.notes.toList();
+    });
+    if (accepted) widget.onReorder(ids);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        _cardWidth = (constraints.maxWidth - 14 - (widget.columns - 1) * 12) /
+            widget.columns;
+        return DragTarget<String>(
+          onWillAcceptWithDetails: (details) =>
+              widget.notes.any((note) => note.id == details.data),
+          builder: (context, candidates, rejected) => SingleChildScrollView(
+            key: _viewportKey,
+            controller: _scroll,
+            padding: const EdgeInsets.only(right: 14, bottom: 4),
+            child: SizedBox(
+              height: ((_draft.length + widget.columns - 1) ~/ widget.columns) *
+                      190 -
+                  12,
+              child: Stack(
+                key: _stackKey,
+                children: [
+                  for (var index = 0; index < _draft.length; index++)
+                    AnimatedPositioned(
+                      key: ValueKey('posicion-nota-${_draft[index].id}'),
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      top: (index ~/ widget.columns) * 190.0,
+                      left: (index % widget.columns) * (_cardWidth + 12),
+                      width: _cardWidth,
+                      height: 178,
+                      child: SizedBox(
+                        key: _cardKeys.putIfAbsent(
+                            _draft[index].id, () => GlobalKey()),
+                        child: Opacity(
+                          opacity: _draft[index].id == _draggedId ? 0.18 : 1,
+                          child: _buildCard(_draft[index]),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      });
+
+  Widget _buildCard(QuickNote note) => widget.cardBuilder(
+      note,
+      Draggable<String>(
+        key: ValueKey('arrastrar-nota-${note.id}'),
+        data: note.id,
+        maxSimultaneousDrags: 1,
+        dragAnchorStrategy: (draggable, context, position) {
+          final box = _cardKeys[note.id]!.currentContext!.findRenderObject()
+              as RenderBox;
+          return box.globalToLocal(position);
+        },
+        onDragStarted: () {
+          setState(() => _draggedId = note.id);
+          widget.onDragStarted(note);
+        },
+        onDragUpdate: (details) => _updatePointer(details.globalPosition),
+        onDragEnd: (details) => _finish(details.wasAccepted),
+        feedback: Material(
+          color: Colors.transparent,
+          elevation: 8,
+          borderRadius: BorderRadius.circular(18),
+          child: SizedBox(
+              width: _cardWidth,
+              height: 178,
+              child: widget.cardBuilder(note, const _InboxDragHandle())),
+        ),
+        child: const _InboxDragHandle(),
+      ));
+}
+
 class _InboxNoteGridCard extends StatelessWidget {
   const _InboxNoteGridCard({
     required this.note,
@@ -1107,6 +1315,7 @@ class _InboxNoteGridCard extends StatelessWidget {
     required this.onSelect,
     required this.onOpen,
     required this.onAction,
+    required this.dragHandle,
   });
 
   final QuickNote note;
@@ -1115,6 +1324,7 @@ class _InboxNoteGridCard extends StatelessWidget {
   final void Function(QuickNote) onSelect;
   final Future<void> Function(QuickNote) onOpen;
   final Future<void> Function(String?, QuickNote) onAction;
+  final Widget dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -1170,6 +1380,7 @@ class _InboxNoteGridCard extends StatelessWidget {
                         size: 16,
                         color: Color(0xFF607A5A),
                       ),
+                    dragHandle,
                     PopupMenuButton<String>(
                       tooltip: 'Opciones de la nota',
                       icon: const Icon(Icons.more_horiz_rounded, size: 20),
@@ -1277,14 +1488,6 @@ class _InboxCategoryChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _InboxListSection {
-  const _InboxListSection(this.label, this.count, this.icon);
-
-  final String label;
-  final int count;
-  final IconData icon;
 }
 
 class _InboxNoteInlineEditor extends StatefulWidget {

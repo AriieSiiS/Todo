@@ -3094,12 +3094,16 @@ class TodoWorkspace extends ChangeNotifier {
 
   void reorderNotes(List<String> orderedIds) {
     final byId = {for (final note in _notes) note.id: note};
-    final ordered = <QuickNote>[];
-    for (final id in orderedIds) {
-      final note = byId.remove(id);
-      if (note != null) ordered.add(note);
+    final ids = orderedIds.where(byId.containsKey).toSet().toList();
+    final included = ids.toSet();
+    var index = 0;
+    final ordered = _notes
+        .map((note) => included.contains(note.id) ? byId[ids[index++]]! : note)
+        .toList();
+    if (List.generate(ordered.length, (i) => ordered[i].id == _notes[i].id)
+        .every((same) => same)) {
+      return;
     }
-    ordered.addAll(byId.values);
     _notes
       ..clear()
       ..addAll(ordered);
