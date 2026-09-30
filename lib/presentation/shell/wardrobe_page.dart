@@ -763,6 +763,17 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
 
   TodoWorkspace get controller => widget.controller;
 
+  Future<void> _duplicarMaleta(WardrobePackingList list) async {
+    final copy = await _showDuplicatePackingList(context, controller, list);
+    if (copy != null && mounted)
+      setState(() {
+        _selectedListId = copy.id;
+        _view = 0;
+        _query = '';
+        _category = null;
+      });
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = controller.wardrobePackingLists
@@ -806,7 +817,15 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
                               subtitle: Text(
                                 '${list.startDate.day}/${list.startDate.month} – ${list.endDate.day}/${list.endDate.month} · ${list.entries.length} prendas · ${list.entries.where((entry) => entry.packed).length} preparadas',
                               ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
+                              trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                        tooltip: 'Duplicar maleta',
+                                        onPressed: () => _duplicarMaleta(list),
+                                        icon: const Icon(Icons.copy_outlined)),
+                                    const Icon(Icons.chevron_right_rounded),
+                                  ]),
                               onTap: () => setState(() {
                                 _selectedListId = list.id;
                                 _view = 0;
@@ -898,6 +917,10 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
             if (mounted) setState(() {});
           },
         ),
+        IconButton(
+            tooltip: 'Duplicar maleta',
+            onPressed: () => _duplicarMaleta(selected),
+            icon: const Icon(Icons.copy_outlined)),
       ]),
       const SizedBox(height: 12),
       Wrap(spacing: 8, runSpacing: 8, children: [
@@ -2977,6 +3000,84 @@ Future<WardrobePackingList?> _showCreatePackingList(
         endDate: DateTime.now().add(const Duration(days: 3)));
   }
   return null;
+}
+
+Future<WardrobePackingList?> _showDuplicatePackingList(BuildContext context,
+    TodoWorkspace controller, WardrobePackingList original) async {
+  final name = TextEditingController(text: '${original.name} · otro viaje');
+  var start = DateUtils.dateOnly(DateTime.now());
+  var end = start.add(original.endDate.difference(original.startDate));
+  var keepDiscarded = false;
+  final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+            builder: (context, actualizar) => AlertDialog(
+              title: const Text('Duplicar maleta'),
+              content: SizedBox(
+                  width: 480,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextField(
+                        controller: name,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                            labelText: 'Nombre del nuevo viaje')),
+                    const SizedBox(height: 12),
+                    ListTile(
+                        title: const Text('Inicio'),
+                        subtitle:
+                            Text('${start.day}/${start.month}/${start.year}'),
+                        trailing: const Icon(Icons.calendar_today_outlined),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                              context: context,
+                              initialDate: start,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2100));
+                          if (date != null && context.mounted)
+                            actualizar(() {
+                              final duration = end.difference(start);
+                              start = date;
+                              end = date.add(duration);
+                            });
+                        }),
+                    ListTile(
+                        title: const Text('Fin'),
+                        subtitle: Text('${end.day}/${end.month}/${end.year}'),
+                        trailing: const Icon(Icons.calendar_today_outlined),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                              context: context,
+                              initialDate: end,
+                              firstDate: start,
+                              lastDate: DateTime(2100));
+                          if (date != null && context.mounted)
+                            actualizar(() => end = date);
+                        }),
+                    CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Conservar prendas descartadas'),
+                        subtitle: Text(
+                            '${original.discardedItemIds.length} prendas. Las marcas de preparada se reinician.'),
+                        value: keepDiscarded,
+                        onChanged: (value) =>
+                            actualizar(() => keepDiscarded = value ?? false)),
+                  ])),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Duplicar')),
+              ],
+            ),
+          ));
+  if (save != true) return null;
+  return controller.duplicateWardrobePackingList(original.id,
+      name: name.text,
+      startDate: start,
+      endDate: end,
+      keepDiscarded: keepDiscarded);
 }
 
 Future<void> _importWardrobeDirectory(

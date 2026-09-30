@@ -1059,6 +1059,35 @@ class TodoWorkspace extends ChangeNotifier {
     return list;
   }
 
+  WardrobePackingList? duplicateWardrobePackingList(
+    String listId, {
+    required String name,
+    required DateTime startDate,
+    required DateTime endDate,
+    bool keepDiscarded = false,
+  }) {
+    final original =
+        _wardrobePackingLists.where((list) => list.id == listId).firstOrNull;
+    if (original == null) return null;
+    if (endDate.isBefore(startDate))
+      throw ArgumentError('La fecha de fin debe ser posterior al inicio.');
+    final copy = WardrobePackingList(
+      id: _id('wardrobe-packing'),
+      name: name.trim().isEmpty ? '${original.name} · otro viaje' : name.trim(),
+      startDate: startDate,
+      endDate: endDate,
+      entries: original.entries
+          .map((entry) => entry.copyWith(packed: false))
+          .toList(),
+      discardedItemIds: keepDiscarded
+          ? List<String>.from(original.discardedItemIds)
+          : const [],
+    );
+    _wardrobePackingLists.add(copy);
+    _commit();
+    return copy;
+  }
+
   void addWardrobePackingItem(String listId, String itemId,
       {int quantity = 1}) {
     final index = _wardrobePackingLists.indexWhere((list) => list.id == listId);

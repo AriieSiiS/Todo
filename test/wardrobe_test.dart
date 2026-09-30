@@ -274,6 +274,41 @@ void main() {
     expect(controller.wardrobeItems, hasLength(2));
   });
 
+  test(
+      'duplicar una maleta reinicia las marcas y permite conservar los descartes',
+      () {
+    final controller = TodoWorkspace.createForTest();
+    final shirt =
+        controller.createWardrobeItem(name: 'Camisa azul', category: 'Camisas');
+    final trousers = controller.createWardrobeItem(
+        name: 'Pantalón beige', category: 'Pantalones');
+    final list = controller.createWardrobePackingList(
+        name: 'Viaje',
+        startDate: DateTime(2026, 10, 1),
+        endDate: DateTime(2026, 10, 3));
+    controller.addWardrobePackingItem(list.id, shirt.id, quantity: 2);
+    controller.toggleWardrobePackingItem(list.id, shirt.id);
+    controller.discardWardrobePackingItem(list.id, trousers.id);
+    final copy = controller.duplicateWardrobePackingList(list.id,
+        name: 'Otro viaje',
+        startDate: DateTime(2026, 11, 1),
+        endDate: DateTime(2026, 11, 3),
+        keepDiscarded: true)!;
+    expect(copy.id, isNot(list.id));
+    expect(copy.entries.single.itemId, shirt.id);
+    expect(copy.entries.single.quantity, 2);
+    expect(copy.entries.single.packed, isFalse);
+    expect(copy.discardedItemIds, [trousers.id]);
+    final withoutDiscarded = controller.duplicateWardrobePackingList(list.id,
+        name: 'Viaje nuevo',
+        startDate: DateTime(2026, 12, 1),
+        endDate: DateTime(2026, 12, 3))!;
+    expect(withoutDiscarded.discardedItemIds, isEmpty);
+    controller.removeWardrobePackingItem(copy.id, shirt.id);
+    expect(controller.wardrobePackingLists.first.entries.single.packed, isTrue);
+    expect(controller.wardrobeItems, hasLength(2));
+  });
+
   test('el servicio prepara y aprueba un lote PNG transparente', () async {
     final temp = await Directory.systemTemp.createTemp('todo-wardrobe-test-');
     addTearDown(() => temp.delete(recursive: true));
