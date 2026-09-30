@@ -610,6 +610,10 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.tips_and_updates_outlined,
       children: [
         _SettingsHintRow(
+          icon: Icons.keyboard_rounded,
+          text: 'Ctrl + Mayús + N abre una nota desde cualquier sección.',
+        ),
+        _SettingsHintRow(
           icon: Icons.open_with_rounded,
           text: 'Arrastra las tareas de Hoy para cambiar su orden.',
         ),

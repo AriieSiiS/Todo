@@ -1,6 +1,7 @@
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,30 @@ import 'package:todo/presentation/shell/app_shell.dart';
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
+  testWidgets('la captura con teclado guarda una nota sin cambiar de sección',
+      (tester) async {
+    final controller = TodoWorkspace.createForTest();
+    controller.setSection(AppSection.projects);
+    _configureLargeSurface(tester);
+    await _pumpShell(tester, controller);
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byWidgetPredicate((widget) =>
+            widget is TextField &&
+            widget.decoration?.hintText == 'Título de la nota'),
+        'Una idea rápida');
+    await tester.tap(find.text('Guardar nota'));
+    await tester.pumpAndSettle();
+    expect(controller.inboxNotes().single.content, 'Una idea rápida');
+    expect(controller.section, AppSection.projects);
   });
 
   testWidgets('renders today workspace', (WidgetTester tester) async {

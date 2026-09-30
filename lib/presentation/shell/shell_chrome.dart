@@ -21,6 +21,7 @@ class _AppShellState extends ConsumerState<AppShell>
   late final bool _shouldInitializeMusic;
   bool _launchIntentHandled = false;
   bool _openingNotificationTask = false;
+  bool _quickCaptureOpen = false;
   final AudioPlayer _alarmPlayer = AudioPlayer();
   String? _playingAlarmId;
   bool _musicWasPlaying = false;
@@ -138,22 +139,40 @@ class _AppShellState extends ConsumerState<AppShell>
           : null,
       bottomNavigationBar: wide ? null : _MobileNav(controller: controller),
     );
-    return Stack(
-      children: [
-        scaffold,
-        if (alarm != null)
-          Positioned.fill(
-            child: _ImportantAlarmOverlay(
-              alarm: alarm,
-              remainingCount: controller.importantAlarmCount,
-              error: controller.importantAlarmError,
-              onStop: controller.stopImportantAlarm,
-              onSnooze: controller.snoozeImportantAlarm,
-              onOpenTask: () => _openImportantAlarmTask(alarm),
-            ),
-          ),
-      ],
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN,
+            control: true, shift: true): _captureQuickNote,
+      },
+      child: Focus(
+          autofocus: true,
+          child: Stack(
+            children: [
+              scaffold,
+              if (alarm != null)
+                Positioned.fill(
+                  child: _ImportantAlarmOverlay(
+                    alarm: alarm,
+                    remainingCount: controller.importantAlarmCount,
+                    error: controller.importantAlarmError,
+                    onStop: controller.stopImportantAlarm,
+                    onSnooze: controller.snoozeImportantAlarm,
+                    onOpenTask: () => _openImportantAlarmTask(alarm),
+                  ),
+                ),
+            ],
+          )),
     );
+  }
+
+  Future<void> _captureQuickNote() async {
+    if (_quickCaptureOpen) return;
+    _quickCaptureOpen = true;
+    try {
+      await showQuickNoteComposer(context, controller);
+    } finally {
+      _quickCaptureOpen = false;
+    }
   }
 
   Future<void> _syncAlarmPlayback(ImportantAlarmOccurrence? alarm) async {
