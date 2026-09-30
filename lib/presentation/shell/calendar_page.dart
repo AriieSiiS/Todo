@@ -394,13 +394,19 @@ class _CalendarMonthView extends StatelessWidget {
                                     ..sort(
                                         (a, b) => a.start.compareTo(b.start));
                                   return Expanded(
-                                    child: _CalendarMonthCell(
-                                      day: day,
-                                      visibleMonth: visibleMonth,
-                                      isSelected: _sameDay(day, selectedDay),
-                                      isToday: _sameDay(day, today),
-                                      entries: dayEntries,
-                                      onTap: () => onSelectDay(day),
+                                    child: _CalendarDropZone(
+                                      controller: controller,
+                                      destination: day,
+                                      preserveTime: true,
+                                      onMoved: () => onSelectDay(day),
+                                      child: _CalendarMonthCell(
+                                        day: day,
+                                        visibleMonth: visibleMonth,
+                                        isSelected: _sameDay(day, selectedDay),
+                                        isToday: _sameDay(day, today),
+                                        entries: dayEntries,
+                                        onTap: () => onSelectDay(day),
+                                      ),
                                     ),
                                   );
                                 }).toList(),
@@ -639,39 +645,116 @@ class _CalendarMonthEntryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 32,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: entry.background,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration:
-                  BoxDecoration(color: entry.dot, shape: BoxShape.circle),
+    return _CalendarDraggableEntry(
+        entry: entry,
+        child: SizedBox(
+          height: 32,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: entry.background,
+              borderRadius: BorderRadius.circular(9),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                entry.title,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: entry.foreground,
-                  fontWeight: FontWeight.w500,
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration:
+                      BoxDecoration(color: entry.dot, shape: BoxShape.circle),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    entry.title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: entry.foreground,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
+}
+
+class _CalendarDraggableEntry extends StatelessWidget {
+  const _CalendarDraggableEntry({required this.entry, required this.child});
+  final _CalendarEntry entry;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Draggable<_CalendarEntry>(
+        key: ValueKey('calendar-drag-${entry.id}'),
+        data: entry,
+        dragAnchorStrategy: pointerDragAnchorStrategy,
+        feedback: Material(
+          elevation: 6,
+          borderRadius: BorderRadius.circular(12),
+          color: entry.background,
+          child: SizedBox(
+              width: 240,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(entry.title,
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+              )),
+        ),
+        childWhenDragging: Opacity(opacity: .35, child: child),
+        child: MouseRegion(cursor: SystemMouseCursors.grab, child: child),
+      );
+}
+
+class _CalendarDropZone extends StatelessWidget {
+  const _CalendarDropZone({
+    required this.controller,
+    required this.destination,
+    required this.child,
+    required this.onMoved,
+    this.preserveTime = false,
+  });
+  final TodoWorkspace controller;
+  final DateTime destination;
+  final Widget child;
+  final VoidCallback onMoved;
+  final bool preserveTime;
+
+  @override
+  Widget build(BuildContext context) => DragTarget<_CalendarEntry>(
+        key: ValueKey('calendar-drop-${destination.toIso8601String()}'),
+        onAcceptWithDetails: (details) async {
+          try {
+            await controller.rescheduleCalendarEntry(
+              id: details.data.id,
+              isTask: details.data.isTask,
+              destination: destination,
+              preserveTime: preserveTime,
+            );
+            onMoved();
+          } catch (_) {
+            if (context.mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('No se pudo reprogramar el elemento.')),
+              );
+          }
+        },
+        builder: (context, candidates, rejected) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: candidates.isEmpty
+                ? Colors.transparent
+                : const Color(0xFFDCE8CF),
+            border: candidates.isEmpty
+                ? null
+                : Border.all(color: const Color(0xFF607A4D), width: 2),
+          ),
+          child: child,
+        ),
+      );
 }
 
 class _CalendarMonthSidePanel extends StatelessWidget {
@@ -769,9 +852,13 @@ class _CalendarMonthSidePanel extends StatelessWidget {
                         : Column(
                             children: [
                               for (final entry in activeTasks)
-                                _CalendarTaskRow(entry: entry),
+                                _CalendarDraggableEntry(
+                                    entry: entry,
+                                    child: _CalendarTaskRow(entry: entry)),
                               for (final entry in completedTasks)
-                                _CalendarTaskRow(entry: entry),
+                                _CalendarDraggableEntry(
+                                    entry: entry,
+                                    child: _CalendarTaskRow(entry: entry)),
                             ],
                           ),
                   ),
@@ -782,8 +869,9 @@ class _CalendarMonthSidePanel extends StatelessWidget {
                         ? _CalendarEmptyLine('No hay eventos este día.')
                         : Column(
                             children: events
-                                .map((entry) =>
-                                    _CalendarEventSideRow(entry: entry))
+                                .map((entry) => _CalendarDraggableEntry(
+                                    entry: entry,
+                                    child: _CalendarEventSideRow(entry: entry)))
                                 .toList(),
                           ),
                   ),
@@ -1115,56 +1203,76 @@ class _CalendarWeekView extends StatelessWidget {
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                    itemCount: days.length,
+                    itemCount: days.length + 1,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final day = days[index];
+                      if (index == 0) {
+                        return SizedBox(
+                            height: 440,
+                            child: _CalendarHourSchedule(
+                              controller: controller,
+                              days: days,
+                              entries: entries,
+                              onSelectDay: onSelectDay,
+                            ));
+                      }
+                      final day = days[index - 1];
                       final dayEntries = entries
                           .where((entry) => _sameDay(entry.start, day))
                           .toList()
                         ..sort((a, b) => a.start.compareTo(b.start));
-                      return InkWell(
-                        onTap: () => onSelectDay(day),
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFE8DCCB)),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 110,
-                                child: Text(
-                                  '${_weekdayShort(day)} ${day.day}',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
+                      return _CalendarDropZone(
+                        controller: controller,
+                        destination: day,
+                        preserveTime: true,
+                        onMoved: () => onSelectDay(day),
+                        child: InkWell(
+                          onTap: () => onSelectDay(day),
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0xFFE8DCCB)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: 110,
+                                  child: Text(
+                                    '${_weekdayShort(day)} ${day.day}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                child: dayEntries.isEmpty
-                                    ? _CalendarEmptyLine(
-                                        'Sin elementos programados.')
-                                    : Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: dayEntries
-                                            .map((entry) => _miniBadge(
-                                                  entry.allDay
-                                                      ? entry.title
-                                                      : '${_entryTimeLabel(entry)} ${entry.title}',
-                                                  entry.background,
-                                                  entry.foreground,
-                                                ))
-                                            .toList(),
-                                      ),
-                              ),
-                            ],
+                                Expanded(
+                                  child: dayEntries.isEmpty
+                                      ? _CalendarEmptyLine(
+                                          'Sin elementos programados.')
+                                      : Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: dayEntries
+                                              .map((entry) =>
+                                                  _CalendarDraggableEntry(
+                                                      entry: entry,
+                                                      child: _miniBadge(
+                                                        entry.allDay
+                                                            ? entry.title
+                                                            : '${_entryTimeLabel(entry)} ${entry.title}',
+                                                        entry.background,
+                                                        entry.foreground,
+                                                      )))
+                                              .toList(),
+                                        ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -1188,6 +1296,105 @@ class _CalendarWeekView extends StatelessWidget {
       ],
     );
   }
+}
+
+class _CalendarHourSchedule extends StatefulWidget {
+  const _CalendarHourSchedule({
+    required this.controller,
+    required this.days,
+    required this.entries,
+    required this.onSelectDay,
+  });
+  final TodoWorkspace controller;
+  final List<DateTime> days;
+  final List<_CalendarEntry> entries;
+  final ValueChanged<DateTime> onSelectDay;
+
+  @override
+  State<_CalendarHourSchedule> createState() => _CalendarHourScheduleState();
+}
+
+class _CalendarHourScheduleState extends State<_CalendarHourSchedule> {
+  final _scroll = ScrollController(initialScrollOffset: 8 * 2 * 64);
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Arrastra a un día o a una franja de media hora.',
+              style: TextStyle(fontSize: 12)),
+        ),
+        Row(children: [
+          const SizedBox(width: 52),
+          for (final day in widget.days)
+            Expanded(
+                child: Center(
+                    child: Text('${_weekdayShort(day)} ${day.day}',
+                        style: const TextStyle(fontWeight: FontWeight.w700)))),
+        ]),
+        const SizedBox(height: 8),
+        Expanded(
+            child: ListView.builder(
+          controller: _scroll,
+          itemExtent: 64,
+          itemCount: 48,
+          itemBuilder: (context, index) {
+            final hora = index ~/ 2;
+            final minuto = (index % 2) * 30;
+            return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                      width: 52,
+                      child: Text(
+                        '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                            fontSize: 12, color: context.visuals.textMuted),
+                      )),
+                  for (final day in widget.days)
+                    Expanded(child: Builder(builder: (context) {
+                      final destino =
+                          DateTime(day.year, day.month, day.day, hora, minuto);
+                      final elementos = widget.entries
+                          .where((entry) =>
+                              _sameDay(entry.start, day) &&
+                              entry.start.hour == hora &&
+                              entry.start.minute ~/ 30 == minuto ~/ 30)
+                          .toList();
+                      return _CalendarDropZone(
+                        controller: widget.controller,
+                        destination: destino,
+                        onMoved: () => widget.onSelectDay(day),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                              border: Border(
+                            top: BorderSide(color: Color(0xFFE8DCCB)),
+                            right: BorderSide(color: Color(0xFFE8DCCB)),
+                          )),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (elementos.isNotEmpty)
+                                  _CalendarMonthEntryChip(
+                                      entry: elementos.first),
+                                if (elementos.length > 1)
+                                  Text('+${elementos.length - 1} más',
+                                      style: const TextStyle(fontSize: 11)),
+                              ]),
+                        ),
+                      );
+                    })),
+                ]);
+          },
+        )),
+      ]);
 }
 
 class _CalendarAgendaView extends StatelessWidget {

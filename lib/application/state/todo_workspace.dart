@@ -2371,6 +2371,46 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  Future<void> rescheduleCalendarEntry({
+    required String id,
+    required bool isTask,
+    required DateTime destination,
+    bool preserveTime = false,
+  }) async {
+    if (isTask) {
+      final index = _tasks.indexWhere((task) => task.id == id);
+      if (index == -1) return;
+      final task = _tasks[index];
+      final current = task.scheduledAt ?? destination;
+      final start = preserveTime
+          ? DateTime(destination.year, destination.month, destination.day,
+              current.hour, current.minute)
+          : destination;
+      _tasks[index] = task.copyWith(
+        scheduledAt: start,
+        calendarLink:
+            task.calendarLink?.copyWith(syncStatus: CalendarSyncStatus.pending),
+      );
+      _commit();
+      if (task.calendarLink != null && _calendarSettings.connected) {
+        await syncTaskToCalendar(id, silent: true);
+      }
+    } else {
+      final index = _calendarEvents.indexWhere((event) => event.id == id);
+      if (index == -1) return;
+      final event = _calendarEvents[index];
+      final start = preserveTime
+          ? DateTime(destination.year, destination.month, destination.day,
+              event.startAt.hour, event.startAt.minute)
+          : destination;
+      _calendarEvents[index] = event.copyWith(
+        startAt: start,
+        endAt: start.add(event.endAt.difference(event.startAt)),
+      );
+      _commit();
+    }
+  }
+
   void deleteTask(String taskId) {
     _tasks.removeWhere(
         (task) => task.id == taskId || task.parentTaskId == taskId);
