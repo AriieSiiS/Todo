@@ -46,6 +46,78 @@ try {
       throw "El snapshot local contiene el campo no permitido: $name"
     }
   }
+  $wardrobeUri = 'https://127.0.0.1:47832/v1/wardrobe-snapshot'
+  $unauthorized = Invoke-WebRequest `
+    -Method Get `
+    -Uri $wardrobeUri `
+    -SkipCertificateCheck `
+    -SkipHttpErrorCheck
+  if ($unauthorized.StatusCode -ne 401) {
+    throw 'Ropa permite una petición sin autenticar.'
+  }
+  $wardrobeResponse = Invoke-WebRequest `
+    -Method Get `
+    -Uri $wardrobeUri `
+    -Headers $headers `
+    -SkipCertificateCheck
+  $wardrobe = $wardrobeResponse.Content | ConvertFrom-Json
+  if ($wardrobe.serverId -ne $status.serverId -or $wardrobe.wardrobeVersion -ne 1) {
+    throw 'Ropa respondió con una identidad o versión incorrecta.'
+  }
+  foreach ($name in @('notes', 'expenses', 'wardrobeWearLogs', 'wardrobeImportBatches')) {
+    if ($wardrobe.PSObject.Properties.Name -contains $name) {
+      throw "Ropa contiene el campo no permitido: $name"
+    }
+  }
+  foreach ($item in $wardrobe.items) {
+    if ($item.PSObject.Properties.Name -contains 'imagePath') {
+      throw 'Ropa expuso una ruta local de imagen.'
+    }
+  }
+  $notModified = Invoke-WebRequest `
+    -Method Get `
+    -Uri $wardrobeUri `
+    -Headers @{ Authorization = "Bearer $($pairing.token)"; 'If-None-Match' = $wardrobeResponse.Headers.ETag[0] } `
+    -SkipCertificateCheck `
+    -SkipHttpErrorCheck
+  if ($notModified.StatusCode -ne 304) {
+    throw 'Ropa no respetó If-None-Match.'
+  }
+  $photoVerified = $false
+  $photo = @($wardrobe.items | Where-Object { $_.imageAvailable -and $_.imageSha256 }) | Select-Object -First 1
+  if ($photo) {
+    $temporaryPhoto = [System.IO.Path]::GetTempFileName()
+    try {
+      Invoke-WebRequest `
+        -Method Get `
+        -Uri "https://127.0.0.1:47832/v1/wardrobe-image/$($photo.id)?variant=original" `
+        -Headers $headers `
+        -SkipCertificateCheck `
+        -OutFile $temporaryPhoto
+      $photoVerified = (Get-FileHash -LiteralPath $temporaryPhoto -Algorithm SHA256).Hash -eq $photo.imageSha256
+      if (-not $photoVerified) { throw 'La foto no coincide con su SHA-256.' }
+    }
+    finally {
+      Remove-Item -LiteralPath $temporaryPhoto -ErrorAction SilentlyContinue
+    }
+  }
+  $blockedImage = Invoke-WebRequest `
+    -Method Get `
+    -Uri "https://127.0.0.1:47832/v1/wardrobe-image/$($photo.id)?variant=original" `
+    -SkipCertificateCheck `
+    -SkipHttpErrorCheck
+  if ($blockedImage.StatusCode -ne 401) {
+    throw 'Una foto permite una petición sin autenticar.'
+  }
+  $invalidImage = Invoke-WebRequest `
+    -Method Get `
+    -Uri 'https://127.0.0.1:47832/v1/wardrobe-image/..%2Fsecret?variant=original' `
+    -Headers $headers `
+    -SkipCertificateCheck `
+    -SkipHttpErrorCheck
+  if ($invalidImage.StatusCode -eq 200) {
+    throw 'Una ruta manipulada devolvió una foto.'
+  }
   [ordered]@{
     paired = ($pairing.protocolVersion -eq 1)
     serverIdMatches = ($pairing.serverId -eq $status.serverId)
@@ -54,6 +126,11 @@ try {
     categories = @($snapshot.categories).Count
     projects = @($snapshot.projects).Count
     forbiddenFieldsAbsent = $true
+    wardrobeItems = @($wardrobe.items).Count
+    packingLists = @($wardrobe.packingLists).Count
+    wardrobeEtag = ($notModified.StatusCode -eq 304)
+    photoVerified = $photoVerified
+    imageAccessRestricted = $true
   } | ConvertTo-Json
 }
 finally {

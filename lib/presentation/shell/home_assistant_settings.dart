@@ -128,6 +128,22 @@ class _HomeAssistantSettingsCardState extends State<HomeAssistantSettingsCard> {
     }
   }
 
+  Future<void> _bindEcho(String id) async {
+    setState(() {
+      _busy = true;
+      _localError = null;
+    });
+    try {
+      await widget.controller.bindEcho(id);
+    } on FormatException catch (error) {
+      _localError = error.message;
+    } catch (_) {
+      _localError = 'No se pudo asociar el Echo.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final home = widget.controller;
@@ -324,6 +340,42 @@ class _HomeAssistantSettingsCardState extends State<HomeAssistantSettingsCard> {
             const SizedBox(height: 8),
             Text(
               'No hay ninguna entidad meteorológica. Añade Met.no en Home Assistant usando la ubicación de tu casa y vuelve a conectar.',
+              style: TextStyle(color: context.visuals.textMuted),
+            ),
+          ],
+          const Divider(height: 28),
+          Text(
+            'Echo Dot de Habitación',
+            style: TextStyle(color: context.visuals.textMuted),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey('home-assistant-echo-${home.echoEntityId}'),
+            initialValue: home.echoPlayers
+                    .any((item) => item.entityId == home.echoEntityId)
+                ? home.echoEntityId
+                : null,
+            hint: const Text('Selecciona el Echo'),
+            isExpanded: true,
+            items: [
+              for (final player in home.echoPlayers)
+                DropdownMenuItem(
+                  value: player.entityId,
+                  child: Text('${player.name} · ${player.entityId}',
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _busy || !home.connected
+                ? null
+                : (id) {
+                    if (id != null) unawaited(_bindEcho(id));
+                  },
+          ),
+          if (home.echoPlayers.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Añade «Alexa Devices» en Dispositivos y servicios de Home Assistant. '
+              'Esta opción no necesita Home Assistant Cloud, pero sí usa tu cuenta de Amazon.',
               style: TextStyle(color: context.visuals.textMuted),
             ),
           ],

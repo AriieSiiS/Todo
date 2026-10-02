@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:multicast_dns/multicast_dns.dart';
@@ -67,7 +68,109 @@ class LanSyncResult {
   final Map<String, dynamic>? snapshot;
 }
 
+class LanWardrobeResult {
+  const LanWardrobeResult({
+    required this.changed,
+    required this.endpoint,
+    this.snapshot,
+  });
+
+  final bool changed;
+  final String endpoint;
+  final Map<String, dynamic>? snapshot;
+}
+
 class MobileLanClient {
+  Future<LanWardrobeResult> syncWardrobe({
+    required LanConnectionConfig config,
+    required String token,
+    required String revision,
+  }) async {
+    final endpoints = <String>[config.endpoint];
+    final discovered = await discoverEndpoint(config.serverId);
+    if (discovered != null && !endpoints.contains(discovered)) {
+      endpoints.add(discovered);
+    }
+    Object? lastError;
+    for (final endpoint in endpoints.where((value) => value.isNotEmpty)) {
+      final client = _pinnedClient(config.certificateFingerprint);
+      try {
+        final request = await client
+            .getUrl(Uri.parse('$endpoint/v1/wardrobe-snapshot'))
+            .timeout(const Duration(seconds: 8));
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+        if (revision.isNotEmpty) {
+          request.headers.set(HttpHeaders.ifNoneMatchHeader, '"$revision"');
+        }
+        final response =
+            await request.close().timeout(const Duration(seconds: 10));
+        if (response.statusCode == HttpStatus.notModified) {
+          return LanWardrobeResult(changed: false, endpoint: endpoint);
+        }
+        final body = await utf8.decoder.bind(response).join();
+        if (response.statusCode != 200) {
+          throw StateError(response.statusCode == 404
+              ? 'Actualiza Todo en Windows para compartir Ropa.'
+              : _errorMessage(response.statusCode, body));
+        }
+        final json = (jsonDecode(body) as Map).cast<String, dynamic>();
+        if (json['serverId'] != config.serverId ||
+            (json['protocolVersion'] as num?)?.toInt() != 1 ||
+            (json['wardrobeVersion'] as num?)?.toInt() != 1) {
+          throw const FormatException('La respuesta de Ropa no es compatible.');
+        }
+        return LanWardrobeResult(
+          changed: true,
+          endpoint: endpoint,
+          snapshot: json,
+        );
+      } catch (error) {
+        lastError = error;
+      } finally {
+        client.close(force: true);
+      }
+    }
+    throw StateError('No se pudo descargar Ropa: $lastError');
+  }
+
+  Future<Uint8List?> wardrobeImage({
+    required LanConnectionConfig config,
+    required String endpoint,
+    required String token,
+    required String itemId,
+    required String variant,
+  }) async {
+    final client = _pinnedClient(config.certificateFingerprint);
+    try {
+      final uri = Uri.parse('$endpoint/v1/wardrobe-image/$itemId')
+          .replace(queryParameters: {'variant': variant});
+      final request =
+          await client.getUrl(uri).timeout(const Duration(seconds: 8));
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      final response =
+          await request.close().timeout(const Duration(seconds: 15));
+      if (response.statusCode == 404) return null;
+      if (response.statusCode != 200) {
+        throw StateError(
+            'No se pudo descargar una foto: ${response.statusCode}.');
+      }
+      const maximumBytes = 10 * 1024 * 1024;
+      if (response.contentLength > maximumBytes) {
+        throw const FormatException('Una foto supera el tamaño permitido.');
+      }
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response.timeout(const Duration(seconds: 30))) {
+        builder.add(chunk);
+        if (builder.length > maximumBytes) {
+          throw const FormatException('Una foto supera el tamaño permitido.');
+        }
+      }
+      return builder.takeBytes();
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<LanPairingResult> pair(
     LanPairingData pairing, {
     required String deviceName,

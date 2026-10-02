@@ -10,6 +10,8 @@ import { createHallwayLightSwitch, createLightSwitch } from './light_switch.js';
 import { addDesktopOverlay } from './desktop_overlays.js';
 import { addHallwayDetails } from './hallway_details.js';
 import { createSecondRoomLamp } from './second_room_lamp.js';
+import { createEchoDot } from './echo_dot.js';
+import { frameOrthographicCamera } from './camera_framing.js';
 
 const state = document.getElementById('estado');
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -78,7 +80,7 @@ let pendingFocus = null;
 let cameraTween = null;
 
 function hasControls(room, object) {
-  return object.id === 'ventana' || room.id === 'dormitorio' && object.id === 'luz_techo';
+  return object.id === 'ventana' || room.id === 'dormitorio' && ['luz_techo', 'echo_dot'].includes(object.id);
 }
 
 function weatherStyle(value) {
@@ -808,13 +810,14 @@ function frame(target) {
   cameraTween = null;
   const bounds = new THREE.Box3().setFromObject(target);
   if (bounds.isEmpty()) return;
-  const size = bounds.getSize(new THREE.Vector3());
-  const center = bounds.getCenter(new THREE.Vector3());
+  const direction = target === wholeHouse
+    ? new THREE.Vector3(8, 14, 9)
+    : new THREE.Vector3(-8, 14, 9)
+      .applyQuaternion(target.getWorldQuaternion(new THREE.Quaternion()));
+  const center = frameOrthographicCamera(camera, bounds, direction);
   controls.target.copy(center);
-  const radius = Math.max(size.x, size.z, size.y * 1.6, 2);
-  camera.zoom = Math.min(2.1, Math.max(0.48, 6.8 / radius));
-  camera.position.copy(center).add(new THREE.Vector3(rooms.size > 1 ? 8 : -8, 14, 9));
-  camera.updateProjectionMatrix();
+  // El alejamiento conserva al menos el 65 % del tamaño del encuadre inicial.
+  controls.minZoom = camera.zoom * 0.65;
   controls.update();
 }
 
@@ -1004,6 +1007,15 @@ async function load() {
         placeDeskAgainstRightWall(root);
         lightSwitches.set(room.id, createLightSwitch(root));
         pcFans = addDeskDetails(root);
+        const echo = createEchoDot(root);
+        if (echo) {
+          echo.userData.twinObject = {
+            roomId: room.id,
+            objectId: 'echo_dot',
+            objectName: 'Echo Dot',
+          };
+          controllableObjects.set('dormitorio/echo_dot', echo);
+        }
         for (const index of [1, 2]) {
           const update = addDesktopOverlay(root, index);
           if (update) desktopOverlays.push(update);

@@ -56,4 +56,51 @@ void main() {
     expect(projected, isNot(contains('calendarSettings')));
     expect((projected['tasks'] as List).first, isNot(contains('calendarLink')));
   });
+
+  test('Ropa comparte prendas visibles y maletas sin datos ajenos', () {
+    final projected = projectWardrobeSnapshot({
+      'wardrobeItems': [
+        {
+          'id': 'camisa',
+          'name': 'Camisa azul',
+          'category': 'Camisas',
+          'imagePath': 'items/privado.png',
+          'imageSha256': 'abc',
+          'price': 59,
+          'laundryStatus': 'dirty',
+        },
+        {'id': 'abrigo', 'name': 'Abrigo', 'archived': true},
+        {'id': 'oculta', 'name': 'Oculta', 'archived': true},
+      ],
+      'wardrobePackingLists': [
+        {
+          'id': 'viaje',
+          'name': 'Viaje',
+          'startDate': '2026-10-01',
+          'endDate': '2026-10-05',
+          'entries': [
+            {'itemId': 'camisa', 'quantity': 3, 'packed': false},
+            {'itemId': 'abrigo', 'quantity': 1, 'packed': true},
+          ],
+          'discardedItemIds': ['oculta'],
+        },
+      ],
+      'wardrobeWearLogs': [
+        {'private': true}
+      ],
+      'notes': [
+        {'private': true}
+      ],
+    }, serverId: 'pc');
+    final items = projected['items'] as List;
+    expect(items, hasLength(2));
+    expect(items.map((item) => item['id']), containsAll(['camisa', 'abrigo']));
+    expect(items.first, isNot(contains('imagePath')));
+    expect(items.first, isNot(contains('price')));
+    expect(items.first, isNot(contains('laundryStatus')));
+    expect(projected, isNot(contains('wardrobeWearLogs')));
+    expect(projected, isNot(contains('notes')));
+    expect((projected['packingLists'] as List).first,
+        isNot(contains('discardedItemIds')));
+  });
 }

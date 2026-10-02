@@ -153,11 +153,17 @@ Para completar el login real de la app, todavía hace falta tener Google activad
 
 ### Android por Wi-Fi local
 
-La versión Android es un visor de tareas de solo lectura. No inicializa
-Supabase ni comparte el snapshot completo: se empareja mediante el QR de
-`Ajustes > Conexión Android`, descarga por HTTPS local únicamente tareas,
-proyectos y categorías referenciados, conserva una copia sin conexión y
-programa los avisos en el propio teléfono.
+La versión Android permite consultar tareas y ropa. Se empareja mediante el QR
+de `Ajustes > Conexión Android`, descarga por HTTPS local únicamente los datos
+de esos apartados y conserva una copia sin conexión. Los avisos de tareas se
+programan en el propio teléfono.
+
+`Ropa` descarga el catálogo y las fotos completas. `Maletas` carga las listas
+preparadas en Windows y permite marcar, unidad por unidad, lo que se ha usado
+durante el viaje. Estas marcas se guardan solo en el móvil y no modifican el
+archivo de datos de Windows. La aplicación indica el progreso de descarga y
+cuándo la ropa está lista para consultarla sin Wi-Fi. Desconectar el PC desde
+Android borra también las fotos y las marcas locales.
 
 Windows instala `todo_lan_agent.exe`, un agente por usuario que arranca con la
 sesión y continúa disponible aunque la ventana de Todo esté cerrada. Su
@@ -216,9 +222,14 @@ mediante el conmutador externo `Todo Home Assistant LAN`. La imagen oficial se
 descarga y verifica con `tooling/install_home_assistant_vm.ps1`; la opción
 `-Install` crea e inicia la máquina virtual con permisos de administrador.
 El arranque automático está desactivado: al reiniciar Windows la máquina no se
-enciende sola. Para usar la domótica hay que iniciarla manualmente en Hyper-V
-o pedir a Codex que lo haga. Cerrar Todo no apaga Home Assistant; para liberar
-su memoria hay que apagar la máquina virtual de forma ordenada.
+enciende sola. Para encenderla, usa el acceso directo «Iniciar Home Assistant»
+del escritorio o ejecuta
+`powershell -NoProfile -ExecutionPolicy Bypass -File tooling/start_home_assistant_vm.ps1`
+desde la raíz del proyecto. Ambos usan el
+mismo script; Windows pide permisos de administrador cuando necesita iniciar la
+máquina y el script espera a que Home Assistant responda. Cerrar Todo no apaga
+Home Assistant; para liberar su memoria hay que apagar la máquina virtual de
+forma ordenada.
 Tras el primer arranque, abrir `http://homeassistant.local`, crear la
 cuenta propietaria y añadir la integración oficial TP-Link con la cuenta Tapo.
 No compartir esas credenciales ni el token en chats o archivos del repositorio.

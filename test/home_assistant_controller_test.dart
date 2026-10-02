@@ -112,8 +112,7 @@ void main() {
                 'rgb_color': options['rgb_color'],
               if (options['color_temp_kelvin'] != null)
                 'color_temp_kelvin': options['color_temp_kelvin'],
-              if (options['rgb_color'] != null)
-                'color_mode': 'hs',
+              if (options['rgb_color'] != null) 'color_mode': 'hs',
               if (options['color_temp_kelvin'] != null)
                 'color_mode': 'color_temp',
             },
@@ -391,7 +390,8 @@ void main() {
     expect((commands.last['service_data'] as Map)['color_temp_kelvin'], 3100);
     expect(controller.secondRoomLight?.temperature, 3100);
     await controller.savePresetForRoom('habitacion_vacia', 'Lectura');
-    expect(controller.presetsForRoom('habitacion_vacia').single.name, 'Lectura');
+    expect(
+        controller.presetsForRoom('habitacion_vacia').single.name, 'Lectura');
     expect(controller.presetsForRoom('pasillo').single.name, 'Violeta');
     await controller.setGradualOnEnabledForRoom('pasillo', false);
     expect(controller.gradualOnEnabledForRoom('pasillo'), isFalse);
@@ -452,5 +452,117 @@ void main() {
     expect(controller.secondRoomLight?.temperature, 3100);
     await controller.setSecondRoomLight(on: true);
     expect((commands.last['service_data'] as Map)['color_temp_kelvin'], 3100);
+  });
+
+  test('asocia el Echo por dispositivo y limita sus órdenes', () async {
+    final directory = await Directory.systemTemp.createTemp('todo-echo-test-');
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final sockets = <WebSocket>[];
+    final commands = <Map<String, dynamic>>[];
+    server.listen((request) async {
+      final socket = await WebSocketTransformer.upgrade(request);
+      sockets.add(socket);
+      socket.add(jsonEncode({'type': 'auth_required'}));
+      socket.listen((message) {
+        final data =
+            (jsonDecode(message as String) as Map).cast<String, dynamic>();
+        if (data['type'] == 'auth') {
+          socket.add(jsonEncode({'type': 'auth_ok'}));
+          return;
+        }
+        if (data['type'] == 'call_service') commands.add(data);
+        socket.add(jsonEncode({
+          'id': data['id'],
+          'type': 'result',
+          'success': true,
+          'result': switch (data['type']) {
+            'get_states' => [
+                {
+                  'entity_id': 'media_player.echo_pc',
+                  'state': 'playing',
+                  'attributes': {
+                    'friendly_name': 'Echo del PC',
+                    'volume_level': 0.4,
+                    'supported_features': 16445,
+                  },
+                },
+                {
+                  'entity_id': 'switch.echo_no_molestar',
+                  'state': 'off',
+                  'attributes': {'friendly_name': 'No molestar'},
+                },
+                {
+                  'entity_id': 'switch.ajeno',
+                  'state': 'off',
+                  'attributes': {'friendly_name': 'Otro dispositivo'},
+                },
+              ],
+            'config/entity_registry/list_for_display' => {
+                'entities': [
+                  {
+                    'ei': 'media_player.echo_pc',
+                    'pl': 'alexa_devices',
+                    'di': 'echo-1'
+                  },
+                  {
+                    'ei': 'switch.echo_no_molestar',
+                    'pl': 'alexa_devices',
+                    'di': 'echo-1'
+                  },
+                  {
+                    'ei': 'notify.echo_pc_speak',
+                    'pl': 'alexa_devices',
+                    'di': 'echo-1',
+                    'en': 'Hablar'
+                  },
+                  {'ei': 'switch.ajeno', 'pl': 'alexa_devices', 'di': 'echo-2'},
+                ],
+              },
+            _ => null,
+          },
+        }));
+      });
+    });
+    final controller = HomeAssistantController(
+      twin: HomeTwinService(rootOverride: directory),
+      tokenStore: _MemoryTokenStore(),
+    );
+    addTearDown(() async {
+      controller.dispose();
+      for (final socket in sockets) {
+        await socket.close();
+      }
+      await server.close(force: true);
+      await directory.delete(recursive: true);
+    });
+    await controller.configure(
+      url: 'http://127.0.0.1:${server.port}',
+      newToken: 'token-de-prueba',
+      selectedEntityId: '',
+    );
+    expect(controller.echoPlayers.single.name, 'Echo del PC');
+    await controller.bindEcho('media_player.echo_pc');
+    expect(controller.echoDeviceId, 'echo-1');
+    expect(controller.echoEntities('notify').single.name, 'Hablar');
+    expect(controller.echoEntities('switch').single.entityId,
+        'switch.echo_no_molestar');
+    await controller.callEcho('media_player', 'volume_set',
+        entityId: 'media_player.echo_pc', data: {'volume_level': 0.6});
+    expect((commands.last['service_data'] as Map)['volume_level'], 0.6);
+    await controller.callEcho('notify', 'send_message',
+        entityId: 'notify.echo_pc_speak', data: {'message': 'Hola'});
+    expect(commands.last['target'], {'entity_id': 'notify.echo_pc_speak'});
+    expect(commands.last['service_data'], {'message': 'Hola'});
+    await controller.callEcho('alexa_devices', 'send_text_command',
+        data: {'text_command': 'pon música'});
+    expect((commands.last['service_data'] as Map)['device_id'], 'echo-1');
+    await expectLater(
+      controller.callEcho('switch', 'turn_on', entityId: 'switch.ajeno'),
+      throwsFormatException,
+    );
+    final saved = (jsonDecode(await File(
+      '${directory.path}${Platform.pathSeparator}twin${Platform.pathSeparator}home_assistant.json',
+    ).readAsString()) as Map)['bindings'] as Map;
+    expect(saved['dormitorio/echo_dot'], 'media_player.echo_pc');
   });
 }

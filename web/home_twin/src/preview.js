@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { addDeskDetails } from './desk_details.js';
 import { placeDeskAgainstRightWall } from './desk_placement.js';
+import { createEchoDot } from './echo_dot.js';
 import { addDesktopOverlay } from './desktop_overlays.js';
 import { createEntranceDoor } from './entrance_doors.js';
 import { addHallwayDetails } from './hallway_details.js';
@@ -94,6 +95,8 @@ function focus(node, close) {
   const center = bounds.getCenter(new THREE.Vector3());
   const size = bounds.getSize(new THREE.Vector3());
   const distance = close ? 1.1 : Math.max(3, Math.max(size.x, size.z, size.y) * 1.65);
+  // El límite depende de la estancia y se conserva al inspeccionar un objeto.
+  if (!close) controls.maxDistance = distance / 0.65;
   controls.target.copy(center);
   camera.position.copy(center).add(new THREE.Vector3(0.65, 0.65, 1).normalize().multiplyScalar(distance));
   controls.update();
@@ -296,6 +299,7 @@ async function load() {
     activeCameraRoomId = room.id;
     if (room.id === 'dormitorio') {
       pcRig = addDeskDetails(root);
+      createEchoDot(root);
       await addMonitorWallpapers(root);
     }
     status.textContent = 'Arrastra para girar · Usa la rueda sobre un objeto para acercar · La cámara se conserva al recargar';

@@ -28,6 +28,9 @@ class TodoLanAgent {
   MdnsAdvertiser? _mdns;
   Map<String, dynamic>? _projection;
   String _revision = '';
+  Map<String, dynamic>? _wardrobeProjection;
+  String _wardrobeRevision = '';
+  final Map<String, Map<String, String>> _wardrobeAssets = {};
   String _pairingSecret = '';
   DateTime _pairingExpiresAt = DateTime.fromMillisecondsSinceEpoch(0);
   Timer? _pairingTimer;
@@ -234,6 +237,41 @@ class TodoLanAgent {
           'desktopUtcOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
           'desktopTimeZoneName': DateTime.now().timeZoneName,
         };
+        final wardrobe = projectWardrobeSnapshot(
+          decoded.cast<String, dynamic>(),
+          serverId: _serverId,
+        );
+        final assets = <String, Map<String, String>>{};
+        for (final value in wardrobe['items'] as List) {
+          final item = value as Map<String, dynamic>;
+          final id = item['id'] as String;
+          final sourceItem = (decoded['wardrobeItems'] as List? ?? const [])
+              .whereType<Map>()
+              .firstWhere((candidate) => candidate['id'] == id);
+          final original = sourceItem['imagePath'] as String? ?? '';
+          final thumbnail = sourceItem['thumbnailPath'] as String? ?? '';
+          assets[id] = {'original': original, 'thumbnail': thumbnail};
+          final thumbnailFile = _wardrobeFile(thumbnail, 'thumbnail');
+          if (thumbnailFile != null && await thumbnailFile.exists()) {
+            item['thumbnailSha256'] =
+                sha256.convert(await thumbnailFile.readAsBytes()).toString();
+          } else {
+            item['thumbnailSha256'] = '';
+          }
+          final originalFile = _wardrobeFile(original, 'original');
+          item['imageAvailable'] =
+              originalFile != null && await originalFile.exists();
+        }
+        _wardrobeAssets
+          ..clear()
+          ..addAll(assets);
+        _wardrobeRevision =
+            sha256.convert(utf8.encode(jsonEncode(wardrobe))).toString();
+        _wardrobeProjection = {
+          ...wardrobe,
+          'revision': _wardrobeRevision,
+          'generatedAt': DateTime.now().toUtc().toIso8601String(),
+        };
         if (_server != null) unawaited(_writeStatus());
         return;
       } catch (_) {
@@ -280,6 +318,46 @@ class TodoLanAgent {
         request.response.headers.set(HttpHeaders.etagHeader, etag);
         return _json(request.response, 200, _projection!);
       }
+      if (request.method == 'GET' &&
+          request.uri.path == '/v1/wardrobe-snapshot') {
+        if (!await _isAuthorized(request)) {
+          return _json(request.response, 401, {'error': 'no_autorizado'});
+        }
+        await _refreshSnapshot();
+        if (_wardrobeProjection == null) {
+          return _json(
+              request.response, 503, {'error': 'snapshot_no_disponible'});
+        }
+        final etag = '"$_wardrobeRevision"';
+        request.response.headers.set(HttpHeaders.etagHeader, etag);
+        if (request.headers.value(HttpHeaders.ifNoneMatchHeader) == etag) {
+          request.response.statusCode = HttpStatus.notModified;
+          return request.response.close();
+        }
+        return _json(request.response, 200, _wardrobeProjection!);
+      }
+      if (request.method == 'GET' &&
+          request.uri.path.startsWith('/v1/wardrobe-image/')) {
+        if (!await _isAuthorized(request)) {
+          return _json(request.response, 401, {'error': 'no_autorizado'});
+        }
+        final id = request.uri.pathSegments.last;
+        final variant = request.uri.queryParameters['variant'];
+        if (!RegExp(r'^[A-Za-z0-9_-]{1,100}$').hasMatch(id) ||
+            (variant != 'original' && variant != 'thumbnail')) {
+          return _json(request.response, 400, {'error': 'imagen_invalida'});
+        }
+        final relative = _wardrobeAssets[id]?[variant];
+        final file = _wardrobeFile(relative ?? '', variant!);
+        if (file == null || !await file.exists()) {
+          return _json(
+              request.response, 404, {'error': 'imagen_no_disponible'});
+        }
+        request.response.headers.contentType = ContentType('image', 'png');
+        request.response.headers.contentLength = await file.length();
+        await request.response.addStream(file.openRead());
+        return request.response.close();
+      }
       _json(request.response, 404, {'error': 'ruta_no_encontrada'});
     } catch (_) {
       try {
@@ -288,6 +366,19 @@ class TodoLanAgent {
         await request.response.close();
       }
     }
+  }
+
+  File? _wardrobeFile(String relative, String variant) {
+    final normalized = relative.replaceAll('\\', '/');
+    final prefix = variant == 'original' ? 'items/' : 'thumbnails/';
+    if (!normalized.startsWith(prefix) ||
+        !RegExp(r'^[A-Za-z0-9_-]+\.png$')
+            .hasMatch(normalized.substring(prefix.length))) {
+      return null;
+    }
+    return File(
+      '${stateDirectory.parent.path}${Platform.pathSeparator}wardrobe${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}',
+    );
   }
 
   Future<void> _pair(HttpRequest request) async {
@@ -385,6 +476,53 @@ class TodoLanAgent {
     final values = List<int>.generate(bytes, (_) => _random.nextInt(256));
     return base64UrlEncode(values).replaceAll('=', '');
   }
+}
+
+Map<String, dynamic> projectWardrobeSnapshot(
+  Map<String, dynamic> source, {
+  required String serverId,
+}) {
+  final lists = (source['wardrobePackingLists'] as List? ?? const [])
+      .whereType<Map>()
+      .map((list) => {
+            ..._allow(list, const ['id', 'name', 'startDate', 'endDate']),
+            'entries': (list['entries'] as List? ?? const [])
+                .whereType<Map>()
+                .map((entry) =>
+                    _allow(entry, const ['itemId', 'quantity', 'packed']))
+                .toList(),
+          })
+      .toList();
+  final referencedIds = <String>{
+    for (final list in lists)
+      for (final entry in list['entries'] as List)
+        if (entry['itemId'] is String) entry['itemId'] as String,
+  };
+  final items = (source['wardrobeItems'] as List? ?? const [])
+      .whereType<Map>()
+      .where((item) =>
+          item['archived'] != true || referencedIds.contains(item['id']))
+      .map((item) => _allow(item, const [
+            'id',
+            'name',
+            'category',
+            'colors',
+            'material',
+            'seasons',
+            'occasions',
+            'tags',
+            'favorite',
+            'archived',
+            'imageSha256',
+          ]))
+      .toList();
+  return {
+    'protocolVersion': protocolVersion,
+    'wardrobeVersion': 1,
+    'serverId': serverId,
+    'items': items,
+    'packingLists': lists,
+  };
 }
 
 Map<String, dynamic> projectTaskSnapshot(

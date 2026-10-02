@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../domain/models.dart';
 import 'mobile_task_controller.dart';
+import 'mobile_wardrobe_pages.dart';
 
 class MobileTaskApp extends StatefulWidget {
   const MobileTaskApp({super.key});
@@ -36,7 +37,7 @@ class _MobileTaskAppState extends State<MobileTaskApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && controller.paired) {
-      unawaited(controller.sync());
+      unawaited(controller.syncAll());
     }
   }
 
@@ -311,7 +312,8 @@ class _MobileTaskShellState extends State<_MobileTaskShell> {
         tasks: controller.allTasks,
         controller: controller,
       ),
-      _MobileSettingsPage(controller: controller),
+      MobileWardrobePage(controller: controller),
+      MobilePackingPage(controller: controller),
     ];
 
     return Stack(
@@ -331,9 +333,21 @@ class _MobileTaskShellState extends State<_MobileTaskShell> {
               else
                 IconButton(
                   tooltip: 'Actualizar',
-                  onPressed: controller.sync,
+                  onPressed: controller.syncAll,
                   icon: const Icon(Icons.sync_rounded),
                 ),
+              IconButton(
+                tooltip: 'Ajustes',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(title: const Text('Ajustes')),
+                      body: _MobileSettingsPage(controller: controller),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.settings_outlined),
+              ),
             ],
           ),
           body: Column(
@@ -374,9 +388,14 @@ class _MobileTaskShellState extends State<_MobileTaskShell> {
                 label: 'Todas',
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded),
-                label: 'Ajustes',
+                icon: Icon(Icons.checkroom_outlined),
+                selectedIcon: Icon(Icons.checkroom_rounded),
+                label: 'Ropa',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.luggage_outlined),
+                selectedIcon: Icon(Icons.luggage_rounded),
+                label: 'Maletas',
               ),
             ],
           ),
@@ -735,7 +754,7 @@ class _MobileSettingsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 FilledButton.tonalIcon(
-                  onPressed: controller.syncing ? null : controller.sync,
+                  onPressed: controller.syncing ? null : controller.syncAll,
                   icon: const Icon(Icons.sync_rounded),
                   label: const Text('Actualizar ahora'),
                 ),
@@ -791,7 +810,7 @@ class _MobileSettingsPage extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Desconectar móvil'),
         content: const Text(
-          'Se eliminarán de este móvil la copia de tareas, la credencial y los avisos programados. Las tareas del ordenador no cambiarán.',
+          'Se eliminarán de este móvil las tareas, la ropa descargada, las marcas de uso de las maletas, la credencial y los avisos programados. Los datos del ordenador no cambiarán.',
         ),
         actions: [
           TextButton(

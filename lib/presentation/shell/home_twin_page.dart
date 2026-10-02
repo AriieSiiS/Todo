@@ -303,7 +303,8 @@ class _HomeTwinLightControlsState extends State<_HomeTwinLightControls> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
-              Expanded(child: Column(
+              Expanded(
+                  child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1123,6 +1124,7 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
 
   bool _hasControls(HomeTwinRoom room, HomeTwinObject object) =>
       object.id == 'ventana' ||
+      (room.id == 'dormitorio' && object.id == 'echo_dot') ||
       ((room.id == 'dormitorio' || room.id == 'habitacion_vacia') &&
           object.id == 'luz_techo') ||
       (room.id == 'pasillo' && object.id == 'luz_pasillo');
@@ -1338,12 +1340,13 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         for (final object in room.objects)
-                          if (_hasControls(room, object))
+                          if (_hasControls(room, object) &&
+                              object.id != 'ventana')
                             IconButton.filledTonal(
                               tooltip: 'Ir a ${object.name.toLowerCase()}',
                               onPressed: () => _focusDevice(room, object),
-                              icon: Icon(object.id == 'ventana'
-                                  ? Icons.blinds_rounded
+                              icon: Icon(object.id == 'echo_dot'
+                                  ? Icons.speaker_rounded
                                   : Icons.lightbulb_outline_rounded),
                             ),
                       ],
@@ -1385,6 +1388,10 @@ class _HomeTwinPageState extends State<HomeTwinPage> {
                 home: widget.homeAssistant,
                 roomId: _selectedRoom!.id,
               ),
+            ],
+            if (_selectedObject!.id == 'echo_dot') ...[
+              const SizedBox(height: 12),
+              _HomeTwinEchoControls(home: widget.homeAssistant),
             ],
             if (_selectedObject!.id == 'ventana') ...[
               const SizedBox(height: 12),

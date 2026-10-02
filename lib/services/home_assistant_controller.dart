@@ -242,6 +242,44 @@ class HomeAssistantWeather {
   }
 }
 
+class HomeAssistantEchoEntity {
+  const HomeAssistantEchoEntity({
+    required this.entityId,
+    required this.name,
+    required this.state,
+    required this.attributes,
+  });
+
+  final String entityId;
+  final String name;
+  final String state;
+  final Map<String, dynamic> attributes;
+
+  bool get available => state != 'unavailable' && state != 'unknown';
+  int get supportedFeatures =>
+      (attributes['supported_features'] as num?)?.toInt() ?? 0;
+  bool supports(int feature) => (supportedFeatures & feature) != 0;
+  double? get volume => (attributes['volume_level'] as num?)?.toDouble();
+  bool? get muted => attributes['is_volume_muted'] as bool?;
+  String? get mediaTitle => attributes['media_title'] as String?;
+  String? get mediaArtist => attributes['media_artist'] as String?;
+  List<String> get options => ((attributes['options'] as List?) ?? const [])
+      .whereType<String>()
+      .toList();
+
+  factory HomeAssistantEchoEntity.fromState(Map<String, dynamic> value) {
+    final id = value['entity_id'] as String? ?? '';
+    final attributes = (value['attributes'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    return HomeAssistantEchoEntity(
+      entityId: id,
+      name: attributes['friendly_name'] as String? ?? id,
+      state: value['state'] as String? ?? 'unavailable',
+      attributes: attributes,
+    );
+  }
+}
+
 class _IndependentLightState {
   HomeAssistantLight? preview;
   HomeLightPreset? lastOn;
@@ -278,6 +316,9 @@ class HomeAssistantController extends ChangeNotifier {
   final Map<String, HomeAssistantLight> _lights = {};
   final Map<String, HomeAssistantWeather> _weathers = {};
   final Map<String, HomeAssistantWeather> _lastAvailableWeather = {};
+  final Map<String, HomeAssistantEchoEntity> _echoEntities = {};
+  final Map<String, String> _echoDeviceByEntity = {};
+  final Map<String, String> _echoPlatformByEntity = {};
   bool? _sunAboveHorizon;
   double? _sunElevation;
   HomeAssistantLight? _previewLight;
@@ -307,6 +348,7 @@ class HomeAssistantController extends ChangeNotifier {
   String hallwayEntityId = '';
   String secondRoomEntityId = '';
   String weatherEntityId = '';
+  String echoEntityId = '';
   String? error;
   bool connected = false;
   bool hasToken = false;
@@ -335,6 +377,25 @@ class HomeAssistantController extends ChangeNotifier {
       _lights.values.toList()..sort((a, b) => a.name.compareTo(b.name));
   List<HomeAssistantWeather> get weathers =>
       _weathers.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  List<HomeAssistantEchoEntity> get echoPlayers => _echoEntities.values
+      .where((entity) =>
+          entity.entityId.startsWith('media_player.') &&
+          _echoPlatformByEntity[entity.entityId] == 'alexa_devices')
+      .toList()
+    ..sort((a, b) => a.name.compareTo(b.name));
+  HomeAssistantEchoEntity? get selectedEcho => _echoEntities[echoEntityId];
+  String? get echoDeviceId => _echoDeviceByEntity[echoEntityId];
+  List<HomeAssistantEchoEntity> echoEntities(String domain) {
+    final deviceId = echoDeviceId;
+    if (deviceId == null || deviceId.isEmpty) return const [];
+    return _echoEntities.values
+        .where((entity) =>
+            entity.entityId.startsWith('$domain.') &&
+            _echoDeviceByEntity[entity.entityId] == deviceId)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
   HomeAssistantWeather? get selectedWeather {
     final current = _weathers[weatherEntityId];
     return current?.available == true
@@ -363,9 +424,7 @@ class HomeAssistantController extends ChangeNotifier {
     final preview = _previewLight;
     if (preview != null) {
       final prepared = _lastOnLight;
-      return !preview.isOn &&
-              prepared != null &&
-              prepared.entityId == entityId
+      return !preview.isOn && prepared != null && prepared.entityId == entityId
           ? preview.withSetting(prepared)
           : preview;
     }
@@ -421,6 +480,7 @@ class HomeAssistantController extends ChangeNotifier {
             bindings?['habitacion_vacia/luz_techo'] as String? ?? '';
         weatherEntityId =
             bindings?['dormitorio/ventana_clima'] as String? ?? '';
+        echoEntityId = bindings?['dormitorio/echo_dot'] as String? ?? '';
         final gradualOn = json['gradualOnByEntity'];
         if (gradualOn is Map) {
           for (final entry in gradualOn.entries) {
@@ -570,6 +630,18 @@ class HomeAssistantController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> bindEcho(String id) async {
+    if (_echoPlatformByEntity[id] != 'alexa_devices' ||
+        !id.startsWith('media_player.') ||
+        !_echoEntities.containsKey(id)) {
+      throw const FormatException(
+          'Selecciona un Echo de la integración Alexa Devices.');
+    }
+    echoEntityId = id;
+    await _saveConfiguration();
+    notifyListeners();
+  }
+
   Future<void> _saveConfiguration() {
     final contents = jsonEncode({
       'schemaVersion': 1,
@@ -579,6 +651,7 @@ class HomeAssistantController extends ChangeNotifier {
         'pasillo/luz_pasillo': hallwayEntityId,
         'habitacion_vacia/luz_techo': secondRoomEntityId,
         'dormitorio/ventana_clima': weatherEntityId,
+        'dormitorio/echo_dot': echoEntityId,
       },
       'presets': _presets.map((preset) => preset.toJson()).toList(),
       'lastOnLight': _lastOnLight?.toJson(),
@@ -783,6 +856,13 @@ class HomeAssistantController extends ChangeNotifier {
       await _authenticated!.future.timeout(const Duration(seconds: 8));
       final response = await _request({'type': 'get_states'});
       _readStates(response['result']);
+      try {
+        final registry =
+            await _request({'type': 'config/entity_registry/list_for_display'});
+        _readEchoRegistry(registry['result']);
+      } catch (_) {
+        // La conexión y las luces siguen disponibles si falla el registro.
+      }
       await _request(
           {'type': 'subscribe_events', 'event_type': 'state_changed'});
       connected = true;
@@ -825,6 +905,16 @@ class HomeAssistantController extends ChangeNotifier {
         final id = values['entity_id'];
         if (id is! String) return;
         final state = values['new_state'];
+        if (_echoDomains.any((domain) => id.startsWith('$domain.'))) {
+          if (state is Map) {
+            _echoEntities[id] = HomeAssistantEchoEntity.fromState(
+                state.cast<String, dynamic>());
+          } else {
+            _echoEntities.remove(id);
+          }
+          notifyListeners();
+          return;
+        }
         if (id.startsWith('weather.')) {
           if (state is Map) {
             final weather =
@@ -882,9 +972,15 @@ class HomeAssistantController extends ChangeNotifier {
     if (result is! List) return;
     _lights.clear();
     _weathers.clear();
+    _echoEntities.clear();
     for (final value in result) {
       if (value is! Map || value['entity_id'] is! String) continue;
       final id = value['entity_id'] as String;
+      if (_echoDomains.any((domain) => id.startsWith('$domain.'))) {
+        _echoEntities[id] =
+            HomeAssistantEchoEntity.fromState(value.cast<String, dynamic>());
+        continue;
+      }
       if (id.startsWith('weather.')) {
         final weather =
             HomeAssistantWeather.fromState(value.cast<String, dynamic>());
@@ -911,6 +1007,94 @@ class HomeAssistantController extends ChangeNotifier {
     _reconcilePreview();
     _reconcileIndependentPreviews();
     notifyListeners();
+  }
+
+  static const _echoDomains = {
+    'media_player',
+    'notify',
+    'switch',
+    'select',
+    'sensor',
+    'binary_sensor',
+    'button',
+    'event',
+    'todo',
+  };
+
+  void _readEchoRegistry(dynamic result) {
+    if (result is! Map || result['entities'] is! List) return;
+    _echoDeviceByEntity.clear();
+    _echoPlatformByEntity.clear();
+    for (final entry in result['entities'] as List) {
+      if (entry is! Map) continue;
+      final id = entry['ei'];
+      if (id is! String) continue;
+      final device = entry['di'];
+      final platform = entry['pl'];
+      if (device is String) _echoDeviceByEntity[id] = device;
+      if (platform is String) _echoPlatformByEntity[id] = platform;
+      if (platform == 'alexa_devices' &&
+          id.startsWith('notify.') &&
+          !_echoEntities.containsKey(id)) {
+        _echoEntities[id] = HomeAssistantEchoEntity(
+          entityId: id,
+          name: entry['en'] as String? ?? id,
+          state: 'on',
+          attributes: const {},
+        );
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> callEcho(
+    String domain,
+    String service, {
+    String? entityId,
+    Map<String, dynamic> data = const {},
+  }) async {
+    if (!connected || selectedEcho == null || echoDeviceId == null) {
+      throw const FormatException(
+          'El Echo no está conectado en Home Assistant.');
+    }
+    const allowed = <String, Set<String>>{
+      'media_player': {
+        'media_play',
+        'media_pause',
+        'media_stop',
+        'media_next_track',
+        'media_previous_track',
+        'volume_set',
+        'volume_mute',
+        'select_source',
+      },
+      'notify': {'send_message'},
+      'switch': {'turn_on', 'turn_off'},
+      'select': {'select_option'},
+      'button': {'press'},
+      'alexa_devices': {'send_text_command'},
+    };
+    if (allowed[domain]?.contains(service) != true) {
+      throw const FormatException('La función solicitada no está disponible.');
+    }
+    if (domain != 'alexa_devices' &&
+        (entityId == null ||
+            !echoEntities(domain)
+                .any((entity) => entity.entityId == entityId))) {
+      throw const FormatException('La entidad no pertenece al Echo asociado.');
+    }
+    final serviceData = <String, dynamic>{
+      ...data,
+      if (domain == 'alexa_devices') 'device_id': echoDeviceId,
+      if (entityId != null && domain != 'notify') 'entity_id': entityId,
+    };
+    await _request({
+      'type': 'call_service',
+      'domain': domain,
+      'service': service,
+      'service_data': serviceData,
+      if (domain == 'notify') 'target': {'entity_id': entityId},
+    });
   }
 
   void _readSun(dynamic value) {
