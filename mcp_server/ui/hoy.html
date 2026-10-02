@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hoy en Todo</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; color: light-dark(#20252b, #e9edf2); background: light-dark(#fafbf9, #1b1e22); }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 780px; margin: auto; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -.8px; }
+    p { line-height: 1.5; }
+    #date, #connection, .detail { color: light-dark(#626c77, #aab5c3); font-size: 13px; }
+    #date { margin: 6px 0; }
+    button, input { font: inherit; border: 1px solid light-dark(#dce2dd, #3c4540); border-radius: 10px; padding: 10px 13px; }
+    button { cursor: pointer; background: light-dark(#fff, #252b28); color: inherit; }
+    button:hover:enabled { border-color: #43886a; }
+    button:disabled { opacity: .55; cursor: default; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #74ad93; outline-offset: 2px; }
+    #message { min-height: 24px; font-size: 14px; }
+    #message.error { color: light-dark(#a42d20, #ffa695); }
+    form { padding: 16px; background: light-dark(#edf3ef, #242e28); border-radius: 14px; margin: 18px 0; }
+    form[hidden] { display: none; }
+    label { display: block; font-size: 13px; margin-bottom: 6px; }
+    input { width: 100%; background: light-dark(#fff, #1b211d); color: inherit; }
+    .form-bottom { display: flex; align-items: end; gap: 12px; margin-top: 12px; }
+    .schedule { flex: 1; }
+    #add { background: #27694a; color: white; border-color: #27694a; white-space: nowrap; }
+    ul { padding: 0; list-style: none; margin: 0; }
+    li { display: flex; align-items: start; gap: 14px; padding: 16px 0; border-bottom: 1px solid light-dark(#e5e9e5, #303735); }
+    .task-body { flex: 1; min-width: 0; }
+    .task-title { font-weight: 600; overflow-wrap: anywhere; }
+    .detail { margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .complete { font-size: 13px; flex-shrink: 0; }
+    #empty { text-align: center; padding: 28px 16px; border-radius: 14px; background: light-dark(#eff3ef, #252d28); }
+    @media (max-width: 480px) { body { padding: 16px; } .form-bottom { flex-direction: column; align-items: stretch; } li { flex-wrap: wrap; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><div><h1>Hoy en Todo</h1><p id="date">Cargando tus tareas…</p></div><button id="refresh" disabled>Actualizar</button></header>
+  <p id="connection">Conectando con Todo…</p>
+  <form id="create" hidden>
+    <label for="title">Nueva tarea</label><input id="title" maxlength="500" required placeholder="¿Qué tienes pendiente?">
+    <div class="form-bottom"><div class="schedule"><label for="scheduled">Fecha y hora (opcional)</label><input id="scheduled" type="datetime-local"></div><button id="add" type="submit">Añadir tarea</button></div>
+  </form>
+  <p id="message" role="status" aria-live="polite"></p>
+  <ul id="tasks" aria-label="Tareas de hoy"></ul>
+  <p id="empty" hidden>No tienes tareas pendientes para hoy.</p>
+</main>
+<script>
+  const el = id => document.getElementById(id);
+  const pending = new Map();
+  const completionRequests = new Map();
+  let rpcId = 0, state = { tasks: [], writes_available: false }, busy = false, createRequest = null;
+  function message(text = '', error = false) { el('message').textContent = text; el('message').className = error ? 'error' : ''; }
+  function request(method, params) {
+    return new Promise((resolve, reject) => {
+      const id = ++rpcId;
+      const timer = setTimeout(() => { pending.delete(id); reject(Object.assign(new Error('La conexión no respondió. Puedes reintentar la misma operación.'), { retryable: true })); }, 15000);
+      pending.set(id, { resolve, reject, timer });
+      window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+    });
+  }
+  window.addEventListener('message', event => {
+    if (event.source !== window.parent || event.data?.jsonrpc !== '2.0') return;
+    const data = event.data;
+    if (typeof data.id === 'number' && pending.has(data.id)) {
+      const item = pending.get(data.id); pending.delete(data.id); clearTimeout(item.timer);
+      if (data.error) item.reject(Object.assign(new Error(data.error.message || 'La petición fue rechazada.'), { retryable: false }));
+      else item.resolve(data.result);
+    } else if (data.method === 'ui/notifications/tool-result') {
+      const payload = data.params?.structuredContent;
+      if (Array.isArray(payload?.tasks)) { state = payload; render(); }
+      else if (payload?.savedLocally || payload?.created || payload?.task) refresh().catch(error => message(error.message, true));
+    }
+  });
+  async function tool(name, args) {
+    const result = await request('tools/call', { name, arguments: args });
+    if (result.isError) throw Object.assign(new Error(result.structuredContent?.error || result.content?.[0]?.text || 'No se pudo completar la operación.'), { retryable: result.structuredContent?.retryable === true });
+    return result.structuredContent;
+  }
+  function render() {
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(state.date || '') ? new Date(`${state.date}T12:00:00`) : null;
+    el('date').textContent = day ? new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(day) : 'Tus tareas de hoy';
+    el('connection').textContent = state.mode === 'sandbox' ? 'Prueba en memoria · Los cambios no se guardan en tu colección.' : state.writes_available ? 'Todo está conectado.' : state.source === 'snapshot' ? 'Abre Todo en el PC para modificar tareas.' : 'Consulta de tus tareas locales.';
+    el('create').hidden = !state.writes_available && !createRequest;
+    el('title').disabled = busy || !!createRequest; el('scheduled').disabled = busy || !!createRequest;
+    el('add').disabled = busy || !state.writes_available; el('add').textContent = createRequest ? 'Reintentar guardado' : 'Añadir tarea';
+    el('refresh').disabled = busy;
+    el('tasks').replaceChildren(); el('empty').hidden = state.tasks.length > 0;
+    for (const task of state.tasks) {
+      const row = document.createElement('li'), body = document.createElement('div'), title = document.createElement('div');
+      body.className = 'task-body'; title.className = 'task-title'; title.textContent = task.title; body.append(title);
+      const info = [];
+      if (task.scheduledAt) {
+        const time = new Date(task.scheduledAt);
+        if (!Number.isNaN(time.getTime())) info.push(new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(time));
+      }
+      if (task.recurrence?.type && task.recurrence.type !== 'none') info.push('Rutina');
+      if (task.description) info.push(task.description);
+      if (info.length) { const detail = document.createElement('div'); detail.className = 'detail'; detail.textContent = info.join(' · '); body.append(detail); }
+      row.append(body);
+      if (state.writes_available && !task.calendarLink && (task.task_version || state.mode === 'sandbox')) {
+        const complete = document.createElement('button'); complete.className = 'complete'; complete.textContent = completionRequests.has(task.id) ? 'Reintentar' : 'Completar';
+        complete.setAttribute('aria-label', `${complete.textContent}: ${task.title}`); complete.disabled = busy;
+        complete.addEventListener('click', () => finishTask(task)); row.append(complete);
+      }
+      el('tasks').append(row);
+    }
+    window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/size-changed', params: { height: document.documentElement.scrollHeight } }, '*');
+  }
+  async function refresh() { state = await tool('get_today', {}); render(); }
+  async function finishTask(task) {
+    busy = true; message();
+    const args = completionRequests.get(task.id) || (state.mode === 'sandbox' ? { task_id: task.id } : { task_id: task.id, request_id: crypto.randomUUID(), expected_version: task.task_version });
+    completionRequests.set(task.id, args); render();
+    try {
+      await tool('complete_task', args); completionRequests.delete(task.id); message('Tarea completada.'); await refresh();
+    } catch (error) {
+      if (!error.retryable) { completionRequests.delete(task.id); await refresh().catch(() => {}); }
+      message(error.message, true);
+    } finally { busy = false; render(); }
+  }
+  el('create').addEventListener('submit', async event => {
+    event.preventDefault(); if (busy) return;
+    if (!createRequest) {
+      const title = el('title').value.trim(); if (!title) return;
+      createRequest = { title };
+      if (state.mode !== 'sandbox') createRequest.request_id = crypto.randomUUID();
+      if (el('scheduled').value) createRequest.scheduled_at = el('scheduled').value;
+    }
+    busy = true; message(); render();
+    try {
+      await tool('create_task', createRequest); createRequest = null; el('title').value = ''; el('scheduled').value = ''; message('Tarea añadida.'); await refresh();
+    } catch (error) {
+      if (!error.retryable) createRequest = null;
+      message(error.message, true);
+    } finally { busy = false; render(); }
+  });
+  el('refresh').addEventListener('click', async () => {
+    busy = true; message(); render();
+    try { await refresh(); } catch (error) { message(error.message, true); }
+    finally { busy = false; render(); }
+  });
+  (async () => {
+    try {
+      await request('ui/initialize', { appInfo: { name: 'todo-hoy', version: '0.2.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' });
+      window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} }, '*');
+      await refresh();
+    } catch (error) { el('date').textContent = 'Tus tareas de hoy'; message('Abre este panel desde el plugin de Todo en ChatGPT. ' + error.message, true); }
+  })();
+</script>
+</body>
+</html>

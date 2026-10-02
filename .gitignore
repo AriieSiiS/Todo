@@ -10,6 +10,7 @@ pubspec.lock
 *.iml
 mcp_server/.env
 mcp_server/.venv-chatgpt/
+mcp_server/.tunnel-client/
 .codex_tmp_py/
 .codex_tmp/
 .codex_video_review/

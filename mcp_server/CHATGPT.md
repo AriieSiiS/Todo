@@ -1,145 +1,202 @@
 # Todo como plugin privado de ChatGPT
 
-Esta primera fase prepara una conexión privada con el MCP local de Todo. Los
-datos reales siguen en `Documents/Todo/runtime/todo_state.json`. El adaptador
-usa el SDK oficial de Python, con mensajes JSON por líneas sobre `stdio`; el
-servidor anterior y su transporte con `Content-Length` siguen disponibles para
-los clientes existentes.
+El adaptador estándar `chatgpt_server.py` conecta el MCP local con ChatGPT por
+Secure MCP Tunnel. Los datos permanecen en `Documents/Todo/runtime/todo_state.json`.
+Supabase está desactivado: no se carga el `.env` antiguo ni se utilizan sus
+credenciales. El transporte stdio usa mensajes JSON UTF-8 por líneas del SDK
+oficial; el servidor anterior conserva su transporte con `Content-Length`.
 
-## Estado de la preparación
+## Funciones disponibles
 
-- El adaptador `chatgpt_server.py` permite consultar datos locales sin escribir
-  el snapshot, ejecutar migraciones ni tocar las preferencias de Windows.
-- Se exponen `get_today`, `list_tasks`, `get_task`, `list_projects` y
-  `list_categories`, con esquemas y anotaciones de solo lectura.
-- `--sandbox` añade `create_task`, `update_task`, `complete_task` y
-  `move_task_to_day`. Usa un estado vacío en memoria que desaparece al cerrar
-  el proceso. Nunca importa las tareas reales. Cada respuesta indica
-  `mode: "sandbox"` y `persistent: false`.
-- Las entradas se validan antes de ejecutar una operación. No se permiten
-  herramientas de borrado, importación, exportación completa, archivos ni
-  ajustes. Las respuestas solo contienen datos de las entidades consultadas.
-- Supabase está desactivado en ambos modos. El adaptador también omite el
-  archivo `.env` del servidor antiguo y sus credenciales.
-- Las pruebas verifican el transporte mediante un cliente del SDK, el
-  arranque por PowerShell, el castellano con tildes y la ausencia de escrituras
-  en los archivos utilizados como snapshot y preferencias.
+- Consultar Hoy, buscar tareas, consultar una tarea, listar proyectos y categorías.
+- Crear, editar, mover y completar tareas locales mediante Todo abierto.
+- Abrir el panel **Hoy en Todo** como MCP App, con entradas para la barra lateral
+  y el panel de conversación. Permite actualizar, añadir y completar tareas.
+- Probar las nueve herramientas con un estado vacío en memoria, sin datos personales.
+- Instalar el cliente oficial de túneles para Windows y comprobar su hash publicado.
+- Arrancar un proceso supervisado con un túnel real y una referencia local a su clave.
+- Generar el paquete del plugin cuando exista el identificador real de la conexión.
 
-El adaptador **todavía no está conectado a una cuenta de ChatGPT**. No se ha
-creado un túnel ni instalado un plugin, y no se ha desplegado nada en Sites.
+El código local está preparado, pero **no se ha conectado todavía a una cuenta de
+ChatGPT**. Crear el túnel, proporcionar la clave de ejecución y registrar la
+conexión requieren acceso autenticado a esa cuenta. No se ha desplegado en Sites
+ni publicado en un directorio público.
 
 ## Preparar Python en Windows
-
-Desde la raíz del repositorio, con una instalación normal de Python 3.10 o
-posterior:
 
 ```powershell
 py -3 -m venv mcp_server/.venv-chatgpt
 mcp_server/.venv-chatgpt/Scripts/python.exe -m pip install -r mcp_server/requirements-chatgpt.txt
 ```
 
-El entorno está excluido de Git. `requirements-chatgpt.txt` fija la versión
-probada del SDK. Si el Python empaquetado de Codex no consigue instalar `pip`
-mediante `ensurepip`, su `pip` puede preparar el entorno ya creado:
+El entorno está excluido de Git. Si el Python empaquetado de Codex no consigue
+preparar `pip` con `ensurepip`, su `pip` puede instalar en el entorno ya creado:
 
 ```powershell
 & "$env:USERPROFILE/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe" -m pip --python mcp_server/.venv-chatgpt/Scripts/python.exe install -r mcp_server/requirements-chatgpt.txt
 ```
 
-## Arrancar el adaptador
+## Modos de funcionamiento
 
-Lectura del snapshot activo:
+Solo lectura del snapshot, sin escrituras, migraciones ni preferencias:
 
 ```powershell
 ./mcp_server/start_chatgpt_mcp.ps1
 ```
 
-Sesión de prueba, sin leer ni escribir datos personales:
+Lectura del estado en memoria y escritura mediante Todo abierto:
+
+```powershell
+./mcp_server/start_chatgpt_mcp.ps1 -Live
+```
+
+Prueba aislada en memoria, sin leer ni modificar la colección real:
 
 ```powershell
 ./mcp_server/start_chatgpt_mcp.ps1 -Sandbox
 ```
 
-Un snapshot alternativo para consultas:
+`-StatePath` permite seleccionar otro snapshot. Los modos `-Live` y `-Sandbox`
+son excluyentes. El proceso espera a un cliente MCP; no imprime mensajes de
+arranque en la salida estándar, que pertenece al protocolo.
+
+## Cómo se guardan los cambios
+
+La instalación de Todo inicia un puente HTTP en `127.0.0.1`, con un puerto
+aleatorio y un token distinto por sesión. Su archivo de conexión está en
+`runtime/agent_bridge_session.json`. Nunca se envía ese token a ChatGPT: el
+adaptador stdio lo utiliza únicamente dentro del PC. El puente rechaza peticiones
+sin token y peticiones que incluyan `Origin`, y no escucha en la LAN. Un bloqueo
+de archivo impide que dos puentes publiquen la misma sesión.
+
+El adaptador solicita operaciones a `TodoWorkspace`; **nunca escribe directamente
+el snapshot real**. Cada operación se valida también en Flutter y se aplica sobre
+su estado actual. El agente LAN continúa leyendo los archivos que guarda Todo.
+
+Cada escritura necesita un `request_id` único. La tarea y el resultado se guardan
+juntos en `agentOperationReceipts`, dentro del mismo snapshot. Un reintento con
+el mismo identificador y argumentos devuelve el resultado original sin repetir
+el cambio, incluso después de recargar. Reutilizarlo para otra operación se
+rechaza. Se conservan hasta 10.000 operaciones; al alcanzar ese límite se
+rechazan escrituras nuevas sin eliminar silenciosamente la protección anterior.
+
+Para editar, mover o completar se requiere `expected_version`, obtenido del
+`task_version` devuelto al consultar. La versión incluye la tarea, sus subtareas
+y el día lógico. Una edición reciente o un cambio de día obliga a consultar de
+nuevo. Completar una rutina marca la ocurrencia del día lógico; un reintento
+nunca la vuelve a abrir.
+
+Solo se devuelve `savedLocally: true` después de guardar. Si falla la persistencia,
+el cambio queda en memoria con su identificador pendiente: el mismo reintento
+vuelve a intentar guardarlo. Los errores del MCP indican `retryable`; el panel
+conserva la petición cuando no está confirmado el resultado.
+
+Si Todo está cerrado, las consultas usan el snapshot y las escrituras devuelven
+un error. Hoy respeta el día lógico manual, las rutinas completadas o saltadas y
+el orden guardado. El panel muestra que debe abrirse Todo para modificar tareas.
+
+Las escrituras de este adaptador cubren título, descripción, fecha y hora,
+prioridad, categorías y proyectos; la creación también admite recurrencia.
+No permiten borrar, importar, exportar el estado completo, editar ajustes ni
+gestionar archivos. Las tareas archivadas o enlazadas al calendario se modifican
+desde Todo. Los campos no editados se conservan, incluidos materiales y avisos.
+Las herramientas antiguas ajenas a este adaptador mantienen su funcionamiento;
+no se convierten automáticamente en clientes del puente.
+
+## Conectar el túnel
+
+Esta conexión es privada y saliente. No requiere abrir puertos entrantes ni
+publicar un servidor accesible sin autenticación. Necesita el PC y el cliente
+del túnel encendidos; para escribir también debe estar abierta la app Todo.
+
+1. Iniciar sesión en [túneles de Platform](https://platform.openai.com/settings/organization/tunnels).
+   Crear el túnel y asociarlo a la organización y al espacio de ChatGPT adecuados.
+   Crear requiere permisos Tunnels Read + Manage; ejecutarlo requiere Read + Use.
+2. Instalar el cliente oficial para la arquitectura de Windows:
+
+   ```powershell
+   ./tooling/install_mcp_tunnel_client.ps1
+   ```
+
+   El instalador consulta la última publicación oficial y verifica SHA-256 antes
+   de extraer. El binario queda en `mcp_server/.tunnel-client/`, excluido de Git.
+3. Crear una clave **de ejecución**, con acceso al túnel; no utilizar una clave
+   administrativa para el proceso persistente. Introducirla en un terminal local
+   mediante entrada oculta:
+
+   ```powershell
+   ./mcp_server/save_chatgpt_runtime_key.ps1
+   ```
+
+   Se guarda en `%LOCALAPPDATA%/Todo/ChatGPT/runtime.key`, fuera del repositorio,
+   con permisos exclusivos del usuario actual. No pegarla en chats ni incluirla
+   en argumentos. El cliente oficial lee el archivo mediante una referencia
+   `file:`; el archivo contiene la clave y debe mantenerse privado.
+4. Arrancar con el identificador real devuelto por Platform:
+
+   ```powershell
+   ./mcp_server/start_chatgpt_tunnel.ps1 -TunnelId $idRealDelTunel -RuntimeKeyFile "$env:LOCALAPPDATA/Todo/ChatGPT/runtime.key"
+   ```
+
+   El script utiliza `tunnel-client runtimes connect`, el alias `todo-local` y
+   el servidor stdio con `--live`. Después muestra el estado JSON. Solo confirmar
+   conexión cuando `process_running`, `healthy` y `ready` estén activos. Si falla,
+   consultar `tunnel-client doctor --profile todo-local --explain` y los permisos
+   de la cuenta. Los identificadores no se inventan ni se incluyen en Git.
+5. Con el túnel activo, activar el modo desarrollador de ChatGPT y crear la
+   conexión desde [Plugins](https://chatgpt.com/plugins), seleccionando **Tunnel**.
+   Comprobar que aparecen nueve herramientas y el recurso `ui://todo/hoy.html`.
+   Consultar Hoy y comparar una tarea real por su identificador con Todo.
+6. Actualizar la conexión en ChatGPT después de cambiar herramientas o metadatos.
+
+Las instrucciones concretas de la versión instalada del cliente prevalecen.
+El cliente verificado durante la preparación fue `v0.0.15` para Windows amd64.
+La disponibilidad y los permisos de la cuenta siguen pendientes de comprobar.
+
+## Paquete del plugin
+
+Después de registrar la conexión, copiar su identificador real del enlace de
+ChatGPT (`plugin_asdk_app_…`) y ejecutar:
 
 ```powershell
-./mcp_server/start_chatgpt_mcp.ps1 -StatePath 'C:/ruta/estado.json'
+mcp_server/.venv-chatgpt/Scripts/python.exe mcp_server/package_chatgpt_plugin.py --connection-id $idRealDeLaConexion
 ```
 
-El proceso espera mensajes MCP de un cliente. No muestra una interfaz ni
-mensajes de arranque en la salida estándar; esa salida pertenece al protocolo.
-Un archivo ausente, vacío, mal formado o ilegible produce un error de consulta,
-sin crear un estado nuevo ni reemplazar el archivo.
+El ZIP en `output/chatgpt/todo-personal.zip` contiene `plugin.json`, `.app.json`
+y un README. Usa el manifiesto portable y la referencia MCP registrada, sin
+copiar tareas, credenciales, entorno Python ni recursos personales. La instalación
+del paquete se realiza desde el flujo de plugins de la cuenta; generarlo no
+confirma que esté instalado. No se genera un paquete con identificadores ficticios.
 
-## Conectar con Secure MCP Tunnel
+## Validación
 
-La documentación oficial permite conectar servidores privados mediante stdio
-o HTTP sin abrir puertos entrantes. El cliente del túnel debe permanecer
-encendido junto al servidor. Esta ruta sirve para conexiones privadas y
-pruebas en modo desarrollador; no publica un plugin en el directorio público.
+```powershell
+mcp_server/.venv-chatgpt/Scripts/python.exe -m unittest discover -s mcp_server -p 'test_chatgpt*.py' -v
+flutter test --no-pub test/agent_bridge_test.dart
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build windows --debug --no-pub
+```
 
-1. Comprobar el acceso a [túneles de Platform](https://platform.openai.com/settings/organization/tunnels)
-   y al modo desarrollador de ChatGPT. Se necesitan permisos de lectura y
-   gestión para crear el túnel, y de lectura y uso para ejecutarlo.
-2. Crear el túnel y asociarlo a la organización y al espacio de ChatGPT que lo
-   utilizarán. Usar su identificador real; no inventar uno.
-3. Instalar el cliente oficial indicado en esa página y consultar
-   `tunnel-client help quickstart`. Verificar su soporte de Windows antes de
-   configurar el proceso persistente.
-4. Proporcionar la clave del cliente mediante la configuración segura o el
-   entorno local indicado por esa versión del cliente. No pegarla en chats,
-   guardarla en este repositorio ni añadirla a los argumentos del servidor.
-5. Inicializar un perfil stdio que lance
-   `mcp_server/.venv-chatgpt/Scripts/python.exe -u mcp_server/chatgpt_server.py`
-   con rutas absolutas. Se pueden usar las opciones `--mcp-command` y
-   `--tunnel-id` del cliente. Usar `--sandbox` solo en el perfil de pruebas;
-   el perfil de datos reales arranca sin esa opción.
-6. Ejecutar `tunnel-client doctor --profile todo-local --explain` y después
-   `tunnel-client run --profile todo-local`.
-7. En ChatGPT, activar el modo desarrollador y crear la conexión desde Plugins,
-   seleccionando «Tunnel» y el túnel correspondiente. Comprobar que se
-   anuncian cinco herramientas de lectura, consultar Hoy y comparar una tarea
-   por su identificador con Todo.
+Las pruebas usan archivos temporales: autenticación, consultas en memoria,
+escrituras simultáneas, versiones antiguas, guardados fallidos, reintentos,
+recarga, rutinas y traslado conservando la hora. Con el entorno Python instalado,
+la prueba Flutter arranca un cliente del SDK y un servidor stdio reales contra
+su puente temporal. No modifica datos personales ni requiere credenciales.
 
-Los nombres de perfil son elecciones locales; el identificador del túnel y el
-de la conexión del plugin deben venir de OpenAI. La disponibilidad y los
-permisos de esta cuenta aún no se han comprobado. Las instrucciones específicas
-del cliente instalado prevalecen sobre estos ejemplos.
+El panel se puede comprobar localmente con un host de prueba; eso no sustituye
+la validación final dentro de ChatGPT. La actualización de Flutter requiere
+instalar y verificar los hashes de Windows. La prueba visual de la aplicación
+instalada corresponde al usuario.
 
-Fuentes:
+## Fuentes
 
 - [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
-- [Conectar y probar un plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt)
-- [Construir un servidor MCP](https://developers.openai.com/plugins/build/mcp-server)
+- [MCP y panel de ejemplo](https://developers.openai.com/plugins/build/app-quickstart)
 - [Extensiones de plugins](https://developers.openai.com/plugins/build/extensions)
+- [Conectar un plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+- [Empaquetar un plugin](https://developers.openai.com/plugins/build/plugins)
 
-## Validación local
-
-```powershell
-mcp_server/.venv-chatgpt/Scripts/python.exe -m unittest discover -s mcp_server -p test_chatgpt_server.py -v
-```
-
-Las pruebas usan archivos temporales y procesos locales. No crean conexiones
-externas ni requieren credenciales de OpenAI.
-
-## Fases siguientes
-
-1. Conectar y probar la lectura con la cuenta real mediante el túnel.
-2. Resolver la coordinación entre `TodoWorkspace`, el MCP y el agente LAN.
-   Actualmente Todo mantiene estado en memoria y no aplica automáticamente
-   todas las modificaciones externas de tareas. Un bloqueo exclusivo del MCP
-   no coordina las escrituras de Flutter ni evita sobrescribir cambios.
-   Las escrituras reales se habilitarán después de verificar actualizaciones
-   simultáneas, errores, reintentos y recarga con la app abierta.
-3. Añadir un panel de Hoy mediante MCP Apps y las extensiones de ChatGPT.
-4. Empaquetar el plugin utilizando el identificador real de la conexión.
-   No se incluye un manifiesto con identificadores ficticios.
-
-Sites puede formar parte de una fase posterior de alojamiento. Un despliegue
-remoto no tiene acceso directo a los archivos del PC: requiere un puente
-autenticado o un diseño de sincronización. La fase actual mantiene los datos
-locales y necesita que el PC y el cliente del túnel estén encendidos.
-
-Esta preparación cambia herramientas de agente, no el ejecutable Flutter.
-Cuando la coordinación requiera cambios en la app, se harán las comprobaciones
-de Flutter y la actualización verificada de la instalación de Windows.
+Sites puede alojar una interfaz o un servidor remoto en una fase posterior.
+Ese despliegue no accede directamente a los archivos del PC. Esta implementación
+conserva la fuente local y usa el túnel privado para llegar hasta ella.

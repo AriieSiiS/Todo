@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:crypto/crypto.dart';
 
 import '../../config/supabase_config.dart';
 import '../../core/date/date_helpers.dart';
@@ -30,6 +31,9 @@ import '../../services/supabase_cloud_service.dart';
 import '../../services/task_feedback_service.dart';
 import '../../services/task_scheduler_service.dart';
 import '../../services/wardrobe_asset_service.dart';
+import '../../services/agent_bridge_service.dart';
+
+part 'todo_workspace_agent.dart';
 
 class TodoWorkspace extends ChangeNotifier {
   TodoWorkspace._(
@@ -70,6 +74,15 @@ class TodoWorkspace extends ChangeNotifier {
       rethrow;
     }
     if (!controller._isFlutterTest) {
+      controller._agentBridge =
+          AgentBridgeService(controller.executeAgentCommand);
+      // Una conexión de agente fallida no impide utilizar Todo.
+      try {
+        await controller._agentBridge!.start();
+      } catch (error) {
+        debugPrint(
+            'No se pudo iniciar el puente local de Todo: ${error.runtimeType}');
+      }
       unawaited(controller._initializeStartupIntegrations());
       controller._externalWardrobePoll = Timer.periodic(
         const Duration(seconds: 1),
@@ -99,9 +112,10 @@ class TodoWorkspace extends ChangeNotifier {
   static TodoWorkspace createForTest({
     AppStateSnapshot? snapshot,
     PlantAssetService? plantAssets,
+    TodoStateRepository? stateRepository,
   }) {
     final controller = TodoWorkspace._(
-      _InMemoryTodoStateRepository(snapshot),
+      stateRepository ?? _InMemoryTodoStateRepository(snapshot),
       SupabaseCloudSyncRepository(SupabaseCloudService()),
       CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
@@ -201,6 +215,11 @@ class TodoWorkspace extends ChangeNotifier {
   Timer? _saveDebounce;
   Timer? _externalWardrobePoll;
   bool _checkingExternalWardrobe = false;
+  AgentBridgeService? _agentBridge;
+  Future<void> _agentCommandQueue = Future<void>.value();
+  final Map<String, dynamic> _agentOperationReceipts = {};
+
+  void _notifyAgentChange() => notifyListeners();
 
   bool get _isFlutterTest {
     try {
@@ -4943,6 +4962,9 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void _applySnapshot(AppStateSnapshot snapshot) {
+    _agentOperationReceipts
+      ..clear()
+      ..addAll(snapshot.agentOperationReceipts);
     _tasks
       ..clear()
       ..addAll(snapshot.tasks);
@@ -5492,6 +5514,8 @@ class TodoWorkspace extends ChangeNotifier {
       navOrder: navOrder,
       updatedAt: DateTime.now(),
       schemaVersion: 11,
+      agentOperationReceipts: jsonDecode(jsonEncode(_agentOperationReceipts))
+          as Map<String, dynamic>,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
           ? _cloudService.currentEmail
           : 'local-device',
@@ -5715,6 +5739,7 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   void _clearStateToDefaults() {
+    _agentOperationReceipts.clear();
     _tasks.clear();
     _categories.clear();
     _projects.clear();
@@ -6006,6 +6031,7 @@ class TodoWorkspace extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(_agentBridge?.stop());
     _saveDebounce?.cancel();
     _externalWardrobePoll?.cancel();
     unawaited(_notificationActionSubscription.cancel());

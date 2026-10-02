@@ -12,24 +12,48 @@ os.environ["TODO_MCP_DISABLE_REMOTE"] = "1"
 from jsonschema import Draft202012Validator, ValidationError
 from mcp import types
 from mcp.server.lowlevel import Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
 
-from chatgpt_adapter import LocalBackend, tool_definitions
+from chatgpt_adapter import BridgeError, LocalBackend, tool_definitions
 import server as core
+
+UI_URI = "ui://todo/hoy.html"
+UI_MIME = "text/html;profile=mcp-app"
 
 
 def create_server(backend: LocalBackend) -> Server:
-    mode = "prueba en memoria" if backend.sandbox else "solo lectura local"
+    mode = "prueba en memoria" if backend.sandbox else "escritura mediante Todo abierto" if backend.live else "solo lectura local"
     app = Server(
         "todo-chatgpt-local",
-        version="0.1.0",
+        version="0.2.0",
         instructions=(
             f"Todo funciona en modo {mode}. Consulta tareas, proyectos y categorías por sus identificadores. "
             "La fecha de get_today respeta el día lógico de Todo. "
-            "Las modificaciones solo están disponibles en la sesión de prueba y no alteran datos reales."
+            "En modo real, cada modificación necesita request_id único; conserva identificador y argumentos al reintentar. "
+            "Consulta task_version antes de editar, completar o mover. Las tareas del calendario se editan desde Todo. "
+            "Nunca confirmes que se guardó una tarea sin savedLocally: true. El modo de prueba no altera datos reales."
         ),
     )
-    definitions = {item["name"]: item for item in tool_definitions(backend.sandbox)}
+    definitions = {item["name"]: item for item in tool_definitions(backend.sandbox, backend.live)}
+    definitions["get_today"]["_meta"] = {
+        "ui": {"resourceUri": UI_URI},
+        "openai/ui": {"entrypoints": [{"type": "global"}, {"type": "thread"}]},
+    }
+
+    @app.list_resources()
+    async def list_resources() -> list[types.Resource]:
+        return [types.Resource(uri=UI_URI, name="todo-hoy", title="Hoy en Todo", mimeType=UI_MIME)]
+
+    @app.read_resource()
+    async def read_resource(uri) -> list[ReadResourceContents]:
+        if str(uri) != UI_URI:
+            raise ValueError("El recurso solicitado no existe.")
+        return [ReadResourceContents(
+            content=Path(__file__).with_name("ui").joinpath("hoy.html").read_text(encoding="utf-8"),
+            mime_type=UI_MIME,
+            meta={"ui": {"prefersBorder": True, "csp": {"connectDomains": [], "resourceDomains": []}}},
+        )]
 
     @app.list_tools()
     async def list_tools() -> list[types.Tool]:
@@ -38,12 +62,14 @@ def create_server(backend: LocalBackend) -> Server:
     # Se valida aquí para devolver los errores propios en castellano.
     @app.call_tool(validate_input=False)
     async def call_tool(name: str, arguments: dict) -> types.CallToolResult:
+        retryable = False
         try:
             if name not in definitions:
                 raise ValueError("La herramienta solicitada no está habilitada en este adaptador.")
             Draft202012Validator(definitions[name]["inputSchema"]).validate(arguments)
-            payload = backend.call(name, arguments)
-            payload["mode"] = "sandbox" if backend.sandbox else "local_read_only"
+            payload = await asyncio.to_thread(backend.call, name, arguments)
+            payload["mode"] = "sandbox" if backend.sandbox else "local_app" if backend.live else "local_read_only"
+            payload["writes_available"] = backend.sandbox or (backend.live and payload.get("source") == "app")
             if backend.sandbox:
                 payload["persistent"] = False
             return types.CallToolResult(
@@ -53,13 +79,18 @@ def create_server(backend: LocalBackend) -> Server:
             )
         except ValidationError:
             message = "Los argumentos no cumplen el esquema de la herramienta. Revisa los campos obligatorios, los tipos y los valores permitidos."
+        except BridgeError as error:
+            message = str(error)
+            retryable = error.retryable
         except ValueError as error:
             message = str(error)
         except Exception:
             # Evita devolver rutas, preferencias o detalles internos al cliente.
             message = "No se pudo completar la operación local de Todo."
+            retryable = name in {"create_task", "update_task", "complete_task", "move_task_to_day"}
         return types.CallToolResult(
             content=[types.TextContent(type="text", text=message)],
+            structuredContent={"error": message, "retryable": retryable},
             isError=True,
         )
 
@@ -74,10 +105,12 @@ async def run(backend: LocalBackend) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Conexión privada de Todo con ChatGPT por stdio.")
-    parser.add_argument("--sandbox", action="store_true", help="Usa un estado vacío en memoria; permite probar cambios sin tocar archivos.")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--sandbox", action="store_true", help="Usa un estado vacío en memoria; permite probar cambios sin tocar archivos.")
+    modes.add_argument("--live", action="store_true", help="Solicita escrituras al puente de Todo abierto; nunca escribe directamente el snapshot.")
     parser.add_argument("--state-path", type=Path, default=core.STATE_PATH, help="Snapshot que se consulta en modo de solo lectura.")
     options = parser.parse_args()
-    asyncio.run(run(LocalBackend(options.state_path, sandbox=options.sandbox)))
+    asyncio.run(run(LocalBackend(options.state_path, sandbox=options.sandbox, live=options.live)))
 
 
 if __name__ == "__main__":

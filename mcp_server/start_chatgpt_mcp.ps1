@@ -1,9 +1,13 @@
-param(
+﻿param(
     [switch]$Sandbox,
+    [switch]$Live,
     [string]$StatePath
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Sandbox -and $Live) {
+    throw 'Los modos de prueba y de escritura real son excluyentes.'
+}
 $pythonPath = Join-Path $PSScriptRoot '.venv-chatgpt\Scripts\python.exe'
 $serverPath = Join-Path $PSScriptRoot 'chatgpt_server.py'
 if (-not (Test-Path -LiteralPath $pythonPath -PathType Leaf)) {
@@ -12,6 +16,9 @@ if (-not (Test-Path -LiteralPath $pythonPath -PathType Leaf)) {
 $serverArguments = @('-u', $serverPath)
 if ($Sandbox) {
     $serverArguments += '--sandbox'
+}
+if ($Live) {
+    $serverArguments += '--live'
 }
 if (-not [string]::IsNullOrWhiteSpace($StatePath)) {
     $serverArguments += @('--state-path', $StatePath)

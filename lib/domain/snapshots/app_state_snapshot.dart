@@ -54,6 +54,7 @@ class AppStateSnapshot {
     this.updatedAt,
     this.schemaVersion = 1,
     this.lastModifiedBy = '',
+    this.agentOperationReceipts = const <String, dynamic>{},
   });
 
   final List<TaskModel> tasks;
@@ -92,6 +93,8 @@ class AppStateSnapshot {
   final DateTime? updatedAt;
   final int schemaVersion;
   final String lastModifiedBy;
+  // El resultado y la tarea se guardan juntos para reconocer los reintentos.
+  final Map<String, dynamic> agentOperationReceipts;
 
   DateTime get resolvedUpdatedAt =>
       updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -142,6 +145,7 @@ class AppStateSnapshot {
       'updatedAt': updatedAt?.toIso8601String(),
       'schemaVersion': schemaVersion,
       'lastModifiedBy': lastModifiedBy,
+      'agentOperationReceipts': agentOperationReceipts,
     };
   }
 
@@ -297,6 +301,8 @@ class AppStateSnapshot {
           : DateTime.tryParse(json['updatedAt'] as String),
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
       lastModifiedBy: json['lastModifiedBy'] as String? ?? '',
+      agentOperationReceipts: Map<String, dynamic>.from(
+          json['agentOperationReceipts'] as Map? ?? {}),
     );
   }
 
