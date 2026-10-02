@@ -34,6 +34,9 @@ MCP_DIR = REPO_ROOT / "mcp_server"
 
 
 def load_env_file() -> None:
+    # El adaptador privado usa solo datos locales y omite las credenciales.
+    if os.environ.get("TODO_MCP_SKIP_ENV_FILE") == "1":
+        return
     env_path = MCP_DIR / ".env"
     if not env_path.exists():
         return

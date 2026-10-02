@@ -9,6 +9,7 @@ coverage/
 pubspec.lock
 *.iml
 mcp_server/.env
+mcp_server/.venv-chatgpt/
 .codex_tmp_py/
 .codex_tmp/
 .codex_video_review/

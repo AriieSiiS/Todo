@@ -2,6 +2,17 @@
 
 Este servidor MCP local permite que Codex u otras IAs compatibles lean y gestionen la app Todo sin tocar la interfaz.
 
+## Preparación del plugin privado de ChatGPT
+
+[CHATGPT.md](CHATGPT.md) describe el adaptador estándar para Secure MCP Tunnel.
+Permite consultas locales sin escrituras y pruebas de creación, edición y
+finalización de tareas en memoria. La conexión a la cuenta y las escrituras
+reales siguen pendientes. El servidor y el arranque existentes se conservan.
+
+Supabase está desactivado por las instrucciones actuales del proyecto. Las
+secciones históricas sobre sincronización remota no deben ejecutarse mientras
+esa regla siga vigente.
+
 ## Idea clave
 
 No es un servidor en internet. Es un proceso local dentro del mismo repo.
