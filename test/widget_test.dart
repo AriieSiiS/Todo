@@ -649,6 +649,67 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Biblioteca abre en Todo y modo portadas por defecto', (
+    WidgetTester tester,
+  ) async {
+    final now = DateTime.now();
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'default-library-completed',
+            type: LibraryItemType.book,
+            title: 'Libro terminado',
+            status: LibraryItemStatus.completed,
+            completedDate: now,
+            createdAt: now,
+            updatedAt: now,
+          ),
+          LibraryItem(
+            id: 'default-library-pending',
+            type: LibraryItemType.book,
+            title: 'Libro pendiente',
+            status: LibraryItemStatus.pending,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+    });
+
+    expect(find.text('Todo'), findsOneWidget);
+    expect(find.byTooltip('Vista de portadas'), findsOneWidget);
+    expect(
+      find.byKey(
+          const ValueKey('library-cover-card-default-library-completed')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('library-cover-card-default-library-pending')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('library restores and updates its internal tab', (
     WidgetTester tester,
   ) async {

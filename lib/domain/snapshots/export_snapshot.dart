@@ -5,6 +5,7 @@ import '../entities/calendar_models.dart';
 import '../entities/enums.dart';
 import '../entities/financial.dart';
 import '../entities/household.dart';
+import '../entities/shopping.dart';
 import '../entities/library_goal.dart';
 import '../entities/library_item.dart';
 import '../entities/plant.dart';
@@ -33,6 +34,7 @@ class ExportSnapshot {
     this.wardrobePlanEntries = const <WardrobePlanEntry>[],
     this.wardrobePackingLists = const <WardrobePackingList>[],
     this.householdItems = const <HouseholdItem>[],
+    this.shoppingItems = const <ShoppingItem>[],
     this.plants = const <Plant>[],
     this.recipes = const <Recipe>[],
     this.weeklyMenus = const <WeeklyMenu>[],
@@ -61,6 +63,7 @@ class ExportSnapshot {
   final List<WardrobePlanEntry> wardrobePlanEntries;
   final List<WardrobePackingList> wardrobePackingLists;
   final List<HouseholdItem> householdItems;
+  final List<ShoppingItem> shoppingItems;
   final List<Plant> plants;
   final List<Recipe> recipes;
   final List<WeeklyMenu> weeklyMenus;
@@ -96,6 +99,7 @@ class ExportSnapshot {
       'wardrobePackingLists':
           wardrobePackingLists.map((item) => item.toJson()).toList(),
       'householdItems': householdItems.map((item) => item.toJson()).toList(),
+      'shoppingItems': shoppingItems.map((item) => item.toJson()).toList(),
       'plants': plants.map((item) => item.toJson()).toList(),
       'recipes': recipes.map((item) => item.toJson()).toList(),
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),

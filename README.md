@@ -58,6 +58,45 @@ Codex puede completar el flujo mediante el MCP local: crear la ficha con
 `set_household_item_document`. Así la aplicación no necesita claves de IA ni
 acceso permanente al correo o a la web.
 
+## Compras deseadas
+
+Una sola ficha puede guardar varias opciones de compra (nombre y enlace por
+opción). Sus precios se revisan y comparan por separado, nunca entre variantes.
+Las opciones se editan en «Opciones de compra» y se conservan en las copias y
+exportaciones. La primera lectura no avisa de una oferta ya existente: establece
+la base para detectar cambios posteriores.
+
+Las compras del mismo tipo (categoría y subcategoría) se agrupan automáticamente
+en una carpeta cuando hay dos o más productos. Por ejemplo, cuatro proyectores
+se muestran como una única tarjeta «Proyectores», con una imagen y el número de
+opciones. Al abrirla aparecen sus productos; «Todas las compras» vuelve a la
+vista general. Los productos sin subcategoría se agrupan por categoría. La
+búsqueda y los filtros siguen funcionando, y las fichas y el seguimiento de
+precios se conservan por producto. El menú de tres puntos o el clic derecho de
+la carpeta permite «Desagrupar»: sus productos vuelven a mostrarse por separado.
+Desde el clic derecho de cualquiera de ellos, «Agrupar de nuevo» reúne todos
+los productos de la misma categoría y subcategoría, incluso si hay filtros
+activos. La elección se guarda con las compras y se conserva al reiniciar y
+exportar los datos. No borra fichas, imágenes ni historiales de precios.
+Los productos nuevos del mismo tipo respetan una carpeta desagrupada.
+
+Las tarjetas de Compras ofrecen un menú con clic derecho para editar, cambiar
+la prioridad o el estado de compra y eliminar. La eliminación pide confirmación;
+cancelar conserva el producto.
+
+La pestaña `Hogar → Compras` guarda productos que se quieren comprar, separados
+del inventario. Cada ficha admite categoría y subcategoría, enlace de origen
+(Amazon, tuit o cualquier página), imagen, tienda, precio de referencia, precio
+objetivo, prioridad, estado y notas de investigación. El seguimiento opcional
+comprueba precios cada 24 horas mediante changedetection.io local, sin IA ni
+suscripciones. Conserva el precio de referencia manual separado del precio
+observado y avisa de cambios. Véase [Seguimiento de precios](docs/SEGUIMIENTO_PRECIOS.md)
+para la instalación, las comprobaciones y los límites de Amazon.
+Las imágenes se guardan en `Documents/Todo/shopping` y se incluyen
+en las copias completas. El MCP permite listar, crear, editar y eliminar fichas
+con `list_shopping_items`, `create_shopping_item`, `update_shopping_item`,
+`set_shopping_item_image` y `delete_shopping_item`.
+
 ## Plantas
 
 La sección `Plantas` muestra cada ejemplar como una tarjeta visual con su

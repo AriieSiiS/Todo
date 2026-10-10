@@ -159,6 +159,7 @@ def default_state() -> dict[str, Any]:
         "wardrobePackingLists": [],
         "wardrobeImportBatches": [],
         "householdItems": [],
+        "shoppingItems": [],
         "plants": [],
         "recipes": [],
         "weeklyMenus": [],
@@ -1246,6 +1247,18 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "tags": strings,
         "archived": boolean,
     }
+    shopping_fields = {
+        "item_id": string, "name": string, "category": string,
+        "subcategory": string, "source_url": string, "retailer": string,
+        "notes": string, "research_notes": string,
+        "reference_price": number, "target_price": number,
+        "clear_reference_price": boolean, "clear_target_price": boolean,
+        "priority": boolean, "status": {"type": "string", "enum": ["saved", "comparing", "purchased"]},
+        "archived": boolean,
+        "offers": {"type": "array", "maxItems": 25, "items": {
+            "type": "object", "properties": {"name": string, "source_url": string},
+            "required": ["name", "source_url"], "additionalProperties": False}},
+    }
     plant_fields = {
         "plant_id": string,
         "request_id": string,
@@ -1369,6 +1382,11 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("set_household_item_document", "Guarda un manual o una factura PDF dentro de la ficha de Hogar.", {"item_id": string, "kind": string, "source_file": string, "source_url": string}, ["item_id", "kind", "source_file"]),
         tool("delete_household_item", "Elimina una ficha de Hogar y sus recursos locales.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
         tool("list_home_twin_rooms", "Lista las habitaciones del gemelo 3D local.", {}, []),
+        tool("list_shopping_items", "Lista las compras deseadas de Hogar, con categorías y precios anotados.", {"include_archived": boolean, "category": string, "subcategory": string}, []),
+        tool("create_shopping_item", "Guarda una compra deseada desde un enlace, tuit o imagen ya identificado. No inicia seguimiento automático.", shopping_fields, ["name", "category"]),
+        tool("update_shopping_item", "Edita una compra deseada, sus notas de investigación, precios y estado.", shopping_fields, ["item_id"]),
+        tool("set_shopping_item_image", "Guarda una imagen PNG local para una compra deseada.", {"item_id": string, "source_file": string}, ["item_id", "source_file"]),
+        tool("delete_shopping_item", "Elimina una compra deseada y sus imágenes locales.", {"item_id": string, "confirm": boolean}, ["item_id", "confirm"]),
         tool("import_home_twin_room", "Importa o actualiza una habitación GLB de forma idempotente.", {
             "room_id": string, "name": string, "source_file": string,
             "floor": integer, "rotation_degrees": {"type": "number"},
@@ -4694,6 +4712,154 @@ def set_wardrobe_item_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         raise
 
 
+def shopping_directory() -> Path:
+    override = os.environ.get("TODO_MCP_SHOPPING_DIR")
+    directory = Path(override) if override else documents_todo_dir() / "shopping"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def list_shopping_items_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
+    items = load_state().get("shoppingItems", [])
+    return [item for item in items
+            if (arguments.get("include_archived") or not item.get("archived", False))
+            and (not arguments.get("category") or item.get("category") == arguments["category"])
+            and (not arguments.get("subcategory") or item.get("subcategory") == arguments["subcategory"])]
+
+
+def _shopping_values(arguments: dict[str, Any]) -> dict[str, Any]:
+    mapping = {"name": "name", "category": "category", "subcategory": "subcategory",
+               "source_url": "sourceUrl", "retailer": "retailer", "notes": "notes",
+               "research_notes": "researchNotes", "reference_price": "referencePrice",
+               "target_price": "targetPrice", "priority": "priority", "status": "status",
+               "archived": "archived"}
+    values = {}
+    for source, destination in mapping.items():
+        if source not in arguments:
+            continue
+        value = arguments[source]
+        if source in {"reference_price", "target_price"}:
+            value = float(value)
+            if not (0 <= value < float("inf")):
+                raise ValueError("El precio debe ser un número finito y positivo o cero.")
+        elif source in {"priority", "archived"}:
+            if not isinstance(value, bool):
+                raise ValueError("La prioridad y el archivado deben ser booleanos.")
+        else:
+            value = str(value).strip()
+            if source in {"name", "category"} and not value:
+                raise ValueError("El nombre y la categoría son obligatorios.")
+            if source == "source_url" and value:
+                parsed = urllib.parse.urlparse(value)
+                if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                    raise ValueError("El enlace debe ser una URL http o https válida.")
+            if source == "status" and value not in {"saved", "comparing", "purchased"}:
+                raise ValueError("Estado de compra no válido.")
+        values[destination] = value
+    for source, destination in (("clear_reference_price", "referencePrice"), ("clear_target_price", "targetPrice")):
+        if arguments.get(source):
+            values[destination] = None
+    if "offers" in arguments:
+        offers = arguments["offers"]
+        if not isinstance(offers, list) or len(offers) > 25:
+            raise ValueError("Una ficha admite como máximo 25 opciones.")
+        normalized = []
+        for offer in offers:
+            if not isinstance(offer, dict) or not isinstance(offer.get("name"), str) or not offer["name"].strip():
+                raise ValueError("Cada opción necesita un nombre.")
+            url = offer.get("source_url")
+            if not isinstance(url, str):
+                raise ValueError("Cada opción necesita un enlace.")
+            parsed = urllib.parse.urlparse(url.strip())
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise ValueError("El enlace de la opción debe ser http o https.")
+            normalized.append({"name": offer["name"].strip(), "sourceUrl": url.strip()})
+        values["offers"] = normalized
+        if normalized:
+            values["sourceUrl"] = normalized[0]["sourceUrl"]
+    return values
+
+
+def create_shopping_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    values = _shopping_values(arguments)
+    if not values.get("name") or not values.get("category"):
+        raise ValueError("El nombre y la categoría son obligatorios.")
+    state = load_state()
+    instant = now_iso()
+    item = {"id": make_id("shopping-item"), "name": "", "category": "",
+            "subcategory": "", "sourceUrl": "", "retailer": "", "notes": "",
+            "researchNotes": "", "imagePath": "", "thumbnailPath": "", "imageSha256": "",
+            "referencePrice": None, "targetPrice": None, "priority": False,
+            "status": "saved", "archived": False, "createdAt": instant, "updatedAt": instant}
+    item.update(values)
+    peers = [entry for entry in state.get("shoppingItems", [])
+             if entry.get("category") == item["category"]
+             and entry.get("subcategory", "").strip() == item["subcategory"]]
+    item["grouped"] = not peers or any(entry.get("grouped", True) for entry in peers)
+    state.setdefault("shoppingItems", []).append(item)
+    save_state(state)
+    return item
+
+
+def update_shopping_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    values = _shopping_values(arguments)
+    state = load_state()
+    index, item = find_by_id(state.setdefault("shoppingItems", []), arguments["item_id"], "compra deseada")
+    item.update(values)
+    item["updatedAt"] = now_iso()
+    state["shoppingItems"][index] = item
+    save_state(state)
+    return item
+
+
+def _delete_shopping_asset(relative_path: str) -> None:
+    if not relative_path:
+        return
+    root = shopping_directory().resolve()
+    candidate = (root / relative_path).resolve()
+    if root in candidate.parents:
+        candidate.unlink(missing_ok=True)
+
+
+def set_shopping_item_image_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    source = Path(str(arguments["source_file"])).resolve()
+    if not source.is_file() or source.suffix.lower() != ".png":
+        raise ValueError("La imagen de Compras debe ser un PNG local.")
+    data = source.read_bytes()
+    if len(data) < 33 or not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("La imagen no es un PNG válido.")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 400 or height < 400:
+        raise ValueError("La imagen debe medir al menos 400 × 400 píxeles.")
+    state = load_state()
+    index, item = find_by_id(state.setdefault("shoppingItems", []), arguments["item_id"], "compra deseada")
+    digest = hashlib.sha256(data).hexdigest()
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "-", str(item["id"]))
+    file_name = f"{safe_id}-{digest[:12]}.png"
+    root = shopping_directory()
+    _write_household_asset(root / "images", file_name, data)
+    _write_household_asset(root / "thumbnails", file_name, data)
+    previous = {str(item.get(field) or "") for field in ("imagePath", "thumbnailPath")}
+    item.update(imagePath=f"images/{file_name}", thumbnailPath=f"thumbnails/{file_name}",
+                imageSha256=digest, updatedAt=now_iso())
+    state["shoppingItems"][index] = item
+    save_state(state)
+    for path in previous - {item["imagePath"], item["thumbnailPath"]}:
+        _delete_shopping_asset(path)
+    return item
+
+
+def delete_shopping_item_impl(arguments: dict[str, Any]) -> dict[str, Any]:
+    require_confirm(arguments, "delete_shopping_item")
+    state = load_state()
+    index, item = find_by_id(state.setdefault("shoppingItems", []), arguments["item_id"], "compra deseada")
+    state["shoppingItems"].pop(index)
+    save_state(state)
+    for field in ("imagePath", "thumbnailPath"):
+        _delete_shopping_asset(str(item.get(field) or ""))
+    return {"deleted": True, "item_id": item["id"]}
+
+
 def list_household_items_impl(arguments: dict[str, Any]) -> list[dict[str, Any]]:
     items = load_state().setdefault("householdItems", [])
     if bool(arguments.get("include_archived", False)):
@@ -5978,6 +6144,16 @@ def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return json_result(add_wardrobe_packing_item_impl(arguments))
     if name == "list_household_items":
         return json_result(list_household_items_impl(arguments))
+    if name == "list_shopping_items":
+        return json_result(list_shopping_items_impl(arguments))
+    if name == "create_shopping_item":
+        return json_result(create_shopping_item_impl(arguments))
+    if name == "update_shopping_item":
+        return json_result(update_shopping_item_impl(arguments))
+    if name == "set_shopping_item_image":
+        return json_result(set_shopping_item_image_impl(arguments))
+    if name == "delete_shopping_item":
+        return json_result(delete_shopping_item_impl(arguments))
     if name == "create_household_item":
         return json_result(create_household_item_impl(arguments))
     if name == "update_household_item":

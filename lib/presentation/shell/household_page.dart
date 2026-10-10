@@ -74,10 +74,25 @@ class _HouseholdPageState extends State<HouseholdPage> {
                 subtitle: '',
                 compact: true,
                 pinTrailingToEdge: true,
-                trailing: _HeaderActionButton(
-                  label: 'Añadir compra',
-                  icon: Icons.add_rounded,
-                  onPressed: () => _showHouseholdEditor(context, controller),
+                trailing: Builder(
+                  builder: (context) {
+                    final tabController = DefaultTabController.of(context);
+                    return AnimatedBuilder(
+                      animation: tabController,
+                      builder: (context, _) {
+                        final shopping =
+                            tabs[tabController.index] == 'shopping';
+                        return _HeaderActionButton(
+                          label:
+                              shopping ? 'Añadir a compras' : 'Añadir compra',
+                          icon: Icons.add_rounded,
+                          onPressed: () => shopping
+                              ? _showShoppingEditor(context, controller)
+                              : _showHouseholdEditor(context, controller),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ),
@@ -99,6 +114,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
                       selectedCategory: selectedCategory,
                       items: items,
                     ),
+                  if (tabs.contains('shopping'))
+                    ShoppingPage(controller: controller),
                   if (tabs.contains('twin'))
                     HomeTwinPage(
                         controller: controller,

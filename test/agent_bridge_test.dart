@@ -82,6 +82,100 @@ void main() {
     return result['task']['task_version'] as String;
   }
 
+  test(
+      'notas: guarda, conserva campos, rechaza versiones antiguas y reconoce reintentos',
+      () async {
+    final args = {
+      'request_id': 'nota-crear-001',
+      'content': 'Ideas para cocinar',
+      'scheduled_for': '2026-10-12T09:00:00',
+      'emoji': '🍲',
+      'is_pinned': true
+    };
+    final created = await call('create_note', args);
+    expect(created.$1, 200);
+    final note = created.$2['created'] as Map;
+    expect((await call('create_note', args)).$2['created']['id'], note['id']);
+    final updated = await call('update_note', {
+      'request_id': 'nota-editar-001',
+      'note_id': note['id'],
+      'expected_version': note['note_version'],
+      'content': 'Ideas para el menú'
+    });
+    expect(updated.$1, 200);
+    expect(updated.$2['note']['scheduledFor'], note['scheduledFor']);
+    expect(updated.$2['note']['emoji'], '🍲');
+    expect(updated.$2['note']['isPinned'], true);
+    expect(
+        (await call('delete_note', {
+          'request_id': 'nota-borrar-001',
+          'note_id': note['id'],
+          'expected_version': note['note_version'],
+          'confirm': true
+        }))
+            .$1,
+        400);
+    final archived = await call('archive_note', {
+      'request_id': 'nota-archivar-001',
+      'note_id': note['id'],
+      'expected_version': updated.$2['note']['note_version']
+    });
+    expect(archived.$2['note']['status'], 'archived');
+    final deletion = {
+      'request_id': 'nota-borrar-002',
+      'note_id': note['id'],
+      'expected_version': archived.$2['note']['note_version'],
+      'confirm': true
+    };
+    expect(
+        (await call('delete_note', {...deletion, 'confirm': false})).$1, 400);
+    expect((await call('delete_note', deletion)).$2['savedLocally'], true);
+    expect(
+        (await call('delete_note', deletion)).$2['deleted_ids'], [note['id']]);
+    final stored = await store.load();
+    expect(stored!.notes, isEmpty);
+  });
+
+  test('borrar tarea incluye todos los descendientes y conserva tareas ajenas',
+      () async {
+    workspace.createSubtask('original', 'Hija');
+    final child =
+        workspace.tasks.firstWhere((t) => t.parentTaskId == 'original');
+    workspace.createSubtask(child.id, 'Nieta');
+    final args = {
+      'request_id': 'tarea-borrar-001',
+      'task_id': 'original',
+      'expected_version': await version('original'),
+      'confirm': true
+    };
+    expect((await call('delete_task', {...args, 'confirm': false})).$1, 400);
+    final deleted = await call('delete_task', args);
+    expect(deleted.$1, 200);
+    expect(deleted.$2['deleted_ids'], hasLength(3));
+    expect(workspace.tasks.map((t) => t.id), ['rutina']);
+    expect((await call('delete_task', args)).$2, deleted.$2);
+    final saved = await store.load();
+    final reloaded = TodoWorkspace.createForTest(
+        snapshot: saved!, stateRepository: LocalTodoStateRepository(store));
+    expect(await reloaded.executeAgentCommand('delete_task', args), deleted.$2);
+    reloaded.dispose();
+  });
+
+  test('las lecturas de contenido se limitan a colecciones autorizadas',
+      () async {
+    final note = workspace.createNote('Contenido todavía en memoria');
+    final result = await call('read_content', {'section': 'notas'});
+    expect(result.$1, 200);
+    expect(result.$2['items'][0]['id'], note.id);
+    expect(result.$2['source'], 'app');
+    expect(
+        (await call('read_content', {'section': 'calendarSettings'})).$1, 400);
+    expect(
+        (await call('read_content', {'section': 'ropa', 'path': 'C:/privado'}))
+            .$1,
+        400);
+  });
+
   test('rechaza peticiones sin token, desde páginas web y campos no permitidos',
       () async {
     expect((await call('get_today', {}, authorized: false)).$1, 401);

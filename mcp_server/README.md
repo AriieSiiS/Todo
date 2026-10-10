@@ -192,6 +192,22 @@ seleccionadas; sin ese argumento utiliza la semana completa.
 Flutter también puede importar directamente archivos JSON y direcciones web
 que publiquen una receta compatible con schema.org.
 
+## Compras deseadas en Hogar
+
+`create_shopping_item` guarda productos que se quieren comprar en la pestaña
+Compras, separados de los aparatos ya comprados. Recibe `name`, `category`,
+`subcategory`, `source_url`, `retailer`, `reference_price`, `target_price`,
+`priority`, `notes` y `research_notes`. Un agente identifica el producto desde
+el enlace o la imagen que entregue el usuario y propone su clasificación.
+`set_shopping_item_image` copia un PNG local a `Documents/Todo/shopping`; no se
+comparten archivos borrables con el inventario. `list_shopping_items` filtra
+por categoría y subcategoría; `update_shopping_item` permite vaciar precios
+con `clear_reference_price` o `clear_target_price`. Los estados son `saved`,
+`comparing` y `purchased`. `offers` admite hasta 25 opciones con `name` y
+`source_url`, dentro de una única ficha. La app permite activar su seguimiento
+diario con changedetection.io local, sin IA. Crear la ficha mediante MCP no
+activa por sí solo los monitores; se configuran con la API local del servicio.
+
 ## Arranque rápido
 
 Manual en PowerShell:

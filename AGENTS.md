@@ -1,5 +1,13 @@
 # AGENTS
 
+## Lecciones
+
+- Cuando se agrupen elementos en carpetas, ofrecer desagrupar y volver a agrupar desde la interfaz, y conservar esa elección al reiniciar.
+- Cuando se amplíe la conexión de ChatGPT, reutilizar las herramientas del MCP local existente y añadir solo la adaptación necesaria del transporte y las escrituras de Todo abierto.
+- Cuando se añadan tarjetas de Compras en Windows, ofrecer las acciones de edición y eliminación también mediante clic derecho, con confirmación antes de eliminar.
+- Cuando el usuario pida consultar tareas en ChatGPT, devolver solo los títulos y abrir paneles únicamente si los solicita expresamente.
+- Cuando un script guarde una credencial, validar su formato y distinguir el guardado local de la autenticación comprobada antes de comunicar éxito.
+
 Guía corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
 
 ## Supabase desactivado temporalmente

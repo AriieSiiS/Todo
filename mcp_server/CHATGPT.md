@@ -5,22 +5,59 @@ Secure MCP Tunnel. Los datos permanecen en `Documents/Todo/runtime/todo_state.js
 Supabase está desactivado: no se carga el `.env` antiguo ni se utilizan sus
 credenciales. El transporte stdio usa mensajes JSON UTF-8 por líneas del SDK
 oficial; el servidor anterior conserva su transporte con `Content-Length`.
+Las consultas reutilizan los manejadores del MCP completo en `server.py` sobre
+el estado local o en memoria. El adaptador añade búsqueda y paginación; las
+escrituras de ChatGPT pasan por Todo abierto para no sobrescribir sus cambios.
 
 ## Funciones disponibles
 
 - Consultar Hoy, buscar tareas, consultar una tarea, listar proyectos y categorías.
-- Crear, editar, mover y completar tareas locales mediante Todo abierto.
+- Crear, editar, mover, completar y borrar tareas locales mediante Todo abierto.
+- Consultar, crear, editar, archivar y borrar notas de Entrada.
+- Buscar y consultar fichas de Ropa, conjuntos, usos, planes y maletas; Recetas y
+  menús; Hogar; Compras; Biblioteca y sus objetivos. Estas colecciones son de lectura.
 - Abrir el panel **Hoy en Todo** como MCP App, con entradas para la barra lateral
   y el panel de conversación. Permite actualizar, añadir y completar tareas.
-- Probar las nueve herramientas con un estado vacío en memoria, sin datos personales.
+- Probar las herramientas con un estado vacío en memoria, sin datos personales.
 - Instalar el cliente oficial de túneles para Windows y comprobar su hash publicado.
 - Arrancar un proceso supervisado con un túnel real y una referencia local a su clave.
 - Generar el paquete del plugin cuando exista el identificador real de la conexión.
 
-El código local está preparado, pero **no se ha conectado todavía a una cuenta de
-ChatGPT**. Crear el túnel, proporcionar la clave de ejecución y registrar la
-conexión requieren acceso autenticado a esa cuenta. No se ha desplegado en Sites
-ni publicado en un directorio público.
+La conexión requiere un túnel activo, una clave de ejecución y el registro en
+ChatGPT con la cuenta autenticada. El túnel local y el panel ya se han utilizado
+desde ChatGPT. No se ha desplegado en Sites ni publicado en un directorio público.
+
+## Respuestas de consulta
+
+«Muéstrame las tareas de hoy» utiliza `get_today` y devuelve únicamente los títulos
+en una lista de texto. No abre paneles, no añade explicaciones, prioridades,
+resúmenes, propuestas ni casillas de seguimiento ajenas a Todo. Los detalles se
+incluyen cuando el usuario los solicita.
+
+`open_today_panel` abre **Hoy en Todo** solo ante una petición expresa de abrir
+el panel. Ambas herramientas consultan las mismas tareas; únicamente la segunda
+tiene un recurso visual asociado. Tras actualizar estas instrucciones, hay que
+actualizar las herramientas de la conexión en ChatGPT y probar en un chat nuevo.
+
+## Navegar por el contenido
+
+`list_content_sections` muestra las colecciones disponibles y sus tamaños.
+`browse_content` busca por palabras, estado y tipo, con páginas de hasta 100 fichas;
+`get_content_item` consulta una ficha completa por su identificador. No abre vistas.
+Las respuestas distinguen datos en memoria de la última copia guardada y omiten
+rutas de archivos locales. No leen imágenes, manuales ni facturas: consultan los
+datos registrados, enlaces, ingredientes, pasos, valoraciones y fechas disponibles.
+
+Para «¿jugué a este juego?» se comprueba el estado y la fecha de Biblioteca; una
+entrada pendiente en objetivos no demuestra que esté completado. Para «mi camisa
+azul» se busca en Ropa y se consulta su ficha y, si hace falta, sus usos o conjuntos.
+No se afirma que una ficha no existe sin revisar la búsqueda y sus páginas.
+
+Las notas se consultan con `list_notes` y `get_note`. Las modificaciones requieren
+`note_version` como `expected_version`, y las escrituras conservan `request_id`
+para reintentos. Borrar una tarea incluye todas sus subtareas y limpia sus referencias;
+el resultado indica los identificadores afectados. Borrar tareas o notas requiere
+`confirm: true` tras una petición explícita de borrar. No se ofrecen borrados masivos.
 
 ## Preparar Python en Windows
 
@@ -97,8 +134,8 @@ el orden guardado. El panel muestra que debe abrirse Todo para modificar tareas.
 
 Las escrituras de este adaptador cubren título, descripción, fecha y hora,
 prioridad, categorías y proyectos; la creación también admite recurrencia.
-No permiten borrar, importar, exportar el estado completo, editar ajustes ni
-gestionar archivos. Las tareas archivadas o enlazadas al calendario se modifican
+No permiten importar, exportar el estado completo, editar ajustes ni gestionar
+archivos. Las tareas archivadas o enlazadas al calendario se modifican
 desde Todo. Los campos no editados se conservan, incluidos materiales y avisos.
 Las herramientas antiguas ajenas a este adaptador mantienen su funcionamiento;
 no se convierten automáticamente en clientes del puente.
@@ -132,6 +169,11 @@ del túnel encendidos; para escribir también debe estar abierta la app Todo.
    con permisos exclusivos del usuario actual. No pegarla en chats ni incluirla
    en argumentos. El cliente oficial lee el archivo mediante una referencia
    `file:`; el archivo contiene la clave y debe mantenerse privado.
+   El guardado aplica los permisos mediante las API de Windows, sin depender de
+   la carga de `Microsoft.PowerShell.Security`. Si un intento fallido dejó un
+   archivo vacío, se puede repetir; una clave ya guardada nunca se sobrescribe.
+   Antes de guardar se comprueba el formato de la entrada. El mensaje de guardado
+   no confirma la autenticación: esta solo se confirma al conectar el túnel.
 4. Arrancar con el identificador real devuelto por Platform:
 
    ```powershell
@@ -145,13 +187,13 @@ del túnel encendidos; para escribir también debe estar abierta la app Todo.
    de la cuenta. Los identificadores no se inventan ni se incluyen en Git.
 5. Con el túnel activo, activar el modo desarrollador de ChatGPT y crear la
    conexión desde [Plugins](https://chatgpt.com/plugins), seleccionando **Tunnel**.
-   Comprobar que aparecen nueve herramientas y el recurso `ui://todo/hoy.html`.
+   Comprobar las herramientas registradas y el recurso `ui://todo/hoy.html`.
    Consultar Hoy y comparar una tarea real por su identificador con Todo.
 6. Actualizar la conexión en ChatGPT después de cambiar herramientas o metadatos.
 
 Las instrucciones concretas de la versión instalada del cliente prevalecen.
 El cliente verificado durante la preparación fue `v0.0.15` para Windows amd64.
-La disponibilidad y los permisos de la cuenta siguen pendientes de comprobar.
+Cada cuenta debe disponer de los permisos indicados para configurar la conexión.
 
 ## Paquete del plugin
 

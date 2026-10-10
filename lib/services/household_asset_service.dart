@@ -18,10 +18,12 @@ class HouseholdImportedImage {
 }
 
 class HouseholdAssetService {
-  HouseholdAssetService({Directory? rootOverride})
+  HouseholdAssetService(
+      {Directory? rootOverride, this.directoryName = 'household'})
       : _rootOverride = rootOverride;
 
   final Directory? _rootOverride;
+  final String directoryName;
 
   Future<Directory> householdDirectory() async {
     if (_rootOverride != null) {
@@ -34,7 +36,7 @@ class HouseholdAssetService {
     final documents = Directory('$home${Platform.pathSeparator}Documents');
     final base = documents.existsSync() ? documents : Directory(home);
     final directory = Directory(
-      '${base.path}${Platform.pathSeparator}Todo${Platform.pathSeparator}household',
+      '${base.path}${Platform.pathSeparator}Todo${Platform.pathSeparator}$directoryName',
     );
     await directory.create(recursive: true);
     return directory;

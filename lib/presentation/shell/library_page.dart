@@ -16,7 +16,7 @@ class LibraryPage extends StatefulWidget {
 class _LibraryPageState extends State<LibraryPage> {
   LibraryItemType? _typeFilter;
   LibraryItemType? _goalsTypeFilter;
-  _LibraryOverviewMode _overviewMode = _LibraryOverviewMode.columns;
+  _LibraryOverviewMode _overviewMode = _LibraryOverviewMode.covers;
   LibrarySortOrder _allSortOrder = LibrarySortOrder.newestFirst;
   late final TextEditingController _allSearchController;
   late int _year = DateTime.now().year;
@@ -29,6 +29,11 @@ class _LibraryPageState extends State<LibraryPage> {
   void initState() {
     super.initState();
     _allSearchController = TextEditingController();
+    // Completados era el valor histórico inicial, así que Todo es la nueva
+    // vista inicial. Los filtros Pendiente y En curso sí representan una
+    // elección anterior persistida y se mantienen al volver a abrir.
+    _showAllStatuses =
+        controller.libraryStatusView == LibraryItemStatus.completed;
   }
 
   @override

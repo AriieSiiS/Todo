@@ -20,6 +20,7 @@ class AppVisibilitySettings {
     },
     AppSection.household: {
       'inventory': 'Inventario',
+      'shopping': 'Compras',
       'twin': 'Gemelo 3D',
       'qr': 'Códigos QR',
     },

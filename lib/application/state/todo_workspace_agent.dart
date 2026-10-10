@@ -15,6 +15,29 @@ extension TodoWorkspaceAgent on TodoWorkspace {
         'task_version': _agentTaskVersion(task),
       };
 
+  Map<String, dynamic> _agentNote(QuickNote note) => {
+        ...note.toJson(),
+        'note_version': _agentDigest(note.toJson()),
+      };
+
+  Iterable<Map<String, dynamic>> _agentContent(String section) {
+    return switch (section) {
+      'notas' => _notes.map(_agentNote),
+      'ropa' => _wardrobeItems.map((item) => item.toJson()),
+      'conjuntos' => _wardrobeOutfits.map((item) => item.toJson()),
+      'usos_ropa' => _wardrobeWearLogs.map((item) => item.toJson()),
+      'planes_ropa' => _wardrobePlanEntries.map((item) => item.toJson()),
+      'maletas' => _wardrobePackingLists.map((item) => item.toJson()),
+      'recetas' => _recipes.map((item) => item.toJson()),
+      'menus' => _weeklyMenus.map((item) => item.toJson()),
+      'hogar' => _householdItems.map((item) => item.toJson()),
+      'compras' => _shoppingItems.map((item) => item.toJson()),
+      'biblioteca' => _libraryItems.map((item) => item.toJson()),
+      'objetivos_biblioteca' => _libraryGoals.map((item) => item.toJson()),
+      _ => throw const FormatException('La colección no está disponible.'),
+    };
+  }
+
   String _agentTaskVersion(TaskModel task) {
     final related = <TaskModel>[task];
     final visited = <String>{task.id};
@@ -59,6 +82,31 @@ extension TodoWorkspaceAgent on TodoWorkspace {
       'get_task': {'task_id'},
       'list_projects': {},
       'list_categories': {},
+      'read_content': {'section'},
+      'list_content_sections': {},
+      'delete_task': {'request_id', 'task_id', 'expected_version', 'confirm'},
+      'create_note': {
+        'request_id',
+        'content',
+        'scheduled_for',
+        'emoji',
+        'is_pinned',
+        'category_ids'
+      },
+      'update_note': {
+        'request_id',
+        'note_id',
+        'expected_version',
+        'content',
+        'scheduled_for',
+        'clear_scheduled_for',
+        'emoji',
+        'is_pinned',
+        'category_ids',
+        'status'
+      },
+      'archive_note': {'request_id', 'note_id', 'expected_version'},
+      'delete_note': {'request_id', 'note_id', 'expected_version', 'confirm'},
       'create_task': {
         'request_id',
         'title',
@@ -128,6 +176,40 @@ extension TodoWorkspaceAgent on TodoWorkspace {
       final task = taskById(text('task_id', required: true));
       if (task == null) throw const FormatException('La tarea ya no existe.');
       return task;
+    }
+
+    if (name == 'read_content') {
+      return {
+        'items': _agentContent(text('section', required: true)).toList(),
+        'source': 'app'
+      };
+    }
+    if (name == 'list_content_sections') {
+      const titles = {
+        'notas': 'Notas',
+        'ropa': 'Ropa',
+        'conjuntos': 'Conjuntos',
+        'usos_ropa': 'Usos de ropa',
+        'planes_ropa': 'Planes de ropa',
+        'maletas': 'Maletas',
+        'recetas': 'Recetas',
+        'menus': 'Menús',
+        'hogar': 'Hogar',
+        'compras': 'Compras',
+        'biblioteca': 'Biblioteca',
+        'objetivos_biblioteca': 'Objetivos de Biblioteca'
+      };
+      return {
+        'sections': [
+          for (final entry in titles.entries)
+            {
+              'section': entry.key,
+              'title': entry.value,
+              'count': _agentContent(entry.key).length
+            }
+        ],
+        'source': 'app'
+      };
     }
 
     if (name == 'get_today') {
@@ -209,6 +291,79 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     final categories =
         relation('category_ids', _categories.map((item) => item.id));
     final projects = relation('project_ids', _projects.map((item) => item.id));
+    if ({'create_note', 'update_note', 'archive_note', 'delete_note'}
+        .contains(name)) {
+      QuickNote? previous;
+      if (name != 'create_note') {
+        final id = text('note_id', required: true);
+        for (final item in _notes) {
+          if (item.id == id) previous = item;
+        }
+        if (previous == null) {
+          throw const FormatException('La nota ya no existe.');
+        }
+        if (text('expected_version', required: true) !=
+            _agentDigest(previous.toJson())) {
+          throw const FormatException(
+              'La nota cambió desde la consulta. Vuelve a consultarla.');
+        }
+      }
+      if (name == 'delete_note') {
+        if (arguments['confirm'] != true) {
+          throw const FormatException(
+              'Confirma el borrado permanente de la nota.');
+        }
+        _notes.removeWhere((item) => item.id == previous!.id);
+        return _finishAgentOperation(requestId, fingerprint, {
+          'deleted_ids': [previous!.id]
+        });
+      }
+      final content = arguments.containsKey('content')
+          ? text('content', required: true).trim()
+          : previous?.content;
+      if (content == null || content.isEmpty) {
+        throw const FormatException('La nota necesita contenido.');
+      }
+      final clear = arguments['clear_scheduled_for'] ?? false;
+      if (clear is! bool || (clear && arguments.containsKey('scheduled_for'))) {
+        throw const FormatException(
+            'La fecha no puede fijarse y eliminarse a la vez.');
+      }
+      final scheduled = arguments.containsKey('scheduled_for')
+          ? date(text('scheduled_for', required: true), withTime: true)
+          : previous?.scheduledFor;
+      final pinned = arguments['is_pinned'] ?? previous?.isPinned ?? false;
+      if (pinned is! bool) {
+        throw const FormatException('is_pinned debe ser booleano.');
+      }
+      final status = text('status');
+      if (status.isNotEmpty && !{'inbox', 'archived'}.contains(status)) {
+        throw const FormatException('El estado de la nota no es válido.');
+      }
+      final note = (previous ??
+              QuickNote(id: _id('note'), content: content, createdAt: now))
+          .copyWith(
+        content: content,
+        scheduledFor: scheduled,
+        clearScheduledFor: clear,
+        emoji: arguments.containsKey('emoji') ? text('emoji') : null,
+        isPinned: pinned,
+        categoryIds: categories,
+        updatedAt: now,
+        status: name == 'archive_note' || status == 'archived'
+            ? NoteStatus.archived
+            : status == 'inbox'
+                ? NoteStatus.inbox
+                : null,
+      );
+      if (previous == null) {
+        _notes.insert(0, note);
+      } else {
+        _notes[_notes.indexWhere((item) => item.id == note.id)] = note;
+      }
+      return _finishAgentOperation(requestId, fingerprint,
+          {name == 'create_note' ? 'created' : 'note': _agentNote(note)});
+    }
     TaskPriority? priority;
     if (arguments.containsKey('priority')) {
       final value = text('priority', required: true);
@@ -277,6 +432,40 @@ extension TodoWorkspaceAgent on TodoWorkspace {
         throw const FormatException(
             'La tarea está archivada. Revísala desde Todo.');
       }
+      if (name == 'delete_task') {
+        if (arguments['confirm'] != true) {
+          throw const FormatException(
+              'Confirma el borrado permanente de la tarea y sus subtareas.');
+        }
+        final ids = <String>{task.id};
+        while (true) {
+          final children = _tasks
+              .where((item) => ids.contains(item.parentTaskId))
+              .map((item) => item.id)
+              .toSet();
+          if (children.difference(ids).isEmpty) break;
+          ids.addAll(children);
+        }
+        final affected = _tasks.where((item) => ids.contains(item.id)).toList();
+        if (affected.any((item) =>
+            item.calendarLink != null || item.status == TaskStatus.archived)) {
+          throw const FormatException(
+              'Revisa desde Todo las subtareas archivadas o enlazadas al calendario antes de borrar.');
+        }
+        _tasks.removeWhere((item) => ids.contains(item.id));
+        for (var i = 0; i < _tasks.length; i++) {
+          final item = _tasks[i];
+          if (item.subtaskIds.any(ids.contains)) {
+            _tasks[i] = item.copyWith(
+                subtaskIds:
+                    item.subtaskIds.where((id) => !ids.contains(id)).toList());
+          }
+        }
+        return _finishAgentOperation(requestId, fingerprint, {
+          'deleted_ids': ids.toList()..sort(),
+          'deleted_titles': affected.map((item) => item.title).toList()
+        });
+      }
       if (name == 'update_task') {
         final clear = arguments['clear_scheduled_at'] ?? false;
         if (clear is! bool || (clear && scheduled != null)) {
@@ -322,8 +511,15 @@ extension TodoWorkspaceAgent on TodoWorkspace {
         task = taskById(task.id)!;
       }
     }
-    final result = <String, dynamic>{
+    return _finishAgentOperation(requestId, fingerprint, {
       name == 'create_task' ? 'created' : 'task': _agentTask(task),
+    });
+  }
+
+  Future<Map<String, dynamic>> _finishAgentOperation(String requestId,
+      String fingerprint, Map<String, dynamic> payload) async {
+    final result = <String, dynamic>{
+      ...payload,
       'request_id': requestId,
       'savedLocally': true,
       'source': 'app',

@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import copy
 import json
 import os
 from pathlib import Path
@@ -26,17 +27,31 @@ def create_server(backend: LocalBackend) -> Server:
     mode = "prueba en memoria" if backend.sandbox else "escritura mediante Todo abierto" if backend.live else "solo lectura local"
     app = Server(
         "todo-chatgpt-local",
-        version="0.2.0",
+        version="0.3.0",
         instructions=(
             f"Todo funciona en modo {mode}. Consulta tareas, proyectos y categorías por sus identificadores. "
             "La fecha de get_today respeta el día lógico de Todo. "
+            "Cuando el usuario pida las tareas de hoy, usa get_today y responde únicamente con los títulos, "
+            "sin introducción, resumen, sugerencias ni casillas de seguimiento. "
+            "Usa open_today_panel solo cuando solicite expresamente abrir el panel de Hoy. "
+            "Para otras colecciones usa browse_content y get_content_item; responde solo a lo solicitado. "
+            "Distingue lo completado en Biblioteca de los objetivos pendientes, y no inventes fechas, usos o datos ausentes. "
+            "source=snapshot indica los últimos datos guardados, no el estado en memoria. "
+            "Antes de borrar, comprueba la ficha y el alcance; solo usa confirm=true ante una petición explícita de borrar. "
             "En modo real, cada modificación necesita request_id único; conserva identificador y argumentos al reintentar. "
-            "Consulta task_version antes de editar, completar o mover. Las tareas del calendario se editan desde Todo. "
+            "Consulta task_version o note_version antes de modificar o borrar. Las tareas del calendario se editan desde Todo. "
             "Nunca confirmes que se guardó una tarea sin savedLocally: true. El modo de prueba no altera datos reales."
         ),
     )
     definitions = {item["name"]: item for item in tool_definitions(backend.sandbox, backend.live)}
-    definitions["get_today"]["_meta"] = {
+    panel_tool = copy.deepcopy(definitions["get_today"])
+    panel_tool.update(
+        name="open_today_panel",
+        title="Abrir panel de Hoy",
+        description="Abre el panel interactivo Hoy en Todo únicamente cuando el usuario pida expresamente abrir el panel. Para consultar o mostrar las tareas en texto, usa get_today. No dupliques el panel con otra lista ni con casillas ajenas a Todo.",
+    )
+    definitions["open_today_panel"] = panel_tool
+    panel_tool["_meta"] = {
         "ui": {"resourceUri": UI_URI},
         "openai/ui": {"entrypoints": [{"type": "global"}, {"type": "thread"}]},
     }
@@ -52,7 +67,10 @@ def create_server(backend: LocalBackend) -> Server:
         return [ReadResourceContents(
             content=Path(__file__).with_name("ui").joinpath("hoy.html").read_text(encoding="utf-8"),
             mime_type=UI_MIME,
-            meta={"ui": {"prefersBorder": True, "csp": {"connectDomains": [], "resourceDomains": []}}},
+            meta={
+                "ui": {"prefersBorder": True, "csp": {"connectDomains": [], "resourceDomains": []}},
+                "openai/widgetDescription": "Panel de las tareas de hoy con acciones reales en Todo. Ya muestra la lista; evita repetirla en texto o añadir casillas de seguimiento ajenas a Todo.",
+            },
         )]
 
     @app.list_tools()
@@ -67,7 +85,8 @@ def create_server(backend: LocalBackend) -> Server:
             if name not in definitions:
                 raise ValueError("La herramienta solicitada no está habilitada en este adaptador.")
             Draft202012Validator(definitions[name]["inputSchema"]).validate(arguments)
-            payload = await asyncio.to_thread(backend.call, name, arguments)
+            backend_name = "get_today" if name == "open_today_panel" else name
+            payload = await asyncio.to_thread(backend.call, backend_name, arguments)
             payload["mode"] = "sandbox" if backend.sandbox else "local_app" if backend.live else "local_read_only"
             payload["writes_available"] = backend.sandbox or (backend.live and payload.get("source") == "app")
             if backend.sandbox:
@@ -87,7 +106,7 @@ def create_server(backend: LocalBackend) -> Server:
         except Exception:
             # Evita devolver rutas, preferencias o detalles internos al cliente.
             message = "No se pudo completar la operación local de Todo."
-            retryable = name in {"create_task", "update_task", "complete_task", "move_task_to_day"}
+            retryable = name not in definitions or not definitions[name]["annotations"]["readOnlyHint"]
         return types.CallToolResult(
             content=[types.TextContent(type="text", text=message)],
             structuredContent={"error": message, "retryable": retryable},

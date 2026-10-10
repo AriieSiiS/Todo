@@ -85,7 +85,7 @@ class LiveBackendTest(unittest.TestCase):
 
     def test_schema_requires_retry_identity_and_task_version(self):
         tools = {tool["name"]: tool for tool in tool_definitions(live=True)}
-        self.assertEqual(len(tools), 9)
+        self.assertEqual(len(tools), 19)
         self.assertIn("request_id", tools["create_task"]["inputSchema"]["required"])
         self.assertIn("expected_version", tools["complete_task"]["inputSchema"]["required"])
         self.assertNotIn("status", tools["update_task"]["inputSchema"]["properties"])
@@ -137,7 +137,7 @@ class BridgeSDKTest(unittest.IsolatedAsyncioTestCase):
         async with stdio_client(parameters) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                self.assertEqual(len((await session.list_tools()).tools), 9)
+                self.assertEqual(len((await session.list_tools()).tools), 20)
                 today = await session.call_tool("get_today", {})
                 self.assertEqual(today.structuredContent["date"], "2026-10-02")
                 self.assertEqual(today.structuredContent["source"], "app")
@@ -156,6 +156,21 @@ class BridgeSDKTest(unittest.IsolatedAsyncioTestCase):
                 completed = await session.call_tool("complete_task", {"task_id": task["id"],
                     "expected_version": updated.structuredContent["task"]["task_version"], "request_id": "stdio-completar-001"})
                 self.assertTrue(completed.structuredContent["savedLocally"])
+                note = (await session.call_tool('create_note', {'content': 'Idea desde ChatGPT', 'emoji': '💡', 'request_id': 'stdio-nota-001'})).structuredContent['created']
+                read_note = await session.call_tool('get_note', {'note_id': note['id']})
+                self.assertEqual(read_note.structuredContent['note']['note_version'], note['note_version'])
+                listing = await session.call_tool('browse_content', {'section': 'notas', 'query': 'idea'})
+                self.assertEqual(listing.structuredContent['items'][0]['id'], note['id'])
+                changed = await session.call_tool('update_note', {'note_id': note['id'], 'expected_version': note['note_version'], 'request_id': 'stdio-nota-002', 'content': 'Idea corregida'})
+                self.assertEqual(changed.structuredContent['note']['emoji'], '💡')
+                delete_note = {'note_id': note['id'], 'expected_version': changed.structuredContent['note']['note_version'], 'request_id': 'stdio-nota-003', 'confirm': True}
+                removed = await session.call_tool('delete_note', delete_note)
+                self.assertTrue(removed.structuredContent['savedLocally'])
+                self.assertEqual((await session.call_tool('delete_note', delete_note)).structuredContent, removed.structuredContent)
+                doomed = (await session.call_tool('create_task', {'title': 'Borrar esta prueba', 'request_id': 'stdio-crear-002'})).structuredContent['created']
+                deletion = await session.call_tool('delete_task', {'task_id': doomed['id'], 'expected_version': doomed['task_version'], 'request_id': 'stdio-borrar-001', 'confirm': True})
+                self.assertTrue(deletion.structuredContent['savedLocally'])
+                self.assertTrue((await session.call_tool('get_task', {'task_id': doomed['id']})).isError)
         saved = json.loads(state_path.read_text(encoding="utf-8"))
         matching = [task for task in saved["tasks"] if task["title"] == "Té desde stdio"]
         self.assertEqual(len(matching), 1)
