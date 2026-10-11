@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -6,8 +7,15 @@ import 'package:just_audio/just_audio.dart';
 class AmbientMusicController extends ChangeNotifier {
   AmbientMusicController({bool enabled = true}) : _enabled = enabled;
 
-  static const String _assetPath =
-      'resources/Persona 5 but it\'s Lofi ~ Chill Lofi Mix for Study_Work (1 Hour) [aM9dxd2nRwE] (1).mp3';
+  /// La música pesa 53 MB, así que vive fuera del ejecutable:
+  /// `Documents/Todo/media/musica-ambiente.mp3`.
+  static String get rutaMusica {
+    final inicio = Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        Directory.current.path;
+    final s = Platform.pathSeparator;
+    return '$inicio${s}Documents${s}Todo${s}media${s}musica-ambiente.mp3';
+  }
 
   final bool _enabled;
   AudioPlayer? _player;
@@ -38,7 +46,13 @@ class AmbientMusicController extends ChangeNotifier {
     _player ??= AudioPlayer();
     _wireStreams();
     try {
-      await _player!.setAsset(_assetPath);
+      final archivo = File(rutaMusica);
+      if (!await archivo.exists()) {
+        _errorMessage = 'Falta el archivo de música: ${archivo.path}';
+        notifyListeners();
+        return;
+      }
+      await _player!.setFilePath(archivo.path);
       await _player!.setLoopMode(LoopMode.one);
       await _player!.setVolume(_volume);
       _duration = _player!.duration ?? Duration.zero;
