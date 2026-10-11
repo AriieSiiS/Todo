@@ -210,6 +210,7 @@ class TodoWorkspace extends ChangeNotifier {
   DateTime? _manualLogicalDate;
   DateTime? _manualLogicalDateStartedAt;
   DateTime? _lastSavedAt;
+  String _saveError = '';
   bool _loadedFromPersistence = false;
   bool _calendarBusy = false;
   bool _notificationBusy = false;
@@ -340,6 +341,7 @@ class TodoWorkspace extends ChangeNotifier {
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
   bool get hasManualLogicalDate => manualLogicalDate != null;
   DateTime? get lastSavedAt => _lastSavedAt;
+  String get saveError => _saveError;
   bool get loadedFromPersistence => _loadedFromPersistence;
   bool get calendarBusy => _calendarBusy;
   bool get notificationBusy => _notificationBusy;
@@ -889,7 +891,7 @@ class TodoWorkspace extends ChangeNotifier {
   Future<void> _persistWardrobeLocally() async {
     _saveDebounce?.cancel();
     _saveDebounce = null;
-    await _store.save(_buildSnapshot());
+    await _saveSnapshotTracked(_buildSnapshot());
     _syncMetadata = _syncMetadata.copyWith(
       deviceId: _syncMetadata.deviceId.isNotEmpty
           ? _syncMetadata.deviceId
@@ -5592,16 +5594,46 @@ class TodoWorkspace extends ChangeNotifier {
     notifyListeners();
     _saveDebounce?.cancel();
     _saveDebounce = Timer(const Duration(milliseconds: 250), () async {
-      await _persist();
+      try {
+        await _persist();
+      } catch (_) {
+        // El error queda registrado en `saveError` y la interfaz lo muestra.
+        return;
+      }
       if (!_isFlutterTest) {
         await rescheduleTaskReminders();
       }
     });
   }
 
+  /// Guarda el snapshot local y registra el fallo para avisar al usuario.
+  /// Vuelve a lanzar el error para que quien llama no dé el guardado por hecho.
+  Future<void> _saveSnapshotTracked(AppStateSnapshot snapshot) async {
+    try {
+      await _store.save(snapshot);
+      if (_saveError.isNotEmpty) {
+        _saveError = '';
+        notifyListeners();
+      }
+    } catch (error) {
+      _saveError = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Reintenta guardar los cambios pendientes tras un fallo.
+  Future<void> retrySave() async {
+    try {
+      await flushPendingChanges();
+    } catch (_) {
+      // El aviso persiste mientras `saveError` no esté vacío.
+    }
+  }
+
   Future<void> _persist() async {
     final snapshot = _buildSnapshot();
-    await _store.save(snapshot);
+    await _saveSnapshotTracked(snapshot);
     _syncMetadata = _syncMetadata.copyWith(
       deviceId: _syncMetadata.deviceId.isNotEmpty
           ? _syncMetadata.deviceId

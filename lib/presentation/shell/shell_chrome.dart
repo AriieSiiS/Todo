@@ -149,6 +149,16 @@ class _AppShellState extends ConsumerState<AppShell>
           child: Stack(
             children: [
               scaffold,
+              if (controller.saveError.isNotEmpty)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: _SaveErrorBanner(
+                    error: controller.saveError,
+                    onRetry: controller.retrySave,
+                  ),
+                ),
               if (alarm != null)
                 Positioned.fill(
                   child: _ImportantAlarmOverlay(
@@ -925,6 +935,46 @@ class _AmbientMusicPlayer extends StatelessWidget {
               ?.copyWith(color: const Color(0xFFD7D1C6)),
         ),
       ],
+    );
+  }
+}
+
+class _SaveErrorBanner extends StatelessWidget {
+  const _SaveErrorBanner({required this.error, required this.onRetry});
+
+  final String error;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: scheme.onErrorContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'No se pudieron guardar los cambios. Los datos recientes '
+                  'podrían perderse si cierras la aplicación. $error',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: scheme.onErrorContainer),
+                ),
+              ),
+              TextButton(
+                onPressed: () => unawaited(onRetry()),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

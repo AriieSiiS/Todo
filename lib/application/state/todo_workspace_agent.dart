@@ -538,7 +538,7 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     _saveDebounce = null;
     // La confirmación requiere el snapshot completo, incluida la operación.
     // Si falla, el reintento vuelve a guardarlo sin aplicar de nuevo el cambio.
-    await _store.save(_buildSnapshot());
+    await _saveSnapshotTracked(_buildSnapshot());
     _syncMetadata = _syncMetadata.copyWith(pendingLocalChanges: true);
     await _store.saveSyncMetadata(_syncMetadata);
     _lastSavedAt = DateTime.now();
