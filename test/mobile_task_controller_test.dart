@@ -30,6 +30,25 @@ void main() {
     expect(controller.syncing, isFalse);
   });
 
+  test('una respuesta que llega tras cerrar no guarda configuración', () async {
+    final store = _Store();
+    final client = _SlowClient();
+    final controller = MobileTaskController(
+        store: store,
+        client: client,
+        notifications: _Notifications(),
+        wardrobeStore: _WardrobeStore());
+    await controller.initialize();
+    store.token.complete('credencial-de-prueba');
+    await client.started.future;
+    controller.dispose();
+    client.response.complete(
+        const LanSyncResult(changed: false, endpoint: 'https://127.0.0.1'));
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(store.saved.isCompleted, isFalse);
+  });
+
   test('un fallo al leer la credencial libera el estado de sincronización',
       () async {
     final store = _Store();
@@ -135,6 +154,17 @@ class _Client extends MobileLanClient {
     required String revision,
   }) async =>
       LanWardrobeResult(changed: false, endpoint: config.endpoint);
+}
+
+class _SlowClient extends _Client {
+  final started = Completer<void>();
+  final response = Completer<LanSyncResult>();
+  @override
+  Future<LanSyncResult> sync(
+      {required LanConnectionConfig config, required String token}) {
+    started.complete();
+    return response.future;
+  }
 }
 
 class _WardrobeStore extends MobileWardrobeStore {

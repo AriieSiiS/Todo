@@ -30,6 +30,9 @@ class MobileTaskController extends ChangeNotifier {
   Future<void> _usageWrite = Future<void>.value();
   bool _disposed = false;
   int _wardrobeEpoch = 0;
+  // Invalida la sincronización de tareas en curso al desconectar o cerrar.
+  int _syncEpoch = 0;
+  Completer<void>? _syncIdle;
   Completer<void>? _wardrobeIdle;
   StreamSubscription<MobileNotificationOpen>? _notificationSubscription;
 
@@ -148,6 +151,9 @@ class MobileTaskController extends ChangeNotifier {
   Future<bool> sync() async {
     final current = _config;
     if (current == null || _syncing) return false;
+    final epoch = _syncEpoch;
+    final idle = Completer<void>();
+    _syncIdle = idle;
     _syncing = true;
     _error = '';
     notifyListeners();
@@ -158,6 +164,8 @@ class MobileTaskController extends ChangeNotifier {
         return false;
       }
       final result = await _client.sync(config: current, token: token);
+      // Si se desconectó o se cerró mientras esperaba la respuesta, se descarta.
+      if (epoch != _syncEpoch) return false;
       var updated = current.copyWith(
         endpoint: result.endpoint,
         lastSyncAt: DateTime.now(),
@@ -165,18 +173,22 @@ class MobileTaskController extends ChangeNotifier {
       if (result.changed && result.snapshot != null) {
         final next = MobileTaskSnapshot.fromJson(result.snapshot!);
         await _store.saveSnapshot(result.snapshot!);
+        if (epoch != _syncEpoch) return false;
         await _notifications.syncSnapshot(next);
         _snapshot = next;
         updated = updated.copyWith(revision: next.revision);
       }
+      if (epoch != _syncEpoch) return false;
       _config = updated;
       await _store.saveConfig(updated);
       return true;
     } catch (error) {
-      _error = _friendlyError(error);
+      if (epoch == _syncEpoch) _error = _friendlyError(error);
       return false;
     } finally {
       _syncing = false;
+      if (identical(_syncIdle, idle)) _syncIdle = null;
+      idle.complete();
       notifyListeners();
     }
   }
@@ -372,7 +384,9 @@ class MobileTaskController extends ChangeNotifier {
 
   Future<void> disconnect() async {
     _wardrobeEpoch++;
+    _syncEpoch++;
     await _wardrobeIdle?.future;
+    await _syncIdle?.future;
     await _usageWrite;
     await cancelMobileDailySync();
     await _notifications.cancelAllTodoNotifications();
@@ -392,6 +406,8 @@ class MobileTaskController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _syncEpoch++;
+    _wardrobeEpoch++;
     _notificationSubscription?.cancel();
     super.dispose();
   }
