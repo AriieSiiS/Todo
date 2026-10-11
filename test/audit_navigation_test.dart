@@ -39,13 +39,15 @@ void main() {
     }));
     addTearDown(controller.dispose);
     await pumpPage(tester, LibraryPage(controller: controller));
-    expect(find.text('Libro 4'), findsNothing);
+    // El título también aparece en la portada de la cuadrícula principal, así
+    // que se compara cuántas veces se muestra en lugar de exigir su ausencia.
+    final apariciones = find.text('Libro 4').evaluate().length;
     await tester.tap(find.text('Ver todos los recientes'));
     await tester.pump();
-    expect(find.text('Libro 4'), findsOneWidget);
+    expect(find.text('Libro 4'), findsNWidgets(apariciones + 1));
     await tester.tap(find.text('Ver menos recientes'));
     await tester.pump();
-    expect(find.text('Libro 4'), findsNothing);
+    expect(find.text('Libro 4'), findsNWidgets(apariciones));
     expect(find.text('${year - 4}'), findsNothing);
     await tester.tap(find.text('Ver todos los años'));
     await tester.pump();
