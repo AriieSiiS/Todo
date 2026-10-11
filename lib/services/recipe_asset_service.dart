@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -87,27 +88,8 @@ class RecipeAssetService {
     String recipeId,
     Uint8List bytes,
   ) async {
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      throw const FormatException('El archivo seleccionado no es una imagen.');
-    }
-    if (decoded.width < 300 || decoded.height < 200) {
-      throw const FormatException(
-        'La imagen debe medir al menos 300 × 200 píxeles.',
-      );
-    }
-
-    final longest = max(decoded.width, decoded.height);
-    final scale = longest > 2200 ? 2200 / longest : 1.0;
-    final normalized = scale < 1
-        ? img.copyResize(
-            decoded,
-            width: max(1, (decoded.width * scale).round()),
-            height: max(1, (decoded.height * scale).round()),
-            interpolation: img.Interpolation.average,
-          )
-        : decoded;
-    final imageBytes = img.encodeJpg(normalized, quality: 92);
+    final preparada = await Isolate.run(() => _prepararImagenReceta(bytes));
+    final imageBytes = preparada.imagen;
     final digest = sha256.convert(imageBytes).toString();
     final fileStem = '${_safeId(recipeId)}-${digest.substring(0, 12)}';
     final root = await recipeDirectory();
@@ -119,15 +101,9 @@ class RecipeAssetService {
     final image = File('${images.path}${Platform.pathSeparator}$fileStem.jpg');
     final thumbnail =
         File('${thumbnails.path}${Platform.pathSeparator}$fileStem.jpg');
-    final thumb = img.copyResize(
-      normalized,
-      width: normalized.width >= normalized.height ? 720 : null,
-      height: normalized.height > normalized.width ? 720 : null,
-      interpolation: img.Interpolation.average,
-    );
     await _atomicWrite(image, imageBytes);
     try {
-      await _atomicWrite(thumbnail, img.encodeJpg(thumb, quality: 86));
+      await _atomicWrite(thumbnail, preparada.miniatura);
     } catch (_) {
       if (await image.exists()) await image.delete();
       rethrow;
@@ -164,4 +140,46 @@ class RecipeAssetService {
         ? 'receta-${DateTime.now().microsecondsSinceEpoch}'
         : safe;
   }
+}
+
+/// Imagen ya normalizada y su miniatura, calculadas fuera del hilo de la interfaz.
+class _ImagenPreparada {
+  const _ImagenPreparada(this.imagen, this.miniatura);
+
+  final Uint8List imagen;
+  final Uint8List miniatura;
+}
+
+/// Decodifica, valida, reduce y codifica la imagen. Es costosa, por eso se
+/// ejecuta con `Isolate.run`.
+_ImagenPreparada _prepararImagenReceta(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    throw const FormatException('El archivo seleccionado no es una imagen.');
+  }
+  if (decoded.width < 300 || decoded.height < 200) {
+    throw const FormatException(
+      'La imagen debe medir al menos 300 × 200 píxeles.',
+    );
+  }
+  final longest = max(decoded.width, decoded.height);
+  final scale = longest > 2200 ? 2200 / longest : 1.0;
+  final normalized = scale < 1
+      ? img.copyResize(
+          decoded,
+          width: max(1, (decoded.width * scale).round()),
+          height: max(1, (decoded.height * scale).round()),
+          interpolation: img.Interpolation.average,
+        )
+      : decoded;
+  final thumb = img.copyResize(
+    normalized,
+    width: normalized.width >= normalized.height ? 720 : null,
+    height: normalized.height > normalized.width ? 720 : null,
+    interpolation: img.Interpolation.average,
+  );
+  return _ImagenPreparada(
+    Uint8List.fromList(img.encodeJpg(normalized, quality: 92)),
+    Uint8List.fromList(img.encodeJpg(thumb, quality: 86)),
+  );
 }

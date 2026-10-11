@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -78,20 +79,12 @@ class WardrobeAssetService {
     String outfitId,
     Uint8List bytes,
   ) async {
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      throw const FormatException('La imagen del conjunto no es válida.');
-    }
-    if (decoded.width < 600 || decoded.height < 600) {
-      throw const FormatException(
-          'La imagen del conjunto debe medir al menos 600 × 600 píxeles.');
-    }
+    final encoded = await Isolate.run(() => _prepararRenderConjunto(bytes));
     final wardrobe = await wardrobeDirectory();
     final directory = Directory(
       '${wardrobe.path}${Platform.pathSeparator}outfits',
     );
     await directory.create(recursive: true);
-    final encoded = img.encodePng(decoded);
     final digest = sha256.convert(encoded).toString();
     final fileName = '${_safeId(outfitId)}-${digest.substring(0, 12)}.png';
     final destination = File(
@@ -525,4 +518,18 @@ class WardrobeAssetService {
 
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
+}
+
+/// Valida y vuelve a codificar el render de un conjunto fuera del hilo de la
+/// interfaz, porque decodificar y codificar un PNG grande es costoso.
+Uint8List _prepararRenderConjunto(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    throw const FormatException('La imagen del conjunto no es válida.');
+  }
+  if (decoded.width < 600 || decoded.height < 600) {
+    throw const FormatException(
+        'La imagen del conjunto debe medir al menos 600 × 600 píxeles.');
+  }
+  return Uint8List.fromList(img.encodePng(decoded));
 }

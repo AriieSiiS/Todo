@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -62,27 +63,8 @@ class PlantAssetService {
     String plantId,
     Uint8List bytes,
   ) async {
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      throw const FormatException('El archivo seleccionado no es una imagen.');
-    }
-    if (decoded.width < 400 || decoded.height < 400) {
-      throw const FormatException(
-        'La imagen debe medir al menos 400 × 400 píxeles.',
-      );
-    }
-
-    final longest = max(decoded.width, decoded.height);
-    final scale = longest > 2000 ? 2000 / longest : 1.0;
-    final normalized = scale < 1
-        ? img.copyResize(
-            decoded,
-            width: max(1, (decoded.width * scale).round()),
-            height: max(1, (decoded.height * scale).round()),
-            interpolation: img.Interpolation.average,
-          )
-        : decoded;
-    final imageBytes = img.encodePng(normalized);
+    final preparada = await Isolate.run(() => _prepararImagenPlanta(bytes));
+    final imageBytes = preparada.imagen;
     final digest = sha256.convert(imageBytes).toString();
     final stem = '${_safeId(plantId)}-${digest.substring(0, 12)}';
     final root = await plantsDirectory();
@@ -94,15 +76,9 @@ class PlantAssetService {
     final image = File('${images.path}${Platform.pathSeparator}$stem.png');
     final thumbnail =
         File('${thumbnails.path}${Platform.pathSeparator}$stem.png');
-    final thumb = img.copyResize(
-      normalized,
-      width: normalized.width >= normalized.height ? 640 : null,
-      height: normalized.height > normalized.width ? 640 : null,
-      interpolation: img.Interpolation.average,
-    );
     await _atomicWrite(image, imageBytes);
     try {
-      await _atomicWrite(thumbnail, img.encodePng(thumb));
+      await _atomicWrite(thumbnail, preparada.miniatura);
     } catch (_) {
       if (await image.exists()) await image.delete();
       rethrow;
@@ -139,4 +115,46 @@ class PlantAssetService {
         ? 'planta-${DateTime.now().microsecondsSinceEpoch}'
         : safe;
   }
+}
+
+/// Imagen ya normalizada y su miniatura, calculadas fuera del hilo de la interfaz.
+class _ImagenPreparada {
+  const _ImagenPreparada(this.imagen, this.miniatura);
+
+  final Uint8List imagen;
+  final Uint8List miniatura;
+}
+
+/// Decodifica, valida, reduce y codifica la imagen. Es costosa, por eso se
+/// ejecuta con `Isolate.run`.
+_ImagenPreparada _prepararImagenPlanta(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) {
+    throw const FormatException('El archivo seleccionado no es una imagen.');
+  }
+  if (decoded.width < 400 || decoded.height < 400) {
+    throw const FormatException(
+      'La imagen debe medir al menos 400 × 400 píxeles.',
+    );
+  }
+  final longest = max(decoded.width, decoded.height);
+  final scale = longest > 2000 ? 2000 / longest : 1.0;
+  final normalized = scale < 1
+      ? img.copyResize(
+          decoded,
+          width: max(1, (decoded.width * scale).round()),
+          height: max(1, (decoded.height * scale).round()),
+          interpolation: img.Interpolation.average,
+        )
+      : decoded;
+  final thumb = img.copyResize(
+    normalized,
+    width: normalized.width >= normalized.height ? 640 : null,
+    height: normalized.height > normalized.width ? 640 : null,
+    interpolation: img.Interpolation.average,
+  );
+  return _ImagenPreparada(
+    Uint8List.fromList(img.encodePng(normalized)),
+    Uint8List.fromList(img.encodePng(thumb)),
+  );
 }
