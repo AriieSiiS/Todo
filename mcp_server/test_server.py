@@ -1024,6 +1024,26 @@ class McpServerTest(unittest.TestCase):
             ["500 g de salmón", "Sal"],
         )
 
+    def test_guardado_de_la_app_durante_una_herramienta_no_se_pierde(self) -> None:
+        self.call("create_task", {"title": "Tarea inicial"})
+        original = self.server.load_state
+        pendiente = {"externo": True}
+
+        def carga_con_escritura_externa():
+            state = original()
+            if pendiente.pop("externo", False):
+                # Simula que la app guarda otra tarea justo después de la lectura.
+                externo = json.loads(self.server.STATE_PATH.read_text(encoding="utf-8"))
+                externo["tasks"].append({**externo["tasks"][0], "id": "tarea-externa", "title": "Tarea de la app"})
+                self.server.STATE_PATH.write_text(json.dumps(externo), encoding="utf-8")
+            return state
+
+        with patch.object(self.server, "load_state", carga_con_escritura_externa):
+            self.call("create_task", {"title": "Tarea del MCP"})
+
+        titulos = {t["title"] for t in self.call("list_tasks")["tasks"]} if isinstance(self.call("list_tasks"), dict) else {t["title"] for t in self.call("list_tasks")}
+        self.assertEqual(titulos, {"Tarea inicial", "Tarea de la app", "Tarea del MCP"})
+
 
 if __name__ == "__main__":
     unittest.main()

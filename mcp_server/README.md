@@ -274,3 +274,10 @@ El script intenta encontrar Python en este orden:
 3. `python`
 
 Asi que normalmente basta con tener Python 3 instalado, o usarlo desde Codex.
+
+## Escrituras coordinadas con la app
+
+Leer el estado ya no lo reescribe. Al guardar, el servidor comprueba bajo un
+bloqueo de archivo (`todo_state.json.lock`) que `todo_state.json` no haya
+cambiado desde que lo leyó. Si la app guardó entretanto, la herramienta se
+repite sobre el estado nuevo (hasta cinco intentos) en lugar de pisar el cambio.

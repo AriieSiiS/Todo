@@ -1,3 +1,4 @@
+import contextlib
 import copy
 import datetime as dt
 import hashlib
@@ -213,12 +214,15 @@ def ensure_runtime_dir() -> None:
 
 
 def read_local_state() -> dict[str, Any]:
+    global _base_signature
     ensure_runtime_dir()
     if not STATE_PATH.exists():
         state = default_state()
         write_local_state(state)
         return state
-    raw = STATE_PATH.read_text(encoding="utf-8").strip()
+    content = STATE_PATH.read_bytes()
+    _base_signature = hashlib.sha256(content).hexdigest()
+    raw = content.decode("utf-8").strip()
     if not raw:
         state = default_state()
         write_local_state(state)
@@ -226,11 +230,65 @@ def read_local_state() -> dict[str, Any]:
     return json.loads(raw)
 
 
-def write_local_state(state: dict[str, Any]) -> None:
+class StateConflict(RuntimeError):
+    """El archivo de estado cambió (por ejemplo, lo guardó la app) tras leerlo."""
+
+
+# Huella del archivo de estado tal como se leyó o se escribió por última vez.
+# Sirve para no pisar los cambios que la app guarde mientras una herramienta
+# modifica su copia en memoria.
+_base_signature: str | None = None
+
+
+def _file_signature() -> str | None:
+    try:
+        return hashlib.sha256(STATE_PATH.read_bytes()).hexdigest()
+    except FileNotFoundError:
+        return None
+
+
+@contextlib.contextmanager
+def _state_write_lock():
+    """Bloqueo entre procesos para que la comprobación y el reemplazo sean atómicos."""
     ensure_runtime_dir()
-    temp = STATE_PATH.with_suffix(".tmp")
-    temp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
-    temp.replace(STATE_PATH)
+    with open(STATE_PATH.with_name(STATE_PATH.name + ".lock"), "a+b") as handle:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            while True:
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    continue
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def write_local_state(state: dict[str, Any], *, check_conflict: bool = False) -> None:
+    global _base_signature
+    ensure_runtime_dir()
+    with _state_write_lock():
+        if check_conflict and _file_signature() != _base_signature:
+            raise StateConflict(
+                "El estado cambió mientras se procesaba la operación; se reintentará."
+            )
+        temp = STATE_PATH.with_suffix(".tmp")
+        temp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+        temp.replace(STATE_PATH)
+        _base_signature = _file_signature()
 
 
 def write_app_snapshot(state: dict[str, Any]) -> None:
@@ -327,8 +385,10 @@ def load_state() -> dict[str, Any]:
     migrated = migrate_plants_feature(state) or migrated
     if migrated:
         touch_state(state)
-    write_local_state(state)
-    write_app_snapshot(state)
+    if migrated or from_remote:
+        # Leer no debe reescribir el archivo: podría pisar un guardado de la app.
+        write_local_state(state)
+        write_app_snapshot(state)
     if remote_enabled() and (migrated or not from_remote):
         write_remote_state(state)
     return state
@@ -336,7 +396,7 @@ def load_state() -> dict[str, Any]:
 
 def save_state(state: dict[str, Any]) -> None:
     touch_state(state)
-    write_local_state(state)
+    write_local_state(state, check_conflict=True)
     write_app_snapshot(state)
     if remote_enabled():
         write_remote_state(state)
@@ -5887,6 +5947,20 @@ def knowledge_repository() -> KnowledgeRepository:
 
 
 def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Ejecuta la herramienta y la repite sobre el estado nuevo si la app guardó antes."""
+    for attempt in range(5):
+        try:
+            return _handle_tool_call_once(name, arguments)
+        except StateConflict:
+            if attempt == 4:
+                raise RuntimeError(
+                    "No se pudo guardar: la app modificó el estado varias veces "
+                    "seguidas. Vuelve a intentarlo."
+                )
+    raise AssertionError("inalcanzable")
+
+
+def _handle_tool_call_once(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if name == "get_app_state":
         state = load_state()
         return json_result(state)
