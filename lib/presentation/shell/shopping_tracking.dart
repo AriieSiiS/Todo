@@ -65,10 +65,11 @@ class _ShoppingTrackingPanelState extends State<_ShoppingTrackingPanel> {
       await action();
       if (mounted) setState(() => _feedback = success);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() => _feedback = error is StateError
             ? error.message.toString()
             : 'No se pudo contactar con el servicio de precios.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
