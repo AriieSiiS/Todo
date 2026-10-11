@@ -1169,7 +1169,11 @@ class TodoWorkspace extends ChangeNotifier {
       await _store.saveCalendarSession(session);
     }
     _lastSavedAt = DateTime.now();
-    notifyListeners();
+    // Solo Ajustes muestra la hora del último guardado y el estado de la nube;
+    // avisar a toda la interfaz tras cada guardado duplicaba las reconstrucciones.
+    if (_section == AppSection.settings || _cloudService.isAuthenticated) {
+      notifyListeners();
+    }
   }
 
   Future<void> flushPendingChanges() async {

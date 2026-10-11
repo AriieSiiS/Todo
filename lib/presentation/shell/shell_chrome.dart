@@ -62,7 +62,19 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.watch(todoWorkspaceProvider);
+    // El shell solo se reconstruye cuando cambia algo propio de su estructura
+    // (sección, biblioteca abierta, alarma, aviso de guardado o notificación).
+    // Los datos de cada vista los escucha su propio ListenableBuilder.
+    ref.watch(todoWorkspaceProvider.select((c) => (
+          c.section,
+          c.openKnowledgeLibraryItem,
+          c.currentImportantAlarm?.id,
+          c.importantAlarmCount,
+          c.importantAlarmError,
+          c.saveError,
+          c.pendingNotificationTaskId,
+        )));
+    final controller = ref.read(todoWorkspaceProvider);
     if (controller.pendingNotificationTaskId != null &&
         !_openingNotificationTask) {
       _openingNotificationTask = true;
@@ -92,10 +104,13 @@ class _AppShellState extends ConsumerState<AppShell>
         child: SafeArea(
           child: Row(
             children: [
-              _Sidebar(
-                controller: controller,
-                compact: !wide,
-                musicController: _musicController,
+              ListenableBuilder(
+                listenable: controller,
+                builder: (context, _) => _Sidebar(
+                  controller: controller,
+                  compact: !wide,
+                  musicController: _musicController,
+                ),
               ),
               Expanded(
                 child: Padding(
@@ -109,17 +124,26 @@ class _AppShellState extends ConsumerState<AppShell>
                             duration: const Duration(milliseconds: 220),
                             switchInCurve: Curves.easeOutCubic,
                             switchOutCurve: Curves.easeInCubic,
-                            child: _sectionView(context),
+                            child: ListenableBuilder(
+                              key: ValueKey(controller.section),
+                              listenable: controller,
+                              builder: (context, _) => _sectionView(context),
+                            ),
                           )
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(30),
-                            child: KnowledgeWorkspacePage(
-                              key: ValueKey(
-                                  'knowledge-workspace-${knowledgeItem.id}'),
-                              controller: controller,
-                              libraryItem: knowledgeItem,
-                              embedded: true,
-                              onClose: controller.closeKnowledgeWorkspace,
+                            child: ListenableBuilder(
+                              listenable: controller,
+                              builder: (context, _) => KnowledgeWorkspacePage(
+                                key: ValueKey(
+                                    'knowledge-workspace-${knowledgeItem.id}'),
+                                controller: controller,
+                                libraryItem:
+                                    controller.openKnowledgeLibraryItem ??
+                                        knowledgeItem,
+                                embedded: true,
+                                onClose: controller.closeKnowledgeWorkspace,
+                              ),
                             ),
                           ),
                   ),
@@ -137,7 +161,12 @@ class _AppShellState extends ConsumerState<AppShell>
               child: const Icon(Icons.add_rounded),
             )
           : null,
-      bottomNavigationBar: wide ? null : _MobileNav(controller: controller),
+      bottomNavigationBar: wide
+          ? null
+          : ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) => _MobileNav(controller: controller),
+            ),
     );
     return CallbackShortcuts(
       bindings: {
