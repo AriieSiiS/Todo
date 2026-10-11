@@ -6,7 +6,6 @@
 .vscode/
 build/
 coverage/
-pubspec.lock
 *.iml
 mcp_server/.env
 mcp_server/.venv-chatgpt/
