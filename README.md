@@ -4,7 +4,7 @@ Base de una app personal de tareas pensada para Windows.
 
 ## Mapa rápido para nuevos chats o agentes
 
-Si un chat nuevo necesita orientarse sin volver a recorrer todo el repo, empieza por [AGENTS.md](</C:/Users/AlejandroAfonso/Documents/Todo/AGENTS.md>). Ahí está el mapa corto del proyecto, las rutas clave y los atajos para abrir cada vista directamente.
+Si un chat nuevo necesita orientarse sin volver a recorrer todo el repo, empieza por [AGENTS.md](AGENTS.md). Ahí está el mapa corto del proyecto, las rutas clave y los atajos para abrir cada vista directamente.
 
 La app está migrada a una estructura por capas:
 
@@ -164,7 +164,7 @@ La sincronización nueva usa un snapshot único por cuenta. Eso encaja bien con 
 Pasos base:
 
 1. Crea un proyecto en Supabase.
-2. Ejecuta el SQL de [supabase/001_todo_app_states.sql](</C:/Users/AlejandroAfonso/Documents/Todo/supabase/001_todo_app_states.sql>).
+2. Ejecuta el SQL de [supabase/001_todo_app_states.sql](supabase/001_todo_app_states.sql).
 3. Arranca Flutter con:
 
 ```text
@@ -185,8 +185,8 @@ Cuando la app tenga esa configuración, desde `Ajustes` podrás conectar la nube
 
 Scripts útiles:
 
-- Windows con Supabase ya preparado: [tooling/run_windows_supabase.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/tooling/run_windows_supabase.ps1>)
-- prueba MCP contra Supabase: [tooling/test_supabase_mcp_sync.py](</C:/Users/AlejandroAfonso/Documents/Todo/tooling/test_supabase_mcp_sync.py>)
+- Windows con Supabase ya preparado: [tooling/run_windows_supabase.ps1](tooling/run_windows_supabase.ps1)
+- prueba MCP contra Supabase: [tooling/test_supabase_mcp_sync.py](tooling/test_supabase_mcp_sync.py)
 
 Para completar el login real de la app, todavía hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
 
@@ -218,7 +218,7 @@ APK privada:
 
 La APK usa `dev.aries.todo` y actualiza la instalación Android anterior. Si
 existe `android/key.properties`, el build release usa esa keystore. Puedes
-partir de [android/key.properties.example](</C:/Users/AlejandroAfonso/Documents/Todo/android/key.properties.example>).
+partir de [android/key.properties.example](android/key.properties.example).
 
 ## Gemelo 3D de Hogar
 
@@ -290,13 +290,13 @@ Assistant se gestionan por separado desde su interfaz.
 
 ## MCP local
 
-La app ya trae una base para control externo por IA mediante un servidor MCP local en [mcp_server/README.md](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/README.md>).
+La app ya trae una base para control externo por IA mediante un servidor MCP local en [mcp_server/README.md](mcp_server/README.md).
 
 - La app mantiene caché local en `Documents/Todo/runtime/todo_state.json`
-- El servidor MCP vive en [mcp_server/server.py](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/server.py>)
-- El arranque portable del repo está en [mcp_server/start_mcp.ps1](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.ps1>) y [mcp_server/start_mcp.bat](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/start_mcp.bat>)
-- Hay una configuración de ejemplo para clientes en [mcp_server/client.example.json](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/client.example.json>)
-- Si quieres que el MCP use la misma nube que la app, copia [mcp_server/.env.example](</C:/Users/AlejandroAfonso/Documents/Todo/mcp_server/.env.example>) a `mcp_server/.env` y rellena sus valores
+- El servidor MCP vive en [mcp_server/server.py](mcp_server/server.py)
+- El arranque portable del repo está en [mcp_server/start_mcp.ps1](mcp_server/start_mcp.ps1) y [mcp_server/start_mcp.bat](mcp_server/start_mcp.bat)
+- Hay una configuración de ejemplo para clientes en [mcp_server/client.example.json](mcp_server/client.example.json)
+- Si quieres que el MCP use la misma nube que la app, copia [mcp_server/.env.example](mcp_server/.env.example) a `mcp_server/.env` y rellena sus valores
 
 ## Páginas y conocimiento
 

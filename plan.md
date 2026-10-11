@@ -59,6 +59,6 @@ Construir una app personal de tareas, casa, vida personal y autocuidado donde la
 - [ ] Formularios más completos para tareas recurrentes, checklist y materiales.
 - [ ] Calendario editable con arrastrar y mover entre días.
 - [ ] Integración real con Google Calendar.
-- [ ] Notificaciones locales y push.
-- [ ] Capa MCP real para exponer operaciones al agente externo.
-- [ ] Sincronización entre dispositivos.
+- [x] Notificaciones locales (las notificaciones push siguen pendientes).
+- [x] Capa MCP real para exponer operaciones al agente externo (`mcp_server/`).
+- [x] Sincronización entre dispositivos por Wi-Fi local (`lan_sync_agent/`); Supabase está desactivado temporalmente.
