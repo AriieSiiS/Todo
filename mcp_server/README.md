@@ -281,3 +281,11 @@ Leer el estado ya no lo reescribe. Al guardar, el servidor comprueba bajo un
 bloqueo de archivo (`todo_state.json.lock`) que `todo_state.json` no haya
 cambiado desde que lo leyó. Si la app guardó entretanto, la herramienta se
 repite sobre el estado nuevo (hasta cinco intentos) en lugar de pisar el cambio.
+
+## Estructura del servidor
+
+`server.py` conserva el estado compartido, el acceso al archivo y el protocolo
+MCP. Las herramientas están agrupadas por área en `herramientas/` (tareas,
+notas, calendario, ajustes, gastos, biblioteca, ropa, compras, hogar, plantas,
+recetas y las definiciones de las herramientas). Cada módulo usa el estado y los
+ayudantes comunes mediante `server.`, de modo que las pruebas pueden sustituirlos.
