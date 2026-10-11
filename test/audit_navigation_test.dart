@@ -104,7 +104,9 @@ void main() {
           TaskModel(
                   id: 'agenda-$i',
                   title: 'Agenda $i',
-                  scheduledAt: DateTime(now.year, now.month, now.day, 12, i))
+                  // Mañana, para que no dependa de la hora a la que se ejecuta.
+                  scheduledAt:
+                      DateTime(now.year, now.month, now.day + 1, 12, i))
               .toJson()
       ],
     }));
