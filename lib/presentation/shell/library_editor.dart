@@ -6,12 +6,16 @@ class _LibraryItemDialog extends StatefulWidget {
     this.item,
     this.initialType = LibraryItemType.game,
     this.initialStatus = LibraryItemStatus.pending,
+    this.focusReview = false,
   });
 
   final TodoWorkspace controller;
   final LibraryItem? item;
   final LibraryItemType initialType;
   final LibraryItemStatus initialStatus;
+
+  /// Abre la ficha con el cursor en la reseña (campo de notas).
+  final bool focusReview;
 
   @override
   State<_LibraryItemDialog> createState() => _LibraryItemDialogState();
@@ -34,6 +38,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _country = TextEditingController();
   final _pages = TextEditingController();
   final _note = TextEditingController();
+  final _noteFocus = FocusNode();
+  final _noteKey = GlobalKey();
   final _rating = TextEditingController();
   final _cover = TextEditingController();
   final _externalUrl = TextEditingController();
@@ -48,6 +54,16 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.focusReview) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _noteFocus.requestFocus();
+        final noteContext = _noteKey.currentContext;
+        if (noteContext != null) {
+          Scrollable.ensureVisible(noteContext);
+        }
+      });
+    }
     final item = widget.item;
     _type = item?.type ?? widget.initialType;
     _status = item?.status ?? widget.initialStatus;
@@ -95,6 +111,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _country.dispose();
     _pages.dispose();
     _note.dispose();
+    _noteFocus.dispose();
     _rating.dispose();
     _cover.dispose();
     _externalUrl.dispose();
@@ -310,6 +327,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
+              focusNode: _noteFocus,
+              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,
@@ -354,6 +373,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
+              focusNode: _noteFocus,
+              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,
@@ -419,6 +440,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
+              focusNode: _noteFocus,
+              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,
@@ -489,12 +512,18 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
 
   Widget _dialogField(
       TextEditingController controller, String label, String hint,
-      {TextInputType? keyboardType, int maxLines = 1, int? minLines}) {
+      {TextInputType? keyboardType,
+      int maxLines = 1,
+      int? minLines,
+      FocusNode? focusNode,
+      Key? fieldKey}) {
     return _LibraryEditLine(
+      key: fieldKey,
       label: label,
       alignTop: maxLines > 1,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: keyboardType,
         minLines: minLines,
         maxLines: maxLines,
@@ -867,6 +896,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
 
 class _LibraryEditLine extends StatelessWidget {
   const _LibraryEditLine({
+    super.key,
     required this.label,
     required this.child,
     this.alignTop = false,

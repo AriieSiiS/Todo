@@ -42,8 +42,7 @@ void main() {
 
   test('Un guardado fallido deja un aviso y reintentar lo limpia', () async {
     final repository = _FallibleRepository();
-    final controller =
-        TodoWorkspace.createForTest(stateRepository: repository);
+    final controller = TodoWorkspace.createForTest(stateRepository: repository);
     addTearDown(controller.dispose);
     expect(controller.saveError, isEmpty);
 

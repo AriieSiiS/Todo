@@ -1,6 +1,6 @@
 part of 'app_shell.dart';
 
-enum _LibraryContextAction { pages, complete, edit, delete }
+enum _LibraryContextAction { pages, complete, review, edit, delete }
 
 enum _LibraryOverviewMode { columns, covers }
 
@@ -505,6 +505,12 @@ class _LibraryMainContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Los menús de los elementos añaden estas opciones tras las suyas.
+    _libraryAddMenuContext = _libraryAddMenuRequest(
+      controller: controller,
+      selectedType: selectedType,
+      status: status,
+    );
     final typeFilters = _LibraryTypeFilters(
       selected: selectedType,
       onChanged: onSelectedTypeChanged,

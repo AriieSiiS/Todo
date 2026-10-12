@@ -63,6 +63,5 @@ void main() {
     final document = jsonDecode(await response.transform(utf8.decoder).join())
         as Map<String, dynamic>;
     expect((document['rooms'] as List<dynamic>).length, 2);
-
   });
 }

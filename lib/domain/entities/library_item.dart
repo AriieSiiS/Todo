@@ -129,8 +129,7 @@ class LibraryItem {
       completedDate:
           clearCompletedDate ? null : completedDate ?? this.completedDate,
       coverUrl: clearCoverUrl ? null : coverUrl ?? this.coverUrl,
-      externalUrl:
-          clearExternalUrl ? null : externalUrl ?? this.externalUrl,
+      externalUrl: clearExternalUrl ? null : externalUrl ?? this.externalUrl,
       rating: clearRating ? null : rating ?? this.rating,
       note: clearNote ? null : note ?? this.note,
       platform: clearPlatform ? null : platform ?? this.platform,

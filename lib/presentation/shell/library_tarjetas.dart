@@ -50,6 +50,11 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     widget.controller,
                     item,
                   ),
+          onReview: () => _editLibraryReview(
+            context,
+            widget.controller,
+            item,
+          ),
           onEdit: widget.onEdit,
           onDelete: widget.onDelete,
         ),
@@ -251,6 +256,11 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                               widget.controller,
                               item,
                             ),
+                    onReview: () => _editLibraryReview(
+                      context,
+                      widget.controller,
+                      item,
+                    ),
                     onEdit: widget.onEdit,
                     onDelete: widget.onDelete,
                   ),
@@ -432,12 +442,14 @@ class _LibraryCoverMenuButton extends StatelessWidget {
   const _LibraryCoverMenuButton({
     this.onPages,
     this.onComplete,
+    this.onReview,
     required this.onEdit,
     required this.onDelete,
   });
 
   final VoidCallback? onPages;
   final VoidCallback? onComplete;
+  final VoidCallback? onReview;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -451,6 +463,8 @@ class _LibraryCoverMenuButton extends StatelessWidget {
           onPages?.call();
         } else if (action == _LibraryContextAction.complete) {
           onComplete?.call();
+        } else if (action == _LibraryContextAction.review) {
+          onReview?.call();
         } else if (action == _LibraryContextAction.edit) {
           onEdit();
         } else if (action == _LibraryContextAction.delete) {
@@ -474,6 +488,15 @@ class _LibraryCoverMenuButton extends StatelessWidget {
               dense: true,
               leading: Icon(Icons.check_circle_outline_rounded),
               title: Text('Marcar como completado'),
+            ),
+          ),
+        if (onReview != null)
+          const PopupMenuItem(
+            value: _LibraryContextAction.review,
+            child: ListTile(
+              dense: true,
+              leading: Icon(Icons.rate_review_outlined),
+              title: Text('Cambiar/añadir reseña'),
             ),
           ),
         const PopupMenuItem(
@@ -541,6 +564,7 @@ class _LibraryItemRow extends StatelessWidget {
         onComplete: item.status == LibraryItemStatus.completed
             ? null
             : () => _completeLibraryItem(context, controller, item),
+        onReview: () => _editLibraryReview(context, controller, item),
         onEdit: onEdit,
         onDelete: onDelete,
       ),

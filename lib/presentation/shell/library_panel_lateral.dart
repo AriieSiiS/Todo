@@ -451,20 +451,103 @@ Future<void> _openKnowledgeWorkspace(
   return Future<void>.value();
 }
 
+/// Opciones de «Añadir…» de la vista de Biblioteca actual. El menú de un
+/// elemento las muestra después de sus propias acciones, en un único menú.
+class _LibraryAddMenuRequest {
+  const _LibraryAddMenuRequest({
+    required this.controller,
+    required this.types,
+    required this.status,
+  });
+
+  final TodoWorkspace controller;
+  final List<LibraryItemType> types;
+  final LibraryItemStatus? status;
+}
+
+_LibraryAddMenuRequest? _libraryAddMenuContext;
+
+/// Instante del último menú de elemento, para que el fondo no abra otro encima.
+DateTime _libraryItemMenuAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+_LibraryAddMenuRequest _libraryAddMenuRequest({
+  required TodoWorkspace controller,
+  required LibraryItemType? selectedType,
+  required LibraryItemStatus? status,
+}) {
+  return _LibraryAddMenuRequest(
+    controller: controller,
+    types: selectedType == null
+        ? LibraryItemType.values
+        : <LibraryItemType>[selectedType],
+    status: status,
+  );
+}
+
+Future<void> _editLibraryReview(
+  BuildContext context,
+  TodoWorkspace controller,
+  LibraryItem item,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _LibraryItemDialog(
+      controller: controller,
+      item: item,
+      focusReview: true,
+    ),
+  );
+}
+
+List<PopupMenuEntry<Object>> _libraryAddMenuEntries(
+  _LibraryAddMenuRequest request,
+) {
+  return [
+    for (final type in request.types)
+      PopupMenuItem<Object>(
+        value: type,
+        child: ListTile(
+          dense: true,
+          leading: Icon(_libraryIcon(type), color: _libraryColor(type)),
+          title: Text(
+              'Añadir ${_libraryTypeSingularLabelForType(type).toLowerCase()}'),
+        ),
+      ),
+  ];
+}
+
+Future<void> _openLibraryAddDialog(
+  BuildContext context,
+  _LibraryAddMenuRequest request,
+  LibraryItemType type,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _LibraryItemDialog(
+      controller: request.controller,
+      initialType: type,
+      initialStatus: request.status ?? LibraryItemStatus.pending,
+    ),
+  );
+}
+
 Future<void> _showLibraryContextMenu({
   required BuildContext context,
   required Offset position,
   VoidCallback? onPages,
   VoidCallback? onComplete,
+  VoidCallback? onReview,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
 }) async {
+  _libraryItemMenuAt = DateTime.now();
+  final addRequest = _libraryAddMenuContext;
   final overlay =
       Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
   if (overlay == null) {
     return;
   }
-  final action = await showMenu<_LibraryContextAction>(
+  final action = await showMenu<Object>(
     context: context,
     position: RelativeRect.fromRect(
       position & const Size(1, 1),
@@ -472,7 +555,7 @@ Future<void> _showLibraryContextMenu({
     ),
     items: [
       if (onPages != null)
-        const PopupMenuItem(
+        const PopupMenuItem<Object>(
           value: _LibraryContextAction.pages,
           child: ListTile(
             dense: true,
@@ -481,7 +564,7 @@ Future<void> _showLibraryContextMenu({
           ),
         ),
       if (onComplete != null)
-        const PopupMenuItem(
+        const PopupMenuItem<Object>(
           value: _LibraryContextAction.complete,
           child: ListTile(
             dense: true,
@@ -489,7 +572,16 @@ Future<void> _showLibraryContextMenu({
             title: Text('Marcar como completado'),
           ),
         ),
-      const PopupMenuItem(
+      if (onReview != null)
+        const PopupMenuItem<Object>(
+          value: _LibraryContextAction.review,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.rate_review_outlined),
+            title: Text('Cambiar/añadir reseña'),
+          ),
+        ),
+      const PopupMenuItem<Object>(
         value: _LibraryContextAction.edit,
         child: ListTile(
           dense: true,
@@ -497,7 +589,7 @@ Future<void> _showLibraryContextMenu({
           title: Text('Editar'),
         ),
       ),
-      const PopupMenuItem(
+      const PopupMenuItem<Object>(
         value: _LibraryContextAction.delete,
         child: ListTile(
           dense: true,
@@ -505,16 +597,27 @@ Future<void> _showLibraryContextMenu({
           title: Text('Borrar'),
         ),
       ),
+      if (addRequest != null) ...[
+        const PopupMenuDivider(),
+        ..._libraryAddMenuEntries(addRequest),
+      ],
     ],
   );
   if (action == _LibraryContextAction.pages) {
     onPages?.call();
   } else if (action == _LibraryContextAction.complete) {
     onComplete?.call();
+  } else if (action == _LibraryContextAction.review) {
+    onReview?.call();
   } else if (action == _LibraryContextAction.edit) {
     onEdit();
   } else if (action == _LibraryContextAction.delete) {
     onDelete();
+  } else if (action is LibraryItemType && addRequest != null) {
+    if (!context.mounted) {
+      return;
+    }
+    await _openLibraryAddDialog(context, addRequest, action);
   }
 }
 
@@ -525,44 +628,38 @@ Future<void> _showLibraryAddContextMenu({
   required LibraryItemType? selectedType,
   required LibraryItemStatus? status,
 }) async {
+  final request = _libraryAddMenuRequest(
+    controller: controller,
+    selectedType: selectedType,
+    status: status,
+  );
   final overlay =
       Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
   if (overlay == null) {
     return;
   }
-  final types = selectedType == null
-      ? LibraryItemType.values
-      : <LibraryItemType>[selectedType];
-  final type = await showMenu<LibraryItemType>(
+  // Un clic lento sobre un elemento también llega al fondo: si el menú del
+  // elemento acaba de abrirse, ya incluye estas opciones.
+  await Future<void>.delayed(const Duration(milliseconds: 40));
+  if (DateTime.now().difference(_libraryItemMenuAt) <
+      const Duration(milliseconds: 400)) {
+    return;
+  }
+  if (!context.mounted) {
+    return;
+  }
+  final type = await showMenu<Object>(
     context: context,
     position: RelativeRect.fromRect(
       position & const Size(1, 1),
       Offset.zero & overlay.size,
     ),
-    items: [
-      for (final type in types)
-        PopupMenuItem(
-          value: type,
-          child: ListTile(
-            dense: true,
-            leading: Icon(_libraryIcon(type), color: _libraryColor(type)),
-            title: Text(
-                'Añadir ${_libraryTypeSingularLabelForType(type).toLowerCase()}'),
-          ),
-        ),
-    ],
+    items: _libraryAddMenuEntries(request),
   );
-  if (type == null || !context.mounted) {
+  if (type is! LibraryItemType || !context.mounted) {
     return;
   }
-  await showDialog<void>(
-    context: context,
-    builder: (context) => _LibraryItemDialog(
-      controller: controller,
-      initialType: type,
-      initialStatus: status ?? LibraryItemStatus.pending,
-    ),
-  );
+  await _openLibraryAddDialog(context, request, type);
 }
 
 void _completeLibraryItem(
@@ -813,7 +910,8 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                           ),
                         ),
                         icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                        label: Text('Abrir en ${nombreFichaExterna(item.type)}'),
+                        label:
+                            Text('Abrir en ${nombreFichaExterna(item.type)}'),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(142, 48),
                           foregroundColor: visuals.textStrong,

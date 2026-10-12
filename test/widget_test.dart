@@ -551,6 +551,77 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+      'clic derecho en una portada muestra un solo menú con el elemento primero',
+      (WidgetTester tester) async {
+    final controller = TodoWorkspace.createForTest(
+      snapshot: AppStateSnapshot(
+        tasks: const [],
+        categories: const [],
+        projects: const [],
+        notes: const [],
+        libraryItems: [
+          LibraryItem(
+            id: 'juego-menu',
+            type: LibraryItemType.game,
+            title: 'Control',
+            status: LibraryItemStatus.inProgress,
+            createdAt: DateTime(2026, 7, 20),
+            updatedAt: DateTime(2026, 7, 22),
+          ),
+        ],
+        libraryStatusView: LibraryItemStatus.inProgress,
+        daySettings: const DaySettings(),
+        notificationSettings: const DeviceNotificationSettings(),
+        calendarSettings: const CalendarIntegrationSettings(),
+        section: AppSection.library,
+        todaySort: TodaySort.manual,
+        schemaVersion: 3,
+      ),
+    );
+
+    _configureLargeSurface(tester);
+    await _ignoreRenderOverflow(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTodoTheme(),
+          home: Scaffold(body: LibraryPage(controller: controller)),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('Vista de portadas'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(
+        find.byKey(const ValueKey('library-cover-card-juego-menu')),
+        buttons: kSecondaryMouseButton,
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+    });
+
+    final opcionResena = find.text('Cambiar/añadir reseña');
+    final editar = find.text('Editar');
+    final anadir = find.text('Añadir juego');
+    expect(opcionResena, findsOneWidget);
+    expect(editar, findsOneWidget);
+    expect(find.text('Borrar'), findsOneWidget);
+    expect(anadir, findsOneWidget);
+    expect(
+      tester.getTopLeft(opcionResena).dy,
+      lessThan(tester.getTopLeft(anadir).dy),
+    );
+
+    await tester.tap(opcionResena);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+    final notas = tester.widget<TextField>(
+      find.byWidgetPredicate(
+        (widget) => widget is TextField && widget.focusNode?.hasFocus == true,
+      ),
+    );
+    expect(notas.minLines, 3);
+  });
+
   testWidgets('library shows and remembers consumption status tabs', (
     WidgetTester tester,
   ) async {
