@@ -8,8 +8,32 @@ forma parte de estas copias.
 
 - Datos activos: `C:\Users\aries\Documents\Todo`
 - Copias completas: `C:\Users\aries\Documents\Todo Backups`
-- Copia verificada del 1 de septiembre de 2026:
-  `C:\Users\aries\Documents\Todo Backups\Todo-completo-20260901-213007`
+- Segunda ubicación en otro disco: `E:\Todo Backups externo`
+- Fotos rápidas del snapshot antes de cambios grandes (las últimas 10):
+  `C:\Users\aries\Documents\Todo Backups\_antes-de-cambios`
+- Copias antiguas archivadas, sin rotación:
+  `C:\Users\aries\Documents\Todo Backups\_archivo-historico`
+
+## Cómo se gestionan las copias
+
+- Solo hay un tipo de copia de recuperación: la completa y verificada
+  `Todo-completo-AAAAMMDD-HHMMSS`.
+- Se crea desde Ajustes, con `tooling\backup_todo_data_full.ps1` o sola cada
+  domingo a las 04:00 (tarea programada `\Todo\CopiaSemanal`, que reintenta
+  cada hora si Todo está abierto).
+- El script para el seguimiento de precios mientras copia y lo vuelve a
+  arrancar al terminar.
+- Tras verificar la copia nueva se conservan solo las **2 últimas** en cada
+  ubicación y se borran las anteriores y las incompletas.
+- La copia nueva se duplica en `E:\Todo Backups externo` y se verifica allí. Si
+  la unidad no está, se omite sin fallar.
+- Antes de un cambio grande de datos se usa
+  `tooling\guardar_antes_de_cambio.ps1 -Etiqueta <motivo>`, que guarda el
+  snapshot en `_antes-de-cambios` y conserva las 10 últimas. No se crean más
+  copias sueltas en `runtime`.
+- La tarea semanal apunta al script de este repositorio; si se mueve la
+  carpeta del proyecto, hay que volver a ejecutar
+  `tooling\registrar_copia_semanal.ps1`.
 
 Una copia válida contiene `backup_manifest.json`, `runtime\todo_state.json` y
 las carpetas de recursos. Restaurar únicamente el JSON no recupera las imágenes,

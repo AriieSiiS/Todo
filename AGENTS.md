@@ -7,6 +7,9 @@
 - Cuando se añadan tarjetas de Compras en Windows, ofrecer las acciones de edición y eliminación también mediante clic derecho, con confirmación antes de eliminar.
 - Cuando el usuario pida consultar tareas en ChatGPT, devolver solo los títulos y abrir paneles únicamente si los solicita expresamente.
 - Cuando se complete la ficha de un libro o una película en Biblioteca, añadir también el enlace verificado a Goodreads o Letterboxd, y no adivinarlo si hay dudas.
+- Cuando se vaya a hacer un cambio grande de datos, guardar antes el snapshot con
+  `tooling\guardar_antes_de_cambio.ps1` y no dejar copias sueltas en `runtime`.
+  Las copias completas conservan solo las 2 últimas y se duplican en el disco E.
 - Cuando un script guarde una credencial, validar su formato y distinguir el guardado local de la autenticación comprobada antes de comunicar éxito.
 
 Guía corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
@@ -190,8 +193,8 @@ portada, y todo en castellano salvo que el usuario indique lo contrario.
 2. Descargar la portada (p. ej. `https://image.tmdb.org/t/p/w500/<ruta>.jpg`) a
    `C:\Users\aries\Documents\Todo\library_covers\` y usar esa ruta absoluta en
    `cover_url`, igual que el resto de portadas.
-3. Copiar antes `runtime\todo_state.json` a
-   `todo_state.json.backup-before-<tarea>-<fecha>`.
+3. Guardar antes una foto del snapshot con
+   `tooling\guardar_antes_de_cambio.ps1 -Etiqueta <tarea>`.
 4. Con `todo.exe` cerrado, llamar a `create_library_item_impl` de
    `mcp_server/herramientas/biblioteca.py` con `TODO_MCP_DISABLE_REMOTE=1`
    (Supabase está desactivado y, sin esa variable, el MCP intenta conectar y
@@ -267,4 +270,6 @@ directamente, sin investigar otra vez las rutas ni restaurar solo el JSON.
 - Solo comunicar éxito si el script devuelve `restaurado_y_verificado`.
 
 Para crear otra copia recuperable se usa
-`tooling\backup_todo_data_full.ps1` con la app cerrada.
+`tooling\backup_todo_data_full.ps1` con la app cerrada. El script rota (2
+últimas), duplica en `E:\Todo Backups externo` y se ejecuta solo cada domingo
+a las 04:00. Detalles en `RECUPERACION_DATOS.md`.

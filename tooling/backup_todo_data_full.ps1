@@ -4,10 +4,49 @@ param(
   [int]$WaitForProcessId = 0,
   [string]$RelaunchExecutable = '',
   [string]$StatusPath = '',
-  [switch]$DeleteSelfWhenDone
+  [switch]$DeleteSelfWhenDone,
+  # Cuántas copias completas se conservan en cada ubicación.
+  [int]$Keep = 2,
+  # Segunda ubicación en otro disco. Si no existe la unidad, se omite sin fallar.
+  [string]$ExternalRoot = 'E:\Todo Backups externo'
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Get-ValidBackups([string]$Root) {
+  # Solo cuentan las copias con manifiesto; las incompletas se tratan aparte.
+  @(Get-ChildItem -LiteralPath $Root -Directory -Filter 'Todo-completo-*' -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'backup_manifest.json') -PathType Leaf } |
+    Sort-Object Name -Descending)
+}
+
+function Remove-OldBackups([string]$Root, [string]$Protected, [int]$Keep) {
+  $rootPath = (Resolve-Path -LiteralPath $Root).Path
+  $valid = Get-ValidBackups $rootPath
+  $incomplete = @(Get-ChildItem -LiteralPath $rootPath -Directory -Filter 'Todo-completo-*' -ErrorAction SilentlyContinue |
+    Where-Object { -not (Test-Path -LiteralPath (Join-Path $_.FullName 'backup_manifest.json') -PathType Leaf) })
+  $remove = @($valid | Select-Object -Skip $Keep) + $incomplete
+  foreach ($directory in $remove) {
+    if ($directory.Name -eq (Split-Path -Leaf $Protected)) { continue }
+    if (-not $directory.FullName.StartsWith($rootPath + '\', [StringComparison]::OrdinalIgnoreCase)) { continue }
+    Remove-Item -LiteralPath $directory.FullName -Recurse -Force
+  }
+  return @($remove | ForEach-Object { $_.Name })
+}
+
+function Stop-PriceTracker {
+  # El seguimiento de precios mantiene abierta una base SQLite que cambia durante la copia.
+  $task = Get-ScheduledTask -TaskName 'SeguimientoCompras' -TaskPath '\Todo\' -ErrorAction SilentlyContinue
+  if (-not $task) { return $false }
+  $stopScript = Join-Path $env:LOCALAPPDATA 'Todo\price_tracker\stop.ps1'
+  if (Test-Path -LiteralPath $stopScript -PathType Leaf) {
+    & $stopScript -RuntimeDirectory (Join-Path $env:LOCALAPPDATA 'Todo\price_tracker')
+  } elseif ($task.State -eq 'Running') {
+    Stop-ScheduledTask -TaskName 'SeguimientoCompras' -TaskPath '\Todo\'
+  }
+  Start-Sleep -Seconds 3
+  return $true
+}
 
 function Write-BackupStatus([System.Collections.IDictionary]$Value) {
   if ([string]::IsNullOrWhiteSpace($StatusPath)) { return }
@@ -27,6 +66,7 @@ try {
   if (Get-Process -Name todo -ErrorAction SilentlyContinue) {
     throw 'Cierra Todo antes de crear la copia.'
   }
+  $trackerStopped = Stop-PriceTracker
   if (-not (Test-Path -LiteralPath $SourceDirectory -PathType Container)) {
     throw "No existe la carpeta de datos: $SourceDirectory"
   }
@@ -94,14 +134,44 @@ try {
   }
   $manifestPath = Join-Path $destination 'backup_manifest.json'
   $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+  # La rotación solo ocurre después de que la copia nueva esté verificada.
+  $removed = Remove-OldBackups $destinationRootPath $destination $Keep
+
+  $externalStatus = 'omitida_sin_disco'
+  $externalRemoved = @()
+  $externalDrive = if ($ExternalRoot) { Split-Path -Qualifier $ExternalRoot } else { '' }
+  if ($externalDrive -and (Test-Path -LiteralPath "$externalDrive\" -PathType Container)) {
+    try {
+      New-Item -ItemType Directory -Path $ExternalRoot -Force | Out-Null
+      $externalRootPath = (Resolve-Path -LiteralPath $ExternalRoot).Path
+      $externalDestination = Join-Path $externalRootPath (Split-Path -Leaf $destination)
+      robocopy $destination $externalDestination /E /R:2 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
+      if ($LASTEXITCODE -ge 8) { throw 'robocopy no pudo copiar la copia al disco externo.' }
+      foreach ($entry in $manifestFiles) {
+        $copied = Join-Path $externalDestination $entry.path
+        if (-not (Test-Path -LiteralPath $copied -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $copied -Algorithm SHA256).Hash -ne $entry.sha256) {
+          throw "La verificación en el disco externo falló para $($entry.path)"
+        }
+      }
+      Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $externalDestination 'backup_manifest.json') -Force
+      $externalRemoved = Remove-OldBackups $externalRootPath $externalDestination $Keep
+      $externalStatus = 'copiada_y_verificada'
+    } catch {
+      $externalStatus = 'error: ' + $_.Exception.Message
+    }
+  }
+
   $result = [ordered]@{
     destination=$destination; manifest=$manifestPath; counts=$manifest.counts
     verifiedFiles=$manifest.verifiedFiles; totalBytes=$totalBytes
+    removedOldBackups=$removed; external=$externalStatus; externalRemoved=$externalRemoved
     status='copia_creada_y_verificada'
   }
   Write-BackupStatus ([ordered]@{
     status='correcta'; finishedAt=(Get-Date).ToString('o'); createdAt=$createdAt
     destination=$destination; verifiedFiles=$manifest.verifiedFiles; totalBytes=$totalBytes
+    external=$externalStatus
   })
   $result | ConvertTo-Json -Depth 5
 } catch {
@@ -110,6 +180,9 @@ try {
   })
   throw
 } finally {
+  if ($trackerStopped) {
+    Start-ScheduledTask -TaskName 'SeguimientoCompras' -TaskPath '\Todo\' -ErrorAction SilentlyContinue
+  }
   if (-not [string]::IsNullOrWhiteSpace($RelaunchExecutable) -and
       (Test-Path -LiteralPath $RelaunchExecutable -PathType Leaf)) {
     Start-Process -FilePath $RelaunchExecutable -ArgumentList '--section=settings'
