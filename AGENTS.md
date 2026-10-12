@@ -207,6 +207,7 @@ en el MCP): es obligatorio al completar los metadatos de un libro o una películ
 - Películas: `https://letterboxd.com/film/<slug>/`. Letterboxd bloquea `curl`; abrir
   `letterboxd.com/film/<slug>/` en el navegador integrado y comprobar título, año
   y director antes de guardar (`og:title`).
+- Mangas: enlazar siempre el tomo 1 en Goodreads, aunque la serie tenga más tomos.
 - Si hay duda razonable entre varias fichas, no adivinar: dejar el elemento sin
   enlace y preguntar al usuario.
 - En la app se edita en el diálogo del elemento y se abre con el botón de la ficha
