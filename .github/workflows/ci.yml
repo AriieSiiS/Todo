@@ -17,6 +17,9 @@ jobs:
           cache: true
       - name: Instalar dependencias
         run: flutter pub get
+      - name: Instalar dependencias del agente de sincronización
+        run: flutter pub get
+        working-directory: lan_sync_agent
       - name: Análisis estático
         run: flutter analyze
       - name: Pruebas
