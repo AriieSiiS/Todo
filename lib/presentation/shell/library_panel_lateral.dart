@@ -182,6 +182,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                       position: details.globalPosition,
                       onPages: () =>
                           _openKnowledgeWorkspace(context, controller, item),
+                      onRating: item.status != LibraryItemStatus.completed
+                          ? null
+                          : () => _editLibraryRating(context, controller, item),
                       onEdit: () => _editItem(context, item),
                       onDelete: () => _deleteItem(context, item),
                     ),
@@ -484,7 +487,7 @@ _LibraryAddMenuRequest _libraryAddMenuRequest({
   );
 }
 
-Future<void> _editLibraryReview(
+Future<void> _editLibraryRating(
   BuildContext context,
   TodoWorkspace controller,
   LibraryItem item,
@@ -494,7 +497,7 @@ Future<void> _editLibraryReview(
     builder: (context) => _LibraryItemDialog(
       controller: controller,
       item: item,
-      focusReview: true,
+      focusRating: true,
     ),
   );
 }
@@ -536,7 +539,7 @@ Future<void> _showLibraryContextMenu({
   required Offset position,
   VoidCallback? onPages,
   VoidCallback? onComplete,
-  VoidCallback? onReview,
+  VoidCallback? onRating,
   required VoidCallback onEdit,
   required VoidCallback onDelete,
 }) async {
@@ -572,13 +575,13 @@ Future<void> _showLibraryContextMenu({
             title: Text('Marcar como completado'),
           ),
         ),
-      if (onReview != null)
+      if (onRating != null)
         const PopupMenuItem<Object>(
-          value: _LibraryContextAction.review,
+          value: _LibraryContextAction.rating,
           child: ListTile(
             dense: true,
-            leading: Icon(Icons.rate_review_outlined),
-            title: Text('Cambiar/añadir reseña'),
+            leading: Icon(Icons.star_outline_rounded),
+            title: Text('Cambiar/añadir valoración'),
           ),
         ),
       const PopupMenuItem<Object>(
@@ -607,8 +610,8 @@ Future<void> _showLibraryContextMenu({
     onPages?.call();
   } else if (action == _LibraryContextAction.complete) {
     onComplete?.call();
-  } else if (action == _LibraryContextAction.review) {
-    onReview?.call();
+  } else if (action == _LibraryContextAction.rating) {
+    onRating?.call();
   } else if (action == _LibraryContextAction.edit) {
     onEdit();
   } else if (action == _LibraryContextAction.delete) {

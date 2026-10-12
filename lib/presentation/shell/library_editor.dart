@@ -6,7 +6,7 @@ class _LibraryItemDialog extends StatefulWidget {
     this.item,
     this.initialType = LibraryItemType.game,
     this.initialStatus = LibraryItemStatus.pending,
-    this.focusReview = false,
+    this.focusRating = false,
   });
 
   final TodoWorkspace controller;
@@ -14,8 +14,8 @@ class _LibraryItemDialog extends StatefulWidget {
   final LibraryItemType initialType;
   final LibraryItemStatus initialStatus;
 
-  /// Abre la ficha con el cursor en la reseña (campo de notas).
-  final bool focusReview;
+  /// Abre la ficha con el cursor en la valoración.
+  final bool focusRating;
 
   @override
   State<_LibraryItemDialog> createState() => _LibraryItemDialogState();
@@ -38,8 +38,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _country = TextEditingController();
   final _pages = TextEditingController();
   final _note = TextEditingController();
-  final _noteFocus = FocusNode();
-  final _noteKey = GlobalKey();
+  final _ratingFocus = FocusNode();
+  final _ratingKey = GlobalKey();
   final _rating = TextEditingController();
   final _cover = TextEditingController();
   final _externalUrl = TextEditingController();
@@ -54,13 +54,13 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   @override
   void initState() {
     super.initState();
-    if (widget.focusReview) {
+    if (widget.focusRating) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _noteFocus.requestFocus();
-        final noteContext = _noteKey.currentContext;
-        if (noteContext != null) {
-          Scrollable.ensureVisible(noteContext);
+        _ratingFocus.requestFocus();
+        final ratingContext = _ratingKey.currentContext;
+        if (ratingContext != null) {
+          Scrollable.ensureVisible(ratingContext);
         }
       });
     }
@@ -111,7 +111,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _country.dispose();
     _pages.dispose();
     _note.dispose();
-    _noteFocus.dispose();
+    _ratingFocus.dispose();
     _rating.dispose();
     _cover.dispose();
     _externalUrl.dispose();
@@ -318,6 +318,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 _rating,
                 'Valoración opcional',
                 'Ej. 8,5',
+                focusNode: _ratingFocus,
+                fieldKey: _ratingKey,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -327,8 +329,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
-              focusNode: _noteFocus,
-              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,
@@ -364,6 +364,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 _rating,
                 'Valoración opcional',
                 'Ej. 8,5',
+                focusNode: _ratingFocus,
+                fieldKey: _ratingKey,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -373,8 +375,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
-              focusNode: _noteFocus,
-              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,
@@ -431,6 +431,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 _rating,
                 'Valoración opcional',
                 'Ej. 8,5',
+                focusNode: _ratingFocus,
+                fieldKey: _ratingKey,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -440,8 +442,6 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             _dialogField(
               _note,
               'Notas opcionales',
-              focusNode: _noteFocus,
-              fieldKey: _noteKey,
               'Añade contexto, una reseña o cualquier detalle…',
               minLines: 3,
               maxLines: 5,

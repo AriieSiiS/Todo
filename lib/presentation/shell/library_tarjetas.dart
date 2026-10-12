@@ -50,11 +50,13 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     widget.controller,
                     item,
                   ),
-          onReview: () => _editLibraryReview(
-            context,
-            widget.controller,
-            item,
-          ),
+          onRating: item.status != LibraryItemStatus.completed
+              ? null
+              : () => _editLibraryRating(
+                    context,
+                    widget.controller,
+                    item,
+                  ),
           onEdit: widget.onEdit,
           onDelete: widget.onDelete,
         ),
@@ -256,11 +258,13 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                               widget.controller,
                               item,
                             ),
-                    onReview: () => _editLibraryReview(
-                      context,
-                      widget.controller,
-                      item,
-                    ),
+                    onRating: item.status != LibraryItemStatus.completed
+                        ? null
+                        : () => _editLibraryRating(
+                              context,
+                              widget.controller,
+                              item,
+                            ),
                     onEdit: widget.onEdit,
                     onDelete: widget.onDelete,
                   ),
@@ -442,14 +446,14 @@ class _LibraryCoverMenuButton extends StatelessWidget {
   const _LibraryCoverMenuButton({
     this.onPages,
     this.onComplete,
-    this.onReview,
+    this.onRating,
     required this.onEdit,
     required this.onDelete,
   });
 
   final VoidCallback? onPages;
   final VoidCallback? onComplete;
-  final VoidCallback? onReview;
+  final VoidCallback? onRating;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -463,8 +467,8 @@ class _LibraryCoverMenuButton extends StatelessWidget {
           onPages?.call();
         } else if (action == _LibraryContextAction.complete) {
           onComplete?.call();
-        } else if (action == _LibraryContextAction.review) {
-          onReview?.call();
+        } else if (action == _LibraryContextAction.rating) {
+          onRating?.call();
         } else if (action == _LibraryContextAction.edit) {
           onEdit();
         } else if (action == _LibraryContextAction.delete) {
@@ -490,13 +494,13 @@ class _LibraryCoverMenuButton extends StatelessWidget {
               title: Text('Marcar como completado'),
             ),
           ),
-        if (onReview != null)
+        if (onRating != null)
           const PopupMenuItem(
-            value: _LibraryContextAction.review,
+            value: _LibraryContextAction.rating,
             child: ListTile(
               dense: true,
-              leading: Icon(Icons.rate_review_outlined),
-              title: Text('Cambiar/añadir reseña'),
+              leading: Icon(Icons.star_outline_rounded),
+              title: Text('Cambiar/añadir valoración'),
             ),
           ),
         const PopupMenuItem(
@@ -564,7 +568,9 @@ class _LibraryItemRow extends StatelessWidget {
         onComplete: item.status == LibraryItemStatus.completed
             ? null
             : () => _completeLibraryItem(context, controller, item),
-        onReview: () => _editLibraryReview(context, controller, item),
+        onRating: item.status != LibraryItemStatus.completed
+            ? null
+            : () => _editLibraryRating(context, controller, item),
         onEdit: onEdit,
         onDelete: onDelete,
       ),

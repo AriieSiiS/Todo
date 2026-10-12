@@ -565,12 +565,12 @@ void main() {
             id: 'juego-menu',
             type: LibraryItemType.game,
             title: 'Control',
-            status: LibraryItemStatus.inProgress,
+            status: LibraryItemStatus.completed,
             createdAt: DateTime(2026, 7, 20),
             updatedAt: DateTime(2026, 7, 22),
           ),
         ],
-        libraryStatusView: LibraryItemStatus.inProgress,
+        libraryStatusView: LibraryItemStatus.completed,
         daySettings: const DaySettings(),
         notificationSettings: const DeviceNotificationSettings(),
         calendarSettings: const CalendarIntegrationSettings(),
@@ -599,19 +599,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     });
 
-    final opcionResena = find.text('Cambiar/añadir reseña');
+    final opcionValoracion = find.text('Cambiar/añadir valoración');
     final editar = find.text('Editar');
     final anadir = find.text('Añadir juego');
-    expect(opcionResena, findsOneWidget);
+    expect(opcionValoracion, findsOneWidget);
     expect(editar, findsOneWidget);
     expect(find.text('Borrar'), findsOneWidget);
     expect(anadir, findsOneWidget);
     expect(
-      tester.getTopLeft(opcionResena).dy,
+      tester.getTopLeft(opcionValoracion).dy,
       lessThan(tester.getTopLeft(anadir).dy),
     );
 
-    await tester.tap(opcionResena);
+    await tester.tap(opcionValoracion);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 300));
     final notas = tester.widget<TextField>(
@@ -619,7 +619,8 @@ void main() {
         (widget) => widget is TextField && widget.focusNode?.hasFocus == true,
       ),
     );
-    expect(notas.minLines, 3);
+    expect(notas.keyboardType,
+        const TextInputType.numberWithOptions(decimal: true));
   });
 
   testWidgets('library shows and remembers consumption status tabs', (

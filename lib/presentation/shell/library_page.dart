@@ -1,6 +1,6 @@
 part of 'app_shell.dart';
 
-enum _LibraryContextAction { pages, complete, review, edit, delete }
+enum _LibraryContextAction { pages, complete, rating, edit, delete }
 
 enum _LibraryOverviewMode { columns, covers }
 
