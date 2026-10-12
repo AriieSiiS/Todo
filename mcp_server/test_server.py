@@ -461,6 +461,25 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(updated_goal["synced_item"]["title"], "Circe final")
         item = self.call("create_library_item", {"type": "game", "title": "Prey", "platform": "PC"})["created"]
         self.call("update_library_item", {"item_id": item["id"], "rating": 9})
+        enlazado = self.call(
+            "create_library_item",
+            {
+                "type": "movieSeries",
+                "title": "Heat",
+                "external_url": "letterboxd.com/film/heat-1995/",
+                "status": "pending",
+            },
+        )["created"]
+        self.assertEqual(enlazado["externalUrl"], "https://letterboxd.com/film/heat-1995/")
+        quitado = self.call(
+            "update_library_item", {"item_id": enlazado["id"], "clear_external_url": True}
+        )
+        self.assertIsNone(quitado["updated"]["externalUrl"])
+        with self.assertRaises(Exception):
+            self.call(
+                "update_library_item",
+                {"item_id": enlazado["id"], "external_url": "no es un enlace"},
+            )
 
         collection_item = self.call(
             "create_library_item",

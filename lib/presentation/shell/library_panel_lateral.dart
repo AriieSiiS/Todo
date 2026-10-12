@@ -802,6 +802,28 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                         ),
                       ),
                     ),
+                    if (_enlaceFicha(item) != null) ...[
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        key: const ValueKey('library-item-external-link'),
+                        onPressed: () => unawaited(
+                          launchUrl(
+                            _enlaceFicha(item)!,
+                            mode: LaunchMode.externalApplication,
+                          ),
+                        ),
+                        icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                        label: Text('Abrir en ${nombreFichaExterna(item.type)}'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(142, 48),
+                          foregroundColor: visuals.textStrong,
+                          side: const BorderSide(color: Color(0xFFE3D8CB)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (_hasPrevious) ...[
                       _LibraryNavigationButton(
@@ -849,6 +871,14 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
       ),
     );
   }
+}
+
+/// Enlace a la ficha de Goodreads o Letterboxd, si el elemento lo tiene.
+Uri? _enlaceFicha(LibraryItem item) {
+  final enlace = normalizarEnlaceExterno(item.externalUrl);
+  return enlace == null || nombreFichaExterna(item.type) == null
+      ? null
+      : Uri.parse(enlace);
 }
 
 class _LibraryDetailCover extends StatelessWidget {

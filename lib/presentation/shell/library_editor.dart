@@ -36,6 +36,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _note = TextEditingController();
   final _rating = TextEditingController();
   final _cover = TextEditingController();
+  final _externalUrl = TextEditingController();
   final _collectionName = TextEditingController();
   final _collectionNumber = TextEditingController();
   final _seasonCount = TextEditingController();
@@ -71,6 +72,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _note.text = item.note ?? '';
     _rating.text = item.rating?.toString() ?? '';
     _cover.text = item.coverUrl ?? '';
+    _externalUrl.text = item.externalUrl ?? '';
     _collectionName.text = item.collectionName ?? '';
     _collectionNumber.text = item.collectionNumber?.toString() ?? '';
     _seasonCount.text = item.seasonCount?.toString() ?? '';
@@ -95,6 +97,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _note.dispose();
     _rating.dispose();
     _cover.dispose();
+    _externalUrl.dispose();
     _collectionName.dispose();
     _collectionNumber.dispose();
     _seasonCount.dispose();
@@ -356,6 +359,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               maxLines: 5,
             ),
             const SizedBox(height: 8),
+            _externalUrlField(
+              'Enlace de Goodreads',
+              'https://www.goodreads.com/book/show/…',
+            ),
+            const SizedBox(height: 8),
             _bookTypeField(),
             if (_creator.text == 'Manga') ...[
               const SizedBox(height: 8),
@@ -416,6 +424,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               maxLines: 5,
             ),
             const SizedBox(height: 8),
+            _externalUrlField(
+              'Enlace de Letterboxd',
+              'https://letterboxd.com/film/…',
+            ),
+            const SizedBox(height: 8),
             _dialogField(_creator, 'Director / Creador',
                 'Ej. Francis Ford Coppola (opcional)'),
             const SizedBox(height: 8),
@@ -463,6 +476,15 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
         ),
       ),
     ];
+  }
+
+  Widget _externalUrlField(String label, String hint) {
+    return _dialogField(
+      _externalUrl,
+      label,
+      hint,
+      keyboardType: TextInputType.url,
+    );
   }
 
   Widget _dialogField(
@@ -702,6 +724,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           clearCompletedDate: _status != LibraryItemStatus.completed,
           coverUrl: _cover.text.trim().isEmpty ? null : _cover.text.trim(),
           clearCoverUrl: _cover.text.trim().isEmpty,
+          externalUrl: _validExternalUrl,
+          clearExternalUrl: _validExternalUrl == null,
           rating: double.tryParse(_rating.text.replaceAll(',', '.')),
           clearRating: _rating.text.trim().isEmpty,
           note: _note.text.trim().isEmpty ? null : _note.text.trim(),
@@ -785,6 +809,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       completedDate:
           _status == LibraryItemStatus.completed ? _completedDate : null,
       coverUrl: _cover.text,
+      externalUrl: _validExternalUrl,
       rating: double.tryParse(_rating.text.replaceAll(',', '.')),
       note: _note.text,
       platform: _type == LibraryItemType.game ? _platform.text : null,
@@ -819,6 +844,14 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               : null,
     );
     Navigator.of(context).pop();
+  }
+
+  /// Solo se guarda un enlace web válido; los juegos no tienen ficha externa.
+  String? get _validExternalUrl {
+    if (_type == LibraryItemType.game) {
+      return null;
+    }
+    return normalizarEnlaceExterno(_externalUrl.text);
   }
 
   int? get _validCollectionNumber {

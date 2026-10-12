@@ -125,6 +125,17 @@ def parse_completed_date(value: str | None) -> str:
     return dt.datetime.combine(parsed, dt.time(hour=12)).astimezone().isoformat()
 
 
+def normalize_external_url(value: str | None) -> str | None:
+    """Devuelve un enlace http(s) válido a Goodreads o Letterboxd, o None si va vacío."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    parsed = urllib.parse.urlparse(text if "://" in text else f"https://{text}")
+    if parsed.scheme not in ("http", "https") or "." not in parsed.netloc:
+        raise ValueError(f"Enlace externo no válido: {value}")
+    return parsed.geturl()
+
+
 def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
     now = server.now_iso()
     status = normalize_library_item_status(arguments.get("status"))
@@ -139,6 +150,7 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
             else None
         ),
         "coverUrl": (arguments.get("cover_url") or "").strip() or None,
+        "externalUrl": normalize_external_url(arguments.get("external_url")),
         "rating": arguments.get("rating"),
         "note": (arguments.get("note") or "").strip() or None,
         "platform": (arguments.get("platform") or "").strip() or None,
@@ -201,6 +213,10 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["coverUrl"] = (arguments.get("cover_url") or "").strip() or None
     if arguments.get("clear_cover_url"):
         updated["coverUrl"] = None
+    if "external_url" in arguments:
+        updated["externalUrl"] = normalize_external_url(arguments.get("external_url"))
+    if arguments.get("clear_external_url"):
+        updated["externalUrl"] = None
     if "rating" in arguments:
         updated["rating"] = arguments.get("rating")
     if arguments.get("clear_rating"):
@@ -790,6 +806,7 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
         merged["completedDate"] = None
     for key in (
         "coverUrl",
+        "externalUrl",
         "rating",
         "note",
         "platform",

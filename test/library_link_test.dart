@@ -3,6 +3,32 @@ import 'package:todo/application/state/todo_workspace.dart';
 import 'package:todo/domain/models.dart';
 
 void main() {
+  test('el enlace externo de un elemento sobrevive al JSON y se normaliza', () {
+    final controller = TodoWorkspace.createForTest();
+    final item = controller.createLibraryItem(
+      type: LibraryItemType.book,
+      title: 'Circe',
+      status: LibraryItemStatus.pending,
+      externalUrl: ' https://www.goodreads.com/book/show/35959740-circe ',
+    );
+
+    expect(
+      item.externalUrl,
+      'https://www.goodreads.com/book/show/35959740-circe',
+    );
+    final copia = LibraryItem.fromJson(item.toJson());
+    expect(copia.externalUrl, item.externalUrl);
+    expect(
+      LibraryItem.fromJson(<String, dynamic>{'id': 'x', 'title': 'Sin enlace'})
+          .externalUrl,
+      isNull,
+    );
+    expect(normalizarEnlaceExterno('letterboxd.com/film/heat-1995/'),
+        'https://letterboxd.com/film/heat-1995/');
+    expect(normalizarEnlaceExterno('texto sin enlace'), isNull);
+    expect(normalizarEnlaceExterno('javascript:alert(1)'), isNull);
+  });
+
   test('library defaults to completed when no view was saved', () {
     final controller = TodoWorkspace.createForTest();
 
