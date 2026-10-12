@@ -269,7 +269,8 @@ void main() {
     }
     expect(service.progressSnapshotQueryCount, 1);
     expect(
-      service.pendingBackupOperations().where(
+      // Sin límite práctico: hay miles de operaciones de páginas en la cola.
+      service.pendingBackupOperations(limit: 100000).where(
             (operation) => operation['entityType'] == 'progressSource',
           ),
       hasLength(1),
