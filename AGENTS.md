@@ -6,6 +6,7 @@
 - Cuando se amplíe la conexión de ChatGPT, reutilizar las herramientas del MCP local existente y añadir solo la adaptación necesaria del transporte y las escrituras de Todo abierto.
 - Cuando se añadan tarjetas de Compras en Windows, ofrecer las acciones de edición y eliminación también mediante clic derecho, con confirmación antes de eliminar.
 - Cuando el usuario pida consultar tareas en ChatGPT, devolver solo los títulos y abrir paneles únicamente si los solicita expresamente.
+- Cuando se complete la ficha de un libro o una película en Biblioteca, añadir también el enlace verificado a Goodreads o Letterboxd, y no adivinarlo si hay dudas.
 - Cuando un script guarde una credencial, validar su formato y distinguir el guardado local de la autenticación comprobada antes de comunicar éxito.
 
 Guía corta para que cualquier chat o agente entienda este proyecto sin reexplorarlo entero.
@@ -173,6 +174,43 @@ inserción directa en la aplicación.
   repetir verificaciones que no puedan descubrir un fallo concreto.
 - Un render que el usuario haya aprobado se reutiliza tal cual; nunca se vuelve
   a generar solo para retirar el fondo o introducirlo en Todo.
+
+## Flujo rápido para añadir juegos, películas, series y libros a Biblioteca
+
+Regla permanente: todo elemento que se añada a Biblioteca lleva metadatos y
+portada, y todo en castellano salvo que el usuario indique lo contrario.
+
+1. Buscar datos reales (TMDB con `?language=es-ES`, Netflix, IGDB, Open
+   Library…): título en castellano si existe, título original, año, director o
+   autor, género, duración, país, sinopsis y reparto. Si hay varias obras con
+   el mismo nombre, elegir la más probable y decirlo. Si es una serie y no una
+   película, usar `media_type: series`.
+   Para libros y películas, localizar también su ficha: Goodreads para libros
+   y Letterboxd para películas (las series y los juegos no llevan enlace).
+2. Descargar la portada (p. ej. `https://image.tmdb.org/t/p/w500/<ruta>.jpg`) a
+   `C:\Users\aries\Documents\Todo\library_covers\` y usar esa ruta absoluta en
+   `cover_url`, igual que el resto de portadas.
+3. Copiar antes `runtime\todo_state.json` a
+   `todo_state.json.backup-before-<tarea>-<fecha>`.
+4. Con `todo.exe` cerrado, llamar a `create_library_item_impl` de
+   `mcp_server/herramientas/biblioteca.py` con `TODO_MCP_DISABLE_REMOTE=1`
+   (Supabase está desactivado y, sin esa variable, el MCP intenta conectar y
+   falla). Estado `pending` para pendientes; sinopsis y reparto van en `note`.
+   Pasar también `external_url` con la ficha de Goodreads o Letterboxd.
+5. Comprobar que `libraryItems` creció en uno y terminar, sin abrir la app.
+
+Enlace a Goodreads o Letterboxd (campo `externalUrl` del elemento, `external_url`
+en el MCP): es obligatorio al completar los metadatos de un libro o una película.
+- Libros: `https://www.goodreads.com/book/show/<id>-<slug>`. Preferir la edición
+  en castellano con más valoraciones; la búsqueda `goodreads.com/search?q=` responde
+  por HTTP normal.
+- Películas: `https://letterboxd.com/film/<slug>/`. Letterboxd bloquea `curl`; abrir
+  `letterboxd.com/film/<slug>/` en el navegador integrado y comprobar título, año
+  y director antes de guardar (`og:title`).
+- Si hay duda razonable entre varias fichas, no adivinar: dejar el elemento sin
+  enlace y preguntar al usuario.
+- En la app se edita en el diálogo del elemento y se abre con el botón de la ficha
+  de detalle.
 
 ## Flujo rápido para añadir plantas
 
