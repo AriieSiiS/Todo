@@ -29,7 +29,7 @@ class AppVisibilitySettings {
     AppSection.expenses: {
       'monthly': 'Vista mensual',
       'annual': 'Resumen anual',
-      'fixed': 'Pagos fijos',
+      'fixed': 'Suscripciones',
       'categories': 'Categorías',
       'methods': 'Métodos de pago',
     },

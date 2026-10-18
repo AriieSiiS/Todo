@@ -9,6 +9,7 @@ class TaskSchedulerService {
     required DaySettings daySettings,
     required DeviceNotificationSettings notificationSettings,
     required DateTime now,
+    List<FixedPayment> fixedPayments = const <FixedPayment>[],
   }) {
     if (!notificationSettings.notificationsEnabled) {
       return const <NotificationPlan>[];
@@ -93,6 +94,32 @@ class TaskSchedulerService {
           ),
         );
       }
+    }
+
+    // Aviso de cobro de cada pago fijo o suscripción, a las 9:00.
+    for (final payment in fixedPayments) {
+      if (!payment.isActive || payment.reminderDaysBefore <= 0) continue;
+      final due = payment.nextPaymentDate;
+      final trigger = DateTime(
+        due.year,
+        due.month,
+        due.day - payment.reminderDaysBefore,
+        9,
+      );
+      if (!trigger.isAfter(now)) continue;
+      final amount = payment.amount.toStringAsFixed(2).replaceAll('.', ',');
+      final when = payment.reminderDaysBefore == 1
+          ? 'mañana'
+          : 'dentro de ${payment.reminderDaysBefore} días';
+      plans.add(
+        NotificationPlan(
+          id: 300000000 +
+              ('${payment.id}:${_dateKey(due)}'.hashCode & 0x0fffffff),
+          title: 'Próximo cobro: ${payment.name}',
+          body: 'Se cobra $when ($amount €).',
+          when: trigger,
+        ),
+      );
     }
 
     plans.sort((left, right) => left.when.compareTo(right.when));

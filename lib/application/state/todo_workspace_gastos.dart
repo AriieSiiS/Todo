@@ -158,6 +158,7 @@ extension TodoWorkspaceGastos on TodoWorkspace {
     String? customInterval,
     required DateTime nextPaymentDate,
     String? note,
+    int reminderDaysBefore = 3,
   }) {
     final now = DateTime.now();
     final payment = FixedPayment(
@@ -171,6 +172,8 @@ extension TodoWorkspaceGastos on TodoWorkspace {
       nextPaymentDate: DateTime(
           nextPaymentDate.year, nextPaymentDate.month, nextPaymentDate.day),
       note: note?.trim().isEmpty == true ? null : note?.trim(),
+      reminderDaysBefore: reminderDaysBefore.clamp(0, 60),
+      anchorDay: nextPaymentDate.day,
       createdAt: now,
       updatedAt: now,
     );
@@ -202,6 +205,94 @@ extension TodoWorkspaceGastos on TodoWorkspace {
       isRecurringInstance: true,
       fixedPaymentId: payment.id,
     );
+  }
+
+  /// Coste mensual equivalente de un pago fijo (los personalizados se
+  /// interpretan como «cada N días» cuando el intervalo es un número).
+  double fixedPaymentMonthlyCost(FixedPayment payment) {
+    return switch (payment.frequency) {
+      FixedPaymentFrequency.weekly => payment.amount * 52 / 12,
+      FixedPaymentFrequency.monthly => payment.amount,
+      FixedPaymentFrequency.yearly => payment.amount / 12,
+      FixedPaymentFrequency.custom => () {
+          final days = int.tryParse(
+              RegExp(r'\d+').firstMatch(payment.customInterval ?? '')?.group(0) ??
+                  '');
+          return days == null || days <= 0
+              ? payment.amount
+              : payment.amount * 365 / 12 / days;
+        }(),
+    };
+  }
+
+  double get fixedPaymentsMonthlyTotal => _fixedPayments
+      .where((payment) => payment.isActive)
+      .fold<double>(0, (sum, payment) => sum + fixedPaymentMonthlyCost(payment));
+
+  /// Pagos activos ordenados por su próxima fecha.
+  List<FixedPayment> upcomingFixedPayments() {
+    return _fixedPayments.where((payment) => payment.isActive).toList()
+      ..sort((a, b) => a.nextPaymentDate.compareTo(b.nextPaymentDate));
+  }
+
+  /// Pagos activos cuyo aviso ya está en marcha (dentro de su antelación) y
+  /// que todavía no han pasado de fecha.
+  List<FixedPayment> fixedPaymentsDueSoon([DateTime? reference]) {
+    final today = logicalDate(reference);
+    return upcomingFixedPayments().where((payment) {
+      if (payment.reminderDaysBefore <= 0) return false;
+      final days = payment.nextPaymentDate.difference(today).inDays;
+      return days >= 0 && days <= payment.reminderDaysBefore;
+    }).toList();
+  }
+
+  /// Fecha del cobro siguiente a [from] según la frecuencia del pago.
+  DateTime nextFixedPaymentDate(FixedPayment payment, DateTime from) {
+    switch (payment.frequency) {
+      case FixedPaymentFrequency.weekly:
+        return DateTime(from.year, from.month, from.day + 7);
+      case FixedPaymentFrequency.yearly:
+        return _addMonthsClamped(from, 12, payment.anchorDay ?? payment.nextPaymentDate.day);
+      case FixedPaymentFrequency.custom:
+        final days = int.tryParse(
+            RegExp(r'\d+').firstMatch(payment.customInterval ?? '')?.group(0) ??
+                '');
+        if (days != null && days > 0) {
+          return DateTime(from.year, from.month, from.day + days);
+        }
+        return _addMonthsClamped(from, 1, payment.anchorDay ?? payment.nextPaymentDate.day);
+      case FixedPaymentFrequency.monthly:
+        return _addMonthsClamped(from, 1, payment.anchorDay ?? payment.nextPaymentDate.day);
+    }
+  }
+
+  DateTime _addMonthsClamped(DateTime from, int months, int preferredDay) {
+    final target = DateTime(from.year, from.month + months, 1);
+    final lastDay = DateTime(target.year, target.month + 1, 0).day;
+    return DateTime(
+        target.year, target.month, preferredDay > lastDay ? lastDay : preferredDay);
+  }
+
+  /// Registra el cobro como gasto y adelanta la próxima fecha del pago.
+  Expense markFixedPaymentPaid(String fixedPaymentId) {
+    final index =
+        _fixedPayments.indexWhere((payment) => payment.id == fixedPaymentId);
+    if (index == -1) {
+      throw StateError('No se encuentra el pago fijo.');
+    }
+    final payment = _fixedPayments[index];
+    final expense = createExpenseFromFixedPayment(fixedPaymentId);
+    _fixedPayments[index] = payment.copyWith(
+      nextPaymentDate: nextFixedPaymentDate(payment, payment.nextPaymentDate),
+      updatedAt: DateTime.now(),
+    );
+    _commit();
+    return expense;
+  }
+
+  void deleteFixedPayment(String fixedPaymentId) {
+    _fixedPayments.removeWhere((payment) => payment.id == fixedPaymentId);
+    _commit();
   }
 
   List<Expense> expensesForMonth(int year, int month) {

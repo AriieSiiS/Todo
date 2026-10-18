@@ -70,6 +70,7 @@ extension TodoWorkspaceNotificaciones on TodoWorkspace {
       daySettings: daySettings,
       notificationSettings: notificationSettings,
       now: DateTime.now(),
+      fixedPayments: fixedPayments,
     );
     await _importantAlarmService.syncPlans(plans);
     try {

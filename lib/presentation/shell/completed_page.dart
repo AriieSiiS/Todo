@@ -95,6 +95,12 @@ class CompletedPage extends StatelessWidget {
                   title: 'Completadas',
                   subtitle:
                       'Revisa lo que ya has resuelto y mantén perspectiva de tu progreso.',
+                  trailing: _HeaderSecondaryButton(
+                    key: const ValueKey('weekly-summary-open'),
+                    label: 'Resumen semanal',
+                    icon: Icons.summarize_rounded,
+                    onPressed: () => showWeeklySummary(context, controller),
+                  ),
                 ),
                 const SizedBox(height: 18),
                 _CompletedSummaryCard(

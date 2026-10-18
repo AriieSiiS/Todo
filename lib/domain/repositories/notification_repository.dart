@@ -11,5 +11,10 @@ abstract class NotificationRepository {
     required DeviceNotificationSettings notificationSettings,
   });
   Future<void> showTest();
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+  });
   Future<int> pendingCount();
 }

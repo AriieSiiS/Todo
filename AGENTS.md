@@ -94,6 +94,17 @@ La app tiene:
   cuidados, seguridad felina y rutinas enlazadas con tareas
 - `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
   tiempos, ingredientes, pasos y creación de tareas de compra o cocina
+- `lib/presentation/shell/journal_page.dart`: Diario (una entrada por día, ánimo,
+  foto opcional y recuerdos de años anteriores)
+- `lib/presentation/shell/trips_page.dart`: Viajes (itinerario, reservas,
+  documentos PDF o enlaces y maleta enlazada con Ropa; se ven en el Calendario)
+- `lib/presentation/shell/focus_page.dart`: Enfoque (temporizador ligado a
+  tareas y resumen semanal del tiempo dedicado)
+- `lib/presentation/shell/compact_view.dart`: modo mini de Hoy; lo activa el
+  botón de la barra lateral o `--compact`
+- `lib/presentation/shell/weekly_summary_dialog.dart`: resumen semanal, solo
+  bajo demanda desde Completadas; la lógica está en
+  `lib/application/state/todo_workspace_resumen.dart`
 - `lib/presentation/shell/completed_page.dart`: vista Completadas
 - `lib/presentation/shell/settings_page.dart`: vista Ajustes
 - `lib/presentation/shell/shared_widgets.dart`: widgets compartidos del shell
@@ -115,12 +126,16 @@ Secciones:
 - `--section=household`
 - `--section=plants`
 - `--section=recipes`
+- `--section=journal`
+- `--section=trips`
+- `--section=focus`
 
 Editores:
 
 - `--new-task`
 - `--new-project`
 - `--new-category`
+- `--quick-capture` (abre la nota rápida) y `--compact` (modo mini)
 
 Windows primero:
 

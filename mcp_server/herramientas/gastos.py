@@ -312,6 +312,7 @@ def create_fixed_payment_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         "nextPaymentDate": server.date_iso(arguments["next_payment_date"], "next_payment_date"),
         "isActive": bool(arguments.get("is_active", True)),
         "note": (arguments.get("note") or "").strip() or None,
+        "reminderDaysBefore": max(0, min(60, int(arguments.get("reminder_days_before", 3)))),
         "createdAt": now,
         "updatedAt": now,
     }
@@ -351,6 +352,8 @@ def update_fixed_payment_impl(arguments: dict[str, Any]) -> dict[str, Any]:
         updated["note"] = None
     elif "note" in arguments:
         updated["note"] = (arguments.get("note") or "").strip() or None
+    if "reminder_days_before" in arguments:
+        updated["reminderDaysBefore"] = max(0, min(60, int(arguments["reminder_days_before"])))
     updated["updatedAt"] = server.now_iso()
     state["fixedPayments"][index] = updated
     server.save_state(state)

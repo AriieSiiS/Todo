@@ -169,6 +169,9 @@ def default_state() -> dict[str, Any]:
         "plants": [],
         "recipes": [],
         "weeklyMenus": [],
+        "journalEntries": [],
+        "trips": [],
+        "focusSessions": [],
         "calendarEvents": [],
         "daySettings": {
             "dayEndsAtHour": 5,
@@ -205,11 +208,14 @@ def default_state() -> dict[str, Any]:
             "household",
             "plants",
             "recipes",
+            "journal",
+            "trips",
+            "focus",
             "completed",
             "settings",
         ],
         "updatedAt": now_iso(),
-        "schemaVersion": 11,
+        "schemaVersion": 12,
         "lastModifiedBy": "mcp",
     }
 
@@ -505,7 +511,7 @@ VALID_PROJECT_STATUSES = {"active", "paused", "completed", "cancelled"}
 VALID_NOTE_STATUSES = {"inbox", "converted", "archived"}
 VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "monthly", "yearly"}
 VALID_TODAY_SORTS = {"manual", "category", "time", "project", "priority"}
-VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "plants", "recipes", "completed", "settings"}
+VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "plants", "recipes", "journal", "trips", "focus", "completed", "settings"}
 
 
 def migrate_library_state(state: dict[str, Any]) -> bool:
@@ -634,6 +640,7 @@ from herramientas.plantas import *  # noqa: F401,F403
 from herramientas.recetas import *  # noqa: F401,F403
 from herramientas.ropa import *  # noqa: F401,F403
 from herramientas.tareas import *  # noqa: F401,F403
+from herramientas.vida import *  # noqa: F401,F403
 
 
 def handle_tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -967,6 +974,24 @@ def _handle_tool_call_once(name: str, arguments: dict[str, Any]) -> dict[str, An
         return json_result(list_weekly_menus_impl(arguments))
     if name == "create_weekly_menu_task":
         return json_result(create_weekly_menu_task_impl(arguments))
+    if name == "list_journal_entries":
+        return json_result(list_journal_entries_impl(arguments))
+    if name == "save_journal_entry":
+        return json_result(save_journal_entry_impl(arguments))
+    if name == "list_trips":
+        return json_result(list_trips_impl(arguments))
+    if name == "create_trip":
+        return json_result(create_trip_impl(arguments))
+    if name == "add_trip_reservation":
+        return json_result(add_trip_reservation_impl(arguments))
+    if name == "delete_trip":
+        if arguments.get("confirm") is not True:
+            raise ValueError("delete_trip exige confirm=true.")
+        return json_result(delete_trip_impl(arguments))
+    if name == "list_focus_sessions":
+        return json_result(list_focus_sessions_impl(arguments))
+    if name == "generate_weekly_summary":
+        return json_result(generate_weekly_summary_impl(arguments))
     if name == "create_category":
         return json_result(create_category_impl(arguments))
     if name == "create_project":

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "flutter_window.h"
+#include "shell_bridge.h"
 #include "utils.h"
 
 namespace {
@@ -91,6 +92,8 @@ HRESULT ConfigureJumpList() {
       {L"Calendario", L"--section=calendar", L"Abrir el calendario semanal"},
       {L"Proyectos", L"--section=projects", L"Abrir la vista de proyectos"},
       {L"Nueva tarea", L"--new-task", L"Abrir la app creando una tarea"},
+      {L"Captura rápida", L"--quick-capture", L"Apuntar una nota al instante"},
+      {L"Modo mini", L"--compact", L"Abrir la vista mini de Hoy"},
       {L"Nuevo proyecto", L"--new-project", L"Abrir la app creando un proyecto"},
       {L"Ajustes", L"--section=settings", L"Abrir los ajustes"},
   };
@@ -192,7 +195,21 @@ std::string ImportantAlarmIdFromArguments(
   return std::string();
 }
 
-bool FocusExistingInstance(const std::string& important_alarm_id) {
+// Primer argumento de arranque que la instancia abierta sabe atender.
+std::string LaunchArgumentFromArguments(
+    const std::vector<std::string>& arguments) {
+  for (const auto& argument : arguments) {
+    if (argument == "--quick-capture" || argument == "--compact" ||
+        argument == "--new-task" || argument == "--new-project" ||
+        argument == "--new-category" || argument.rfind("--section=", 0) == 0) {
+      return argument;
+    }
+  }
+  return std::string();
+}
+
+bool FocusExistingInstance(const std::string& important_alarm_id,
+                           const std::string& launch_argument) {
   HWND window = ::FindWindowW(kTodoWindowClass, kTodoWindowTitle);
   if (window == nullptr) {
     return false;
@@ -205,6 +222,15 @@ bool FocusExistingInstance(const std::string& important_alarm_id) {
     ::SendMessageW(window, WM_COPYDATA, 0,
                    reinterpret_cast<LPARAM>(&data));
     ::ShowWindow(window, SW_RESTORE);
+  } else if (!launch_argument.empty()) {
+    COPYDATASTRUCT data{};
+    data.dwData = ShellBridge::kLaunchArgumentData;
+    data.cbData = static_cast<DWORD>(launch_argument.size() + 1);
+    data.lpData = const_cast<char*>(launch_argument.c_str());
+    ::SendMessageW(window, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data));
+    if (::IsIconic(window)) {
+      ::ShowWindow(window, SW_RESTORE);
+    }
   } else {
     ::ShowWindow(window, SW_MAXIMIZE);
   }
@@ -225,7 +251,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       ::CreateMutexW(nullptr, TRUE, kTodoSingleInstanceMutex);
   if (single_instance_mutex != nullptr &&
       ::GetLastError() == ERROR_ALREADY_EXISTS) {
-    FocusExistingInstance(important_alarm_id);
+    FocusExistingInstance(important_alarm_id,
+                          LaunchArgumentFromArguments(command_line_arguments));
     ::CloseHandle(single_instance_mutex);
     return EXIT_SUCCESS;
   }

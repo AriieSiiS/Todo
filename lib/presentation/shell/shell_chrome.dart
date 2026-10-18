@@ -19,6 +19,8 @@ class _AppShellState extends ConsumerState<AppShell>
   late final HomeAssistantController _homeAssistant;
   late final AmbientMusicController _musicController;
   late final bool _shouldInitializeMusic;
+  late final WindowsShellService _windowShell;
+  StreamSubscription<String>? _shellArguments;
   bool _launchIntentHandled = false;
   bool _openingNotificationTask = false;
   bool _quickCaptureOpen = false;
@@ -37,6 +39,11 @@ class _AppShellState extends ConsumerState<AppShell>
     }
     _shouldInitializeMusic = _showAmbientMusic && !_isWidgetTest();
     _musicController = AmbientMusicController(enabled: _shouldInitializeMusic);
+    _windowShell = WindowsShellService(
+      enabled: Platform.isWindows && !_isWidgetTest(),
+    )..addListener(_onWindowShellChanged);
+    _shellArguments = _windowShell.arguments.listen(_handleLaunchArgument);
+    unawaited(_windowShell.initialize());
     WidgetsBinding.instance.addObserver(this);
     if (_shouldInitializeMusic) {
       _musicController.initialize();
@@ -47,6 +54,10 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_shellArguments?.cancel());
+    _windowShell
+      ..removeListener(_onWindowShellChanged)
+      ..dispose();
     unawaited(_alarmPlayer.dispose());
     _musicController.dispose();
     _homeAssistant.dispose();
@@ -110,6 +121,9 @@ class _AppShellState extends ConsumerState<AppShell>
                   controller: controller,
                   compact: !wide,
                   musicController: _musicController,
+                  onCompact: _windowShell.enabled
+                      ? () => unawaited(_windowShell.setCompact(true))
+                      : null,
                 ),
               ),
               Expanded(
@@ -177,7 +191,14 @@ class _AppShellState extends ConsumerState<AppShell>
           autofocus: true,
           child: Stack(
             children: [
-              scaffold,
+              if (_windowShell.compact)
+                CompactTodayView(
+                  controller: controller,
+                  onExpand: () => unawaited(_windowShell.setCompact(false)),
+                  onQuickNote: _captureQuickNote,
+                )
+              else
+                scaffold,
               if (controller.saveError.isNotEmpty)
                 Positioned(
                   left: 0,
@@ -202,6 +223,37 @@ class _AppShellState extends ConsumerState<AppShell>
             ],
           )),
     );
+  }
+
+  void _onWindowShellChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Atiende un argumento de arranque que llega con la app ya abierta (atajo
+  /// global, tareas de la lista de salto o una segunda instancia).
+  void _handleLaunchArgument(String argument) {
+    if (!mounted) return;
+    if (argument == '--quick-capture') {
+      unawaited(_captureQuickNote());
+      return;
+    }
+    if (argument == '--compact') {
+      unawaited(_windowShell.setCompact(true));
+      return;
+    }
+    final intent = AppLaunchIntent.fromArgs(<String>[argument]);
+    if (_windowShell.compact) unawaited(_windowShell.setCompact(false));
+    if (intent.section != null) controller.setSection(intent.section!);
+    switch (intent.editorTarget) {
+      case LaunchEditorTarget.none:
+        break;
+      case LaunchEditorTarget.task:
+        unawaited(showTaskEditor(context, controller));
+      case LaunchEditorTarget.project:
+        unawaited(showProjectEditor(context, controller));
+      case LaunchEditorTarget.category:
+        unawaited(showCategoryEditor(context, controller));
+    }
   }
 
   Future<void> _captureQuickNote() async {
@@ -280,6 +332,9 @@ class _AppShellState extends ConsumerState<AppShell>
         HouseholdPage(controller: controller, homeAssistant: _homeAssistant),
       AppSection.plants => PlantsPage(controller: controller),
       AppSection.recipes => RecipesPage(controller: controller),
+      AppSection.journal => JournalPage(controller: controller),
+      AppSection.trips => TripsPage(controller: controller),
+      AppSection.focus => FocusPage(controller: controller),
       AppSection.inbox => InboxPage(controller: controller),
       AppSection.completed => CompletedPage(controller: controller),
       AppSection.settings =>
@@ -300,6 +355,13 @@ class _AppShellState extends ConsumerState<AppShell>
       return;
     }
     _launchIntentHandled = true;
+    if (widget.launchIntent.compact) {
+      unawaited(_windowShell.setCompact(true));
+    }
+    if (widget.launchIntent.quickCapture) {
+      await _captureQuickNote();
+      return;
+    }
     switch (widget.launchIntent.editorTarget) {
       case LaunchEditorTarget.none:
         return;
@@ -442,11 +504,15 @@ class _Sidebar extends StatelessWidget {
     required this.controller,
     required this.compact,
     required this.musicController,
+    this.onCompact,
   });
 
   final TodoWorkspace controller;
   final bool compact;
   final AmbientMusicController musicController;
+
+  /// Pasa a la vista mini; nulo cuando la plataforma no la admite.
+  final VoidCallback? onCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -491,6 +557,15 @@ class _Sidebar extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (onCompact != null)
+                            IconButton(
+                              key: const ValueKey('sidebar-compact'),
+                              tooltip: 'Modo mini',
+                              onPressed: onCompact,
+                              color: const Color(0xFFC6CEBD),
+                              icon: const Icon(
+                                  Icons.picture_in_picture_alt_rounded),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -667,6 +742,21 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         section: AppSection.recipes,
         icon: Icons.restaurant_menu_rounded,
         label: 'Recetas',
+      ),
+    AppSection.journal => const _SidebarDestination(
+        section: AppSection.journal,
+        icon: Icons.auto_stories_rounded,
+        label: 'Diario',
+      ),
+    AppSection.trips => const _SidebarDestination(
+        section: AppSection.trips,
+        icon: Icons.luggage_rounded,
+        label: 'Viajes',
+      ),
+    AppSection.focus => const _SidebarDestination(
+        section: AppSection.focus,
+        icon: Icons.timer_rounded,
+        label: 'Enfoque',
       ),
     AppSection.completed => const _SidebarDestination(
         section: AppSection.completed,

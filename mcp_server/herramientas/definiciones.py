@@ -330,6 +330,7 @@ def tool_definitions() -> list[dict[str, Any]]:
                     "next_payment_date": {"type": "string", "description": "Fecha YYYY-MM-DD."},
                     "note": {"type": "string"},
                     "is_active": {"type": "boolean"},
+                    "reminder_days_before": {"type": "integer", "description": "Días de antelación del aviso de cobro; 0 lo desactiva."},
                 },
             },
         },
@@ -353,6 +354,7 @@ def tool_definitions() -> list[dict[str, Any]]:
                     "note": {"type": "string"},
                     "clear_note": {"type": "boolean"},
                     "is_active": {"type": "boolean"},
+                    "reminder_days_before": {"type": "integer"},
                 },
             },
         },
@@ -1084,6 +1086,14 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         tool("delete_recipe", "Elimina una receta y sus imágenes locales.", {"recipe_id": string, "confirm": boolean}, ["recipe_id", "confirm"]),
         tool("list_weekly_menus", "Lista los menús semanales, sus recetas y su compra planificada.", {"include_archived": boolean}, []),
         tool("create_weekly_menu_task", "Convierte la semana completa o una selección de comidas de un menú en una tarea de compra.", {"menu_id": string, "entry_ids": strings, "scheduled_at": string}, ["menu_id"]),
+        tool("list_journal_entries", "Lista las entradas del diario, de la más reciente a la más antigua.", {"year": integer, "month": integer, "limit": integer}, []),
+        tool("save_journal_entry", "Crea o actualiza la entrada del diario de un día (solo hay una por día). Sin fecha usa el día lógico actual.", {"date": string, "text": string, "mood": integer}, []),
+        tool("list_trips", "Lista los viajes con sus reservas y documentos.", {"include_archived": boolean}, []),
+        tool("create_trip", "Crea un viaje con fechas y, si se pide, su maleta en Ropa.", {"name": string, "destination": string, "start_date": string, "end_date": string, "notes": string, "create_packing_list": boolean}, ["name", "start_date"]),
+        tool("add_trip_reservation", "Añade una reserva o parada al itinerario de un viaje.", {"trip_id": string, "title": string, "kind": string, "date": string, "confirmation": string, "note": string}, ["trip_id", "title"]),
+        tool("delete_trip", "Elimina un viaje (la maleta de Ropa se conserva).", {"trip_id": string, "confirm": boolean}, ["trip_id", "confirm"]),
+        tool("list_focus_sessions", "Lista las sesiones de enfoque registradas, con el total de segundos.", {"from": string, "to": string}, []),
+        tool("generate_weekly_summary", "Genera bajo demanda el resumen de una semana (tareas, Biblioteca, gastos, enfoque, diario y viajes). No guarda nada.", {"week_start": string}, []),
     ]
 
 

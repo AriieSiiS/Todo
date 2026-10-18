@@ -101,7 +101,7 @@ class HouseholdAssetService {
     String sourcePath, {
     required String kind,
   }) async {
-    if (!const <String>{'manuals', 'invoices'}.contains(kind)) {
+    if (!const <String>{'manuals', 'invoices', 'documents'}.contains(kind)) {
       throw ArgumentError('Tipo de documento no compatible.');
     }
     final source = File(sourcePath);

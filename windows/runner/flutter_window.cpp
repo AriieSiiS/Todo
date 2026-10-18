@@ -27,6 +27,8 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   important_alarm_bridge_ = std::make_unique<ImportantAlarmBridge>(
       flutter_controller_->engine()->messenger(), GetHandle());
+  shell_bridge_ = std::make_unique<ShellBridge>(
+      flutter_controller_->engine()->messenger(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -43,6 +45,7 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   important_alarm_bridge_.reset();
+  shell_bridge_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -58,8 +61,19 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       important_alarm_bridge_->HandleCloseRequest()) {
     return 0;
   }
+  if (message == WM_HOTKEY && shell_bridge_ &&
+      shell_bridge_->HandleHotKey(wparam)) {
+    return 0;
+  }
   if (message == WM_COPYDATA) {
     const auto* data = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
+    if (data != nullptr && data->dwData == ShellBridge::kLaunchArgumentData &&
+        data->lpData != nullptr && shell_bridge_) {
+      const auto* text = static_cast<const char*>(data->lpData);
+      shell_bridge_->ForwardLaunchArgument(
+          std::string(text, strnlen(text, data->cbData)));
+      return TRUE;
+    }
     if (data != nullptr && data->dwData == 0x544F444F &&
         data->lpData != nullptr && important_alarm_bridge_) {
       const auto* text = static_cast<const char*>(data->lpData);

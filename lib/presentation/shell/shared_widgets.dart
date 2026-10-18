@@ -1142,6 +1142,7 @@ class _SoftChip extends StatelessWidget {
     required this.label,
     this.icon,
     this.color,
+    super.key,
   });
 
   final String label;
@@ -1175,6 +1176,7 @@ class _HeaderActionButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    super.key,
   });
 
   final String label;
@@ -1213,6 +1215,7 @@ class _HeaderSecondaryButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    super.key,
   });
 
   final String label;

@@ -8,6 +8,8 @@ class AppLaunchIntent {
     this.editorTarget = LaunchEditorTarget.none,
     this.testNotification = false,
     this.importantAlarmId,
+    this.quickCapture = false,
+    this.compact = false,
   });
 
   final AppSection? section;
@@ -15,12 +17,20 @@ class AppLaunchIntent {
   final bool testNotification;
   final String? importantAlarmId;
 
+  /// Abre el editor de nota rápida al arrancar.
+  final bool quickCapture;
+
+  /// Abre la ventana en modo mini.
+  final bool compact;
+
   bool get opensEditor => editorTarget != LaunchEditorTarget.none;
 
   static AppLaunchIntent fromArgs(List<String> args) {
     AppSection? section;
     var editorTarget = LaunchEditorTarget.none;
     var testNotification = false;
+    var quickCapture = false;
+    var compact = false;
     String? importantAlarmId;
 
     for (final arg in args) {
@@ -50,6 +60,12 @@ class AppLaunchIntent {
         section = AppSection.plants;
       } else if (arg == '--section=recipes') {
         section = AppSection.recipes;
+      } else if (arg == '--section=journal') {
+        section = AppSection.journal;
+      } else if (arg == '--section=trips') {
+        section = AppSection.trips;
+      } else if (arg == '--section=focus') {
+        section = AppSection.focus;
       } else if (arg == '--new-task') {
         section = AppSection.today;
         editorTarget = LaunchEditorTarget.task;
@@ -59,6 +75,10 @@ class AppLaunchIntent {
       } else if (arg == '--new-category') {
         section = AppSection.categories;
         editorTarget = LaunchEditorTarget.category;
+      } else if (arg == '--quick-capture') {
+        quickCapture = true;
+      } else if (arg == '--compact') {
+        compact = true;
       } else if (arg == '--test-notification') {
         testNotification = true;
       } else if (arg.startsWith('--important-alarm=')) {
@@ -70,6 +90,8 @@ class AppLaunchIntent {
       section: section,
       editorTarget: editorTarget,
       testNotification: testNotification,
+      quickCapture: quickCapture,
+      compact: compact,
       importantAlarmId:
           importantAlarmId?.isEmpty ?? true ? null : importantAlarmId,
     );

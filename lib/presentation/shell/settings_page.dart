@@ -699,6 +699,16 @@ class _SettingsPageState extends State<SettingsPage> {
           text: 'Ctrl + Mayús + N abre una nota desde cualquier sección.',
         ),
         _SettingsHintRow(
+          icon: Icons.bolt_rounded,
+          text:
+              'Ctrl + Alt + N abre la nota rápida desde cualquier programa de Windows.',
+        ),
+        _SettingsHintRow(
+          icon: Icons.picture_in_picture_alt_rounded,
+          text:
+              'El botón de modo mini, junto al nombre de Todo, deja Hoy a un lado de la pantalla.',
+        ),
+        _SettingsHintRow(
           icon: Icons.open_with_rounded,
           text: 'Arrastra las tareas de Hoy para cambiar su orden.',
         ),

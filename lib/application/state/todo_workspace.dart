@@ -38,13 +38,17 @@ part 'todo_workspace_agent.dart';
 part 'todo_workspace_biblioteca.dart';
 part 'todo_workspace_calendario.dart';
 part 'todo_workspace_compras.dart';
+part 'todo_workspace_diario.dart';
+part 'todo_workspace_enfoque.dart';
 part 'todo_workspace_gastos.dart';
 part 'todo_workspace_hogar.dart';
 part 'todo_workspace_notificaciones.dart';
 part 'todo_workspace_nube.dart';
 part 'todo_workspace_plantas.dart';
 part 'todo_workspace_recetas.dart';
+part 'todo_workspace_resumen.dart';
 part 'todo_workspace_ropa.dart';
+part 'todo_workspace_viajes.dart';
 part 'todo_workspace_tareas.dart';
 
 class TodoWorkspace extends ChangeNotifier {
@@ -80,6 +84,7 @@ class TodoWorkspace extends ChangeNotifier {
     );
     try {
       await controller._load();
+      controller.resumeFocusAfterStartup();
       await controller._importantAlarmService.initialize(
         initialAlarmId: initialImportantAlarmId,
       );
@@ -119,6 +124,9 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.household,
     AppSection.plants,
     AppSection.recipes,
+    AppSection.journal,
+    AppSection.trips,
+    AppSection.focus,
     AppSection.completed,
     AppSection.settings,
   ];
@@ -192,9 +200,17 @@ class TodoWorkspace extends ChangeNotifier {
   final List<Plant> _plants = <Plant>[];
   final List<Recipe> _recipes = <Recipe>[];
   final List<WeeklyMenu> _weeklyMenus = <WeeklyMenu>[];
+  final List<JournalEntry> _journalEntries = <JournalEntry>[];
+  final List<Trip> _trips = <Trip>[];
+  final List<FocusSession> _focusSessions = <FocusSession>[];
+  ActiveFocus? _activeFocus;
   final List<CalendarEventModel> _calendarEvents = <CalendarEventModel>[];
   final WardrobeAssetService _wardrobeAssets = WardrobeAssetService();
   final HouseholdAssetService _householdAssets = HouseholdAssetService();
+  final HouseholdAssetService _journalAssets =
+      HouseholdAssetService(directoryName: 'journal');
+  final HouseholdAssetService _tripAssets =
+      HouseholdAssetService(directoryName: 'trips');
   final HouseholdAssetService _shoppingAssets =
       HouseholdAssetService(directoryName: 'shopping');
   final PlantAssetService _plantAssets;
@@ -236,6 +252,7 @@ class TodoWorkspace extends ChangeNotifier {
   SyncConflict? _syncConflict;
   Timer? _saveDebounce;
   Timer? _externalWardrobePoll;
+  Timer? _focusTimer;
   bool _checkingExternalWardrobe = false;
   AgentBridgeService? _agentBridge;
   Future<void> _agentCommandQueue = Future<void>.value();
@@ -292,6 +309,12 @@ class TodoWorkspace extends ChangeNotifier {
   List<Recipe> get recipes => List<Recipe>.unmodifiable(_recipes);
   List<WeeklyMenu> get weeklyMenus =>
       List<WeeklyMenu>.unmodifiable(_weeklyMenus);
+  List<JournalEntry> get journalEntries =>
+      List<JournalEntry>.unmodifiable(_journalEntries);
+  List<Trip> get trips => List<Trip>.unmodifiable(_trips);
+  List<FocusSession> get focusSessions =>
+      List<FocusSession>.unmodifiable(_focusSessions);
+  ActiveFocus? get activeFocus => _activeFocus;
   List<CalendarEventModel> get calendarEvents =>
       List<CalendarEventModel>.unmodifiable(_calendarEvents);
   DaySettings get settings => _daySettings;
@@ -572,6 +595,9 @@ class TodoWorkspace extends ChangeNotifier {
       plants: plants,
       recipes: recipes,
       weeklyMenus: weeklyMenus,
+      journalEntries: journalEntries,
+      trips: trips,
+      focusSessions: focusSessions,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
@@ -620,7 +646,7 @@ class TodoWorkspace extends ChangeNotifier {
       final migratedChecklists = _migrateLegacyChecklistsToSubtasks();
       final syncedLibraryGoals = _syncCompletedLibraryGoalsIntoItems();
       final migratedPlants = await _prepareEmptyPlantsFeature();
-      if (persisted.schemaVersion < 11 ||
+      if (persisted.schemaVersion < 12 ||
           normalized ||
           migratedChecklists ||
           syncedLibraryGoals ||
@@ -772,6 +798,16 @@ class TodoWorkspace extends ChangeNotifier {
     _weeklyMenus
       ..clear()
       ..addAll(snapshot.weeklyMenus);
+    _journalEntries
+      ..clear()
+      ..addAll(snapshot.journalEntries);
+    _trips
+      ..clear()
+      ..addAll(snapshot.trips);
+    _focusSessions
+      ..clear()
+      ..addAll(snapshot.focusSessions);
+    _activeFocus = snapshot.activeFocus;
     _calendarEvents
       ..clear()
       ..addAll(snapshot.calendarEvents);
@@ -1205,6 +1241,10 @@ class TodoWorkspace extends ChangeNotifier {
       plants: plants,
       recipes: recipes,
       weeklyMenus: weeklyMenus,
+      journalEntries: journalEntries,
+      trips: trips,
+      focusSessions: focusSessions,
+      activeFocus: _activeFocus,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
@@ -1219,7 +1259,7 @@ class TodoWorkspace extends ChangeNotifier {
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
       navOrder: navOrder,
       updatedAt: DateTime.now(),
-      schemaVersion: 11,
+      schemaVersion: 12,
       agentOperationReceipts: jsonDecode(jsonEncode(_agentOperationReceipts))
           as Map<String, dynamic>,
       lastModifiedBy: _cloudService.currentEmail.isNotEmpty
@@ -1368,6 +1408,10 @@ class TodoWorkspace extends ChangeNotifier {
     _plants.clear();
     _recipes.clear();
     _weeklyMenus.clear();
+    _journalEntries.clear();
+    _trips.clear();
+    _focusSessions.clear();
+    _activeFocus = null;
     _calendarEvents.clear();
     _daySettings = const DaySettings();
     _wardrobeDisplaySettings = const WardrobeDisplaySettings();
@@ -1622,6 +1666,7 @@ class TodoWorkspace extends ChangeNotifier {
     unawaited(_agentBridge?.stop());
     _saveDebounce?.cancel();
     _externalWardrobePoll?.cancel();
+    _focusTimer?.cancel();
     unawaited(_notificationActionSubscription.cancel());
     _importantAlarmService.removeListener(_handleImportantAlarmChange);
     _importantAlarmService.dispose();

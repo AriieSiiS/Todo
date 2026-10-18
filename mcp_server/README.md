@@ -189,6 +189,13 @@ Los menús están separados de las recetas individuales en `weeklyMenus`.
 se envía `entry_ids`, recalcula la compra usando únicamente las comidas
 seleccionadas; sin ese argumento utiliza la semana completa.
 
+Diario, viajes y enfoque comparten el mismo snapshot (`journalEntries`,
+`trips` y `focusSessions`). `save_journal_entry` crea o actualiza la única
+entrada de un día; `create_trip` puede crear también la maleta en Ropa;
+`add_trip_reservation` admite `flight`, `lodging`, `transport`, `activity` y
+`other`. `generate_weekly_summary` devuelve el resumen de la semana pedida sin
+guardar nada y `list_focus_sessions` suma los segundos de enfoque del periodo.
+
 Flutter también puede importar directamente archivos JSON y direcciones web
 que publiquen una receta compatible con schema.org.
 

@@ -1208,8 +1208,17 @@ class _FixedPaymentsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final today = controller.logicalDate();
+    final payments = controller.fixedPayments.toList()
+      ..sort((a, b) {
+        if (a.isActive != b.isActive) return a.isActive ? -1 : 1;
+        return a.nextPaymentDate.compareTo(b.nextPaymentDate);
+      });
+    final dueSoon = controller.fixedPaymentsDueSoon();
+    final monthly = controller.fixedPaymentsMonthlyTotal;
+    final activeCount = payments.where((payment) => payment.isActive).length;
     return _FinancePanel(
-      title: 'Pagos fijos',
+      title: 'Suscripciones y pagos fijos',
       icon: Icons.autorenew_rounded,
       trailing: FilledButton.icon(
         onPressed: onCreateFixedPayment,
@@ -1217,31 +1226,168 @@ class _FixedPaymentsView extends StatelessWidget {
         label: const Text('Nuevo pago fijo'),
       ),
       child: Column(
-        children: controller.fixedPayments.map((payment) {
-          final category = controller.expenseCategoryById(payment.categoryId);
-          final method =
-              controller.paymentMethodById(payment.paymentMethodId ?? '');
-          return _FinanceListRow(
-            icon: Icons.autorenew_rounded,
-            color: category?.color ?? const Color(0xFF70835D),
-            title: payment.name,
-            subtitle:
-                '${category?.name ?? 'Sin categoría'} - ${method?.name ?? 'Sin método'} - ${_frequencyLabel(payment.frequency)}',
-            trailing: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_money(payment.amount),
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
-                Text(_dateLabel(payment.nextPaymentDate)),
-              ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _SoftChip(
+                key: const ValueKey('fixed-monthly-total'),
+                label: 'Al mes: ${_money(monthly)}',
+                icon: Icons.calendar_view_month_rounded,
+              ),
+              _SoftChip(
+                label: 'Al año: ${_money(monthly * 12)}',
+                icon: Icons.event_repeat_rounded,
+              ),
+              _SoftChip(
+                label: '$activeCount activos',
+                icon: Icons.check_circle_outline_rounded,
+              ),
+            ],
+          ),
+          if (dueSoon.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              key: const ValueKey('fixed-due-soon'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3DD),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFEBCB93)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.notifications_active_rounded,
+                      color: Color(0xFFB7791F)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Próximos cobros: ${dueSoon.map((payment) => _fixedPaymentDueText(payment, today)).join(', ')}.',
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onToggle: () => controller.updateFixedPayment(
-              payment.copyWith(isActive: !payment.isActive),
-            ),
-            active: payment.isActive,
-          );
-        }).toList(),
+          ],
+          const SizedBox(height: 14),
+          if (payments.isEmpty)
+            Text('Todavía no hay pagos fijos.',
+                style: TextStyle(color: context.visuals.textMuted)),
+          for (final payment in payments)
+            _fixedPaymentRow(context, payment, today),
+        ],
       ),
+    );
+  }
+
+  String _fixedPaymentDueText(FixedPayment payment, DateTime today) {
+    final days = payment.nextPaymentDate.difference(today).inDays;
+    final when = days == 0
+        ? 'hoy'
+        : days == 1
+            ? 'mañana'
+            : 'en $days días';
+    return '${payment.name} ($when, ${_money(payment.amount)})';
+  }
+
+  Widget _fixedPaymentRow(
+      BuildContext context, FixedPayment payment, DateTime today) {
+    final category = controller.expenseCategoryById(payment.categoryId);
+    final method = controller.paymentMethodById(payment.paymentMethodId ?? '');
+    final days = payment.nextPaymentDate.difference(today).inDays;
+    final when = days < 0
+        ? 'vencido hace ${-days} d'
+        : days == 0
+            ? 'hoy'
+            : days == 1
+                ? 'mañana'
+                : 'en $days días';
+    final monthlyEquivalent = payment.frequency == FixedPaymentFrequency.monthly
+        ? ''
+        : ' - ≈ ${_money(controller.fixedPaymentMonthlyCost(payment))}/mes';
+    return _FinanceListRow(
+      icon: Icons.autorenew_rounded,
+      color: category?.color ?? const Color(0xFF70835D),
+      title: payment.name,
+      subtitle:
+          '${category?.name ?? 'Sin categoría'} - ${method?.name ?? 'Sin método'} - ${_frequencyLabel(payment.frequency)}$monthlyEquivalent',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(_money(payment.amount),
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text('${_dateLabel(payment.nextPaymentDate)} · $when'),
+            ],
+          ),
+          const SizedBox(width: 8),
+          if (payment.isActive)
+            Tooltip(
+              message: 'Registrar el cobro y pasar a la siguiente fecha',
+              child: IconButton.filledTonal(
+                key: ValueKey('fixed-paid-${payment.id}'),
+                onPressed: () {
+                  controller.markFixedPaymentPaid(payment.id);
+                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Cobro de ${payment.name} registrado como gasto.'),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.check_rounded),
+              ),
+            ),
+          PopupMenuButton<String>(
+            tooltip: 'Más opciones',
+            onSelected: (value) async {
+              if (value == 'edit') {
+                await showDialog<void>(
+                  context: context,
+                  builder: (context) => _FixedPaymentDialog(
+                    controller: controller,
+                    payment: payment,
+                  ),
+                );
+              } else if (value == 'delete') {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Eliminar pago fijo'),
+                    content: Text(
+                        'Se eliminará «${payment.name}». Los gastos ya registrados se conservan.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Eliminar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  controller.deleteFixedPayment(payment.id);
+                }
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'edit', child: Text('Editar')),
+              PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+            ],
+          ),
+        ],
+      ),
+      onToggle: () => controller.updateFixedPayment(
+        payment.copyWith(isActive: !payment.isActive),
+      ),
+      active: payment.isActive,
     );
   }
 }
@@ -1716,41 +1862,63 @@ class _PaymentMethodDialogState extends State<_PaymentMethodDialog> {
 }
 
 class _FixedPaymentDialog extends StatefulWidget {
-  const _FixedPaymentDialog({required this.controller});
+  const _FixedPaymentDialog({required this.controller, this.payment});
 
   final TodoWorkspace controller;
+  final FixedPayment? payment;
 
   @override
   State<_FixedPaymentDialog> createState() => _FixedPaymentDialogState();
 }
 
 class _FixedPaymentDialogState extends State<_FixedPaymentDialog> {
-  final _name = TextEditingController();
-  final _amount = TextEditingController();
+  late final TextEditingController _name;
+  late final TextEditingController _amount;
+  late final TextEditingController _interval;
   String? _categoryId;
   String? _paymentMethodId;
   FixedPaymentFrequency _frequency = FixedPaymentFrequency.monthly;
   late DateTime _nextDate;
+  int _reminderDays = 3;
+
+  static const List<int> _reminderOptions = <int>[0, 1, 2, 3, 5, 7, 14];
 
   @override
   void initState() {
     super.initState();
-    _categoryId = widget.controller.expenseCategories.firstOrNull?.id;
-    _paymentMethodId = widget.controller.paymentMethods.firstOrNull?.id;
-    _nextDate = DateTime.now();
+    final payment = widget.payment;
+    _name = TextEditingController(text: payment?.name ?? '');
+    _amount = TextEditingController(
+      text: payment == null
+          ? ''
+          : payment.amount.toStringAsFixed(2).replaceAll('.', ','),
+    );
+    _interval = TextEditingController(text: payment?.customInterval ?? '');
+    _categoryId = payment?.categoryId ??
+        widget.controller.expenseCategories.firstOrNull?.id;
+    _paymentMethodId = payment == null
+        ? widget.controller.paymentMethods.firstOrNull?.id
+        : payment.paymentMethodId;
+    _frequency = payment?.frequency ?? FixedPaymentFrequency.monthly;
+    _nextDate = payment?.nextPaymentDate ?? DateTime.now();
+    _reminderDays = payment?.reminderDaysBefore ?? 3;
   }
 
   @override
   void dispose() {
     _name.dispose();
     _amount.dispose();
+    _interval.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final editing = widget.payment != null;
+    final reminderOptions = {..._reminderOptions, _reminderDays}.toList()
+      ..sort();
     return AlertDialog(
-      title: const Text('Nuevo pago fijo'),
+      title: Text(editing ? 'Editar pago fijo' : 'Nuevo pago fijo'),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -1758,10 +1926,12 @@ class _FixedPaymentDialogState extends State<_FixedPaymentDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
+                  key: const ValueKey('fixed-name'),
                   controller: _name,
                   decoration: const InputDecoration(labelText: 'Nombre')),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('fixed-amount'),
                 controller: _amount,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -1803,11 +1973,41 @@ class _FixedPaymentDialogState extends State<_FixedPaymentDialog> {
                 onChanged: (value) =>
                     setState(() => _frequency = value ?? _frequency),
               ),
+              if (_frequency == FixedPaymentFrequency.custom) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _interval,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Cada cuántos días',
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
+                key: const ValueKey('fixed-date'),
                 onPressed: _pickDate,
                 icon: const Icon(Icons.calendar_month_rounded),
                 label: Text('Próxima fecha: ${_dateLabel(_nextDate)}'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                key: const ValueKey('fixed-reminder'),
+                initialValue: _reminderDays,
+                decoration: const InputDecoration(labelText: 'Avisarme'),
+                items: [
+                  for (final days in reminderOptions)
+                    DropdownMenuItem(
+                      value: days,
+                      child: Text(days == 0
+                          ? 'No avisar'
+                          : days == 1
+                              ? '1 día antes'
+                              : '$days días antes'),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _reminderDays = value ?? _reminderDays),
               ),
             ],
           ),
@@ -1817,7 +2017,11 @@ class _FixedPaymentDialogState extends State<_FixedPaymentDialog> {
         TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancelar')),
-        FilledButton(onPressed: _save, child: const Text('Crear')),
+        FilledButton(
+          key: const ValueKey('fixed-save'),
+          onPressed: _save,
+          child: Text(editing ? 'Guardar' : 'Crear'),
+        ),
       ],
     );
   }
@@ -1839,14 +2043,41 @@ class _FixedPaymentDialogState extends State<_FixedPaymentDialog> {
     if (_name.text.trim().isEmpty || amount == null || _categoryId == null) {
       return;
     }
-    widget.controller.createFixedPayment(
-      name: _name.text,
-      amount: amount,
-      categoryId: _categoryId!,
-      paymentMethodId: _paymentMethodId,
-      frequency: _frequency,
-      nextPaymentDate: _nextDate,
-    );
+    final interval = _frequency == FixedPaymentFrequency.custom
+        ? _interval.text.trim()
+        : null;
+    final payment = widget.payment;
+    if (payment == null) {
+      widget.controller.createFixedPayment(
+        name: _name.text,
+        amount: amount,
+        categoryId: _categoryId!,
+        paymentMethodId: _paymentMethodId,
+        frequency: _frequency,
+        customInterval: interval,
+        nextPaymentDate: _nextDate,
+        reminderDaysBefore: _reminderDays,
+      );
+    } else {
+      widget.controller.updateFixedPayment(
+        payment.copyWith(
+          name: _name.text.trim(),
+          amount: amount,
+          categoryId: _categoryId,
+          paymentMethodId: _paymentMethodId,
+          clearPaymentMethodId: _paymentMethodId == null,
+          frequency: _frequency,
+          customInterval: interval,
+          clearCustomInterval: interval == null,
+          nextPaymentDate:
+              DateTime(_nextDate.year, _nextDate.month, _nextDate.day),
+          anchorDay: _nextDate.day != payment.nextPaymentDate.day
+              ? _nextDate.day
+              : null,
+          reminderDaysBefore: _reminderDays,
+        ),
+      );
+    }
     Navigator.of(context).pop();
   }
 }

@@ -142,6 +142,30 @@ El MCP expone el mismo flujo mediante `create_recipe`, `update_recipe`,
 Los menús semanales se consultan con `list_weekly_menus` y su lista completa se
 convierte en tarea mediante `create_weekly_menu_task`.
 
+## Diario, Viajes, Enfoque y Suscripciones
+
+- **Diario**: una entrada por día con ánimo del 1 al 5, foto opcional y un
+  bloque «Hace tiempo, un día como hoy» con las entradas de años anteriores.
+- **Viajes**: fechas, reservas ordenadas por día, documentos (PDF copiados a
+  `Documents\Todo\trips` o enlaces) y maleta enlazada con Ropa. Los días del
+  viaje aparecen en el Calendario.
+- **Enfoque**: temporizador de 15, 25, 45 o 60 minutos, opcionalmente ligado a
+  una tarea. Sobrevive a un reinicio, avisa al terminar y suma el tiempo por
+  día y por tarea.
+- **Suscripciones**: la pestaña de Pagos fijos de Gastos calcula el coste
+  mensual y anual, avisa con una notificación (por defecto 3 días antes) y
+  permite registrar el cobro, que crea el gasto y pasa a la siguiente fecha.
+- **Resumen semanal**: se genera solo cuando se pide, con el botón de
+  Completadas o con la herramienta MCP `generate_weekly_summary`.
+- **Captura rápida**: `Ctrl + Alt + N` abre la nota rápida desde
+  cualquier programa de Windows (si otra aplicación ya usa ese atajo, no se
+  registra y el resto de Todo sigue funcionando). El botón de la barra lateral
+  deja Hoy en un modo mini siempre visible a un lado de la pantalla.
+
+El MCP añade `list_journal_entries`, `save_journal_entry`, `list_trips`,
+`create_trip`, `add_trip_reservation`, `delete_trip`, `list_focus_sessions` y
+`generate_weekly_summary`. Los pagos fijos aceptan `reminder_days_before`.
+
 ## Alarmas importantes en Windows
 
 Cada aviso de una tarea puede marcarse como `Importante`. Además del aviso de

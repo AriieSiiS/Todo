@@ -2376,7 +2376,39 @@ List<_CalendarEntry> _calendarEntriesFromController(TodoWorkspace controller) {
     );
   });
 
-  return [...taskEntries, ...eventEntries].toList()
+  // Un viaje ocupa una entrada de día completo por cada día que dura.
+  final tripEntries = controller.trips
+      .where((trip) => !trip.archived)
+      .expand((trip) => List<_CalendarEntry>.generate(
+            trip.durationDays.clamp(1, 60),
+            (index) {
+              final day = DateTime(trip.startDate.year, trip.startDate.month,
+                  trip.startDate.day + index);
+              return _CalendarEntry(
+                id: 'trip:${trip.id}:$index',
+                title: trip.name,
+                start: day,
+                end: DateTime(day.year, day.month, day.day + 1),
+                isTimeBlock: false,
+                allDay: true,
+                isTask: false,
+                isCompleted: false,
+                isRecurring: false,
+                background: const Color(0xFFE6F1EC),
+                border: const Color(0xFFC4DDD0),
+                foreground: const Color(0xFF2D2A25),
+                dot: const Color(0xFF4F8F6B),
+                leadingIcon: Icons.luggage_rounded,
+                categoryLabel: 'Viaje',
+                projectLabel: null,
+                trailingLabel: trip.destination.isEmpty
+                    ? 'Día ${index + 1} de ${trip.durationDays}'
+                    : '${trip.destination} · día ${index + 1}',
+              );
+            },
+          ));
+
+  return [...taskEntries, ...eventEntries, ...tripEntries].toList()
     ..sort((left, right) => left.start.compareTo(right.start));
 }
 

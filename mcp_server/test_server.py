@@ -161,6 +161,14 @@ class McpServerTest(unittest.TestCase):
             "delete_recipe",
             "list_weekly_menus",
             "create_weekly_menu_task",
+            "list_journal_entries",
+            "save_journal_entry",
+            "list_trips",
+            "create_trip",
+            "add_trip_reservation",
+            "delete_trip",
+            "list_focus_sessions",
+            "generate_weekly_summary",
             "get_knowledge_contract",
             "list_knowledge_pages",
             "get_knowledge_page",
@@ -1062,6 +1070,80 @@ class McpServerTest(unittest.TestCase):
 
         titulos = {t["title"] for t in self.call("list_tasks")["tasks"]} if isinstance(self.call("list_tasks"), dict) else {t["title"] for t in self.call("list_tasks")}
         self.assertEqual(titulos, {"Tarea inicial", "Tarea de la app", "Tarea del MCP"})
+
+    def test_diario_una_entrada_por_dia_y_animo_valido(self) -> None:
+        creada = self.call("save_journal_entry", {"date": "2026-10-01", "text": "Primer día", "mood": 4})
+        self.assertIn("created", creada)
+        actualizada = self.call("save_journal_entry", {"date": "2026-10-01", "text": "Primer día, corregido"})
+        self.assertIn("updated", actualizada)
+        self.assertEqual(actualizada["updated"]["mood"], 4)
+        entradas = self.call("list_journal_entries", {"year": 2026, "month": 10})
+        self.assertEqual(entradas["count"], 1)
+        self.assertEqual(entradas["entries"][0]["text"], "Primer día, corregido")
+        with self.assertRaises(ValueError):
+            self.call("save_journal_entry", {"date": "2026-10-02", "mood": 9})
+
+    def test_viajes_reservas_y_maleta_de_ropa(self) -> None:
+        viaje = self.call("create_trip", {
+            "name": "Lisboa",
+            "destination": "Portugal",
+            "start_date": "2026-11-05",
+            "end_date": "2026-11-09",
+            "create_packing_list": True,
+        })["created"]
+        self.assertTrue(viaje["packingListId"])
+        reserva = self.call("add_trip_reservation", {
+            "trip_id": viaje["id"],
+            "title": "Vuelo de ida",
+            "kind": "flight",
+            "date": "2026-11-05T07:30:00",
+            "confirmation": "ABC123",
+        })["created"]
+        self.assertEqual(reserva["kind"], "flight")
+        with self.assertRaises(ValueError):
+            self.call("add_trip_reservation", {"trip_id": viaje["id"], "title": "x", "kind": "barco"})
+        listado = self.call("list_trips")
+        self.assertEqual(listado["count"], 1)
+        self.assertEqual(len(listado["trips"][0]["reservations"]), 1)
+        estado = self.call("get_app_state")
+        self.assertEqual(len(estado["wardrobePackingLists"]), 1)
+        with self.assertRaises(ValueError):
+            self.call("delete_trip", {"trip_id": viaje["id"]})
+        self.call("delete_trip", {"trip_id": viaje["id"], "confirm": True})
+        self.assertEqual(self.call("list_trips")["count"], 0)
+
+    def test_resumen_semanal_se_genera_bajo_demanda_y_no_guarda(self) -> None:
+        self.call("save_journal_entry", {"date": "2026-10-13", "text": "Martes", "mood": 5})
+        categoria = self.call("create_expense_category", {"name": "Comida", "color_value": 4286578688, "icon_code_point": 0})
+        self.call("create_expense", {
+            "date": "2026-10-14",
+            "concept": "Compra",
+            "amount": 25.5,
+            "category_id": categoria["created"]["id"],
+        })
+        antes = self.server.STATE_PATH.read_text(encoding="utf-8")
+        resultado = self.call("generate_weekly_summary", {"week_start": "2026-10-14"})
+        self.assertEqual(resultado["week_start"], "2026-10-12")
+        self.assertIn("# Resumen de la semana", resultado["summary"])
+        self.assertIn("12 de octubre – 18 de octubre de 2026", resultado["summary"])
+        self.assertIn("Total: 25,50 €", resultado["summary"])
+        self.assertIn("Ánimo medio: 5,0 de 5.", resultado["summary"])
+        self.assertEqual(self.server.STATE_PATH.read_text(encoding="utf-8"), antes)
+
+    def test_aviso_de_cobro_de_pagos_fijos(self) -> None:
+        categoria = self.call("create_expense_category", {"name": "Ocio", "color_value": 4286578688, "icon_code_point": 0})
+        pago = self.call("create_fixed_payment", {
+            "name": "Streaming",
+            "amount": 9.99,
+            "category_id": categoria["created"]["id"],
+            "next_payment_date": "2026-11-01",
+        })["created"]
+        self.assertEqual(pago["reminderDaysBefore"], 3)
+        cambiado = self.call("update_fixed_payment", {
+            "fixed_payment_id": pago["id"],
+            "reminder_days_before": 0,
+        })["updated"]
+        self.assertEqual(cambiado["reminderDaysBefore"], 0)
 
 
 if __name__ == "__main__":

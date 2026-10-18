@@ -254,6 +254,8 @@ class FixedPayment {
     required this.nextPaymentDate,
     this.isActive = true,
     this.note,
+    this.reminderDaysBefore = 3,
+    this.anchorDay,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -268,6 +270,13 @@ class FixedPayment {
   final DateTime nextPaymentDate;
   final bool isActive;
   final String? note;
+
+  /// Días de antelación del aviso de cobro; 0 desactiva el aviso.
+  final int reminderDaysBefore;
+
+  /// Día del mes en que se cobra de verdad. Evita que un cobro del día 31
+  /// se quede en 28 tras pasar por febrero. Nulo usa el día de la fecha.
+  final int? anchorDay;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -285,6 +294,8 @@ class FixedPayment {
     bool? isActive,
     String? note,
     bool clearNote = false,
+    int? reminderDaysBefore,
+    int? anchorDay,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -301,6 +312,8 @@ class FixedPayment {
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       isActive: isActive ?? this.isActive,
       note: clearNote ? null : note ?? this.note,
+      reminderDaysBefore: reminderDaysBefore ?? this.reminderDaysBefore,
+      anchorDay: anchorDay ?? this.anchorDay,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -318,6 +331,8 @@ class FixedPayment {
       'nextPaymentDate': nextPaymentDate.toIso8601String(),
       'isActive': isActive,
       'note': note,
+      'reminderDaysBefore': reminderDaysBefore,
+      'anchorDay': anchorDay,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -338,6 +353,9 @@ class FixedPayment {
               DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
       note: json['note'] as String?,
+      reminderDaysBefore:
+          ((json['reminderDaysBefore'] as num?)?.toInt() ?? 3).clamp(0, 60),
+      anchorDay: (json['anchorDay'] as num?)?.toInt(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??

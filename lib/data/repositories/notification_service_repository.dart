@@ -40,5 +40,13 @@ class NotificationServiceRepository implements NotificationRepository {
       );
 
   @override
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+  }) =>
+      _service.showNow(id: id, title: title, body: body);
+
+  @override
   Future<int> pendingCount() => _service.pendingCount();
 }
