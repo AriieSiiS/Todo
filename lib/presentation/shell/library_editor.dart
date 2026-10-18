@@ -1664,6 +1664,19 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
   };
 }
 
+// El orden elegido se comparte entre vistas; si la vista actual no lo ofrece
+// (por ejemplo, Plataforma fuera de Juegos), se usa el orden por defecto.
+LibrarySortOrder _effectiveSortOrderForType(
+  LibrarySortOrder order,
+  LibraryItemType type,
+) =>
+    _sortOptionsForType(type).contains(order)
+        ? order
+        : LibrarySortOrder.newestFirst;
+
+LibrarySortOrder _effectiveSortOrderForAll(LibrarySortOrder order) =>
+    _sortOptionsForAll().contains(order) ? order : LibrarySortOrder.newestFirst;
+
 List<LibrarySortOrder> _sortOptionsForAll() => const [
       LibrarySortOrder.newestFirst,
       LibrarySortOrder.oldestFirst,

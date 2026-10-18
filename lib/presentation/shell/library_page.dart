@@ -247,7 +247,11 @@ class _LibraryPageState extends State<LibraryPage> {
             .toList();
     final sorted = [...filtered];
     sorted.sort(
-      (left, right) => _compareLibraryItems(left, right, _allSortOrder),
+      (left, right) => _compareLibraryItems(
+        left,
+        right,
+        _effectiveSortOrderForAll(_allSortOrder),
+      ),
     );
     return sorted;
   }
@@ -528,6 +532,8 @@ class _LibraryMainContent extends StatelessWidget {
         status: status,
         showStatus: false,
         typeFilters: typeFilters,
+        sortOrder: allSortOrder,
+        onSortChanged: onAllSortChanged,
       );
       final contextualSingle = GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -676,7 +682,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
       ),
     );
     final sortButton = _LibrarySortButton(
-      label: _sortLabel(sortOrder),
+      label: _sortLabel(_effectiveSortOrderForAll(sortOrder)),
       onSelected: onSortChanged,
     );
     final controls = <Widget>[
@@ -1059,8 +1065,12 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
     required this.status,
     required this.showStatus,
     required this.typeFilters,
+    required this.sortOrder,
+    required this.onSortChanged,
   });
 
+  final LibrarySortOrder sortOrder;
+  final ValueChanged<LibrarySortOrder> onSortChanged;
   final TodoWorkspace controller;
   final LibraryItemType type;
   final List<LibraryItem> items;
@@ -1075,8 +1085,10 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
 }
 
 class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
-  LibrarySortOrder _sortOrder = LibrarySortOrder.newestFirst;
   late final TextEditingController _searchController;
+
+  LibrarySortOrder get _sortOrder =>
+      _effectiveSortOrderForType(widget.sortOrder, widget.type);
 
   @override
   void initState() {
@@ -1118,7 +1130,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
               _LibrarySortButton(
                 label: _sortLabelForType(_sortOrder, widget.type),
                 type: widget.type,
-                onSelected: (order) => setState(() => _sortOrder = order),
+                onSelected: widget.onSortChanged,
               ),
             ];
             if (constraints.maxWidth >= 1260) {
