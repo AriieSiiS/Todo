@@ -93,9 +93,6 @@ class _SteamSettingsPanelState extends State<SteamSettingsPanel> {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-              'Consulta tus juegos, horas y logros. La clave se guarda únicamente en el almacenamiento seguro de este PC.'),
-          const SizedBox(height: 14),
           TextField(
               key: const ValueKey('steam-profile'),
               controller: _profile,

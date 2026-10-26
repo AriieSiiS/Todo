@@ -158,11 +158,6 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Decide cuándo termina tu día en la app, aunque ya haya pasado la medianoche.',
-            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
-          ),
-          const SizedBox(height: 18),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -170,8 +165,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: _SettingsHourField(
                   key: const ValueKey('settings-day-end-hour'),
                   label: 'El día termina a las',
-                  helper:
-                      'Hasta esta hora, las tareas siguen perteneciendo al día anterior.',
                   value: controller.daySettings.dayEndsAtHour,
                   firstHour: 0,
                   lastHour: 12,
@@ -185,8 +178,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: _SettingsHourField(
                   key: const ValueKey('settings-next-day-hour'),
                   label: 'Adelantar el próximo día desde',
-                  helper:
-                      'A partir de esta hora, “Pasar día” abre directamente mañana.',
                   value: controller.daySettings.nextDayVisibleAtHour,
                   firstHour: 5,
                   lastHour: 14,
@@ -203,9 +194,6 @@ class _SettingsPageState extends State<SettingsPage> {
             title: controller.hasManualLogicalDate
                 ? 'Día cambiado manualmente'
                 : 'Cambiar el día actual',
-            subtitle: controller.hasManualLogicalDate
-                ? 'La app está usando una fecha manual. Puedes avanzar, retroceder o volver a la regla automática.'
-                : 'Úsalo cuando quieras cerrar el día antes de la hora configurada.',
             buttonLabel: 'Día siguiente',
             icon: Icons.skip_next_rounded,
             onPressed: controller.advanceToNextLogicalDay,
@@ -228,7 +216,6 @@ class _SettingsPageState extends State<SettingsPage> {
       title: 'Ropa',
       child: _settingsToggleRow(
         title: 'Mostrar número de usos',
-        subtitle: 'Enseña los usos y el coste por uso en las prendas.',
         value: controller.wardrobeDisplaySettings.showUsageCount,
         onChanged: (value) {
           controller.updateWardrobeDisplaySettings(
@@ -245,9 +232,6 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-              'Elige lo que quieres ver. Puedes recuperarlo aquí en cualquier momento. Ajustes estará siempre disponible y cada sección conservará al menos una pestaña.'),
-          const SizedBox(height: 12),
           OutlinedButton.icon(
             icon: const Icon(Icons.tune_rounded),
             label: const Text('Personalizar'),
@@ -256,10 +240,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-
-    final homeAssistant = widget.homeAssistant == null
-        ? null
-        : HomeAssistantSettingsCard(controller: widget.homeAssistant!);
 
     final steam = _SettingsSectionCard(
       icon: Icons.sports_esports_outlined,
@@ -275,8 +255,6 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           _settingsToggleRow(
             title: 'Activar recordatorios',
-            subtitle:
-                'El dispositivo guarda los avisos y puede mostrarlos aunque Todo esté cerrada.',
             value: notificationSettings.notificationsEnabled,
             onChanged: (value) async {
               if (value) {
@@ -308,7 +286,6 @@ class _SettingsPageState extends State<SettingsPage> {
             const Divider(height: 30),
             _settingsToggleRow(
               title: 'Comienzo del día',
-              subtitle: 'Un resumen de las tareas activas al empezar tu día.',
               value: notificationSettings.dayStartReminderEnabled,
               onChanged: (value) => controller.updateNotificationSettings(
                 controller.notificationSettings.copyWith(
@@ -319,8 +296,6 @@ class _SettingsPageState extends State<SettingsPage> {
             const Divider(height: 30),
             _settingsToggleRow(
               title: 'Cierre del día',
-              subtitle:
-                  'Un aviso si todavía tienes notas guardadas antes del cierre.',
               value: notificationSettings.dayEndReminderEnabled,
               onChanged: (value) => controller.updateNotificationSettings(
                 controller.notificationSettings.copyWith(
@@ -332,25 +307,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Row(
               children: [
                 const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Recordatorio predeterminado',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Se utilizará al activar un aviso nuevo en una tarea.',
-                        style: TextStyle(
-                          color: Color(0xFF7E7568),
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Recordatorio predeterminado',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 18),
@@ -460,11 +422,6 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'La app guarda los cambios automáticamente en este equipo. También puedes copiar o restaurar el estado en formato JSON.',
-            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
-          ),
-          const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -496,11 +453,6 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Comparte únicamente tus tareas con la aplicación Android mediante la red Wi-Fi local. No usa Supabase ni Internet.',
-            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
-          ),
-          const SizedBox(height: 16),
           if (_lanSyncBusy)
             const Center(child: CircularProgressIndicator())
           else if (!_lanSyncStatus.running)
@@ -604,12 +556,9 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: Icons.menu_book_rounded,
       title: 'Conexión Kindle',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Consulta Hoy y la semana desde KOReader. Las marcas sin conexión se envían al regresar al Wi-Fi de casa.'),
-        const SizedBox(height: 12),
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
           title: const Text('Conexión Kindle con Todo cerrado'),
-          subtitle: const Text('Al cerrar la ventana se libera la interfaz. El agente ligero sigue guardando tareas, progreso y citas.'),
           value: _kindleBackground,
           onChanged: _lanSyncBusy ? null : (enabled) async {
             await _lanSyncService.setKindleBackgroundEnabled(enabled);
@@ -619,7 +568,6 @@ class _SettingsPageState extends State<SettingsPage> {
         for (final device in _lanSyncStatus.devices.where((device) => device.profile == 'kindle'))
           ListTile(contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.menu_book_rounded), title: Text(device.name),
-            subtitle: const Text('Solo agenda y tareas completadas'),
             trailing: IconButton(tooltip: 'Revocar acceso',
               onPressed: () => _revokeLanSyncDevice(device), icon: const Icon(Icons.link_off_rounded))),
         const SizedBox(height: 10),
@@ -627,8 +575,6 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: const Icon(Icons.usb_rounded), label: const Text('Instalar o actualizar por USB'),
           onPressed: _lanSyncBusy ? null : _installKindle,
         ),
-        const SizedBox(height: 8),
-        const Text('Cierra KOReader y conecta el Kindle en modo USB. La instalación conserva los libros y las marcas pendientes.'),
       ]),
     );
 
@@ -638,11 +584,6 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Guarda una copia completa y recuperable de tareas, imágenes, documentos, ropa, hogar, recetas y Biblioteca.',
-            style: TextStyle(color: context.visuals.textMuted, height: 1.35),
-          ),
-          const SizedBox(height: 16),
           _BackupStatusPanel(
             overview: _backupOverview,
             destinationPath: _backupService.destinationRoot.path,
@@ -675,17 +616,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          if (_backupService.isSupported) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Para garantizar una copia coherente, Todo se cerrará durante el proceso y volverá a abrirse al terminar.',
-              style: TextStyle(
-                color: context.visuals.textMuted,
-                fontSize: 13,
-                height: 1.35,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -789,10 +719,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       steam,
                       const SizedBox(height: 16),
-                      if (homeAssistant != null) ...[
-                        homeAssistant,
-                        const SizedBox(height: 16),
-                      ],
                       wardrobe,
                       const SizedBox(height: 16),
                       visibility,
@@ -823,10 +749,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           const SizedBox(height: 16),
                           steam,
                           const SizedBox(height: 16),
-                          if (homeAssistant != null) ...[
-                            homeAssistant,
-                            const SizedBox(height: 16),
-                          ],
                           backup,
                           const SizedBox(height: 16),
                           data,
@@ -1142,7 +1064,6 @@ class _SettingsPageState extends State<SettingsPage> {
 class _SettingsHourField extends StatelessWidget {
   const _SettingsHourField({
     required this.label,
-    required this.helper,
     required this.value,
     required this.firstHour,
     required this.lastHour,
@@ -1151,7 +1072,6 @@ class _SettingsHourField extends StatelessWidget {
   });
 
   final String label;
-  final String helper;
   final int value;
   final int firstHour;
   final int lastHour;
@@ -1167,15 +1087,6 @@ class _SettingsHourField extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          helper,
-          style: TextStyle(
-            color: context.visuals.textMuted,
-            fontSize: 13,
-            height: 1.35,
-          ),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<int>(
@@ -1615,7 +1526,7 @@ class _SettingsHintRow extends StatelessWidget {
 
 Widget _settingsToggleRow({
   required String title,
-  required String subtitle,
+  String subtitle = '',
   required bool value,
   required ValueChanged<bool> onChanged,
 }) {
@@ -1628,9 +1539,12 @@ Widget _settingsToggleRow({
             Text(title,
                 style:
                     const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(subtitle,
-                style: const TextStyle(color: Color(0xFF7E7568), height: 1.35)),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitle,
+                  style:
+                      const TextStyle(color: Color(0xFF7E7568), height: 1.35)),
+            ],
           ],
         ),
       ),
@@ -1642,7 +1556,7 @@ Widget _settingsToggleRow({
 
 Widget _settingsActionRow({
   required String title,
-  required String subtitle,
+  String subtitle = '',
   required String buttonLabel,
   required IconData icon,
   required VoidCallback onPressed,
@@ -1662,9 +1576,12 @@ Widget _settingsActionRow({
             Text(title,
                 style:
                     const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(subtitle,
-                style: const TextStyle(color: Color(0xFF7E7568), height: 1.35)),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(subtitle,
+                  style:
+                      const TextStyle(color: Color(0xFF7E7568), height: 1.35)),
+            ],
           ],
         ),
       ),
