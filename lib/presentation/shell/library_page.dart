@@ -1124,6 +1124,11 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
+            final anchoFiltros =
+                (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 165 : 0);
+            // La búsqueda cede ancho para que todo quepa en la fila de chips.
+            final anchoBusqueda =
+                (constraints.maxWidth - 670 - anchoFiltros).clamp(110.0, 230.0);
             final filtros = <Widget>[
               if (universes.isNotEmpty)
                 _LibraryFilterButton(
@@ -1145,7 +1150,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   onSelected: (value) => setState(() => _saga = value),
                 ),
               SizedBox(
-                width: 230,
+                width: anchoBusqueda,
                 child: _CompactLibrarySearchField(
                   controller: _searchController,
                   onChanged: () => setState(() {}),
@@ -1157,36 +1162,18 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 onSelected: widget.onSortChanged,
               ),
             ];
-            final anchoFiltros =
-                (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 190 : 0);
-            if (constraints.maxWidth >= 1100 + anchoFiltros) {
-              return Row(
-                children: [
-                  Expanded(child: widget.typeFilters),
-                  const SizedBox(width: 16),
-                  for (var i = 0; i < filtros.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 10),
-                    filtros[i],
-                  ],
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            return Row(
               children: [
-                widget.typeFilters,
-                const SizedBox(height: 10),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 10,
-                  runSpacing: 10,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: filtros,
-                ),
+                Expanded(child: widget.typeFilters),
+                const SizedBox(width: 16),
+                for (var i = 0; i < filtros.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  filtros[i],
+                ],
               ],
             );
           },
-        ),        const SizedBox(height: 12),
+        ),
         Expanded(
           child: sorted.isEmpty
               ? Center(
