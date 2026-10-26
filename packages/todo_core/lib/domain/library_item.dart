@@ -31,6 +31,9 @@ class LibraryItem {
     this.rewatchCount = 1,
     this.seasonCount,
     this.nextSeasonConfirmed = false,
+    this.progressCurrent,
+    this.progressTotal,
+    this.progressSeason,
     this.publicationStatus,
     this.linkedGoalId,
     this.reading,
@@ -66,6 +69,15 @@ class LibraryItem {
   final int rewatchCount;
   final int? seasonCount;
   final bool nextSeasonConfirmed;
+
+  /// Progreso manual de series, anime y manga: episodio o capítulo actual.
+  final int? progressCurrent;
+
+  /// Total de episodios o capítulos.
+  final int? progressTotal;
+
+  /// Temporada actual (opcional, solo series y anime).
+  final int? progressSeason;
   final LibraryPublicationStatus? publicationStatus;
   final String? linkedGoalId;
   final LibraryReading? reading;
@@ -122,6 +134,12 @@ class LibraryItem {
     int? seasonCount,
     bool clearSeasonCount = false,
     bool? nextSeasonConfirmed,
+    int? progressCurrent,
+    bool clearProgressCurrent = false,
+    int? progressTotal,
+    bool clearProgressTotal = false,
+    int? progressSeason,
+    bool clearProgressSeason = false,
     LibraryPublicationStatus? publicationStatus,
     bool clearPublicationStatus = false,
     String? linkedGoalId,
@@ -165,6 +183,12 @@ class LibraryItem {
       rewatchCount: rewatchCount ?? this.rewatchCount,
       seasonCount: clearSeasonCount ? null : seasonCount ?? this.seasonCount,
       nextSeasonConfirmed: nextSeasonConfirmed ?? this.nextSeasonConfirmed,
+      progressCurrent:
+          clearProgressCurrent ? null : progressCurrent ?? this.progressCurrent,
+      progressTotal:
+          clearProgressTotal ? null : progressTotal ?? this.progressTotal,
+      progressSeason:
+          clearProgressSeason ? null : progressSeason ?? this.progressSeason,
       publicationStatus: clearPublicationStatus
           ? null
           : publicationStatus ?? this.publicationStatus,
@@ -206,6 +230,9 @@ class LibraryItem {
       'rewatchCount': rewatchCount,
       'seasonCount': seasonCount,
       'nextSeasonConfirmed': nextSeasonConfirmed,
+      'progressCurrent': progressCurrent,
+      'progressTotal': progressTotal,
+      'progressSeason': progressSeason,
       'publicationStatus': publicationStatus?.name,
       'linkedGoalId': linkedGoalId,
       'reading': reading?.toJson(),
@@ -260,6 +287,9 @@ class LibraryItem {
       rewatchCount: ((json['rewatchCount'] as num?)?.toInt() ?? 1).clamp(1, 99),
       seasonCount: (json['seasonCount'] as num?)?.toInt(),
       nextSeasonConfirmed: json['nextSeasonConfirmed'] as bool? ?? false,
+      progressCurrent: (json['progressCurrent'] as num?)?.toInt(),
+      progressTotal: (json['progressTotal'] as num?)?.toInt(),
+      progressSeason: (json['progressSeason'] as num?)?.toInt(),
       publicationStatus: json['publicationStatus'] == null
           ? null
           : enumByName(
@@ -307,3 +337,45 @@ String? nombreFichaExterna(LibraryItemType type) => switch (type) {
       LibraryItemType.movieSeries => 'Letterboxd',
       LibraryItemType.game => null,
     };
+
+/// ¿Admite el elemento un progreso manual de episodios o capítulos?
+bool admiteProgresoManual(LibraryItem item) => switch (item.type) {
+      LibraryItemType.movieSeries => item.mediaType == LibraryMediaType.series,
+      LibraryItemType.book => item.creatorOrDirector == 'Manga',
+      LibraryItemType.game => false,
+    };
+
+/// Devuelve el elemento con un episodio o capítulo más, sin pasar del total
+/// si lo hay. Si no admite progreso manual, lo devuelve sin cambios.
+LibraryItem conUnaUnidadMasDeProgreso(LibraryItem item) {
+  if (!admiteProgresoManual(item)) return item;
+  final siguiente = (item.progressCurrent ?? 0) + 1;
+  final total = item.progressTotal;
+  final limitado =
+      total != null && total > 0 && siguiente > total ? total : siguiente;
+  return item.copyWith(progressCurrent: limitado);
+}
+
+/// Texto del progreso manual: «T1 · 3 / 9 episodios» o «24 / 86 capítulos».
+String? textoProgresoManual(LibraryItem item) {
+  if (!admiteProgresoManual(item)) return null;
+  final actual = item.progressCurrent;
+  final total = item.progressTotal;
+  if (actual == null && total == null) return null;
+  final esManga = item.type == LibraryItemType.book;
+  final unidad = esManga ? 'capítulos' : 'episodios';
+  final temporada = !esManga && item.progressSeason != null
+      ? 'T${item.progressSeason} · '
+      : '';
+  final cuenta =
+      total != null && total > 0 ? '${actual ?? 0} / $total' : '${actual ?? 0}';
+  return '$temporada$cuenta $unidad';
+}
+
+/// Fracción de 0 a 1 del progreso manual, o `null` si no se puede calcular.
+double? fraccionProgresoManual(LibraryItem item) {
+  if (!admiteProgresoManual(item)) return null;
+  final total = item.progressTotal;
+  if (total == null || total <= 0) return null;
+  return ((item.progressCurrent ?? 0) / total).clamp(0.0, 1.0);
+}

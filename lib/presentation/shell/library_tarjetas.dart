@@ -1,5 +1,125 @@
 part of 'app_shell.dart';
 
+/// Datos de la franja de progreso que se pinta sobre la portada.
+class _LibraryCardProgress {
+  const _LibraryCardProgress({
+    required this.icon,
+    required this.label,
+    this.fraction,
+    this.tooltip,
+  });
+
+  final IconData icon;
+  final String label;
+  final double? fraction;
+  final String? tooltip;
+
+  int? get percent => fraction == null ? null : (fraction! * 100).round();
+}
+
+/// Progreso a mostrar en la tarjeta: solo para «En curso» y con datos reales.
+/// [achievements] son los logros guardados en local (desbloqueados, total).
+_LibraryCardProgress? _libraryCardProgress(
+  LibraryItem item, {
+  (int, int)? achievements,
+}) {
+  if (item.status != LibraryItemStatus.inProgress) return null;
+  switch (item.type) {
+    case LibraryItemType.game:
+      if (achievements == null || achievements.$2 <= 0) return null;
+      return _LibraryCardProgress(
+        icon: _libraryIcon(item.type),
+        label: '${achievements.$1} / ${achievements.$2} logros',
+        fraction: (achievements.$1 / achievements.$2).clamp(0.0, 1.0),
+      );
+    case LibraryItemType.movieSeries:
+      final label = textoProgresoManual(item);
+      if (label == null) return null;
+      return _LibraryCardProgress(
+        icon: _libraryIcon(item.type),
+        label: label,
+        fraction: fraccionProgresoManual(item),
+      );
+    case LibraryItemType.book:
+      final reading = item.reading;
+      if (reading != null) {
+        final total = bookPageTotal(item.pages, reading);
+        final percent = bookReadingPercent(reading, total);
+        final page = reading.page.trim();
+        return _LibraryCardProgress(
+          icon: _libraryIcon(item.type),
+          label: page.isEmpty
+              ? 'Leyendo'
+              : total != null
+                  ? '$page / $total páginas'
+                  : 'Página $page',
+          fraction: percent / 100,
+          tooltip: [
+            '$percent% leído',
+            if (page.isNotEmpty)
+              'Página $page${total != null ? ' de $total' : ''}',
+            if (reading.chapter.trim().isNotEmpty) reading.chapter,
+          ].join('\n'),
+        );
+      }
+      final label = textoProgresoManual(item);
+      if (label == null) return null;
+      return _LibraryCardProgress(
+        icon: _libraryIcon(item.type),
+        label: label,
+        fraction: fraccionProgresoManual(item),
+      );
+  }
+}
+
+/// Acción de «Marcar episodio visto» o «Marcar capítulo leído»; `null` si el
+/// elemento no admite progreso manual.
+VoidCallback? _libraryMarkProgressAction(
+  BuildContext context,
+  TodoWorkspace controller,
+  LibraryItem item,
+) {
+  if (!admiteProgresoManual(item)) return null;
+  return () {
+    final resultado = controller.marcarUnidadDeProgreso(item.id);
+    if (resultado == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    final nuevo = resultado.nuevo;
+    final texto = textoProgresoManual(nuevo) ?? '';
+    final igual = resultado.anterior.progressCurrent == nuevo.progressCurrent;
+    final total = nuevo.progressTotal;
+    final enTotal =
+        total != null && total > 0 && (nuevo.progressCurrent ?? 0) >= total;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text(
+            igual
+                ? 'Ya estás en el total: $texto'
+                : enTotal
+                    ? 'Marcado: $texto. Has llegado al total; no se completa solo.'
+                    : 'Marcado: $texto',
+          ),
+          action: igual
+              ? null
+              : SnackBarAction(
+                  label: 'Deshacer',
+                  onPressed: () =>
+                      controller.updateLibraryItem(resultado.anterior),
+                ),
+        ),
+      );
+  };
+}
+
+String _libraryMarkProgressLabel(LibraryItem item) =>
+    item.type == LibraryItemType.book
+        ? 'Marcar capítulo leído'
+        : 'Marcar episodio visto';
+
 class _LibraryCoverGridCard extends StatefulWidget {
   const _LibraryCoverGridCard({
     required this.item,
@@ -25,10 +145,51 @@ class _LibraryCoverGridCard extends StatefulWidget {
 
 class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
   bool _hovered = false;
+  (int, int)? _achievements;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadAchievements());
+  }
+
+  @override
+  void didUpdateWidget(covariant _LibraryCoverGridCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.id != widget.item.id ||
+        oldWidget.item.status != widget.item.status) {
+      unawaited(_loadAchievements());
+    }
+  }
+
+  /// Lee los logros ya guardados en disco; nunca consulta la red.
+  Future<void> _loadAchievements() async {
+    final item = widget.item;
+    if (item.type != LibraryItemType.game ||
+        item.status != LibraryItemStatus.inProgress) {
+      if (_achievements != null) setState(() => _achievements = null);
+      return;
+    }
+    final saved = await widget.controller.steam.savedAchievements(item.id);
+    if (!mounted) return;
+    final list = saved?['achievements'];
+    final found = list is List && list.isNotEmpty
+        ? (
+            list
+                .where((entry) => entry is Map && entry['unlocked'] == true)
+                .length,
+            list.length,
+          )
+        : null;
+    if (found != _achievements) setState(() => _achievements = found);
+  }
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final progress = _libraryCardProgress(item, achievements: _achievements);
+    final readingBadge = item.reading != null &&
+        !(progress != null && item.type == LibraryItemType.book);
     final rewatchCount = _libraryRewatchCount(item);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
     return MouseRegion(
@@ -57,6 +218,9 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     widget.controller,
                     item,
                   ),
+          onProgress:
+              _libraryMarkProgressAction(context, widget.controller, item),
+          progressLabel: _libraryMarkProgressLabel(item),
           onEdit: widget.onEdit,
           onDelete: widget.onDelete,
         ),
@@ -131,7 +295,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                 ),
                 if (widget.showTypeBadge ||
                     item.rating != null ||
-                    item.reading != null ||
+                    readingBadge ||
                     rewatchCount > 1)
                   Positioned(
                     top: 8,
@@ -146,7 +310,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                           ),
                         if (widget.showTypeBadge &&
                             (item.rating != null ||
-                                item.reading != null ||
+                                readingBadge ||
                                 rewatchCount > 1))
                           const SizedBox(height: 5),
                         if (item.rating != null)
@@ -154,14 +318,14 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                             icon: Icons.star_rounded,
                             label: _formatRating(item.rating!),
                           ),
-                        if (item.reading != null) ...[
+                        if (readingBadge) ...[
                           if (item.rating != null) const SizedBox(height: 5),
                           BookReadingBadge(
                               reading: item.reading!,
                               totalPages:
                                   bookPageTotal(item.pages, item.reading)),
                         ],
-                        if ((item.rating != null || item.reading != null) &&
+                        if ((item.rating != null || readingBadge) &&
                             rewatchCount > 1)
                           const SizedBox(height: 5),
                         if (rewatchCount > 1)
@@ -174,7 +338,9 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                   curve: Curves.easeOut,
                   left: 12,
                   right: 12,
-                  bottom: _hovered ? 50 : 38,
+                  bottom: progress != null
+                      ? (_hovered ? 78 : 66)
+                      : (_hovered ? 50 : 38),
                   child: IgnorePointer(
                     child: AnimatedOpacity(
                       opacity: _hovered ? 1 : 0,
@@ -216,6 +382,17 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     ),
                   ),
                 ),
+                if (progress != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _LibraryProgressStrip(
+                      key: ValueKey('library-cover-progress-${item.id}'),
+                      progress: progress,
+                    ),
+                  )
+                else
                 Positioned(
                   left: 0,
                   right: 0,
@@ -251,7 +428,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                 if (widget.showStatus)
                   Positioned(
                     left: 8,
-                    bottom: 42,
+                    bottom: progress != null ? 70 : 42,
                     child: _LibraryStatusBadge(status: item.status),
                   ),
                 Positioned(
@@ -277,6 +454,9 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                               widget.controller,
                               item,
                             ),
+                    onProgress: _libraryMarkProgressAction(
+                        context, widget.controller, item),
+                    progressLabel: _libraryMarkProgressLabel(item),
                     onEdit: widget.onEdit,
                     onDelete: widget.onDelete,
                   ),
@@ -287,6 +467,89 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
         ),
       ),
     );
+  }
+}
+
+/// Franja degradada sobre la parte baja de la portada con el progreso.
+class _LibraryProgressStrip extends StatelessWidget {
+  const _LibraryProgressStrip({super.key, required this.progress});
+
+  final _LibraryCardProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = progress.fraction;
+    final percent = progress.percent;
+    final strip = DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x00000000), Color(0xC2000000)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(11, 26, 11, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(progress.icon, size: 14, color: Colors.white),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    progress.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (percent != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '$percent %',
+                    style: const TextStyle(
+                      color: Color(0xFFF3C77A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (fraction != null) ...[
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: SizedBox(
+                  height: 4,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(
+                        color: Colors.white.withValues(alpha: 0.22),
+                      ),
+                      FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: fraction,
+                        child: const ColoredBox(color: Color(0xFFE8A23B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    final tooltip = progress.tooltip;
+    return tooltip == null ? strip : Tooltip(message: tooltip, child: strip);
   }
 }
 
@@ -459,6 +722,8 @@ class _LibraryCoverMenuButton extends StatelessWidget {
     this.onPages,
     this.onComplete,
     this.onRating,
+    this.onProgress,
+    this.progressLabel = 'Marcar episodio visto',
     required this.onEdit,
     required this.onDelete,
   });
@@ -466,6 +731,8 @@ class _LibraryCoverMenuButton extends StatelessWidget {
   final VoidCallback? onPages;
   final VoidCallback? onComplete;
   final VoidCallback? onRating;
+  final VoidCallback? onProgress;
+  final String progressLabel;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -481,6 +748,8 @@ class _LibraryCoverMenuButton extends StatelessWidget {
           onComplete?.call();
         } else if (action == _LibraryContextAction.rating) {
           onRating?.call();
+        } else if (action == _LibraryContextAction.progress) {
+          onProgress?.call();
         } else if (action == _LibraryContextAction.edit) {
           onEdit();
         } else if (action == _LibraryContextAction.delete) {
@@ -513,6 +782,15 @@ class _LibraryCoverMenuButton extends StatelessWidget {
               dense: true,
               leading: Icon(Icons.star_outline_rounded),
               title: Text('Cambiar/añadir valoración'),
+            ),
+          ),
+        if (onProgress != null)
+          PopupMenuItem(
+            value: _LibraryContextAction.progress,
+            child: ListTile(
+              dense: true,
+              leading: const Icon(Icons.add_task_rounded),
+              title: Text(progressLabel),
             ),
           ),
         const PopupMenuItem(
@@ -583,6 +861,8 @@ class _LibraryItemRow extends StatelessWidget {
         onRating: item.status != LibraryItemStatus.completed
             ? null
             : () => _editLibraryRating(context, controller, item),
+        onProgress: _libraryMarkProgressAction(context, controller, item),
+        progressLabel: _libraryMarkProgressLabel(item),
         onEdit: onEdit,
         onDelete: onDelete,
       ),

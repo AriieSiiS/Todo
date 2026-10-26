@@ -48,6 +48,9 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _collectionName = TextEditingController();
   final _collectionNumber = TextEditingController();
   final _seasonCount = TextEditingController();
+  final _progressCurrent = TextEditingController();
+  final _progressTotal = TextEditingController();
+  final _progressSeason = TextEditingController();
   bool _showCollectionNumber = false;
   bool _nextSeasonConfirmed = false;
   LibraryPublicationStatus? _publicationStatus;
@@ -96,6 +99,9 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _collectionName.text = item.collectionName ?? '';
     _collectionNumber.text = item.collectionNumber?.toString() ?? '';
     _seasonCount.text = item.seasonCount?.toString() ?? '';
+    _progressCurrent.text = item.progressCurrent?.toString() ?? '';
+    _progressTotal.text = item.progressTotal?.toString() ?? '';
+    _progressSeason.text = item.progressSeason?.toString() ?? '';
     _showCollectionNumber = item.showCollectionNumber;
     _nextSeasonConfirmed = item.nextSeasonConfirmed;
     _publicationStatus = item.publicationStatus;
@@ -124,6 +130,9 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _collectionName.dispose();
     _collectionNumber.dispose();
     _seasonCount.dispose();
+    _progressCurrent.dispose();
+    _progressTotal.dispose();
+    _progressSeason.dispose();
     super.dispose();
   }
 
@@ -395,6 +404,21 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             if (_creator.text == 'Manga') ...[
               const SizedBox(height: 8),
               _publicationStatusField(),
+              const SizedBox(height: 8),
+              _dialogField(
+                _progressCurrent,
+                'Capítulos leídos',
+                'Ej. 24',
+                fieldKey: const ValueKey('library-progress-current-editor'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              _dialogField(
+                _progressTotal,
+                'Total de capítulos',
+                'Ej. 86',
+                keyboardType: TextInputType.number,
+              ),
             ],
             const SizedBox(height: 8),
             _dialogField(_pages, 'Páginas / Volúmenes',
@@ -427,6 +451,28 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               ),
               const SizedBox(height: 8),
               _nextSeasonConfirmedField(),
+              const SizedBox(height: 8),
+              _dialogField(
+                _progressSeason,
+                'Temporada actual (opcional)',
+                'Ej. 1',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              _dialogField(
+                _progressCurrent,
+                'Episodios vistos',
+                'Ej. 3',
+                fieldKey: const ValueKey('library-progress-current-editor'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              _dialogField(
+                _progressTotal,
+                'Total de episodios',
+                'Ej. 9',
+                keyboardType: TextInputType.number,
+              ),
             ],
             const SizedBox(height: 8),
             _statusField(),
@@ -859,6 +905,15 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
               _mediaType == LibraryMediaType.series &&
               _nextSeasonConfirmed,
+          progressCurrent: _admiteProgreso ? _validProgressCurrent : null,
+          clearProgressCurrent:
+              !_admiteProgreso || _validProgressCurrent == null,
+          progressTotal: _admiteProgreso ? _validProgressTotal : null,
+          clearProgressTotal: !_admiteProgreso || _validProgressTotal == null,
+          progressSeason:
+              _admiteProgresoTemporada ? _validProgressSeason : null,
+          clearProgressSeason:
+              !_admiteProgresoTemporada || _validProgressSeason == null,
           publicationStatus:
               _type == LibraryItemType.book && _creator.text == 'Manga'
                   ? _publicationStatus
@@ -911,6 +966,9 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
           _mediaType == LibraryMediaType.series &&
           _nextSeasonConfirmed,
+      progressCurrent: _admiteProgreso ? _validProgressCurrent : null,
+      progressTotal: _admiteProgreso ? _validProgressTotal : null,
+      progressSeason: _admiteProgresoTemporada ? _validProgressSeason : null,
       publicationStatus:
           _type == LibraryItemType.book && _creator.text == 'Manga'
               ? _publicationStatus
@@ -939,6 +997,30 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
 
   int? get _validCollectionNumber {
     final value = int.tryParse(_collectionNumber.text.trim());
+    return value != null && value > 0 ? value : null;
+  }
+
+  bool get _admiteProgreso =>
+      (_type == LibraryItemType.movieSeries &&
+          _mediaType == LibraryMediaType.series) ||
+      (_type == LibraryItemType.book && _creator.text == 'Manga');
+
+  bool get _admiteProgresoTemporada =>
+      _type == LibraryItemType.movieSeries &&
+      _mediaType == LibraryMediaType.series;
+
+  int? get _validProgressCurrent {
+    final value = int.tryParse(_progressCurrent.text.trim());
+    return value != null && value >= 0 ? value : null;
+  }
+
+  int? get _validProgressTotal {
+    final value = int.tryParse(_progressTotal.text.trim());
+    return value != null && value > 0 ? value : null;
+  }
+
+  int? get _validProgressSeason {
+    final value = int.tryParse(_progressSeason.text.trim());
     return value != null && value > 0 ? value : null;
   }
 
@@ -1608,6 +1690,8 @@ List<(String, String)> _detailFields(LibraryItem item) {
     if (item.collectionNumber != null)
       ('Número de entrega', '#${item.collectionNumber}'),
     if (item.rewatchCount > 1) ('Rewatch', 'x${item.rewatchCount}'),
+    if (textoProgresoManual(item) != null)
+      ('Progreso', textoProgresoManual(item)!),
     if (item.completedDate != null)
       ('Fecha completado', _libraryDate(item.completedDate!)),
     if (item.releaseYear != null) ('Año', item.releaseYear.toString()),

@@ -30,6 +30,22 @@ except ImportError:  # La importación PNG básica sigue disponible sin Pillow.
 import server
 
 
+def _entero_positivo(valor: Any) -> int | None:
+    """Convierte a entero mayor que cero; cualquier otra cosa queda en nulo."""
+    if valor is None:
+        return None
+    numero = int(valor)
+    return numero if numero > 0 else None
+
+
+def _entero_no_negativo(valor: Any) -> int | None:
+    """Convierte a entero igual o mayor que cero; si no, nulo."""
+    if valor is None:
+        return None
+    numero = int(valor)
+    return numero if numero >= 0 else None
+
+
 def ensure_library_goal_lists(state: dict[str, Any]) -> None:
     state.setdefault("libraryItems", [])
     state.setdefault("libraryGoals", [])
@@ -186,6 +202,9 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
             else None
         ),
         "nextSeasonConfirmed": bool(arguments.get("next_season_confirmed", False)),
+        "progressCurrent": _entero_no_negativo(arguments.get("progress_current")),
+        "progressTotal": _entero_positivo(arguments.get("progress_total")),
+        "progressSeason": _entero_positivo(arguments.get("progress_season")),
         "publicationStatus": (arguments.get("publication_status") or "").strip()
         or None,
         "linkedGoalId": arguments.get("linked_goal_id") or None,
@@ -300,6 +319,12 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["seasonCount"] = int(value) if value is not None and int(value) > 0 else None
     if arguments.get("clear_season_count"):
         updated["seasonCount"] = None
+    if "progress_current" in arguments:
+        updated["progressCurrent"] = _entero_no_negativo(arguments.get("progress_current"))
+    if "progress_total" in arguments:
+        updated["progressTotal"] = _entero_positivo(arguments.get("progress_total"))
+    if "progress_season" in arguments:
+        updated["progressSeason"] = _entero_positivo(arguments.get("progress_season"))
     if "next_season_confirmed" in arguments:
         updated["nextSeasonConfirmed"] = bool(arguments["next_season_confirmed"])
     if "publication_status" in arguments:
@@ -834,6 +859,9 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
         "rewatchCount",
         "seasonCount",
         "nextSeasonConfirmed",
+        "progressCurrent",
+        "progressTotal",
+        "progressSeason",
         "publicationStatus",
         "linkedGoalId",
     ):

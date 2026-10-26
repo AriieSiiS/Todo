@@ -67,18 +67,66 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la insignia de lectura se ve en la esquina sin solapar el menú',
+  testWidgets(
+      'un libro en curso muestra la franja de progreso en vez de la insignia',
       (tester) async {
     await openLibrary(tester);
     final card = find.byKey(const ValueKey('library-cover-card-libro-prueba'));
-    final badge =
-        find.descendant(of: card, matching: find.byType(BookReadingBadge));
+    final strip =
+        find.byKey(const ValueKey('library-cover-progress-libro-prueba'));
+    expect(strip, findsOneWidget);
+    expect(find.descendant(of: card, matching: find.byType(BookReadingBadge)),
+        findsNothing);
+    expect(find.descendant(of: strip, matching: find.text('20 / 1088 páginas')),
+        findsOneWidget);
+    expect(
+        find.descendant(of: strip, matching: find.text('2 %')), findsOneWidget);
     final menu = find.descendant(
         of: card, matching: find.byIcon(Icons.more_horiz_rounded));
-    expect(badge, findsOneWidget);
-    final badgeRect = tester.getRect(badge);
-    expect(badgeRect.left, greaterThan(tester.getCenter(card).dx));
-    expect(badgeRect.overlaps(tester.getRect(menu)), false);
+    expect(tester.getRect(strip).overlaps(tester.getRect(menu)), false);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('una serie en curso muestra su franja y se marca desde el menú',
+      (tester) async {
+    final now = DateTime(2026, 10, 24);
+    controller.createLibraryItem(
+      type: LibraryItemType.movieSeries,
+      title: 'Serie de prueba',
+      mediaType: LibraryMediaType.series,
+      status: LibraryItemStatus.inProgress,
+      progressSeason: 1,
+      progressCurrent: 3,
+      progressTotal: 9,
+    );
+    expect(now.year, 2026);
+    await openLibrary(tester);
+    final id = controller.libraryItems
+        .firstWhere((item) => item.title == 'Serie de prueba')
+        .id;
+    final strip = find.byKey(ValueKey('library-cover-progress-$id'));
+    expect(strip, findsOneWidget);
+    expect(
+        find.descendant(of: strip, matching: find.text('T1 · 3 / 9 episodios')),
+        findsOneWidget);
+    await tester.tapAt(
+        tester.getCenter(find.byKey(ValueKey('library-cover-card-$id'))),
+        buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marcar episodio visto'));
+    await tester.pumpAndSettle();
+    expect(
+        controller.libraryItems
+            .firstWhere((item) => item.id == id)
+            .progressCurrent,
+        4);
+    expect(find.text('Marcado: T1 · 4 / 9 episodios'), findsOneWidget);
+    await tester.tap(find.text('Deshacer'));
+    await tester.pumpAndSettle();
+    expect(
+        controller.libraryItems
+            .firstWhere((item) => item.id == id)
+            .progressCurrent,
+        3);
     expect(tester.takeException(), isNull);
   });
   testWidgets('el resumen anual de lectura solo se ofrece en Libros',

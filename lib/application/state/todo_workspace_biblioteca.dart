@@ -28,6 +28,9 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     int rewatchCount = 1,
     int? seasonCount,
     bool nextSeasonConfirmed = false,
+    int? progressCurrent,
+    int? progressTotal,
+    int? progressSeason,
     LibraryPublicationStatus? publicationStatus,
   }) {
     final now = DateTime.now();
@@ -71,6 +74,13 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       rewatchCount: rewatchCount.clamp(1, 99).toInt(),
       seasonCount: seasonCount != null && seasonCount > 0 ? seasonCount : null,
       nextSeasonConfirmed: nextSeasonConfirmed,
+      progressCurrent: progressCurrent != null && progressCurrent >= 0
+          ? progressCurrent
+          : null,
+      progressTotal:
+          progressTotal != null && progressTotal > 0 ? progressTotal : null,
+      progressSeason:
+          progressSeason != null && progressSeason > 0 ? progressSeason : null,
       publicationStatus: publicationStatus,
       createdAt: now,
       updatedAt: now,
@@ -113,6 +123,24 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       (value) => value.id == item.id,
       orElse: () => item,
     );
+  }
+
+  /// Suma un episodio o capítulo al progreso manual y guarda. Devuelve el
+  /// elemento anterior (para deshacer) y el nuevo, o `null` si no aplica.
+  /// Si ya estaba en el total, no cambia nada.
+  ({LibraryItem anterior, LibraryItem nuevo})? marcarUnidadDeProgreso(
+    String itemId,
+  ) {
+    final index = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (index == -1) return null;
+    final anterior = _libraryItems[index];
+    if (!admiteProgresoManual(anterior)) return null;
+    final nuevo = conUnaUnidadMasDeProgreso(anterior);
+    if (nuevo.progressCurrent == anterior.progressCurrent) {
+      return (anterior: anterior, nuevo: anterior);
+    }
+    updateLibraryItem(nuevo);
+    return (anterior: anterior, nuevo: _libraryItems[index]);
   }
 
   void updateLibraryItem(LibraryItem updated, {bool replaceReading = false}) {
@@ -675,6 +703,9 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       seasonCount: primary.seasonCount ?? secondary.seasonCount,
       nextSeasonConfirmed:
           primary.nextSeasonConfirmed || secondary.nextSeasonConfirmed,
+      progressCurrent: primary.progressCurrent ?? secondary.progressCurrent,
+      progressTotal: primary.progressTotal ?? secondary.progressTotal,
+      progressSeason: primary.progressSeason ?? secondary.progressSeason,
       publicationStatus:
           primary.publicationStatus ?? secondary.publicationStatus,
       linkedGoalId: primary.linkedGoalId ?? secondary.linkedGoalId,

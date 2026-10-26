@@ -185,6 +185,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                       onRating: item.status != LibraryItemStatus.completed
                           ? null
                           : () => _editLibraryRating(context, controller, item),
+                      onProgress:
+                          _libraryMarkProgressAction(context, controller, item),
+                      progressLabel: _libraryMarkProgressLabel(item),
                       onEdit: () => _editItem(context, item),
                       onDelete: () => _deleteItem(context, item),
                     ),
@@ -591,6 +594,8 @@ Future<void> _showLibraryContextMenu({
   VoidCallback? onPages,
   VoidCallback? onComplete,
   VoidCallback? onRating,
+  VoidCallback? onProgress,
+  String progressLabel = 'Marcar episodio visto',
   required VoidCallback onEdit,
   required VoidCallback onDelete,
 }) async {
@@ -635,6 +640,15 @@ Future<void> _showLibraryContextMenu({
             title: Text('Cambiar/añadir valoración'),
           ),
         ),
+      if (onProgress != null)
+        PopupMenuItem<Object>(
+          value: _LibraryContextAction.progress,
+          child: ListTile(
+            dense: true,
+            leading: const Icon(Icons.add_task_rounded),
+            title: Text(progressLabel),
+          ),
+        ),
       const PopupMenuItem<Object>(
         value: _LibraryContextAction.edit,
         child: ListTile(
@@ -663,6 +677,8 @@ Future<void> _showLibraryContextMenu({
     onComplete?.call();
   } else if (action == _LibraryContextAction.rating) {
     onRating?.call();
+  } else if (action == _LibraryContextAction.progress) {
+    onProgress?.call();
   } else if (action == _LibraryContextAction.edit) {
     onEdit();
   } else if (action == _LibraryContextAction.delete) {
