@@ -1167,9 +1167,38 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
-  Future<void> _persist() async {
+  /// Guardado en curso, para que el cierre espere a que termine en lugar de
+  /// volver a escribir todo el snapshot.
+  Future<void>? _persistEnCurso;
+
+  Future<void> _persist({bool soloLocal = false}) {
+    final actual = _persistir(soloLocal: soloLocal);
+    _persistEnCurso = actual;
+    return actual.whenComplete(() {
+      if (identical(_persistEnCurso, actual)) _persistEnCurso = null;
+    });
+  }
+
+  /// Termina lo pendiente de forma mínima al cerrar: solo escribe si hay
+  /// cambios sin guardar y nunca espera a la red.
+  Future<void> _guardarParaCerrar() async {
+    if (_saveDebounce?.isActive ?? false) {
+      _saveDebounce!.cancel();
+      _saveDebounce = null;
+      await _persist(soloLocal: true);
+      return;
+    }
+    final enCurso = _persistEnCurso;
+    if (enCurso != null) await enCurso;
+  }
+
+  Future<void> _persistir({bool soloLocal = false}) async {
     final snapshot = _buildSnapshot();
     await _saveSnapshotTracked(snapshot);
+    if (soloLocal) {
+      _lastSavedAt = DateTime.now();
+      return;
+    }
     _syncMetadata = _syncMetadata.copyWith(
       deviceId: _syncMetadata.deviceId.isNotEmpty
           ? _syncMetadata.deviceId

@@ -32,7 +32,7 @@ class WindowsShellService extends ChangeNotifier {
       switch (call.method) {
         case 'requestExit':
           try {
-            await beforeExit?.call();
+            await beforeExit?.call().timeout(const Duration(seconds: 10));
             await _channel.invokeMethod<void>('finishExit');
           } catch (_) {
             await _channel.invokeMethod<void>('exitFailed');

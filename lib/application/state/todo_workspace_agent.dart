@@ -18,7 +18,7 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     _agentClosing = true;
     try {
       await _agentCommandQueue;
-      await flushPendingChanges();
+      await _guardarParaCerrar();
       await _agentBridge?.stop();
     } catch (_) {
       _agentClosing = false;

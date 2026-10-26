@@ -69,7 +69,9 @@ ShellBridge::~ShellBridge() {
 void ShellBridge::RequestExit() {
   if (exit_requested_) return;
   exit_requested_ = true;
+  // Se oculta al instante; el guardado termina sin que se vea la ventana colgada.
   ::EnableWindow(window_, FALSE);
+  ::ShowWindow(window_, SW_HIDE);
   if (dart_ready_) channel_->InvokeMethod("requestExit", nullptr);
 }
 
