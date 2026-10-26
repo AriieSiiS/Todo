@@ -1159,7 +1159,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
             ];
             final anchoFiltros =
                 (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 190 : 0);
-            if (constraints.maxWidth >= 1130 + anchoFiltros) {
+            if (constraints.maxWidth >= 1100 + anchoFiltros) {
               return Row(
                 children: [
                   Expanded(child: widget.typeFilters),
@@ -1171,11 +1171,19 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 ],
               );
             }
-            return Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [widget.typeFilters, ...filtros],
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                widget.typeFilters,
+                const SizedBox(height: 10),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: filtros,
+                ),
+              ],
             );
           },
         ),        const SizedBox(height: 12),
