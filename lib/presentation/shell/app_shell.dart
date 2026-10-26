@@ -4,6 +4,7 @@ import '../shared/book_statistics_panel.dart';
 import 'dart:convert';
 import 'dart:math' show atan2, cos, max, min, pi, sin, sqrt;
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';

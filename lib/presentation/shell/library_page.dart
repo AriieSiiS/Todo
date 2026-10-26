@@ -1014,7 +1014,6 @@ class _LibraryAllCoverGrid extends StatelessWidget {
               item: item,
               controller: controller,
               showStatus: showStatus,
-              showTypeBadge: true,
               onTap: () => _showLibraryItemDetails(
                 context,
                 controller,

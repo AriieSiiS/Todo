@@ -3,13 +3,11 @@ part of 'app_shell.dart';
 /// Datos de la franja de progreso que se pinta sobre la portada.
 class _LibraryCardProgress {
   const _LibraryCardProgress({
-    required this.icon,
     required this.label,
     this.fraction,
     this.tooltip,
   });
 
-  final IconData icon;
   final String label;
   final double? fraction;
   final String? tooltip;
@@ -28,7 +26,6 @@ _LibraryCardProgress? _libraryCardProgress(
     case LibraryItemType.game:
       if (achievements == null || achievements.$2 <= 0) return null;
       return _LibraryCardProgress(
-        icon: _libraryIcon(item.type),
         label: '${achievements.$1} / ${achievements.$2} logros',
         fraction: (achievements.$1 / achievements.$2).clamp(0.0, 1.0),
       );
@@ -36,7 +33,6 @@ _LibraryCardProgress? _libraryCardProgress(
       final label = textoProgresoManual(item);
       if (label == null) return null;
       return _LibraryCardProgress(
-        icon: _libraryIcon(item.type),
         label: label,
         fraction: fraccionProgresoManual(item),
       );
@@ -47,8 +43,7 @@ _LibraryCardProgress? _libraryCardProgress(
         final percent = bookReadingPercent(reading, total);
         final page = reading.page.trim();
         return _LibraryCardProgress(
-          icon: _libraryIcon(item.type),
-          label: page.isEmpty
+            label: page.isEmpty
               ? 'Leyendo'
               : total != null
                   ? '$page / $total páginas'
@@ -65,7 +60,6 @@ _LibraryCardProgress? _libraryCardProgress(
       final label = textoProgresoManual(item);
       if (label == null) return null;
       return _LibraryCardProgress(
-        icon: _libraryIcon(item.type),
         label: label,
         fraction: fraccionProgresoManual(item),
       );
@@ -125,7 +119,6 @@ class _LibraryCoverGridCard extends StatefulWidget {
     required this.item,
     required this.controller,
     required this.showStatus,
-    this.showTypeBadge = false,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -134,7 +127,6 @@ class _LibraryCoverGridCard extends StatefulWidget {
   final LibraryItem item;
   final TodoWorkspace controller;
   final bool showStatus;
-  final bool showTypeBadge;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -293,8 +285,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     ),
                   ),
                 ),
-                if (widget.showTypeBadge ||
-                    item.rating != null ||
+                if (item.rating != null ||
                     readingBadge ||
                     rewatchCount > 1)
                   Positioned(
@@ -303,16 +294,6 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (widget.showTypeBadge)
-                          _LibraryCoverTypeBadge(
-                            key: ValueKey('library-cover-type-${item.id}'),
-                            type: item.type,
-                          ),
-                        if (widget.showTypeBadge &&
-                            (item.rating != null ||
-                                readingBadge ||
-                                rewatchCount > 1))
-                          const SizedBox(height: 5),
                         if (item.rating != null)
                           _LibraryPosterBadge(
                             icon: Icons.star_rounded,
@@ -480,23 +461,46 @@ class _LibraryProgressStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final fraction = progress.fraction;
     final percent = progress.percent;
-    final strip = DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x00000000), Color(0xC2000000)],
+    final strip = Stack(
+      children: [
+        // Difumina ligeramente la portada por detrás y funde el desenfoque
+        // hacia arriba para que no se note un corte.
+        Positioned.fill(
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (bounds) => const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0xFF000000)],
+              stops: [0, 0.55],
+            ).createShader(bounds),
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
         ),
-      ),
-      child: Padding(
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x00000000), Color(0xE0000000)],
+                stops: [0, 0.6],
+              ),
+            ),
+          ),
+        ),
+        Padding(
         padding: const EdgeInsets.fromLTRB(11, 26, 11, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                Icon(progress.icon, size: 14, color: Colors.white),
-                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     progress.label,
@@ -506,6 +510,9 @@ class _LibraryProgressStrip extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
+                      shadows: [
+                        Shadow(color: Color(0xCC000000), blurRadius: 6),
+                      ],
                     ),
                   ),
                 ),
@@ -517,6 +524,9 @@ class _LibraryProgressStrip extends StatelessWidget {
                       color: Color(0xFFF3C77A),
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
+                      shadows: [
+                        Shadow(color: Color(0xCC000000), blurRadius: 6),
+                      ],
                     ),
                   ),
                 ],
@@ -546,7 +556,8 @@ class _LibraryProgressStrip extends StatelessWidget {
             ],
           ],
         ),
-      ),
+        ),
+      ],
     );
     final tooltip = progress.tooltip;
     return tooltip == null ? strip : Tooltip(message: tooltip, child: strip);
@@ -582,30 +593,6 @@ class _LibraryPosterBadge extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LibraryCoverTypeBadge extends StatelessWidget {
-  const _LibraryCoverTypeBadge({super.key, required this.type});
-
-  final LibraryItemType type;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _libraryColor(type);
-    return Tooltip(
-      message: _libraryTypeSingularLabelForType(type),
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: const Color(0xD9202732),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-        ),
-        child: Icon(_libraryIcon(type), size: 15, color: color),
       ),
     );
   }

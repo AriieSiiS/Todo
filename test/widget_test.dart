@@ -687,19 +687,11 @@ void main() {
       find.byKey(const ValueKey('library-cover-card-in-progress-game')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(const ValueKey('library-cover-type-in-progress-game')),
-      findsOneWidget,
-    );
 
     await tester.tap(find.byTooltip('Vista por columnas'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(
       find.byKey(const ValueKey('library-cover-card-in-progress-game')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('library-cover-type-in-progress-game')),
       findsNothing,
     );
 
