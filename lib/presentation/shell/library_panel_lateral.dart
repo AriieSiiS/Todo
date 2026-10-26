@@ -831,13 +831,20 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
     );
   }
 
+  static int _lastTab(LibraryItemType type) => switch (type) {
+        LibraryItemType.book => 2,
+        LibraryItemType.game => 1,
+        _ => 0,
+      };
+
   bool get _hasPrevious => widget.items.isNotEmpty && _index > 0;
   bool get _hasNext =>
       widget.items.isNotEmpty && _index < widget.items.length - 1;
 
   void _moveItem(int delta) => setState(() {
         _index += delta;
-        _tab = 0;
+        // Conserva la pestaña si el nuevo elemento también la tiene.
+        _tab = min(_tab, _lastTab(item.type));
       });
 
   Future<void> _editQuote(LibraryItem item, Map<String, dynamic> quote) async {
@@ -868,6 +875,8 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
     final fields = _detailFields(item);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
     return DefaultTabController(
+        key: ValueKey(item.type),
+        initialIndex: _tab,
         length: item.type == LibraryItemType.book
             ? 3
             : item.type == LibraryItemType.game
