@@ -70,6 +70,19 @@ void main() {
     );
     await tester.pump();
 
+    // Todas las secciones de Ajustes arrancan plegadas.
+    expect(find.text('Enviar prueba'), findsNothing);
+    for (final titulo in [
+      'Regla del día',
+      'Notificaciones',
+      'Ropa',
+      'Copias de seguridad',
+    ]) {
+      await tester.ensureVisible(find.text(titulo));
+      await tester.tap(find.text(titulo));
+      await tester.pump();
+    }
+
     expect(find.text('Regla del día'), findsOneWidget);
     expect(find.text('Notificaciones'), findsOneWidget);
     expect(find.text('Enviar prueba'), findsOneWidget);

@@ -1355,7 +1355,7 @@ String _friendlyBackupError(Object error) {
   return message;
 }
 
-class _SettingsSectionCard extends StatelessWidget {
+class _SettingsSectionCard extends StatefulWidget {
   const _SettingsSectionCard({
     required this.icon,
     required this.title,
@@ -1367,41 +1367,63 @@ class _SettingsSectionCard extends StatelessWidget {
   final Widget child;
 
   @override
+  State<_SettingsSectionCard> createState() => _SettingsSectionCardState();
+}
+
+class _SettingsSectionCardState extends State<_SettingsSectionCard> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return _SettingsPanelCard(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, _expanded ? 20 : 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F0DE),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: const Color(0xFF70835D), size: 20),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F0DE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(widget.icon,
+                        color: const Color(0xFF70835D), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(widget.title,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 160),
+                    child: const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF8D8377)),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(title,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFF8D8377)),
-            ],
+            ),
           ),
-          const SizedBox(height: 18),
-          child,
+          if (_expanded) ...[
+            const SizedBox(height: 18),
+            widget.child,
+          ],
         ],
       ),
     );
   }
 }
 
-class _SettingsAsideCard extends StatelessWidget {
+class _SettingsAsideCard extends StatefulWidget {
   const _SettingsAsideCard({
     required this.title,
     required this.icon,
@@ -1413,34 +1435,58 @@ class _SettingsAsideCard extends StatelessWidget {
   final List<Widget> children;
 
   @override
+  State<_SettingsAsideCard> createState() => _SettingsAsideCardState();
+}
+
+class _SettingsAsideCardState extends State<_SettingsAsideCard> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return _SettingsPanelCard(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, _expanded ? 18 : 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(title,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F0DE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(widget.icon,
+                        color: const Color(0xFF70835D), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(widget.title,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 160),
+                    child: const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF8D8377)),
+                  ),
+                ],
               ),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F0DE),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: const Color(0xFF70835D), size: 18),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFE7D9C8)),
-          const SizedBox(height: 14),
-          ...children,
+          if (_expanded) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFE7D9C8)),
+            const SizedBox(height: 14),
+            ...widget.children,
+          ],
         ],
       ),
     );
