@@ -21,24 +21,28 @@ _LibraryCardProgress? _libraryCardProgress(
   LibraryItem item, {
   (int, int)? achievements,
 }) {
-  if (item.status != LibraryItemStatus.inProgress) return null;
+  if (item.status == LibraryItemStatus.completed) return null;
+  final enCurso = item.status == LibraryItemStatus.inProgress;
+  // El progreso manual se ve en cuanto hay algo visto, aunque esté pendiente.
+  final manual = progresoActualEfectivo(item) >= 1
+      ? textoProgresoManual(item)
+      : null;
   switch (item.type) {
     case LibraryItemType.game:
-      if (achievements == null || achievements.$2 <= 0) return null;
+      if (!enCurso || achievements == null || achievements.$2 <= 0) return null;
       return _LibraryCardProgress(
         label: '${achievements.$1} / ${achievements.$2} logros',
         fraction: (achievements.$1 / achievements.$2).clamp(0.0, 1.0),
       );
     case LibraryItemType.movieSeries:
-      final label = textoProgresoManual(item);
-      if (label == null) return null;
+      if (manual == null) return null;
       return _LibraryCardProgress(
-        label: label,
+        label: manual,
         fraction: fraccionProgresoManual(item),
       );
     case LibraryItemType.book:
       final reading = item.reading;
-      if (reading != null) {
+      if (reading != null && enCurso) {
         final total = bookPageTotal(item.pages, reading);
         final percent = bookReadingPercent(reading, total);
         final page = reading.page.trim();
@@ -57,10 +61,9 @@ _LibraryCardProgress? _libraryCardProgress(
           ].join('\n'),
         );
       }
-      final label = textoProgresoManual(item);
-      if (label == null) return null;
+      if (manual == null) return null;
       return _LibraryCardProgress(
-        label: label,
+        label: manual,
         fraction: fraccionProgresoManual(item),
       );
   }
@@ -84,7 +87,7 @@ VoidCallback? _libraryMarkProgressAction(
     final igual = resultado.anterior.progressCurrent == nuevo.progressCurrent;
     final total = nuevo.progressTotal;
     final enTotal =
-        total != null && total > 0 && (nuevo.progressCurrent ?? 0) >= total;
+        total != null && total > 0 && progresoActualEfectivo(nuevo) >= total;
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(

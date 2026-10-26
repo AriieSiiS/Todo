@@ -45,7 +45,11 @@ void main() {
       'T1 · 3 / 9 episodios',
     );
     expect(textoProgresoManual(_serie(actual: 3)), '3 episodios');
-    expect(textoProgresoManual(_serie()), isNull);
+    // En curso sin dato cuenta como el primero; pendiente sin dato, nada.
+    expect(textoProgresoManual(_serie()), '1 episodio');
+    expect(
+        textoProgresoManual(_serie().copyWith(status: LibraryItemStatus.pending)),
+        isNull);
     final manga = LibraryItem(
       id: 'manga-1',
       type: LibraryItemType.book,
@@ -84,7 +88,10 @@ void main() {
     expect(item.progressCurrent, 9);
     item = conUnaUnidadMasDeProgreso(item);
     expect(item.progressCurrent, 9);
-    expect(conUnaUnidadMasDeProgreso(_serie()).progressCurrent, 1);
+    expect(conUnaUnidadMasDeProgreso(_serie()).progressCurrent, 2);
+    final pendiente = _serie(total: 12).copyWith(status: LibraryItemStatus.pending);
+    expect(conUnaUnidadMasDeProgreso(pendiente).progressCurrent, 1);
+    expect(pendiente.status, LibraryItemStatus.pending);
   });
 
   test('el workspace marca la unidad, no completa y permite deshacer', () {

@@ -469,7 +469,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               const SizedBox(height: 8),
               _dialogField(
                 _progressTotal,
-                'Total de episodios',
+                'Total de episodios de la temporada',
                 'Ej. 9',
                 keyboardType: TextInputType.number,
               ),

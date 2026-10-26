@@ -86,6 +86,33 @@ void main() {
     expect(tester.getRect(strip).overlaps(tester.getRect(menu)), false);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('una serie pendiente muestra la franja al marcar un episodio',
+      (tester) async {
+    final serie = controller.createLibraryItem(
+      type: LibraryItemType.movieSeries,
+      title: 'Serie pendiente',
+      mediaType: LibraryMediaType.series,
+      status: LibraryItemStatus.pending,
+      progressTotal: 12,
+    );
+    await openLibrary(tester);
+    await tester.tap(find.text('Todo'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('library-cover-card-${serie.id}')), findsOneWidget);
+    final franja = find.byKey(ValueKey('library-cover-progress-${serie.id}'));
+    expect(franja, findsNothing);
+    controller.marcarUnidadDeProgreso(serie.id);
+    await tester.pump(const Duration(seconds: 2));
+    // La página de prueba no escucha al controlador: se vuelve a pintar.
+    await openLibrary(tester);
+    expect(franja, findsOneWidget);
+    expect(find.descendant(of: franja, matching: find.text('1 / 12 episodios')),
+        findsOneWidget);
+    expect(
+        controller.libraryItems.firstWhere((i) => i.id == serie.id).status,
+        LibraryItemStatus.pending);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('una serie en curso muestra su franja y se marca desde el menú',
       (tester) async {
     final now = DateTime(2026, 10, 24);

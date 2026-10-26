@@ -345,11 +345,17 @@ bool admiteProgresoManual(LibraryItem item) => switch (item.type) {
       LibraryItemType.game => false,
     };
 
+/// Episodio o capítulo actual. Si está en curso y no se ha anotado nada, se
+/// asume que ya se ha empezado y cuenta como el primero.
+int progresoActualEfectivo(LibraryItem item) =>
+    item.progressCurrent ??
+    (item.status == LibraryItemStatus.inProgress ? 1 : 0);
+
 /// Devuelve el elemento con un episodio o capítulo más, sin pasar del total
 /// si lo hay. Si no admite progreso manual, lo devuelve sin cambios.
 LibraryItem conUnaUnidadMasDeProgreso(LibraryItem item) {
   if (!admiteProgresoManual(item)) return item;
-  final siguiente = (item.progressCurrent ?? 0) + 1;
+  final siguiente = progresoActualEfectivo(item) + 1;
   final total = item.progressTotal;
   final limitado =
       total != null && total > 0 && siguiente > total ? total : siguiente;
@@ -359,16 +365,23 @@ LibraryItem conUnaUnidadMasDeProgreso(LibraryItem item) {
 /// Texto del progreso manual: «T1 · 3 / 9 episodios» o «24 / 86 capítulos».
 String? textoProgresoManual(LibraryItem item) {
   if (!admiteProgresoManual(item)) return null;
-  final actual = item.progressCurrent;
+  final actual = progresoActualEfectivo(item);
   final total = item.progressTotal;
-  if (actual == null && total == null) return null;
+  if (item.progressCurrent == null &&
+      total == null &&
+      item.status != LibraryItemStatus.inProgress) {
+    return null;
+  }
   final esManga = item.type == LibraryItemType.book;
-  final unidad = esManga ? 'capítulos' : 'episodios';
+  final sinTotal = total == null || total <= 0;
+  final unidad = esManga
+      ? (sinTotal && actual == 1 ? 'capítulo' : 'capítulos')
+      : (sinTotal && actual == 1 ? 'episodio' : 'episodios');
   final temporada = !esManga && item.progressSeason != null
       ? 'T${item.progressSeason} · '
       : '';
   final cuenta =
-      total != null && total > 0 ? '${actual ?? 0} / $total' : '${actual ?? 0}';
+      total != null && total > 0 ? '$actual / $total' : '$actual';
   return '$temporada$cuenta $unidad';
 }
 
@@ -377,5 +390,5 @@ double? fraccionProgresoManual(LibraryItem item) {
   if (!admiteProgresoManual(item)) return null;
   final total = item.progressTotal;
   if (total == null || total <= 0) return null;
-  return ((item.progressCurrent ?? 0) / total).clamp(0.0, 1.0);
+  return (progresoActualEfectivo(item) / total).clamp(0.0, 1.0);
 }
