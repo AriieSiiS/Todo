@@ -18,9 +18,6 @@ class _FallibleRepository implements TodoStateRepository {
   Future<AppStateSnapshot?> load() async => null;
 
   @override
-  Future<AppStateSnapshot?> loadIfChanged() async => null;
-
-  @override
   Future<String?> loadCalendarSession() async => null;
 
   @override

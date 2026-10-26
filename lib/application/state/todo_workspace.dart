@@ -101,19 +101,15 @@ class TodoWorkspace extends ChangeNotifier {
     if (!controller._isFlutterTest) {
       controller._agentBridge =
           AgentBridgeService(controller.executeAgentCommand);
+      // El puente arranca con la ventana ya abierta: comprobar si queda una
+      // sesión anterior puede tardar un segundo y no debe retrasar la app.
       // Una conexión de agente fallida no impide utilizar Todo.
-      try {
-        await controller._agentBridge!.start();
-      } catch (error) {
+      unawaited(controller._agentBridge!.start().catchError((Object error) {
         debugPrint(
             'No se pudo iniciar el puente local de Todo: ${error.runtimeType}');
-      }
+      }));
       unawaited(controller._initializeStartupIntegrations());
       unawaited(controller.priceTracking.start());
-      controller._externalWardrobePoll = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) => unawaited(controller._mergeExternalWardrobeItems()),
-      );
     }
     return controller;
   }
@@ -262,9 +258,7 @@ class TodoWorkspace extends ChangeNotifier {
   SyncConflict? _syncConflict;
   Timer? _saveDebounce;
   RuntimeWriterLock? _writerLock;
-  Timer? _externalWardrobePoll;
   Timer? _focusTimer;
-  bool _checkingExternalWardrobe = false;
   AgentBridgeService? _agentBridge;
   Future<void> _agentCommandQueue = Future<void>.value();
   bool _agentClosing = false;
@@ -681,13 +675,6 @@ class TodoWorkspace extends ChangeNotifier {
     }
   }
 
-  @visibleForTesting
-  bool mergeExternalWardrobeItemsForTest(List<WardrobeItem> externalItems) {
-    final changed = _mergeExternalWardrobeSnapshot(externalItems);
-    if (changed) notifyListeners();
-    return changed;
-  }
-
   Future<void> _initializeStartupIntegrations() async {
     if (_calendarAccount != null) {
       unawaited(refreshCalendarEvents());
@@ -1093,6 +1080,12 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   String _cleanSpanishText(String value) {
+    // Todo texto estropeado contiene algún carácter entre U+0080 y U+00BF
+    // (los bytes de continuación de UTF-8 leídos como Latin-1). Sin ellos no
+    // hay nada que corregir, y así el arranque no reprocesa cada texto.
+    if (!value.codeUnits.any((unit) => unit >= 0x80 && unit <= 0xBF)) {
+      return value;
+    }
     var result = value
         .replaceAll('ÃƒÆ’Ã‚Â¡', 'á')
         .replaceAll('ÃƒÆ’Ã‚Â©', 'é')
@@ -1670,7 +1663,6 @@ class TodoWorkspace extends ChangeNotifier {
     unawaited(_agentBridge?.stop());
     unawaited(_writerLock?.release());
     _saveDebounce?.cancel();
-    _externalWardrobePoll?.cancel();
     _focusTimer?.cancel();
     unawaited(_notificationActionSubscription.cancel());
     _importantAlarmService.removeListener(_handleImportantAlarmChange);
@@ -1691,9 +1683,6 @@ class _InMemoryTodoStateRepository implements TodoStateRepository {
 
   @override
   Future<AppStateSnapshot?> load() async => _snapshot;
-
-  @override
-  Future<AppStateSnapshot?> loadIfChanged() => load();
 
   @override
   Future<void> save(AppStateSnapshot snapshot) async {

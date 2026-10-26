@@ -49,23 +49,6 @@ void main() {
     expect((await store.load())!.tasks.single.title, 'Después del fallo');
   });
 
-  test(
-      'la consulta periódica detecta cambios externos sin reutilizar listas mutables',
-      () async {
-    await store.save(snapshot('Propia'));
-    // Lo que guarda la propia app no cuenta como cambio externo.
-    expect(await store.loadIfChanged(), isNull);
-    await state.writeAsString(snapshot('Primera').toEncodedJson());
-    final first = await store.loadIfChanged();
-    expect(first!.tasks.single.title, 'Primera');
-    first.tasks.clear();
-    expect(await store.loadIfChanged(), isNull);
-    expect((await store.load())!.tasks.single.title, 'Primera');
-    await state.writeAsString(snapshot('Segunda').toEncodedJson());
-    expect((await store.loadIfChanged())!.tasks.single.title, 'Segunda');
-    expect(await store.loadIfChanged(), isNull);
-  });
-
   test('recupera la copia anterior si el temporal está incompleto', () async {
     await state.parent.create(recursive: true);
     await File('${state.path}.tmp').writeAsString('{');
