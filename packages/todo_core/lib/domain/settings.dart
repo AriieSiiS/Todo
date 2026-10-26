@@ -4,10 +4,12 @@ class AppVisibilitySettings {
   const AppVisibilitySettings({
     this.hiddenSections = const [],
     this.hiddenTabs = const {},
+    this.hiddenLibraryTypes = const [],
   });
 
   final List<String> hiddenSections;
   final Map<String, List<String>> hiddenTabs;
+  final List<String> hiddenLibraryTypes;
 
   static const tabs = <AppSection, Map<String, String>>{
     AppSection.wardrobe: {
@@ -49,9 +51,18 @@ class AppVisibilitySettings {
         : visible;
   }
 
+  /// Categorías de Biblioteca visibles; siempre queda al menos una.
+  List<LibraryItemType> get visibleLibraryTypes {
+    final visible = LibraryItemType.values
+        .where((type) => !hiddenLibraryTypes.contains(type.name))
+        .toList();
+    return visible.isEmpty ? [LibraryItemType.values.first] : visible;
+  }
+
   Map<String, dynamic> toJson() => {
         'hiddenSections': hiddenSections,
         'hiddenTabs': hiddenTabs,
+        'hiddenLibraryTypes': hiddenLibraryTypes,
       };
 
   factory AppVisibilitySettings.fromJson(Map<String, dynamic> json) =>
@@ -62,6 +73,10 @@ class AppVisibilitySettings {
         hiddenTabs: (json['hiddenTabs'] as Map<String, dynamic>? ?? const {})
             .map((section, value) => MapEntry(section,
                 (value as List<dynamic>).whereType<String>().toList())),
+        hiddenLibraryTypes:
+            (json['hiddenLibraryTypes'] as List<dynamic>? ?? const [])
+                .whereType<String>()
+                .toList(),
       );
 }
 

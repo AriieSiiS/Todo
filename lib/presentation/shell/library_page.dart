@@ -32,6 +32,11 @@ class _LibraryPageState extends State<LibraryPage> {
     super.initState();
     _allSearchController = TextEditingController();
     _typeFilter = controller.libraryTypeView;
+    if (_typeFilter != null &&
+        !controller.visibilitySettings.visibleLibraryTypes
+            .contains(_typeFilter)) {
+      _typeFilter = null;
+    }
     // Completados era el valor histórico inicial, así que Todo es la nueva
     // vista inicial. Los filtros Pendiente y En curso sí representan una
     // elección anterior persistida y se mantienen al volver a abrir.
@@ -55,13 +60,20 @@ class _LibraryPageState extends State<LibraryPage> {
         ? controller.libraryAreaView
         : areas.first;
     final status = _showAllStatuses ? null : controller.libraryStatusView;
-    final statusFilteredItems = _filteredItems(controller.libraryItems, status);
+    final visibleTypes = controller.visibilitySettings.visibleLibraryTypes;
+    if (_typeFilter != null && !visibleTypes.contains(_typeFilter)) {
+      _typeFilter = null;
+    }
+    final libraryItems = controller.libraryItems
+        .where((item) => visibleTypes.contains(item.type))
+        .toList();
+    final statusFilteredItems = _filteredItems(libraryItems, status);
     final items = _typeFilter == null
         ? _filterAndSortAllItems(statusFilteredItems)
         : _sortedItems(statusFilteredItems);
     final statusItems = status == null
-        ? controller.libraryItems
-        : controller.libraryItems
+        ? libraryItems
+        : libraryItems
             .where((item) => item.status == status)
             .toList();
     final yearItems = status == LibraryItemStatus.completed
@@ -498,9 +510,14 @@ class _LibraryStatusTabs extends StatelessWidget {
 }
 
 class _LibraryTypeFilters extends StatelessWidget {
-  const _LibraryTypeFilters({required this.selected, required this.onChanged});
+  const _LibraryTypeFilters({
+    required this.selected,
+    required this.onChanged,
+    this.types = LibraryItemType.values,
+  });
 
   final LibraryItemType? selected;
+  final List<LibraryItemType> types;
   final ValueChanged<LibraryItemType?> onChanged;
 
   @override
@@ -514,7 +531,7 @@ class _LibraryTypeFilters extends StatelessWidget {
           selected: selected == null,
           onTap: () => onChanged(null),
         ),
-        for (final type in LibraryItemType.values) ...[
+        for (final type in types) ...[
           const SizedBox(width: 10),
           _FilterPill(
             label: _libraryTypePluralLabel(type),
@@ -575,9 +592,11 @@ class _LibraryMainContent extends StatelessWidget {
       selectedType: selectedType,
       status: status,
     );
+    final visibleTypes = controller.visibilitySettings.visibleLibraryTypes;
     final typeFilters = _LibraryTypeFilters(
       selected: selectedType,
       onChanged: onSelectedTypeChanged,
+      types: visibleTypes,
     );
     if (selectedType != null) {
       final selectedItems =
@@ -636,7 +655,7 @@ class _LibraryMainContent extends StatelessWidget {
     final cards = Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final type in LibraryItemType.values) ...[
+        for (final type in visibleTypes) ...[
           Expanded(
             child: _LibraryTypeCard(
               controller: controller,
@@ -648,7 +667,7 @@ class _LibraryMainContent extends StatelessWidget {
               showStatus: showStatus,
             ),
           ),
-          if (type != LibraryItemType.values.last) const SizedBox(width: 14),
+          if (type != visibleTypes.last) const SizedBox(width: 14),
         ],
       ],
     );

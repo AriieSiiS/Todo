@@ -358,6 +358,7 @@ class TodoWorkspace extends ChangeNotifier {
     _visibilitySettings = AppVisibilitySettings(
       hiddenSections: hidden.toList(),
       hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenLibraryTypes: _visibilitySettings.hiddenLibraryTypes,
     );
     if (!_visibilitySettings.sectionVisible(_section)) {
       _section = visibleNavOrder.first;
@@ -384,7 +385,29 @@ class TodoWorkspace extends ChangeNotifier {
         ..._visibilitySettings.hiddenTabs,
         section.name: hidden.toList()
       },
+      hiddenLibraryTypes: _visibilitySettings.hiddenLibraryTypes,
     );
+    _commit();
+  }
+
+  void setLibraryTypeVisible(LibraryItemType type, bool visible) {
+    final current = _visibilitySettings.visibleLibraryTypes;
+    if (!visible && current.length == 1 && current.contains(type)) return;
+    final hidden = _visibilitySettings.hiddenLibraryTypes.toSet();
+    if (visible) {
+      hidden.remove(type.name);
+    } else {
+      hidden.add(type.name);
+    }
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: _visibilitySettings.hiddenSections,
+      hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenLibraryTypes: hidden.toList(),
+    );
+    if (_libraryTypeView != null &&
+        !_visibilitySettings.visibleLibraryTypes.contains(_libraryTypeView)) {
+      _libraryTypeView = null;
+    }
     _commit();
   }
 

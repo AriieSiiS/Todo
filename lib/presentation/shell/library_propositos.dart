@@ -263,6 +263,7 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
         _LibraryTypeFilters(
           selected: widget.selectedType,
           onChanged: widget.onSelectedTypeChanged,
+          types: widget.controller.visibilitySettings.visibleLibraryTypes,
         ),
         const SizedBox(height: 14),
         if (widget.selectedType != null)

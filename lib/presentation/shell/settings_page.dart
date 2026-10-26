@@ -241,6 +241,34 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
+    final libraryCategories = _SettingsSectionCard(
+      icon: Icons.category_outlined,
+      title: 'Categorías',
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final visible = controller.visibilitySettings.visibleLibraryTypes;
+          return Column(
+            children: [
+              for (final type in LibraryItemType.values)
+                SwitchListTile(
+                  key: ValueKey('library-type-${type.name}'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  secondary: Icon(_libraryIcon(type)),
+                  title: Text(_libraryTypePluralLabel(type)),
+                  value: visible.contains(type),
+                  onChanged: visible.length == 1 && visible.contains(type)
+                      ? null
+                      : (value) =>
+                          controller.setLibraryTypeVisible(type, value),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+
     final steam = _SettingsSectionCard(
       icon: Icons.sports_esports_outlined,
       title: 'Steam',
@@ -692,6 +720,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       visibility,
                       const SizedBox(height: 16),
+                      libraryCategories,
+                      const SizedBox(height: 16),
                       backup,
                       const SizedBox(height: 16),
                       status,
@@ -728,6 +758,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           wardrobe,
                           const SizedBox(height: 16),
                           visibility,
+                          const SizedBox(height: 16),
+                          libraryCategories,
                           const SizedBox(height: 16),
                           status,
                           const SizedBox(height: 16),
