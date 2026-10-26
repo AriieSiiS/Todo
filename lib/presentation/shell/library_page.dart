@@ -121,6 +121,8 @@ class _LibraryPageState extends State<LibraryPage> {
                 currentYear: currentYear,
                 availableYears: availableYears,
                 isGoals: area == LibraryAreaView.goals,
+                showStatistics: area == LibraryAreaView.library &&
+                    _typeFilter == LibraryItemType.book,
                 libraryStatus: status,
                 onYearChanged: (year) => setState(() => _year = year),
                 onStatistics: () => showDialog<void>(
@@ -332,6 +334,7 @@ class _LibraryHeader extends StatelessWidget {
     required this.currentYear,
     required this.availableYears,
     required this.isGoals,
+    required this.showStatistics,
     required this.libraryStatus,
     required this.onYearChanged,
     required this.onAdd,
@@ -342,6 +345,7 @@ class _LibraryHeader extends StatelessWidget {
   final int currentYear;
   final List<int> availableYears;
   final bool isGoals;
+  final bool showStatistics;
   final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
@@ -359,7 +363,7 @@ class _LibraryHeader extends StatelessWidget {
         runSpacing: 10,
         alignment: WrapAlignment.end,
         children: [
-          if (!isGoals)
+          if (showStatistics)
             IconButton(
                 tooltip: 'Estadísticas de lectura',
                 onPressed: onStatistics,
@@ -806,7 +810,7 @@ class _LibraryToolbarRow extends StatelessWidget {
   });
 
   final Widget chips;
-  final List<_LibraryToolbarControl> controls;
+  final List<_LibraryToolbarControl> controls;
   final Widget? trailing;
 
   @override

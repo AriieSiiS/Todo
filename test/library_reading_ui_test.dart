@@ -81,9 +81,17 @@ void main() {
     expect(badgeRect.overlaps(tester.getRect(menu)), false);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('el resumen anual de lectura solo se ofrece en Libros',
+      (tester) async {
+    controller.setLibraryTypeView(LibraryItemType.game);
+    await openLibrary(tester);
+    expect(find.byTooltip('Estadísticas de lectura'), findsNothing);
+    await tester.pump(const Duration(seconds: 1));
+  });
   testWidgets(
       'la tercera pestaña respeta la cabecera y el resumen anual es accesible',
       (tester) async {
+    controller.setLibraryTypeView(LibraryItemType.book);
     await openLibrary(tester);
     expect(find.byTooltip('Estadísticas de lectura'), findsOneWidget);
     await tester.tap(find.byTooltip('Estadísticas de lectura'));
