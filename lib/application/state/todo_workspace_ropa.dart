@@ -736,47 +736,4 @@ extension TodoWorkspaceRopa on TodoWorkspace {
     _wardrobeDisplaySettings = value;
     _commit();
   }
-
-  Future<void> _mergeExternalWardrobeItems() async {
-    if (_checkingExternalWardrobe) return;
-    _checkingExternalWardrobe = true;
-    try {
-      final snapshot = await _store.loadIfChanged();
-      if (snapshot == null) return;
-      if (!_mergeExternalWardrobeSnapshot(snapshot.wardrobeItems)) return;
-      _syncMetadata = _syncMetadata.copyWith(pendingLocalChanges: true);
-      await _store.saveSyncMetadata(_syncMetadata);
-      _notifyChanged();
-      if (_cloudService.isAuthenticated && _syncConflict == null) {
-        unawaited(syncWithCloud());
-      }
-    } catch (_) {
-      // Una lectura externa incompleta se reintentará en el siguiente ciclo.
-    } finally {
-      _checkingExternalWardrobe = false;
-    }
-  }
-
-  bool _mergeExternalWardrobeSnapshot(List<WardrobeItem> externalItems) {
-    var changed = false;
-    final indexesById = <String, int>{
-      for (var index = 0; index < _wardrobeItems.length; index++)
-        _wardrobeItems[index].id: index,
-    };
-    for (final external in externalItems) {
-      final index = indexesById[external.id];
-      if (index == null) {
-        indexesById[external.id] = _wardrobeItems.length;
-        _wardrobeItems.add(external);
-        changed = true;
-        continue;
-      }
-      if (!external.updatedAt.isAfter(_wardrobeItems[index].updatedAt)) {
-        continue;
-      }
-      _wardrobeItems[index] = external;
-      changed = true;
-    }
-    return changed;
-  }
 }

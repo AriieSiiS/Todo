@@ -110,10 +110,6 @@ class TodoWorkspace extends ChangeNotifier {
       }));
       unawaited(controller._initializeStartupIntegrations());
       unawaited(controller.priceTracking.start());
-      controller._externalWardrobePoll = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) => unawaited(controller._mergeExternalWardrobeItems()),
-      );
     }
     return controller;
   }
@@ -262,9 +258,7 @@ class TodoWorkspace extends ChangeNotifier {
   SyncConflict? _syncConflict;
   Timer? _saveDebounce;
   RuntimeWriterLock? _writerLock;
-  Timer? _externalWardrobePoll;
   Timer? _focusTimer;
-  bool _checkingExternalWardrobe = false;
   AgentBridgeService? _agentBridge;
   Future<void> _agentCommandQueue = Future<void>.value();
   bool _agentClosing = false;
@@ -679,13 +673,6 @@ class TodoWorkspace extends ChangeNotifier {
         connectedEmail: _calendarAccount!.email,
       );
     }
-  }
-
-  @visibleForTesting
-  bool mergeExternalWardrobeItemsForTest(List<WardrobeItem> externalItems) {
-    final changed = _mergeExternalWardrobeSnapshot(externalItems);
-    if (changed) notifyListeners();
-    return changed;
   }
 
   Future<void> _initializeStartupIntegrations() async {
@@ -1676,7 +1663,6 @@ class TodoWorkspace extends ChangeNotifier {
     unawaited(_agentBridge?.stop());
     unawaited(_writerLock?.release());
     _saveDebounce?.cancel();
-    _externalWardrobePoll?.cancel();
     _focusTimer?.cancel();
     unawaited(_notificationActionSubscription.cancel());
     _importantAlarmService.removeListener(_handleImportantAlarmChange);
@@ -1697,9 +1683,6 @@ class _InMemoryTodoStateRepository implements TodoStateRepository {
 
   @override
   Future<AppStateSnapshot?> load() async => _snapshot;
-
-  @override
-  Future<AppStateSnapshot?> loadIfChanged() => load();
 
   @override
   Future<void> save(AppStateSnapshot snapshot) async {

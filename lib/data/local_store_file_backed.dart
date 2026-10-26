@@ -14,10 +14,6 @@ class FileBackedLocalStore implements LocalStore {
 
   final Directory? _baseDirectoryOverride;
   Future<void> _pendingOperation = Future<void>.value();
-  String? _lastPolledSnapshot;
-  // Fecha y tamaño del archivo de estado la última vez que se leyó o escribió
-  // aquí. La consulta periódica solo lo vuelve a leer si alguno cambia.
-  (DateTime, int)? _lastPolledStat;
 
   // Lecturas, recuperación y escrituras comparten los archivos temporales.
   // Un fallo se propaga al solicitante sin bloquear la siguiente operación.
@@ -33,30 +29,15 @@ class FileBackedLocalStore implements LocalStore {
   static const String _syncMetadataKey = 'todo.sync.metadata.v1';
 
   @override
-  Future<AppStateSnapshot?> load() => _enqueue(() => _load());
+  Future<AppStateSnapshot?> load() => _enqueue(_load);
 
-  @override
-  Future<AppStateSnapshot?> loadIfChanged() =>
-      _enqueue(() => _load(onlyIfChanged: true));
-
-  Future<AppStateSnapshot?> _load({bool onlyIfChanged = false}) async {
+  Future<AppStateSnapshot?> _load() async {
     final file = await _stateFile();
     await _recoverInterruptedWrite(file);
     if (await file.exists()) {
-      if (onlyIfChanged) {
-        final stat = await file.stat();
-        final current = (stat.modified, stat.size);
-        // La fecha puede tener precisión de segundos: si el archivo cambió
-        // hace muy poco, se relee igualmente para no perder una escritura
-        // del mismo tamaño dentro del mismo segundo.
-        final reciente =
-            DateTime.now().difference(stat.modified).inSeconds < 2;
-        if (current == _lastPolledStat && !reciente) return null;
-        _lastPolledStat = current;
-      }
       final raw = await file.readAsString();
       if (raw.trim().isNotEmpty) {
-        return _decodeSnapshot(raw, onlyIfChanged: onlyIfChanged);
+        return AppStateSnapshot.fromEncodedJson(raw);
       }
     }
 
@@ -66,14 +47,7 @@ class FileBackedLocalStore implements LocalStore {
       return null;
     }
     await _writeAtomically(file, raw);
-    return _decodeSnapshot(raw, onlyIfChanged: onlyIfChanged);
-  }
-
-  AppStateSnapshot? _decodeSnapshot(String raw, {required bool onlyIfChanged}) {
-    if (onlyIfChanged && raw == _lastPolledSnapshot) return null;
-    final snapshot = AppStateSnapshot.fromEncodedJson(raw);
-    if (onlyIfChanged) _lastPolledSnapshot = raw;
-    return snapshot;
+    return AppStateSnapshot.fromEncodedJson(raw);
   }
 
   @override
@@ -82,14 +56,7 @@ class FileBackedLocalStore implements LocalStore {
 
   Future<void> _save(AppStateSnapshot snapshot) async {
     // Se serializa una sola vez y se escribe solo en el archivo de estado.
-    // Lo escrito aquí ya está en memoria: la consulta periódica no debe
-    // volver a leerlo como si fuera un cambio externo.
-    final encoded = snapshot.toEncodedJson();
-    final file = await _stateFile();
-    await _writeAtomically(file, encoded);
-    final stat = await file.stat();
-    _lastPolledStat = (stat.modified, stat.size);
-    _lastPolledSnapshot = encoded;
+    await _writeAtomically(await _stateFile(), snapshot.toEncodedJson());
   }
 
   @override
