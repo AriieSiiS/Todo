@@ -283,20 +283,30 @@ class SteamService {
           [])
         item['name'] as String: item['percent'],
     };
+    // La API oculta la descripción de los logros secretos; la página pública
+    // de logros del juego sí la muestra, así que se usa como complemento.
+    final needsPublic = definitions.any((item) =>
+        item['hidden'] == 1 && '${item['description'] ?? ''}'.trim().isEmpty);
+    final publicPage =
+        needsPublic ? await _publicAchievements(appId) : const {};
     final achievements = <Map<String, dynamic>>[
       for (final item in definitions)
         {
           'id': item['name'],
           'name': item['displayName'] ?? item['name'],
-          'description': item['description'] ?? '',
+          'description': '${item['description'] ?? ''}'.trim().isNotEmpty
+              ? item['description']
+              : publicPage[item['name']]?['description'] ?? '',
           'hidden': item['hidden'] == 1,
           'unlocked': states[item['name']]?['achieved'] is num
               ? states[item['name']]!['achieved'] == 1
               : null,
           'unlock_time': states[item['name']]?['unlocktime'],
           'global_percent': _percentage(percentages[item['name']]),
-          'icon_url': item['icon'],
-          'icon_gray_url': item['icongray'],
+          'icon_url': _iconUrl(appId, item['icon']) ??
+              publicPage[item['name']]?['icon_achieved'],
+          'icon_gray_url': _iconUrl(appId, item['icongray']) ??
+              publicPage[item['name']]?['icon_unachieved'],
         },
     ];
     await _saveIcons(appId, achievements);
@@ -318,6 +328,57 @@ class SteamService {
     _cache['app:$appId'] = (DateTime.now(), result);
     await _saveResult(appId, result);
     return result;
+  }
+
+  /// Algunos juegos devuelven solo el nombre del archivo del icono en lugar de
+  /// la dirección completa.
+  static String? _iconUrl(int appId, Object? raw) {
+    final value = raw is String ? raw.trim() : '';
+    if (value.isEmpty) return null;
+    if (value.contains('://')) return value;
+    if (!RegExp(r'^[\w.\-]+$').hasMatch(value)) return null;
+    return 'https://shared.fastly.steamstatic.com/community_assets/images/apps/'
+        '$appId/${value.contains('.') ? value : '$value.jpg'}';
+  }
+
+  /// Lee la página pública de logros del juego (descripciones de los logros
+  /// ocultos e iconos). Un fallo devuelve un mapa vacío.
+  Future<Map<String, Map<String, String>>> _publicAchievements(
+      int appId) async {
+    try {
+      final response = await _client.get(
+        Uri.https('steamcommunity.com', '/stats/$appId/achievements'),
+        headers: {
+          'Accept-Language': 'es-ES,es;q=0.9',
+          'Cookie': 'Steam_Language=spanish',
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return const {};
+      final page = utf8.decode(response.bodyBytes, allowMalformed: true);
+      final text = page.replaceAll(r'\"', '"');
+      final entry = RegExp(r'"api_name":"((?:[^"\\]|\\.)*)","name":"'
+          r'((?:[^"\\]|\\.)*)","description":"((?:[^"\\]|\\.)*)"'
+          r'(?:(?!"api_name").)*?"icon_achieved":"([^"]*)","icon_unachieved":'
+          r'"([^"]*)"', dotAll: true);
+      String decode(String value) {
+        try {
+          return jsonDecode('"$value"') as String;
+        } catch (_) {
+          return value;
+        }
+      }
+
+      return {
+        for (final match in entry.allMatches(text))
+          decode(match.group(1)!): {
+            'description': decode(match.group(3)!).trim(),
+            'icon_achieved': match.group(4)!,
+            'icon_unachieved': match.group(5)!,
+          },
+      };
+    } catch (_) {
+      return const {};
+    }
   }
 
   static File _resultFile(int appId) => File(
@@ -348,8 +409,8 @@ class SteamService {
     }
   }
 
-  static final _iconHosts =
-      RegExp(r'(^|\.)(steamstatic\.com|akamaihd\.net|steamcommunity\.com)$');
+  static final _iconHosts = RegExp(
+      r'(^|\.)(steamstatic\.com|akamaihd\.net|steamcommunity\.com|steampowered\.com)$');
 
   /// Carpeta local donde se conservan los iconos de los logros de cada juego.
   static Directory _iconsDirectory(int appId) {
@@ -377,12 +438,22 @@ class SteamService {
           ('icon_gray_url', 'icon_gray_path'),
         ]) {
           final raw = item.remove(urlKey);
-          final uri = raw is String ? Uri.tryParse(raw) : null;
+          var uri = raw is String ? Uri.tryParse(raw) : null;
+          // Algunos juegos devuelven solo el nombre del archivo, y otros aún
+          // usan http: se completa la dirección y se fuerza https.
+          if (raw is String &&
+              RegExp(r'^[0-9a-f]{20,}(\.\w+)?$').hasMatch(raw)) {
+            uri = Uri.https('cdn.fastly.steamstatic.com',
+                '/steamcommunity/public/images/apps/$appId/${raw.contains('.') ? raw : '$raw.jpg'}');
+          } else if (uri != null && uri.scheme == 'http') {
+            uri = uri.replace(scheme: 'https');
+          }
           if (uri == null ||
               uri.scheme != 'https' ||
               !_iconHosts.hasMatch(uri.host)) {
             continue;
           }
+          final address = uri;
           final name =
               uri.pathSegments.last.replaceAll(RegExp(r'[^\w.\-]'), '');
           if (name.isEmpty) continue;
@@ -393,8 +464,9 @@ class SteamService {
           }
           tasks.add(() async {
             try {
-              final response =
-                  await _client.get(uri).timeout(const Duration(seconds: 6));
+              final response = await _client
+                  .get(address)
+                  .timeout(const Duration(seconds: 6));
               if (response.statusCode != 200 ||
                   response.bodyBytes.isEmpty ||
                   response.bodyBytes.length > 1024 * 1024) {

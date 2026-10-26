@@ -202,4 +202,58 @@ void main() {
     expect(result['total'], 0);
     expect(result['completion_percent'], isNull);
   });
+
+  test('completa la descripción de los logros ocultos desde la página pública',
+      () async {
+    final service = SteamService(
+        store: MemorySecrets(),
+        client: MockClient((r) async {
+          if (r.url.host == 'steamcommunity.com') {
+            return http.Response.bytes(
+                utf8.encode(
+                r'{\"achievements\":[{\"api_name\":\"Oculto\",\"name\":\"Secreto\",'
+                r'\"description\":\"Entra en el décimo mundo.\",\"hidden\":true,'
+                r'\"icon_achieved\":\"https://shared.fastly.steamstatic.com/a.jpg\",'
+                r'\"icon_unachieved\":\"https://shared.fastly.steamstatic.com/b.jpg\"}]}'),
+                200);
+          }
+          if (r.url.host != 'api.steampowered.com') {
+            return http.Response('', 404);
+          }
+          if (r.url.path.contains('GetOwnedGames')) return response(library);
+          if (r.url.path.contains('GetSchemaForGame')) {
+            return response({
+              'game': {
+                'gameName': 'Juego de prueba',
+                'availableGameStats': {
+                  'achievements': [
+                    {
+                      'name': 'Oculto',
+                      'displayName': 'Secreto',
+                      'description': '',
+                      'hidden': 1,
+                    }
+                  ]
+                }
+              }
+            });
+          }
+          if (r.url.path.contains('GetPlayerAchievements')) {
+            return response({
+              'playerstats': {
+                'success': true,
+                'achievements': [
+                  {'apiname': 'Oculto', 'achieved': 1, 'unlocktime': 1}
+                ]
+              }
+            });
+          }
+          return response({});
+        }));
+    addTearDown(service.dispose);
+    await service.connect(id, key);
+    final result = await service.achievements(42);
+    final item = (result['achievements'] as List).single as Map;
+    expect(item['description'], 'Entra en el décimo mundo.');
+  });
 }
