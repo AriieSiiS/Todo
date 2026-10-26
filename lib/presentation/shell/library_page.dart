@@ -70,8 +70,10 @@ class _LibraryPageState extends State<LibraryPage> {
     final currentYear = DateTime.now().year;
     final availableYears = <int>{
       currentYear,
-      if (area == LibraryAreaView.goals)
-        for (final goal in controller.libraryGoals) goal.targetYear
+      if (area == LibraryAreaView.goals) ...[
+        currentYear + 1,
+        for (final goal in controller.libraryGoals) goal.targetYear,
+      ]
       else
         for (final item in controller.libraryItems)
           if (item.completedDate != null) item.completedDate!.year,
@@ -408,9 +410,13 @@ class _LibraryGoalYearButton extends StatelessWidget {
     final historicalYears = availableYears
         .where((candidate) => candidate < currentYear)
         .toList(growable: false);
+    final futureYears = availableYears
+        .where((candidate) => candidate > currentYear)
+        .toList(growable: false)
+      ..sort();
     final label = year < currentYear ? 'Histórico · $year' : '$year';
 
-    if (historicalYears.isEmpty) {
+    if (historicalYears.isEmpty && futureYears.isEmpty) {
       return _HeaderSecondaryButton(
         label: label,
         icon: Icons.calendar_today_outlined,
@@ -437,20 +443,38 @@ class _LibraryGoalYearButton extends StatelessWidget {
           value: currentYear,
           child: Text('$currentYear'),
         ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<int>(
-          enabled: false,
-          height: 34,
-          child: Text(
-            'Histórico',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        if (futureYears.isNotEmpty) ...[
+          const PopupMenuDivider(),
+          const PopupMenuItem<int>(
+            enabled: false,
+            height: 34,
+            child: Text(
+              'Próximo año',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
-        ),
-        for (final historicalYear in historicalYears)
-          PopupMenuItem<int>(
-            value: historicalYear,
-            child: Text('$historicalYear'),
+          for (final futureYear in futureYears)
+            PopupMenuItem<int>(
+              value: futureYear,
+              child: Text('$futureYear'),
+            ),
+        ],
+        if (historicalYears.isNotEmpty) ...[
+          const PopupMenuDivider(),
+          const PopupMenuItem<int>(
+            enabled: false,
+            height: 34,
+            child: Text(
+              'Histórico',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
+          for (final historicalYear in historicalYears)
+            PopupMenuItem<int>(
+              value: historicalYear,
+              child: Text('$historicalYear'),
+            ),
+        ],
       ],
       child: IgnorePointer(
         child: _HeaderSecondaryButton(
