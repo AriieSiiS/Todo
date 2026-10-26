@@ -1,10 +1,11 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
+
+import 'cola_imagenes.dart';
 
 class HouseholdImportedImage {
   const HouseholdImportedImage({
@@ -66,7 +67,7 @@ class HouseholdAssetService {
     String itemId,
     Uint8List bytes,
   ) async {
-    final preparada = await Isolate.run(() => _prepararImagenHogar(bytes));
+    final preparada = await procesarImagen(() => _prepararImagenHogar(bytes));
     final imageBytes = preparada.imagen;
     final digest = sha256.convert(imageBytes).toString();
     final fileStem = '${_safeId(itemId)}-${digest.substring(0, 12)}';
@@ -162,7 +163,7 @@ class _ImagenPreparada {
 }
 
 /// Decodifica, valida, reduce y codifica la imagen. Es costosa, por eso se
-/// ejecuta con `Isolate.run`.
+/// ejecuta con `procesarImagen`.
 _ImagenPreparada _prepararImagenHogar(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) {

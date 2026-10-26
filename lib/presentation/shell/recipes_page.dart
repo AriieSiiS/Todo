@@ -727,8 +727,8 @@ class _WeeklyMenuRecipeThumbnail extends StatelessWidget {
       builder: (context, snapshot) {
         final path = snapshot.data ?? '';
         if (path.isNotEmpty && File(path).existsSync()) {
-          return Image.file(
-            File(path),
+          return ImagenLocal(
+            path,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => fallback,
           );
@@ -768,7 +768,7 @@ class _WeeklyMenuImage extends StatelessWidget {
           builder: (context, snapshot) {
             final path = snapshot.data ?? '';
             if (path.isNotEmpty && File(path).existsSync()) {
-              return Image.file(File(path), fit: BoxFit.cover);
+              return ImagenLocal(path, fit: BoxFit.cover);
             }
             if (menu.imageSourceUrl.isNotEmpty) {
               return Image.network(
@@ -1501,7 +1501,7 @@ class _RecipeImage extends StatelessWidget {
           builder: (context, snapshot) {
             final path = snapshot.data ?? '';
             if (path.isNotEmpty && File(path).existsSync()) {
-              return Image.file(File(path), fit: BoxFit.cover);
+              return ImagenLocal(path, fit: BoxFit.cover);
             }
             if (recipe.imageSourceUrl.isNotEmpty) {
               return Image.network(
@@ -2278,8 +2278,8 @@ class _RecipeEditorDialog extends StatelessWidget {
                                   const _MissingRecipeImage(),
                             )
                           : imageFile != null
-                              ? Image.file(
-                                  File(imageFile!.path),
+                              ? ImagenLocal(
+                                  imageFile!.path,
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, __, ___) =>
                                       const _MissingRecipeImage(),

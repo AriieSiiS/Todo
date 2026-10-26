@@ -156,8 +156,8 @@ class _PlantCard extends StatelessWidget {
                 builder: (context, snapshot) {
                   final path = snapshot.data ?? '';
                   if (path.isEmpty) return const _MissingPlantImage();
-                  return Image.file(
-                    File(path),
+                  return ImagenLocal(
+                    path,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const _MissingPlantImage(),
                   );
@@ -420,8 +420,8 @@ Future<void> _showPlantDetails(
                                   final path = snapshot.data ?? '';
                                   return path.isEmpty
                                       ? const _MissingPlantImage()
-                                      : Image.file(
-                                          File(path),
+                                      : ImagenLocal(
+                                          path,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               const _MissingPlantImage(),
@@ -736,7 +736,7 @@ class _PlantHistoryImage extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<String>(
         future: controller.plantPhotoAbsolutePath(photo, thumbnail: thumbnail),
         builder: (context, snapshot) => snapshot.data?.isNotEmpty == true
-            ? Image.file(File(snapshot.data!),
+            ? ImagenLocal(snapshot.data!,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const _MissingPlantImage())
             : const _MissingPlantImage(),
@@ -1180,14 +1180,14 @@ class _PlantEditorDialogState extends State<_PlantEditorDialog> {
       return Image.memory(_pastedImageBytes!, fit: BoxFit.contain);
     }
     if (_imageFile != null) {
-      return Image.file(File(_imageFile!.path), fit: BoxFit.contain);
+      return ImagenLocal(_imageFile!.path, fit: BoxFit.contain);
     }
     if (plant?.imagePath.isNotEmpty == true) {
       return FutureBuilder<String>(
         future:
             widget.controller.plantImageAbsolutePath(plant!, thumbnail: false),
         builder: (context, snapshot) => snapshot.data?.isNotEmpty == true
-            ? Image.file(File(snapshot.data!), fit: BoxFit.contain)
+            ? ImagenLocal(snapshot.data!, fit: BoxFit.contain)
             : const _MissingPlantImage(),
       );
     }

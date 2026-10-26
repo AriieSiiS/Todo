@@ -452,7 +452,7 @@ class _ShoppingImage extends StatelessWidget {
                 child: Icon(Icons.shopping_bag_outlined,
                     size: 58, color: context.visuals.textMuted));
             if (path.isEmpty || !File(path).existsSync()) return placeholder;
-            return Image.file(File(path),
+            return ImagenLocal(path,
                 fit: BoxFit.contain, errorBuilder: (_, __, ___) => placeholder);
           },
         ),
@@ -1256,7 +1256,7 @@ class _ShoppingEditorState extends State<_ShoppingEditor> {
                               padding: const EdgeInsets.only(top: 8),
                               child: SizedBox(
                                   height: 110,
-                                  child: Image.file(File(_image!.path),
+                                  child: ImagenLocal(_image!.path,
                                       fit: BoxFit.contain))),
                         const SizedBox(height: 14),
                         _field('notes', 'Notas',

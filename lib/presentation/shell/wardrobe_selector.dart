@@ -398,7 +398,7 @@ class _OutfitPickerImage extends StatelessWidget {
           if (path.isEmpty || !File(path).existsSync()) {
             return const Icon(Icons.checkroom_outlined);
           }
-          return Image.file(File(path), fit: BoxFit.contain);
+          return ImagenLocal(path, fit: BoxFit.contain);
         },
       ),
     );

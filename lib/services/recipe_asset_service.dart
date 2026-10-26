@@ -1,11 +1,12 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
+
+import 'cola_imagenes.dart';
 
 class RecipeImportedImage {
   const RecipeImportedImage({
@@ -88,7 +89,7 @@ class RecipeAssetService {
     String recipeId,
     Uint8List bytes,
   ) async {
-    final preparada = await Isolate.run(() => _prepararImagenReceta(bytes));
+    final preparada = await procesarImagen(() => _prepararImagenReceta(bytes));
     final imageBytes = preparada.imagen;
     final digest = sha256.convert(imageBytes).toString();
     final fileStem = '${_safeId(recipeId)}-${digest.substring(0, 12)}';
@@ -151,7 +152,7 @@ class _ImagenPreparada {
 }
 
 /// Decodifica, valida, reduce y codifica la imagen. Es costosa, por eso se
-/// ejecuta con `Isolate.run`.
+/// ejecuta con `procesarImagen`.
 _ImagenPreparada _prepararImagenReceta(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) {

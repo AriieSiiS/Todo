@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
 
+import 'cola_imagenes.dart';
 import '../domain/models.dart';
 
 class WardrobeApprovedAsset {
@@ -79,7 +79,7 @@ class WardrobeAssetService {
     String outfitId,
     Uint8List bytes,
   ) async {
-    final encoded = await Isolate.run(() => _prepararRenderConjunto(bytes));
+    final encoded = await procesarImagen(() => _prepararRenderConjunto(bytes));
     final wardrobe = await wardrobeDirectory();
     final directory = Directory(
       '${wardrobe.path}${Platform.pathSeparator}outfits',
@@ -167,6 +167,42 @@ class WardrobeAssetService {
     required Uint8List bytes,
     required String category,
   }) async {
+    final (imageBytes, thumbnailBytes) =
+        await _prepararEnCola(bytes, category, lote: false);
+    final digest = sha256.convert(imageBytes).toString();
+    final fileStem = '${_safeId(itemId)}-${digest.substring(0, 12)}';
+    final wardrobe = await wardrobeDirectory();
+    final itemsDirectory = Directory(
+      '${wardrobe.path}${Platform.pathSeparator}items',
+    );
+    final thumbnailsDirectory = Directory(
+      '${wardrobe.path}${Platform.pathSeparator}thumbnails',
+    );
+    await itemsDirectory.create(recursive: true);
+    await thumbnailsDirectory.create(recursive: true);
+    final imageFile = File(
+      '${itemsDirectory.path}${Platform.pathSeparator}$fileStem.png',
+    );
+    final thumbnailFile = File(
+      '${thumbnailsDirectory.path}${Platform.pathSeparator}$fileStem.png',
+    );
+    await _atomicWrite(imageFile, imageBytes);
+    try {
+      await _atomicWrite(thumbnailFile, thumbnailBytes);
+    } catch (_) {
+      if (await imageFile.exists()) await imageFile.delete();
+      rethrow;
+    }
+    return WardrobeStoredAsset(
+      imagePath: 'items/$fileStem.png',
+      thumbnailPath: 'thumbnails/$fileStem.png',
+      sha256: digest,
+    );
+  }
+
+  /// Prepara la imagen guardada y su miniatura; se ejecuta en
+  /// `procesarImagen` porque decodificar y codificar PNG es costoso.
+  (Uint8List, Uint8List) _prepararPrenda(Uint8List bytes, String category) {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) {
       throw const FormatException('El archivo seleccionado no es una imagen.');
@@ -194,42 +230,37 @@ class WardrobeAssetService {
       imageBytes = Uint8List.fromList(img.encodePng(storedImage));
     }
 
-    final digest = sha256.convert(imageBytes).toString();
-    final fileStem = '${_safeId(itemId)}-${digest.substring(0, 12)}';
-    final wardrobe = await wardrobeDirectory();
-    final itemsDirectory = Directory(
-      '${wardrobe.path}${Platform.pathSeparator}items',
-    );
-    final thumbnailsDirectory = Directory(
-      '${wardrobe.path}${Platform.pathSeparator}thumbnails',
-    );
-    await itemsDirectory.create(recursive: true);
-    await thumbnailsDirectory.create(recursive: true);
-    final imageFile = File(
-      '${itemsDirectory.path}${Platform.pathSeparator}$fileStem.png',
-    );
-    final thumbnailFile = File(
-      '${thumbnailsDirectory.path}${Platform.pathSeparator}$fileStem.png',
-    );
     final thumbnail = img.copyResize(
       storedImage,
       width: storedImage.width >= storedImage.height ? 420 : null,
       height: storedImage.height > storedImage.width ? 420 : null,
       interpolation: img.Interpolation.average,
     );
+    return (imageBytes, Uint8List.fromList(img.encodePng(thumbnail)));
+  }
 
-    await _atomicWrite(imageFile, imageBytes);
-    try {
-      await _atomicWrite(thumbnailFile, img.encodePng(thumbnail));
-    } catch (_) {
-      if (await imageFile.exists()) await imageFile.delete();
-      rethrow;
-    }
-    return WardrobeStoredAsset(
-      imagePath: 'items/$fileStem.png',
-      thumbnailPath: 'thumbnails/$fileStem.png',
-      sha256: digest,
+  // Método síncrono aparte para que el cierre enviado al isolate solo
+  // capture estos argumentos y no el estado del método asíncrono que lo llama.
+  Future<(Uint8List, Uint8List)> _prepararEnCola(
+    Uint8List bytes,
+    String category, {
+    required bool lote,
+  }) =>
+      procesarImagen(() => lote
+          ? _prepararPrendaDeLote(bytes, category)
+          : _prepararPrenda(bytes, category));
+
+  /// Normaliza una prenda de un lote y crea su miniatura cuadrada.
+  (Uint8List, Uint8List) _prepararPrendaDeLote(
+      Uint8List bytes, String category) {
+    final normalizedBytes = normalizeCatalogPng(bytes, category);
+    final thumbnail = img.copyResize(
+      img.decodePng(normalizedBytes)!,
+      width: 420,
+      height: 420,
+      interpolation: img.Interpolation.average,
     );
+    return (normalizedBytes, Uint8List.fromList(img.encodePng(thumbnail)));
   }
 
   Future<void> deleteAsset(String relativePath) async {
@@ -360,12 +391,9 @@ class WardrobeAssetService {
         if (item.duplicateItemId != null) continue;
         final source = _safeChildFile(importDirectory, item.fileName);
         final bytes = await source.readAsBytes();
-        final decoded = img.decodePng(bytes);
-        if (decoded == null || !_hasTransparency(decoded)) {
-          throw StateError('${item.name} no es un PNG transparente válido.');
-        }
-        final normalizedBytes = normalizeCatalogPng(bytes, item.category);
-        final normalized = img.decodePng(normalizedBytes)!;
+        final category = item.category;
+        final (normalizedBytes, thumbnailBytes) =
+            await _prepararEnCola(bytes, category, lote: true);
         final digest = sha256.convert(normalizedBytes).toString();
         final fileStem = '${_safeId(item.id)}-${digest.substring(0, 12)}';
         final relativeImage = 'items/$fileStem.png';
@@ -380,13 +408,7 @@ class WardrobeAssetService {
         final tempImage = File('${imageFile.path}.tmp');
         final tempThumb = File('${thumbFile.path}.tmp');
         await tempImage.writeAsBytes(normalizedBytes, flush: true);
-        final thumbnail = img.copyResize(
-          normalized,
-          width: 420,
-          height: 420,
-          interpolation: img.Interpolation.average,
-        );
-        await tempThumb.writeAsBytes(img.encodePng(thumbnail), flush: true);
+        await tempThumb.writeAsBytes(thumbnailBytes, flush: true);
         temporaryFiles.addAll(<File>[tempImage, tempThumb]);
         finalFiles.addAll(<File>[imageFile, thumbFile]);
         results.add(WardrobeApprovedAsset(

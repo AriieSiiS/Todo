@@ -311,10 +311,9 @@ class _JournalEntryCard extends StatelessWidget {
                       builder: (context, snapshot) {
                         final path = snapshot.data ?? '';
                         if (path.isEmpty) return const SizedBox.shrink();
-                        return Image.file(
-                          File(path),
+                        return ImagenLocal(
+                          path,
                           fit: BoxFit.cover,
-                          cacheWidth: 240,
                           errorBuilder: (_, __, ___) =>
                               const SizedBox.shrink(),
                         );
@@ -545,12 +544,13 @@ class _JournalEditorDialogState extends State<_JournalEditorDialog> {
               if (_newImage != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.file(
-                    File(_newImage!.path),
+                  child: SizedBox(
                     height: 160,
+                    child: ImagenLocal(
+                    _newImage!.path,
                     fit: BoxFit.cover,
-                    cacheWidth: 600,
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
                   ),
                 )
               else if (showStoredImage)
@@ -567,10 +567,9 @@ class _JournalEditorDialogState extends State<_JournalEditorDialog> {
                       builder: (context, snapshot) {
                         final path = snapshot.data ?? '';
                         if (path.isEmpty) return const SizedBox.shrink();
-                        return Image.file(
-                          File(path),
+                        return ImagenLocal(
+                          path,
                           fit: BoxFit.cover,
-                          cacheWidth: 600,
                           errorBuilder: (_, __, ___) =>
                               const SizedBox.shrink(),
                         );

@@ -116,16 +116,23 @@ class _AppShellState extends ConsumerState<AppShell>
         child: SafeArea(
           child: Row(
             children: [
-              ListenableBuilder(
-                listenable: controller,
-                builder: (context, _) => _Sidebar(
-                  controller: controller,
-                  compact: !wide,
-                  musicController: _musicController,
-                  onCompact: _windowShell.enabled
-                      ? () => unawaited(_windowShell.setCompact(true))
-                      : null,
-                ),
+              // La barra lateral solo muestra la sección y el orden del menú;
+              // no se reconstruye con cada cambio de datos.
+              Consumer(
+                builder: (context, ref, _) {
+                  ref.watch(todoWorkspaceProvider.select((c) => (
+                        c.section,
+                        c.visibleNavOrder.join(','),
+                      )));
+                  return _Sidebar(
+                    controller: controller,
+                    compact: !wide,
+                    musicController: _musicController,
+                    onCompact: _windowShell.enabled
+                        ? () => unawaited(_windowShell.setCompact(true))
+                        : null,
+                  );
+                },
               ),
               Expanded(
                 child: Padding(

@@ -295,7 +295,7 @@ class _WardrobeItemCard extends StatelessWidget {
                         if (path.isEmpty || !File(path).existsSync()) {
                           return const _MissingWardrobeImage();
                         }
-                        return Image.file(File(path),
+                        return ImagenLocal(path,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) =>
                                 const _MissingWardrobeImage());
@@ -503,7 +503,7 @@ class _WardrobeOutfitArtwork extends StatelessWidget {
         builder: (context, snapshot) {
           final path = snapshot.data ?? '';
           if (path.isNotEmpty && File(path).existsSync()) {
-            return Image.file(File(path),
+            return ImagenLocal(path,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
                     _WardrobeOutfitComposition(controller, outfit));
@@ -662,7 +662,7 @@ class _WardrobeOutfitSlot extends StatelessWidget {
                       if (path.isEmpty || !File(path).existsSync()) {
                         return const Icon(Icons.checkroom_outlined, size: 42);
                       }
-                      return Image.file(File(path), fit: BoxFit.contain);
+                      return ImagenLocal(path, fit: BoxFit.contain, escala: 2);
                     },
                   ),
                 ),
@@ -1398,9 +1398,10 @@ Future<void> _showWardrobeItemDetail(
                   return InteractiveViewer(
                     minScale: 1,
                     maxScale: 4,
-                    child: Image.file(
-                      File(path),
+                    child: ImagenLocal(
+                      path,
                       fit: BoxFit.contain,
+                      escala: 2,
                       errorBuilder: (_, __, ___) =>
                           const _MissingWardrobeImage(),
                     ),

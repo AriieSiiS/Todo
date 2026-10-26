@@ -506,8 +506,8 @@ class _HouseholdItemCard extends StatelessWidget {
                         if (path.isEmpty || !File(path).existsSync()) {
                           return const _MissingHouseholdImage();
                         }
-                        return Image.file(
-                          File(path),
+                        return ImagenLocal(
+                          path,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) =>
                               const _MissingHouseholdImage(),
@@ -699,7 +699,7 @@ Future<void> _showHouseholdDetail(
                     return InteractiveViewer(
                       minScale: 1,
                       maxScale: 4,
-                      child: Image.file(File(path), fit: BoxFit.contain),
+                      child: ImagenLocal(path, fit: BoxFit.contain, escala: 2),
                     );
                   },
                 ),
@@ -1243,8 +1243,8 @@ class _HouseholdItemEditorDialogState
       );
     }
     if (_imageFile != null) {
-      return Image.file(
-        File(_imageFile!.path),
+      return ImagenLocal(
+        _imageFile!.path,
         fit: BoxFit.contain,
         errorBuilder: (_, __, ___) => const _MissingHouseholdImage(),
       );
@@ -1260,8 +1260,8 @@ class _HouseholdItemEditorDialogState
         if (path.isEmpty || !File(path).existsSync()) {
           return const _MissingHouseholdImage();
         }
-        return Image.file(
-          File(path),
+        return ImagenLocal(
+          path,
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => const _MissingHouseholdImage(),
         );

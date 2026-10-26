@@ -1,10 +1,11 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
+
+import 'cola_imagenes.dart';
 
 class PlantImportedImage {
   const PlantImportedImage({
@@ -63,7 +64,7 @@ class PlantAssetService {
     String plantId,
     Uint8List bytes,
   ) async {
-    final preparada = await Isolate.run(() => _prepararImagenPlanta(bytes));
+    final preparada = await procesarImagen(() => _prepararImagenPlanta(bytes));
     final imageBytes = preparada.imagen;
     final digest = sha256.convert(imageBytes).toString();
     final stem = '${_safeId(plantId)}-${digest.substring(0, 12)}';
@@ -126,7 +127,7 @@ class _ImagenPreparada {
 }
 
 /// Decodifica, valida, reduce y codifica la imagen. Es costosa, por eso se
-/// ejecuta con `Isolate.run`.
+/// ejecuta con `procesarImagen`.
 _ImagenPreparada _prepararImagenPlanta(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) {

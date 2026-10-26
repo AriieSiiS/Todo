@@ -31,6 +31,7 @@ import '../../services/windows_shell_service.dart';
 import '../../services/lan_sync_desktop_service.dart';
 import '../../domain/models.dart';
 import '../shared/editors.dart';
+import '../shared/imagen_local.dart';
 import '../shared/texto_busqueda.dart';
 import '../shared/steam_panels.dart';
 import '../knowledge/knowledge_workspace_page.dart';

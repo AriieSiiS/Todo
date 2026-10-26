@@ -25,7 +25,7 @@ void main() {
       });
 
   test(
-      'los guardados simultáneos conservan el último estado y sus preferencias',
+      'los guardados simultáneos conservan el último estado en un solo archivo',
       () async {
     final writes = [
       for (var i = 0; i < 24; i++) store.save(snapshot('Tarea $i')),
@@ -34,13 +34,7 @@ void main() {
     await Future.wait(writes);
     expect((await read)!.tasks.single.title, 'Tarea 23');
     final preferences = await SharedPreferences.getInstance();
-    expect(
-        AppStateSnapshot.fromEncodedJson(
-                preferences.getString('todo.snapshot.v1')!)
-            .tasks
-            .single
-            .title,
-        'Tarea 23');
+    expect(preferences.getString('todo.snapshot.v1'), isNull);
     expect(await File('${state.path}.tmp').exists(), isFalse);
     expect(await File('${state.path}.previous').exists(), isFalse);
   });
@@ -58,7 +52,10 @@ void main() {
   test(
       'la consulta periódica detecta cambios externos sin reutilizar listas mutables',
       () async {
-    await store.save(snapshot('Primera'));
+    await store.save(snapshot('Propia'));
+    // Lo que guarda la propia app no cuenta como cambio externo.
+    expect(await store.loadIfChanged(), isNull);
+    await state.writeAsString(snapshot('Primera').toEncodedJson());
     final first = await store.loadIfChanged();
     expect(first!.tasks.single.title, 'Primera');
     first.tasks.clear();

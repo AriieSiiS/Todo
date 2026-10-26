@@ -47,10 +47,9 @@ class _LocalLibraryCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.file(
-      File(path),
+    return ImagenLocal(
+      path,
       fit: BoxFit.cover,
-      cacheWidth: 600,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) =>
           _LibraryCoverFallback(type: type, iconSize: iconSize),

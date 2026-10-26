@@ -406,8 +406,8 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
       );
     }
     if (_selectedImage != null) {
-      return Image.file(
-        File(_selectedImage!.path),
+      return ImagenLocal(
+        _selectedImage!.path,
         fit: BoxFit.contain,
         errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
       );
@@ -425,8 +425,8 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
         if (path.isEmpty || !File(path).existsSync()) {
           return const _MissingWardrobeImage();
         }
-        return Image.file(
-          File(path),
+        return ImagenLocal(
+          path,
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => const _MissingWardrobeImage(),
         );
@@ -991,7 +991,7 @@ class _OutfitItemRow extends StatelessWidget {
               if (path.isEmpty || !File(path).existsSync()) {
                 return const Icon(Icons.checkroom_outlined);
               }
-              return Image.file(File(path), fit: BoxFit.contain);
+              return ImagenLocal(path, fit: BoxFit.contain, escala: 2);
             },
           ),
         ),
