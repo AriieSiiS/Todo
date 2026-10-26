@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/todo_theme.dart';
 import '../../services/steam_service.dart';
 
 String _steamMessage(Object error) => error is FormatException
@@ -335,15 +336,10 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
     final percent = result['completion_percent'] as num?;
     final unlocked = result['unlocked'] as num;
     final total = result['total'] as num;
-    final queried =
-        DateTime.tryParse(result['queried_at'] as String? ?? '')?.toLocal();
     final scheme = Theme.of(context).colorScheme;
     final details = [
       if (percent != null) '${_decimal(percent)} % completado',
       if (game != null) _hours(game),
-      if (queried != null)
-        'Actualizado ${queried.day}/${queried.month}/${queried.year} '
-            '${queried.hour.toString().padLeft(2, '0')}:${queried.minute.toString().padLeft(2, '0')}',
     ].join('  ·  ');
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -365,23 +361,9 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
         ])),
         const SizedBox(width: 12),
-        SegmentedButton<int>(
-            showSelectedIcon: false,
-            style: const ButtonStyle(visualDensity: VisualDensity.compact),
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Todos')),
-              ButtonSegment(
-                  value: 1,
-                  label: Text('Desbloqueados'),
-                  icon: Icon(Icons.emoji_events_outlined, size: 16)),
-              ButtonSegment(
-                  value: 2,
-                  label: Text('Pendientes'),
-                  icon: Icon(Icons.lock_outline, size: 16)),
-            ],
-            selected: {_filter},
-            onSelectionChanged: (value) =>
-                setState(() => _filter = value.first)),
+        _FilterTabs(
+            selected: _filter,
+            onChanged: (value) => setState(() => _filter = value)),
         IconButton(
             tooltip: 'Actualizar logros',
             onPressed: _busy ? null : () => _load(refresh: true),
@@ -542,6 +524,56 @@ class _AchievementTile extends StatelessWidget {
                             ? const Color(0xFF8A6D00)
                             : scheme.onSurfaceVariant)),
               ])),
+        ]));
+  }
+}
+
+/// Selector de lista con el mismo aspecto que las pestañas de la ficha.
+class _FilterTabs extends StatelessWidget {
+  const _FilterTabs({required this.selected, required this.onChanged});
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  static const _items = [
+    (Icons.apps_rounded, 'Todos'),
+    (Icons.emoji_events_outlined, 'Desbloqueados'),
+    (Icons.lock_outline, 'Pendientes'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent =
+        theme.extension<TodoVisuals>()?.accent ?? theme.colorScheme.primary;
+    final muted = theme.extension<TodoVisuals>()?.textMuted ??
+        theme.colorScheme.onSurfaceVariant;
+    return Container(
+        height: 44,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+            color: accent.withValues(alpha: .06),
+            borderRadius: BorderRadius.circular(10)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < _items.length; i++)
+            InkWell(
+                borderRadius: BorderRadius.circular(7),
+                onTap: () => onChanged(i),
+                child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: selected == i ? theme.colorScheme.surface : null,
+                        borderRadius: BorderRadius.circular(7)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(_items[i].$1,
+                          size: 16, color: selected == i ? accent : muted),
+                      const SizedBox(width: 6),
+                      Text(_items[i].$2,
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: selected == i ? accent : muted)),
+                    ]))),
         ]));
   }
 }
