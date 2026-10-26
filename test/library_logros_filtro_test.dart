@@ -75,7 +75,8 @@ void main() {
     expect(find.byKey(const ValueKey('library-all-achievements')),
         findsOneWidget);
 
-    await tester.tap(find.byTooltip('Filtrar por logros'));
+    expect(find.byTooltip('Filtrar por logros'), findsNothing);
+    await tester.tap(find.byTooltip('Ordenar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('100 % de logros').last);
     await tester.pumpAndSettle();
@@ -83,10 +84,6 @@ void main() {
     expect(tarjeta('uno'), findsNothing);
     expect(tarjeta('tres'), findsNothing);
 
-    await tester.tap(find.byTooltip('Filtrar por logros'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Logros').last);
-    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Ordenar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('% de logros').last);

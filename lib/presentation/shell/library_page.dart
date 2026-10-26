@@ -1194,8 +1194,6 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   late final TextEditingController _searchController;
   String? _universe;
   String? _saga;
-  String? _achievementsFilter;
-  static const _allAchievementsLabel = '100 % de logros';
 
   LibrarySortOrder get _sortOrder =>
       _effectiveSortOrderForType(widget.sortOrder, widget.type);
@@ -1211,7 +1209,6 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   void didUpdateWidget(covariant _LibraryFilteredTypePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.type != widget.type) {
-      _achievementsFilter = null;
       unawaited(_loadAchievements());
     }
   }
@@ -1273,19 +1270,6 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   }),
                 ),
                 130,
-                60,
-              ),
-            if (widget.type == LibraryItemType.game)
-              _LibraryToolbarControl(
-                _LibraryFilterButton(
-                  tooltip: 'Filtrar por logros',
-                  allLabel: 'Logros',
-                  selected: _achievementsFilter,
-                  options: const [_allAchievementsLabel],
-                  onSelected: (value) =>
-                      setState(() => _achievementsFilter = value),
-                ),
-                110,
                 60,
               ),
             if (sagas.isNotEmpty)
@@ -1384,7 +1368,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
         .where((item) => _universe == null || item.universeName == _universe)
         .where((item) => _saga == null || item.collectionName == _saga)
         .where((item) =>
-            _achievementsFilter == null || _libraryHasAllAchievements(item))
+            _sortOrder != LibrarySortOrder.achievementsComplete ||
+            _libraryHasAllAchievements(item))
         .where((item) =>
             query.isEmpty || _searchableText(item).paraBuscar.contains(query))
         .toList();

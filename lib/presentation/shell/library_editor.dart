@@ -1823,6 +1823,7 @@ String _sortLabel(LibrarySortOrder order) => switch (order) {
       LibrarySortOrder.durationAsc => 'Menos duración',
       LibrarySortOrder.countryAsc => 'País',
       LibrarySortOrder.achievementsDesc => '% de logros',
+      LibrarySortOrder.achievementsComplete => '100 % de logros',
     };
 
 String _sortLabelForType(LibrarySortOrder order, LibraryItemType type) {
@@ -1870,6 +1871,7 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
         LibrarySortOrder.durationDesc,
         LibrarySortOrder.durationAsc,
         LibrarySortOrder.achievementsDesc,
+        LibrarySortOrder.achievementsComplete,
       ],
     LibraryItemType.book => [
         ...common,
@@ -1949,8 +1951,10 @@ int _compareLibraryItems(
         .compareTo(_extractFirstNumber(right.duration)),
     LibrarySortOrder.countryAsc =>
       _sortText(left.country).compareTo(_sortText(right.country)),
-    LibrarySortOrder.achievementsDesc => _libraryAchievementPercent(right)
-        .compareTo(_libraryAchievementPercent(left)),
+    LibrarySortOrder.achievementsDesc ||
+    LibrarySortOrder.achievementsComplete =>
+      _libraryAchievementPercent(right)
+          .compareTo(_libraryAchievementPercent(left)),
   };
   if (result != 0) {
     return result;

@@ -98,4 +98,5 @@ enum LibrarySortOrder {
   durationAsc,
   countryAsc,
   achievementsDesc,
+  achievementsComplete,
 }

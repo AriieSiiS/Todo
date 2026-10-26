@@ -156,15 +156,8 @@ class _LibraryGoalDetailsDialogState extends State<_LibraryGoalDetailsDialog> {
                     FilledButton.icon(
                       onPressed: () async {
                         Navigator.of(context).pop();
-                        await showDialog<void>(
-                          context: context,
-                          builder: (context) => _LibraryGoalDialog(
-                            controller: widget.controller,
-                            year: widget.year,
-                            initialType: goal.type,
-                            goal: goal,
-                          ),
-                        );
+                        await _showLibraryGoalEditor(
+                            context, widget.controller, widget.year, goal);
                       },
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       label: const Text('Editar'),
@@ -254,30 +247,126 @@ class _LibraryGoalsView extends StatefulWidget {
 }
 
 class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
+  final _searchController = TextEditingController();
+  String? _universe;
+  String? _saga;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Ficha de Biblioteca enlazada al propósito: de ella salen el universo y la
+  /// saga, que los propósitos no guardan por su cuenta.
+  LibraryItem? _linkedItem(LibraryGoal goal) {
+    final id = goal.linkedLibraryItemId;
+    if (id == null) return null;
+    for (final item in widget.controller.libraryItems) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final goals = widget.controller.libraryGoals
+    final yearGoals = widget.controller.libraryGoals
         .where((goal) => goal.targetYear == widget.year)
         .toList()
       ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
+    final showFilters = widget.selectedType == null;
+    final universes = _libraryDistinctNames(
+        yearGoals.map((goal) => _linkedItem(goal)?.universeName));
+    final sagas = _libraryDistinctNames(yearGoals
+        .where((goal) =>
+            _universe == null || _linkedItem(goal)?.universeName == _universe)
+        .map((goal) => _linkedItem(goal)?.collectionName));
+    final query = _searchController.text.trim().paraBuscar;
+    final goals = !showFilters
+        ? yearGoals
+        : yearGoals.where((goal) {
+            final item = _linkedItem(goal);
+            if (_universe != null && item?.universeName != _universe) {
+              return false;
+            }
+            if (_saga != null && item?.collectionName != _saga) return false;
+            if (query.isEmpty) return true;
+            final text = [
+              goal.title,
+              goal.platform,
+              goal.developer,
+              goal.author,
+              goal.releaseYear?.toString(),
+              goal.creatorOrDirector,
+              goal.genre,
+              goal.format,
+              goal.duration,
+              goal.pages,
+              goal.country,
+              goal.note,
+              item?.universeName,
+              item?.collectionName,
+            ].whereType<String>().join(' ');
+            return text.paraBuscar.contains(query);
+          }).toList();
     final wide = MediaQuery.sizeOf(context).width >= 1320;
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            _LibraryTypeFilters(
-              selected: widget.selectedType,
-              onChanged: widget.onSelectedTypeChanged,
-            ),
-            const Spacer(),
-            // «Todos los propósitos» se puede ver por columnas o en portadas.
-            if (widget.selectedType == null)
-              _LibraryOverviewModeToggle(
-                value: widget.overviewMode,
-                onChanged: widget.onOverviewModeChanged,
+        _LibraryToolbarRow(
+          chips: _LibraryTypeFilters(
+            selected: widget.selectedType,
+            onChanged: widget.onSelectedTypeChanged,
+          ),
+          controls: [
+            if (showFilters && universes.isNotEmpty)
+              _LibraryToolbarControl(
+                _LibraryFilterButton(
+                  tooltip: 'Filtrar por universo',
+                  allLabel: 'Universos',
+                  selected: _universe,
+                  options: universes,
+                  onSelected: (value) => setState(() {
+                    _universe = value;
+                    _saga = null;
+                  }),
+                ),
+                120,
+                60,
+              ),
+            if (showFilters && sagas.isNotEmpty)
+              _LibraryToolbarControl(
+                _LibraryFilterButton(
+                  tooltip: 'Filtrar por saga',
+                  allLabel: 'Sagas',
+                  selected: _saga,
+                  options: sagas,
+                  onSelected: (value) => setState(() => _saga = value),
+                ),
+                120,
+                60,
+              ),
+            if (showFilters)
+              _LibraryToolbarControl(
+                SizedBox(
+                  width: 230,
+                  child: _CompactLibrarySearchField(
+                    controller: _searchController,
+                    onChanged: () => setState(() {}),
+                  ),
+                ),
+                230,
+                64,
+                elastico: true,
               ),
           ],
+          // «Todos los propósitos» se puede ver por columnas o en portadas.
+          trailing: showFilters
+              ? _LibraryOverviewModeToggle(
+                  value: widget.overviewMode,
+                  onChanged: widget.onOverviewModeChanged,
+                )
+              : null,
         ),
         const SizedBox(height: 14),
         if (widget.selectedType != null)
@@ -408,17 +497,9 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
     );
   }
 
-  Future<void> _showGoalEditDialog(
-      BuildContext context, LibraryGoal goal) async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => _LibraryGoalDialog(
-        controller: widget.controller,
-        year: widget.year,
-        initialType: goal.type,
-        goal: goal,
-      ),
-    );
+  Future<void> _showGoalEditDialog(BuildContext context, LibraryGoal goal) {
+    return _showLibraryGoalEditor(
+        context, widget.controller, widget.year, goal);
   }
 
   Widget _allGoalsCoversPanel(BuildContext context, List<LibraryGoal> goals) {
@@ -1074,4 +1155,32 @@ class _LibraryGoalThumbnail extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Edita un propósito con la misma ficha que Biblioteca cuando tiene un
+/// elemento enlazado, porque ambos son el mismo contenido.
+Future<void> _showLibraryGoalEditor(
+  BuildContext context,
+  TodoWorkspace controller,
+  int year,
+  LibraryGoal goal,
+) {
+  final linkedId = goal.linkedLibraryItemId;
+  LibraryItem? item;
+  if (linkedId != null) {
+    for (final candidate in controller.libraryItems) {
+      if (candidate.id == linkedId) item = candidate;
+    }
+  }
+  return showDialog<void>(
+    context: context,
+    builder: (context) => item != null
+        ? _LibraryItemDialog(controller: controller, item: item)
+        : _LibraryGoalDialog(
+            controller: controller,
+            year: year,
+            initialType: goal.type,
+            goal: goal,
+          ),
+  );
 }
