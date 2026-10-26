@@ -285,8 +285,7 @@ class SteamService {
     };
     // La API oculta la descripción de los logros secretos; la página pública
     // de logros del juego sí la muestra, así que se usa como complemento.
-    final needsPublic = definitions.any((item) =>
-        item['hidden'] == 1 && '${item['description'] ?? ''}'.trim().isEmpty);
+    final needsPublic = definitions.isNotEmpty;
     final publicPage =
         needsPublic ? await _publicAchievements(appId) : const {};
     final achievements = <Map<String, dynamic>>[
@@ -303,10 +302,10 @@ class SteamService {
               : null,
           'unlock_time': states[item['name']]?['unlocktime'],
           'global_percent': _percentage(percentages[item['name']]),
-          'icon_url': _iconUrl(appId, item['icon']) ??
-              publicPage[item['name']]?['icon_achieved'],
-          'icon_gray_url': _iconUrl(appId, item['icongray']) ??
-              publicPage[item['name']]?['icon_unachieved'],
+          'icon_url': publicPage[item['name']]?['icon_achieved'] ??
+              _iconUrl(appId, item['icon']),
+          'icon_gray_url': publicPage[item['name']]?['icon_unachieved'] ??
+              _iconUrl(appId, item['icongray']),
         },
     ];
     await _saveIcons(appId, achievements);
@@ -443,8 +442,8 @@ class SteamService {
           // usan http: se completa la dirección y se fuerza https.
           if (raw is String &&
               RegExp(r'^[0-9a-f]{20,}(\.\w+)?$').hasMatch(raw)) {
-            uri = Uri.https('cdn.fastly.steamstatic.com',
-                '/steamcommunity/public/images/apps/$appId/${raw.contains('.') ? raw : '$raw.jpg'}');
+            uri = Uri.https('shared.fastly.steamstatic.com',
+                '/community_assets/images/apps/$appId/${raw.contains('.') ? raw : '$raw.jpg'}');
           } else if (uri != null && uri.scheme == 'http') {
             uri = uri.replace(scheme: 'https');
           }
