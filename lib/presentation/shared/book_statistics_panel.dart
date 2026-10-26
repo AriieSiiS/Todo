@@ -99,22 +99,51 @@ class BookStatisticsPanel extends StatelessWidget {
 String _readingDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
 class AnnualReadingStatisticsDialog extends StatefulWidget {
-  const AnnualReadingStatisticsDialog({required this.books, super.key});
+  const AnnualReadingStatisticsDialog(
+      {required this.books,
+      this.goals = const [],
+      this.coverBuilder,
+      super.key});
   final List<LibraryItem> books;
+  final List<LibraryGoal> goals;
+  final Widget Function(LibraryItem book)? coverBuilder;
   @override
   State<AnnualReadingStatisticsDialog> createState() =>
       _AnnualReadingStatisticsDialogState();
 }
 
+const _readingWeekdays = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo'
+];
+
 class _AnnualReadingStatisticsDialogState
     extends State<AnnualReadingStatisticsDialog> {
   int _year = DateTime.now().year;
+  int _tab = 0;
+  bool _calendar = false;
+
+  ({String label, bool up})? _compare(num current, num previous) {
+    if (previous <= 0) return null;
+    final change = ((current - previous) / previous * 100).round();
+    return (
+      label: '${change >= 0 ? '+' : ''}$change % que en ${_year - 1}',
+      up: change >= 0
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final books =
         widget.books.where((b) => b.type == LibraryItemType.book).toList();
     final sources = combinedReadingStatistics(books);
     final summary = ReadingStatisticsSummary(sources.values, year: _year);
+    final previous = ReadingStatisticsSummary(sources.values, year: _year - 1);
     final years = <int>{
       DateTime.now().year,
       for (final source in sources.values)
@@ -123,11 +152,13 @@ class _AnnualReadingStatisticsDialogState
         if (book.completedDate != null) book.completedDate!.year,
     }.toList()
       ..sort((a, b) => b.compareTo(a));
-    final completed = books
+    List<LibraryItem> finishedIn(int year) => books
         .where((b) =>
             b.status == LibraryItemStatus.completed &&
-            b.completedDate?.year == _year)
-        .length;
+            b.completedDate?.year == year)
+        .toList()
+      ..sort((a, b) => a.completedDate!.compareTo(b.completedDate!));
+    final finished = finishedIn(_year);
     final ranking = [
       for (final book in books)
         (
@@ -137,6 +168,19 @@ class _AnnualReadingStatisticsDialogState
         )
     ]..sort((a, b) => b.stats.seconds.compareTo(a.stats.seconds));
     final active = ranking.where((entry) => entry.stats.seconds > 0).toList();
+    final dailyPages = <DateTime, int>{};
+    final hourly = List.filled(24, 0), weekdays = List.filled(7, 0);
+    for (final source in sources.values) {
+      for (final period in source.periods) {
+        final date = period.localDate;
+        if (period.seconds == 0 || date.year != _year) continue;
+        hourly[date.hour] += period.seconds;
+        weekdays[date.weekday - 1] += period.seconds;
+        dailyPages.update(DateTime(date.year, date.month, date.day),
+            (value) => value + period.pages,
+            ifAbsent: () => period.pages);
+      }
+    }
     final theme = Theme.of(context);
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
@@ -181,7 +225,7 @@ class _AnnualReadingStatisticsDialogState
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded)),
             ]),
-            const SizedBox(height: 22),
+            const SizedBox(height: 18),
             _ReadingMetrics(values: [
               (
                 'Tiempo leído',
@@ -198,27 +242,211 @@ class _AnnualReadingStatisticsDialogState
                 '${summary.pages}',
                 Icons.auto_stories_outlined
               ),
-              ('Libros terminados', '$completed', Icons.task_alt_rounded),
+              (
+                'Libros terminados',
+                '${finished.length}',
+                Icons.task_alt_rounded
+              ),
+            ], comparisons: [
+              _compare(summary.seconds, previous.seconds),
+              _compare(summary.days, previous.days),
+              _compare(summary.pages, previous.pages),
+              _compare(finished.length, finishedIn(_year - 1).length),
             ]),
-            const SizedBox(height: 24),
-            Expanded(
-                flex: 3,
-                child: _ReadingMonthlyChart(
-                    values: summary.monthlySeconds, title: 'Mes a mes')),
-            const SizedBox(height: 22),
+            const SizedBox(height: 14),
+            _ReadingGoalProgress(
+                year: _year,
+                goals: widget.goals
+                    .where((g) =>
+                        g.type == LibraryItemType.book && g.targetYear == _year)
+                    .toList()),
+            const SizedBox(height: 16),
             Row(children: [
-              Text('Tus lecturas',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+              _MiniTabs(
+                  names: const ['Actividad', 'Estantería', 'Récords y hábitos'],
+                  selected: _tab,
+                  onSelected: (index) => setState(() => _tab = index)),
               const Spacer(),
-              Text(
-                  '${active.length} libros · Racha máxima: ${summary.longestStreak} días',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              if (_tab == 0)
+                _MiniTabs(
+                    names: const ['Mes a mes', 'Calendario'],
+                    selected: _calendar ? 1 : 0,
+                    onSelected: (index) =>
+                        setState(() => _calendar = index == 1)),
             ]),
+            const SizedBox(height: 14),
+            Expanded(
+                child: switch (_tab) {
+              1 => _ReadingShelf(
+                  finished: finished,
+                  active: active,
+                  coverBuilder: widget.coverBuilder),
+              2 => _ReadingRecords(
+                  summary: summary,
+                  finished: finished,
+                  hourly: hourly,
+                  weekdays: weekdays),
+              _ => _calendar
+                  ? _ReadingHeatmap(
+                      dailySeconds: summary.dailySeconds,
+                      dailyPages: dailyPages,
+                      from: DateTime(_year),
+                      to: DateTime(_year, 12, 31),
+                      title: null)
+                  : _ReadingMonthlyChart(
+                      values: summary.monthlySeconds, title: 'Mes a mes'),
+            }),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniTabs extends StatelessWidget {
+  const _MiniTabs(
+      {required this.names, required this.selected, required this.onSelected});
+  final List<String> names;
+  final int selected;
+  final ValueChanged<int> onSelected;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+          color: colors.onSurface.withValues(alpha: .06),
+          borderRadius: BorderRadius.circular(9)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        for (var i = 0; i < names.length; i++)
+          InkWell(
+            borderRadius: BorderRadius.circular(7),
+            onTap: () => onSelected(i),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                  color: i == selected ? colors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7)),
+              child: Text(names[i],
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          i == selected ? FontWeight.w700 : FontWeight.w500,
+                      color: i == selected
+                          ? colors.primary
+                          : colors.onSurfaceVariant)),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+class _ReadingGoalProgress extends StatelessWidget {
+  const _ReadingGoalProgress({required this.year, required this.goals});
+  final int year;
+  final List<LibraryGoal> goals;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    final total = goals.length, done = goals.where((g) => g.isCompleted).length;
+    final now = DateTime.now();
+    String status;
+    if (total == 0) {
+      status = 'Sin propósito de libros para $year';
+    } else if (done >= total) {
+      status = '¡Propósito cumplido!';
+    } else if (year < now.year) {
+      status = 'Faltaron ${total - done}';
+    } else if (year > now.year) {
+      status = 'Aún no ha empezado';
+    } else {
+      final elapsed = now.difference(DateTime(year)).inDays + 1;
+      final days = DateTime(year + 1).difference(DateTime(year)).inDays;
+      final expected = total * elapsed / days;
+      final gap = (expected - done).ceil();
+      status = done >= expected.floor()
+          ? 'Vas a buen ritmo'
+          : 'Vas $gap ${gap == 1 ? 'libro' : 'libros'} por detrás';
+    }
+    return Row(children: [
+      Icon(Icons.flag_outlined, size: 18, color: colors.primary),
+      const SizedBox(width: 8),
+      Text(
+          total == 0
+              ? 'Propósito'
+              : 'Propósito: $done de $total ${total == 1 ? 'libro' : 'libros'}',
+          style: const TextStyle(fontWeight: FontWeight.w700)),
+      const SizedBox(width: 14),
+      Expanded(
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: total == 0 ? 0 : (done / total).clamp(0, 1),
+                  backgroundColor: colors.onSurface.withValues(alpha: .07)))),
+      const SizedBox(width: 14),
+      Text(status,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: colors.onSurfaceVariant)),
+    ]);
+  }
+}
+
+class _ReadingShelf extends StatelessWidget {
+  const _ReadingShelf(
+      {required this.finished, required this.active, this.coverBuilder});
+  final List<LibraryItem> finished;
+  final List<({LibraryItem book, ReadingStatisticsSummary stats})> active;
+  final Widget Function(LibraryItem book)? coverBuilder;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    final title =
+        theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(
+          flex: 3,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Terminados', style: title),
             const SizedBox(height: 10),
             Expanded(
-                flex: 2,
+                child: finished.isEmpty
+                    ? const Center(
+                        child: Text('Los libros que termines aparecerán aquí.'))
+                    : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 92,
+                                childAspectRatio: 2 / 3,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10),
+                        itemCount: finished.length,
+                        itemBuilder: (context, index) {
+                          final book = finished[index];
+                          return Tooltip(
+                            message:
+                                '${book.title} · ${_readingDate(book.completedDate!)}',
+                            child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: coverBuilder?.call(book) ??
+                                    ColoredBox(
+                                        color: colors.primary
+                                            .withValues(alpha: .10),
+                                        child: Icon(Icons.menu_book_rounded,
+                                            color: colors.primary))),
+                          );
+                        })),
+          ])),
+      const SizedBox(width: 24),
+      Expanded(
+          flex: 2,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Más tiempo dedicado', style: title),
+            const SizedBox(height: 10),
+            Expanded(
                 child: active.isEmpty
                     ? const Center(
                         child: Text(
@@ -231,40 +459,196 @@ class _AnnualReadingStatisticsDialogState
                           final entry = active[index];
                           return Row(children: [
                             SizedBox(
-                                width: 30,
+                                width: 26,
                                 child: Text('${index + 1}',
                                     style: TextStyle(
-                                        color: theme.colorScheme.primary,
+                                        color: colors.primary,
                                         fontWeight: FontWeight.w800))),
                             Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text(entry.book.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600)),
-                                  if ((entry.book.author ?? '').isNotEmpty)
-                                    Text(entry.book.author!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                                color: theme.colorScheme
-                                                    .onSurfaceVariant)),
-                                ])),
+                                child: Text(entry.book.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600))),
                             const SizedBox(width: 12),
                             Text(readingDuration(entry.stats.seconds),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w700)),
                           ]);
-                        },
-                      )),
-          ]),
-        ),
-      ),
+                        })),
+          ])),
+    ]);
+  }
+}
+
+class _ReadingRecords extends StatelessWidget {
+  const _ReadingRecords(
+      {required this.summary,
+      required this.finished,
+      required this.hourly,
+      required this.weekdays});
+  final ReadingStatisticsSummary summary;
+  final List<LibraryItem> finished;
+  final List<int> hourly, weekdays;
+
+  int? _pages(LibraryItem book) {
+    final digits = RegExp(r'\d+').firstMatch(book.pages ?? '')?.group(0);
+    final pages = int.tryParse(digits ?? '') ?? book.reading?.totalPages ?? 0;
+    return pages > 0 ? pages : null;
+  }
+
+  int? _daysToFinish(LibraryItem book) {
+    final starts = [
+      for (final source
+          in book.reading?.statistics.values ?? <BookReadingStatistics>[])
+        for (final period in source.periods)
+          if (period.seconds > 0) period.localDate
+    ];
+    if (starts.isEmpty) return null;
+    starts.sort();
+    final first =
+        DateTime(starts.first.year, starts.first.month, starts.first.day);
+    final end = book.completedDate!;
+    return DateTime(end.year, end.month, end.day).difference(first).inDays + 1;
+  }
+
+  int _maxIndex(List<int> values) {
+    var best = 0;
+    for (var i = 1; i < values.length; i++) {
+      if (values[i] > values[best]) best = i;
+    }
+    return best;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final title =
+        theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
+    MapEntry<DateTime, int>? bestDay;
+    for (final entry in summary.dailySeconds.entries) {
+      if (bestDay == null || entry.value > bestDay.value) bestDay = entry;
+    }
+    ({LibraryItem book, int value})? best(int? Function(LibraryItem) score,
+        {bool lowest = false}) {
+      ({LibraryItem book, int value})? result;
+      for (final book in finished) {
+        final value = score(book);
+        if (value == null) continue;
+        if (result == null ||
+            (lowest ? value < result.value : value > result.value)) {
+          result = (book: book, value: value);
+        }
+      }
+      return result;
+    }
+
+    final fastest = best(_daysToFinish, lowest: true);
+    final longest = best(_pages);
+    LibraryItem? favourite;
+    for (final book in finished) {
+      if (book.rating != null &&
+          (favourite == null || book.rating! > favourite.rating!)) {
+        favourite = book;
+      }
+    }
+    final hasTime = summary.seconds > 0;
+    final hour = _maxIndex(hourly), weekday = _maxIndex(weekdays);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Récords', style: title),
+        const SizedBox(height: 12),
+        _ReadingRecord(
+            Icons.wb_sunny_outlined,
+            'Día que más leíste',
+            bestDay == null
+                ? '—'
+                : '${_readingDate(bestDay.key)} · ${readingDuration(bestDay.value)}'),
+        _ReadingRecord(
+            Icons.bolt_rounded,
+            'Libro más rápido',
+            fastest == null
+                ? '—'
+                : '${fastest.book.title} · ${fastest.value} ${fastest.value == 1 ? 'día' : 'días'}'),
+        _ReadingRecord(
+            Icons.menu_book_outlined,
+            'Libro más largo',
+            longest == null
+                ? '—'
+                : '${longest.book.title} · ${longest.value} páginas'),
+        _ReadingRecord(
+            Icons.star_outline_rounded,
+            'Mejor valorado',
+            favourite == null
+                ? '—'
+                : '${favourite.title} · ${favourite.rating!.toStringAsFixed(favourite.rating! % 1 == 0 ? 0 : 1).replaceAll('.', ',')} ★'),
+        _ReadingRecord(Icons.local_fire_department_outlined, 'Mejor racha',
+            '${summary.longestStreak} ${summary.longestStreak == 1 ? 'día' : 'días'}'),
+      ])),
+      const SizedBox(width: 28),
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Tus hábitos', style: title),
+        const SizedBox(height: 12),
+        _ReadingRecord(Icons.schedule_rounded, 'Hora favorita',
+            hasTime ? '$hour:00 – ${hour + 1}:00' : '—'),
+        _ReadingRecord(Icons.event_outlined, 'Día favorito',
+            hasTime ? _readingWeekdays[weekday] : '—'),
+        _ReadingRecord(
+            Icons.timelapse_rounded,
+            'Media por día de lectura',
+            hasTime
+                ? readingDuration((summary.seconds / summary.days).round())
+                : '—'),
+        _ReadingRecord(
+            Icons.speed_rounded,
+            'Ritmo medio',
+            summary.pages == 0
+                ? '—'
+                : '${(summary.seconds / summary.pages).round()} s / página'),
+        const SizedBox(height: 4),
+        Expanded(
+            child: _ReadingBars(
+          title: 'Tiempo por hora del día',
+          values: hourly,
+          labels: [for (var h = 0; h < 24; h++) '$h'],
+          tooltips: [
+            for (var h = 0; h < 24; h++)
+              '$h:00 – ${h + 1}:00 · ${readingDuration(hourly[h])}'
+          ],
+          labelEvery: 3,
+        )),
+      ])),
+    ]);
+  }
+}
+
+class _ReadingRecord extends StatelessWidget {
+  const _ReadingRecord(this.icon, this.label, this.value);
+  final IconData icon;
+  final String label, value;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(children: [
+        Icon(icon, size: 18, color: colors.primary),
+        const SizedBox(width: 10),
+        SizedBox(
+            width: 170,
+            child: Text(label,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colors.onSurfaceVariant))),
+        Expanded(
+            child: Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600))),
+      ]),
     );
   }
 }
@@ -284,8 +668,10 @@ class _ReadingNote extends StatelessWidget {
 }
 
 class _ReadingMetrics extends StatelessWidget {
-  const _ReadingMetrics({required this.values});
+  const _ReadingMetrics({required this.values, this.comparisons});
   final List<(String, String, IconData)> values;
+  // Variación respecto al año anterior; positiva en verde, negativa en rojo.
+  final List<({String label, bool up})?>? comparisons;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context), colors = Theme.of(context).colorScheme;
@@ -317,6 +703,20 @@ class _ReadingMetrics extends StatelessWidget {
                 child: Text(values[index].$2,
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w800))),
+            if (comparisons != null) ...[
+              const SizedBox(height: 4),
+              Text(comparisons![index]?.label ?? 'Sin datos del año anterior',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: comparisons![index] == null
+                          ? colors.onSurfaceVariant
+                          : comparisons![index]!.up
+                              ? const Color(0xFF2E7D32)
+                              : colors.error)),
+            ],
           ]),
         )),
       ]
@@ -470,6 +870,7 @@ class _ReadingBars extends StatelessWidget {
                             child: Align(
                                 alignment: Alignment.bottomCenter,
                                 child: FractionallySizedBox(
+                                    widthFactor: 1,
                                     heightFactor: values[i] == 0
                                         ? .02
                                         : .06 + .94 * values[i] / maximum,
@@ -503,9 +904,17 @@ class _ReadingBars extends StatelessWidget {
 }
 
 class _ReadingHeatmap extends StatelessWidget {
-  const _ReadingHeatmap({required this.dailySeconds, required this.dailyPages});
+  const _ReadingHeatmap(
+      {required this.dailySeconds,
+      required this.dailyPages,
+      this.from,
+      this.to,
+      this.title = 'Calendario de lectura'});
   final Map<DateTime, int> dailySeconds;
   final Map<DateTime, int> dailyPages;
+  // Con un intervalo fijo (un año completo) no se ajusta a las lecturas.
+  final DateTime? from, to;
+  final String? title;
 
   static const _months = [
     'Ene',
@@ -534,13 +943,13 @@ class _ReadingHeatmap extends StatelessWidget {
     final theme = Theme.of(context), colors = theme.colorScheme;
     final days = dailySeconds.keys.toList()..sort();
     final today = DateTime.now();
-    final first = _mondayOf(days.isEmpty ? today : days.first);
-    final lastDay = days.isEmpty ? today : days.last;
+    final first = _mondayOf(from ?? (days.isEmpty ? today : days.first));
+    final lastDay = to ?? (days.isEmpty ? today : days.last);
     var weeks = (_mondayOf(lastDay).difference(first).inDays ~/ 7) + 1;
     if (weeks < _minWeeks) weeks = _minWeeks;
     final maximum = dailySeconds.values.fold<int>(1, (a, b) => a > b ? a : b);
     return LayoutBuilder(builder: (context, constraints) {
-      const header = 38.0, footer = 30.0;
+      const header = 46.0, footer = 34.0;
       final availableWidth = constraints.maxWidth - _labelWidth;
       final availableHeight = constraints.maxHeight - header - footer;
       final fit = (availableWidth / (_gap + 14)).floor();
@@ -573,21 +982,23 @@ class _ReadingHeatmap extends StatelessWidget {
         return message == null ? box : Tooltip(message: message, child: box);
       }
 
-      final range = days.isEmpty
+      final range = days.isEmpty || from != null
           ? ''
           : '${_readingDate(days.first)} – ${_readingDate(days.last)}';
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text('Calendario de lectura',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700)),
-          const Spacer(),
-          if (range.isNotEmpty)
-            Text(range,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: colors.onSurfaceVariant)),
-        ]),
-        const SizedBox(height: 14),
+        if (title != null) ...[
+          Row(children: [
+            Text(title!,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const Spacer(),
+            if (range.isNotEmpty)
+              Text(range,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: colors.onSurfaceVariant)),
+          ]),
+          const SizedBox(height: 14),
+        ],
         Expanded(
             child: Center(
                 child: Row(
