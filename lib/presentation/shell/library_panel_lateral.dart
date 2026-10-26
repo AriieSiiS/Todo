@@ -308,11 +308,7 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
           ),
         ),
         const SizedBox(height: 10),
-        _LibraryTotalsSideCard(
-          items: yearItems,
-          year: year,
-          types: controller.visibilitySettings.visibleLibraryTypes,
-        ),
+        _LibraryTotalsSideCard(items: yearItems, year: year),
       ],
     );
   }
@@ -340,14 +336,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
 }
 
 class _LibraryTotalsSideCard extends StatelessWidget {
-  const _LibraryTotalsSideCard({
-    required this.items,
-    required this.year,
-    this.types = LibraryItemType.values,
-  });
+  const _LibraryTotalsSideCard({required this.items, required this.year});
 
   final List<LibraryItem> items;
-  final List<LibraryItemType> types;
   final int year;
 
   @override
@@ -370,7 +361,7 @@ class _LibraryTotalsSideCard extends StatelessWidget {
             value: items.length,
           ),
           const Divider(height: 12),
-          for (final type in types)
+          for (final type in LibraryItemType.values)
             _LibraryTotalRow(
               icon: _libraryIcon(type),
               color: _libraryColor(type),
@@ -492,7 +483,7 @@ _LibraryAddMenuRequest _libraryAddMenuRequest({
   return _LibraryAddMenuRequest(
     controller: controller,
     types: selectedType == null
-        ? controller.visibilitySettings.visibleLibraryTypes
+        ? LibraryItemType.values
         : <LibraryItemType>[selectedType],
     status: status,
   );
