@@ -151,8 +151,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
   @override
   void didUpdateWidget(covariant _LibraryCoverGridCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.item.id != widget.item.id ||
-        oldWidget.item.status != widget.item.status) {
+    if (oldWidget.item.id != widget.item.id) {
       unawaited(_loadAchievements());
     }
   }
@@ -160,8 +159,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
   /// Lee los logros ya guardados en disco; nunca consulta la red.
   Future<void> _loadAchievements() async {
     final item = widget.item;
-    if (item.type != LibraryItemType.game ||
-        item.status != LibraryItemStatus.inProgress) {
+    if (item.type != LibraryItemType.game) {
       if (_achievements != null) setState(() => _achievements = null);
       return;
     }
@@ -185,6 +183,10 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
     final progress = _libraryCardProgress(item, achievements: _achievements);
     final readingBadge = item.reading != null &&
         !(progress != null && item.type == LibraryItemType.book);
+    final allAchievements = item.type == LibraryItemType.game &&
+        _achievements != null &&
+        _achievements!.$2 > 0 &&
+        _achievements!.$1 >= _achievements!.$2;
     final rewatchCount = _libraryRewatchCount(item);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
     return MouseRegion(
@@ -288,7 +290,8 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     ),
                   ),
                 ),
-                if (item.rating != null ||
+                if (allAchievements ||
+                    item.rating != null ||
                     readingBadge ||
                     rewatchCount > 1)
                   Positioned(
@@ -297,6 +300,13 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
+                        if (allAchievements) ...[
+                          const _LibraryAllAchievementsBadge(),
+                          if (item.rating != null ||
+                              readingBadge ||
+                              rewatchCount > 1)
+                            const SizedBox(height: 5),
+                        ],
                         if (item.rating != null)
                           _LibraryPosterBadge(
                             icon: Icons.star_rounded,
@@ -596,6 +606,35 @@ class _LibraryPosterBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Trofeo dorado de los juegos con todos los logros conseguidos.
+class _LibraryAllAchievementsBadge extends StatelessWidget {
+  const _LibraryAllAchievementsBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Todos los logros conseguidos',
+      child: Container(
+        key: const ValueKey('library-all-achievements'),
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: const Color(0xD9202732),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFFF7D36B).withValues(alpha: 0.7),
+          ),
+        ),
+        child: const Icon(
+          Icons.emoji_events_rounded,
+          size: 16,
+          color: Color(0xFFF7D36B),
+        ),
       ),
     );
   }
