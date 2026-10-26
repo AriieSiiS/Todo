@@ -492,9 +492,8 @@ class _LibraryTypeFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 8,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _FilterPill(
           label: 'Todas',
@@ -502,13 +501,15 @@ class _LibraryTypeFilters extends StatelessWidget {
           selected: selected == null,
           onTap: () => onChanged(null),
         ),
-        for (final type in LibraryItemType.values)
+        for (final type in LibraryItemType.values) ...[
+          const SizedBox(width: 10),
           _FilterPill(
             label: _libraryTypePluralLabel(type),
             icon: _libraryIcon(type),
             selected: selected == type,
             onTap: () => onChanged(type),
           ),
+        ],
       ],
     );
   }
@@ -714,65 +715,137 @@ class _LibraryOverviewToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final toggle = _LibraryOverviewModeToggle(
-      value: mode,
-      onChanged: onModeChanged,
-    );
-    final searchField = SizedBox(
-      width: extraFilters.isEmpty ? 280 : 190,
-      child: _CompactLibrarySearchField(
-        controller: searchController,
-        onChanged: onSearchChanged,
+    return _LibraryToolbarRow(
+      chips: filters,
+      controls: [
+        ...extraFilters.map((f) => _LibraryToolbarControl(f, 185, 60)),
+        _LibraryToolbarControl(
+          SizedBox(
+            width: 230,
+            child: _CompactLibrarySearchField(
+              controller: searchController,
+              onChanged: onSearchChanged,
+            ),
+          ),
+          230,
+          80,
+          elastico: true,
+        ),
+        _LibraryToolbarControl(
+          _LibrarySortButton(
+            label: _sortLabel(_effectiveSortOrderForAll(sortOrder)),
+            onSelected: onSortChanged,
+          ),
+          140,
+          70,
+        ),      ],
+      trailing: _LibraryOverviewModeToggle(
+        value: mode,
+        onChanged: onModeChanged,
       ),
-    );
-    final sortButton = _LibrarySortButton(
-      label: _sortLabel(_effectiveSortOrderForAll(sortOrder)),
-      onSelected: onSortChanged,
-    );
-    final controls = <Widget>[
-      for (final filter in extraFilters) ...[
-        filter,
-        const SizedBox(width: 10),
-      ],
-      searchField,
-      const SizedBox(width: 10),
-      sortButton,
-      const SizedBox(width: 10),
-      toggle,
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= 1120) {
-          return Row(
-            children: [
-              Expanded(child: filters),
-              const SizedBox(width: 16),
-              ...controls,
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            filters,
-            const SizedBox(height: 8),
-            if (constraints.maxWidth >= 680)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: controls,
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: controls),
-              ),
-          ],
-        );
-      },
     );
   }
 }
 
+/// Control de la barra con su ancho ideal y el mínimo al que puede encogerse.
+class _LibraryToolbarControl {
+  const _LibraryToolbarControl(
+    this.child,
+    this.ideal,
+    this.minimo, {
+    this.elastico = false,
+  });
+
+  final Widget child;
+  final double ideal;
+  final double minimo;
+
+  /// Los elásticos (la búsqueda) ceden ancho antes que los demás.
+  final bool elastico;
+}
+
+List<double> _repartirAnchos(
+  List<_LibraryToolbarControl> controles,
+  double disponible,
+) {
+  var falta = controles.fold<double>(0, (s, c) => s + c.ideal) - disponible;
+  final anchos = [for (final c in controles) c.ideal];
+  for (final soloElasticos in [true, false]) {
+    if (falta <= 0) break;
+    final candidatos = [
+      for (var i = 0; i < controles.length; i++)
+        if (!soloElasticos || controles[i].elastico) i,
+    ];
+    final margen = candidatos.fold<double>(
+      0,
+      (s, i) => s + anchos[i] - controles[i].minimo,
+    );
+    if (margen <= 0) continue;
+    final recorte = falta < margen ? falta : margen;
+    for (final i in candidatos) {
+      anchos[i] -= recorte * (anchos[i] - controles[i].minimo) / margen;
+    }
+    falta -= recorte;
+  }
+  return anchos;
+}
+
+/// Fila común de Biblioteca: los chips de tipo siempre en una sola línea a la
+/// izquierda y los controles a la derecha, centrados con ellos. Si falta
+/// espacio, los controles se encogen en lugar de partir los chips.
+class _LibraryToolbarRow extends StatelessWidget {
+  const _LibraryToolbarRow({
+    required this.chips,
+    required this.controls,
+    this.trailing,
+  });
+
+  final Widget chips;
+  final List<_LibraryToolbarControl> controls;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        chips,
+        const SizedBox(width: 16),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Reparte el ancho: cada control conserva su tamaño ideal y,
+              // si falta sitio, todos ceden a la vez hasta su mínimo.
+              final fijo = (trailing == null ? 0 : 86) +
+                  10.0 * (controls.length - 1);
+              final anchos = _repartirAnchos(
+                controls,
+                constraints.maxWidth - fijo,
+              );
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < controls.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 10),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: anchos[i]),
+                      child: controls[i].child,
+                    ),
+                  ],
+                  if (trailing != null) ...[
+                    const SizedBox(width: 10),
+                    trailing!,
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
 class _LibraryOverviewModeToggle extends StatelessWidget {
   const _LibraryOverviewModeToggle({
     required this.value,
@@ -1161,15 +1234,11 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final anchoFiltros =
-                (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 165 : 0);
-            // La búsqueda cede ancho para que todo quepa en la fila de chips.
-            final anchoBusqueda =
-                (constraints.maxWidth - 670 - anchoFiltros).clamp(110.0, 230.0);
-            final filtros = <Widget>[
-              if (universes.isNotEmpty)
+        _LibraryToolbarRow(
+          chips: widget.typeFilters,
+          controls: [
+            if (universes.isNotEmpty)
+              _LibraryToolbarControl(
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por universo',
                   allLabel: 'Todos los universos',
@@ -1180,7 +1249,11 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                     _saga = null;
                   }),
                 ),
-              if (sagas.isNotEmpty)
+                185,
+                60,
+              ),
+            if (sagas.isNotEmpty)
+              _LibraryToolbarControl(
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por saga',
                   allLabel: 'Todas las sagas',
@@ -1188,31 +1261,33 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   options: sagas,
                   onSelected: (value) => setState(() => _saga = value),
                 ),
+                155,
+                60,
+              ),
+            _LibraryToolbarControl(
               SizedBox(
-                width: anchoBusqueda,
+                width: 230,
                 child: _CompactLibrarySearchField(
                   controller: _searchController,
                   onChanged: () => setState(() {}),
                 ),
               ),
+              230,
+              80,
+              elastico: true,
+            ),
+            _LibraryToolbarControl(
               _LibrarySortButton(
                 label: _sortLabelForType(_sortOrder, widget.type),
                 type: widget.type,
                 onSelected: widget.onSortChanged,
               ),
-            ];
-            return Row(
-              children: [
-                Expanded(child: widget.typeFilters),
-                const SizedBox(width: 16),
-                for (var i = 0; i < filtros.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 10),
-                  filtros[i],
-                ],
-              ],
-            );
-          },
+              140,
+              70,
+            ),
+          ],
         ),
+        const SizedBox(height: 12),
         Expanded(
           child: sorted.isEmpty
               ? Center(
@@ -1383,12 +1458,15 @@ class _LibrarySortButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF34362F),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF34362F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
