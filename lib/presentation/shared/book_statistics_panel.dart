@@ -32,7 +32,17 @@ class BookStatisticsPanel extends StatelessWidget {
     final summary = ReadingStatisticsSummary(reading?.statistics.values ?? []);
     final dates = summary.dailySeconds.keys.toList()..sort();
     final empty = dates.isEmpty;
-    final year = empty ? DateTime.now().year : dates.last.year;
+    final dailyPages = <DateTime, int>{};
+    for (final source
+        in reading?.statistics.values ?? <BookReadingStatistics>[]) {
+      for (final period in source.periods) {
+        if (period.seconds == 0) continue;
+        final date = period.localDate;
+        dailyPages.update(DateTime(date.year, date.month, date.day),
+            (value) => value + period.pages,
+            ifAbsent: () => period.pages);
+      }
+    }
     return LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxHeight < 380;
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -52,11 +62,9 @@ class BookStatisticsPanel extends StatelessWidget {
         ]),
         SizedBox(height: compact ? 12 : 24),
         Expanded(
-            child: _ReadingMonthlyChart(
-          values: ReadingStatisticsSummary(reading?.statistics.values ?? [],
-                  year: year)
-              .monthlySeconds,
-          title: 'Actividad de $year',
+            child: _ReadingHeatmap(
+          dailySeconds: summary.dailySeconds,
+          dailyPages: dailyPages,
         )),
         SizedBox(height: compact ? 10 : 20),
         Wrap(spacing: 28, runSpacing: 8, children: [
@@ -305,6 +313,176 @@ class _ReadingMetrics extends StatelessWidget {
         )),
       ]
     ]);
+  }
+}
+
+class _ReadingHeatmap extends StatelessWidget {
+  const _ReadingHeatmap({required this.dailySeconds, required this.dailyPages});
+  final Map<DateTime, int> dailySeconds;
+  final Map<DateTime, int> dailyPages;
+
+  static const _months = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic'
+  ];
+  static const _weekdays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  static const _minWeeks = 6;
+  static const _labelWidth = 22.0;
+  static const _gap = 4.0;
+
+  DateTime _mondayOf(DateTime date) =>
+      DateTime(date.year, date.month, date.day - (date.weekday - 1));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    final days = dailySeconds.keys.toList()..sort();
+    final today = DateTime.now();
+    final first = _mondayOf(days.isEmpty ? today : days.first);
+    final lastDay = days.isEmpty ? today : days.last;
+    var weeks = (_mondayOf(lastDay).difference(first).inDays ~/ 7) + 1;
+    if (weeks < _minWeeks) weeks = _minWeeks;
+    final maximum = dailySeconds.values.fold<int>(1, (a, b) => a > b ? a : b);
+    return LayoutBuilder(builder: (context, constraints) {
+      const header = 38.0, footer = 30.0;
+      final availableWidth = constraints.maxWidth - _labelWidth;
+      final availableHeight = constraints.maxHeight - header - footer;
+      final fit = (availableWidth / (_gap + 14)).floor();
+      final shown = weeks > fit ? fit.clamp(1, weeks) : weeks;
+      final start =
+          DateTime(first.year, first.month, first.day + 7 * (weeks - shown));
+      final cell = ((availableWidth - _gap * (shown - 1)) / shown)
+          .clamp(0.0, ((availableHeight - _gap * 6) / 7).clamp(0.0, 46.0))
+          .toDouble();
+      Color tone(int seconds) {
+        if (seconds <= 0) return colors.onSurface.withValues(alpha: .07);
+        final level = seconds / maximum;
+        final step = level > .75
+            ? 4
+            : level > .5
+                ? 3
+                : level > .25
+                    ? 2
+                    : 1;
+        return colors.primary
+            .withValues(alpha: .18 + .20 * (step - 1) + (step == 4 ? .04 : 0));
+      }
+
+      Widget square(Color color, [String? message]) {
+        final box = Container(
+            width: cell,
+            height: cell,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(cell * .22)));
+        return message == null ? box : Tooltip(message: message, child: box);
+      }
+
+      final range = days.isEmpty
+          ? ''
+          : '${_readingDate(days.first)} – ${_readingDate(days.last)}';
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('Calendario de lectura',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700)),
+          const Spacer(),
+          if (range.isNotEmpty)
+            Text(range,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colors.onSurfaceVariant)),
+        ]),
+        const SizedBox(height: 14),
+        Expanded(
+            child: Center(
+                child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+              Column(children: [
+                const SizedBox(height: 20),
+                for (var row = 0; row < 7; row++)
+                  Container(
+                      width: _labelWidth,
+                      height: cell,
+                      alignment: Alignment.centerLeft,
+                      margin: EdgeInsets.only(bottom: row < 6 ? _gap : 0),
+                      child: Text(row.isEven ? _weekdays[row] : '',
+                          style: TextStyle(
+                              fontSize: 11, color: colors.onSurfaceVariant))),
+              ]),
+              for (var week = 0; week < shown; week++) ...[
+                if (week > 0) const SizedBox(width: _gap),
+                Column(children: [
+                  SizedBox(
+                      height: 20,
+                      width: cell,
+                      child: () {
+                        final monday = DateTime(
+                            start.year, start.month, start.day + 7 * week);
+                        final newMonth = week == 0 ||
+                            monday.month !=
+                                DateTime(monday.year, monday.month,
+                                        monday.day - 7)
+                                    .month;
+                        return newMonth
+                            ? OverflowBox(
+                                alignment: Alignment.centerLeft,
+                                maxWidth: 60,
+                                child: Text(_months[monday.month - 1],
+                                    softWrap: false,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: colors.onSurfaceVariant)))
+                            : null;
+                      }()),
+                  for (var row = 0; row < 7; row++)
+                    Padding(
+                        padding: EdgeInsets.only(bottom: row < 6 ? _gap : 0),
+                        child: () {
+                          final date = DateTime(start.year, start.month,
+                              start.day + 7 * week + row);
+                          final seconds = dailySeconds[date] ?? 0;
+                          final pages = dailyPages[date] ?? 0;
+                          final label = _readingDate(date);
+                          return square(
+                              tone(seconds),
+                              seconds == 0
+                                  ? label
+                                  : '$label · ${readingDuration(seconds)}'
+                                      ' · $pages ${pages == 1 ? 'página' : 'páginas'}');
+                        }()),
+                ]),
+              ],
+            ]))),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          Text('Menos',
+              style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+          const SizedBox(width: 6),
+          for (final seconds in [0, 1, 2, 3, 4]) ...[
+            Container(
+                width: 14,
+                height: 14,
+                margin: const EdgeInsets.only(right: 3),
+                decoration: BoxDecoration(
+                    color: tone(seconds * maximum ~/ 4),
+                    borderRadius: BorderRadius.circular(3))),
+          ],
+          const SizedBox(width: 3),
+          Text('Más',
+              style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+        ]),
+      ]);
+    });
   }
 }
 
