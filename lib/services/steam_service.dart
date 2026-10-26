@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:crypto/crypto.dart';
@@ -294,8 +295,11 @@ class SteamService {
               : null,
           'unlock_time': states[item['name']]?['unlocktime'],
           'global_percent': _percentage(percentages[item['name']]),
+          'icon_url': item['icon'],
+          'icon_gray_url': item['icongray'],
         },
     ];
+    await _saveIcons(appId, achievements);
     final unlocked =
         achievements.where((item) => item['unlocked'] == true).length;
     final known = achievements.every((item) => item['unlocked'] != null);
@@ -313,6 +317,71 @@ class SteamService {
     _checkRevision(revision);
     _cache['app:$appId'] = (DateTime.now(), result);
     return result;
+  }
+
+  static final _iconHosts =
+      RegExp(r'(^|\.)(steamstatic\.com|akamaihd\.net|steamcommunity\.com)$');
+
+  /// Carpeta local donde se conservan los iconos de los logros de cada juego.
+  static Directory _iconsDirectory(int appId) {
+    final home = Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        Directory.current.path;
+    final documents = Directory('$home${Platform.pathSeparator}Documents');
+    final base = documents.existsSync()
+        ? '${documents.path}${Platform.pathSeparator}Todo'
+        : home;
+    return Directory(
+        '$base${Platform.pathSeparator}steam_icons${Platform.pathSeparator}$appId');
+  }
+
+  /// Descarga una sola vez los iconos y añade sus rutas locales a cada logro.
+  /// Un fallo al descargar nunca impide mostrar los logros.
+  Future<void> _saveIcons(
+      int appId, List<Map<String, dynamic>> achievements) async {
+    try {
+      final directory = _iconsDirectory(appId);
+      final tasks = <Future<void> Function()>[];
+      for (final item in achievements) {
+        for (final (urlKey, pathKey) in const [
+          ('icon_url', 'icon_path'),
+          ('icon_gray_url', 'icon_gray_path'),
+        ]) {
+          final raw = item.remove(urlKey);
+          final uri = raw is String ? Uri.tryParse(raw) : null;
+          if (uri == null ||
+              uri.scheme != 'https' ||
+              !_iconHosts.hasMatch(uri.host)) {
+            continue;
+          }
+          final name =
+              uri.pathSegments.last.replaceAll(RegExp(r'[^\w.\-]'), '');
+          if (name.isEmpty) continue;
+          final file = File('${directory.path}${Platform.pathSeparator}$name');
+          if (file.existsSync() && file.lengthSync() > 0) {
+            item[pathKey] = file.path;
+            continue;
+          }
+          tasks.add(() async {
+            try {
+              final response =
+                  await _client.get(uri).timeout(const Duration(seconds: 6));
+              if (response.statusCode != 200 ||
+                  response.bodyBytes.isEmpty ||
+                  response.bodyBytes.length > 1024 * 1024) {
+                return;
+              }
+              await directory.create(recursive: true);
+              await file.writeAsBytes(response.bodyBytes);
+              item[pathKey] = file.path;
+            } catch (_) {}
+          });
+        }
+      }
+      for (var i = 0; i < tasks.length; i += 8) {
+        await Future.wait(tasks.skip(i).take(8).map((task) => task()));
+      }
+    } catch (_) {}
   }
 
   static String _titleKey(String value) => value

@@ -974,6 +974,7 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                                     service: widget.controller.steam,
                                     itemId: item.id,
                                     title: item.title,
+                                    allowChangeGame: false,
                                   )
                                 : item.type == LibraryItemType.book && _tab == 2
                                     ? BookStatisticsPanel(reading: item.reading)

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -190,7 +191,12 @@ class SteamGameDialog extends StatelessWidget {
 /// Logros de Steam de un juego, sin marco, para incrustarlos en una pestaña.
 class SteamGamePanel extends StatefulWidget {
   const SteamGamePanel(
-      {required this.service, this.itemId, this.title, super.key});
+      {required this.service,
+      this.itemId,
+      this.title,
+      this.allowChangeGame = true,
+      super.key});
+  final bool allowChangeGame;
   final SteamService service;
   final String? itemId;
   final String? title;
@@ -204,7 +210,7 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
   Map<String, dynamic>? _result;
   int? _appId;
   bool _busy = true;
-  bool _pendingOnly = false;
+  int _filter = 0;
   String? _error;
 
   @override
@@ -316,93 +322,226 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
                     })),
       ]);
     }
-    final achievements = (result['achievements'] as List)
-        .cast<Map<String, dynamic>>()
-        .where((item) => !_pendingOnly || item['unlocked'] == false)
-        .toList();
+    final all = (result['achievements'] as List).cast<Map<String, dynamic>>();
+    final achievements = all
+        .where((item) => switch (_filter) {
+              1 => item['unlocked'] == true,
+              2 => item['unlocked'] != true,
+              _ => true,
+            })
+        .toList()
+      ..sort(_compare);
     final game = _games.where((game) => game['appid'] == _appId).firstOrNull;
     final percent = result['completion_percent'] as num?;
+    final unlocked = result['unlocked'] as num;
+    final total = result['total'] as num;
     final queried =
         DateTime.tryParse(result['queried_at'] as String? ?? '')?.toLocal();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(result['name'] as String,
-          style: Theme.of(context).textTheme.titleLarge),
-      const SizedBox(height: 8),
-      Text('${result['unlocked']} de ${result['total']} logros'
-          '${percent == null ? '' : ' · ${percent.toStringAsFixed(1).replaceAll('.', ',')} %'}'
-          '${game == null ? '' : ' · ${_hours(game)}'}'),
+    final scheme = Theme.of(context).colorScheme;
+    final details = [
+      if (percent != null) '${_decimal(percent)} % completado',
+      if (game != null) _hours(game),
       if (queried != null)
-        Text('Consultado: ${queried.day}/${queried.month}/${queried.year} '
-            '${queried.hour.toString().padLeft(2, '0')}:${queried.minute.toString().padLeft(2, '0')}'),
-      const SizedBox(height: 8),
-      FilterChip(
-          label: const Text('Solo pendientes'),
-          selected: _pendingOnly,
-          onSelected: (value) => setState(() => _pendingOnly = value)),
-      const Divider(),
+        'Actualizado ${queried.day}/${queried.month}/${queried.year} '
+            '${queried.hour.toString().padLeft(2, '0')}:${queried.minute.toString().padLeft(2, '0')}',
+    ].join('  ·  ');
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text.rich(TextSpan(children: [
+            TextSpan(
+                text: '$unlocked',
+                style:
+                    const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            TextSpan(
+                text: ' de $total logros',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ])),
+          const SizedBox(height: 2),
+          Text(details,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+        ])),
+        const SizedBox(width: 12),
+        SegmentedButton<int>(
+            showSelectedIcon: false,
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            segments: const [
+              ButtonSegment(value: 0, label: Text('Todos')),
+              ButtonSegment(
+                  value: 1,
+                  label: Text('Desbloqueados'),
+                  icon: Icon(Icons.emoji_events_outlined, size: 16)),
+              ButtonSegment(
+                  value: 2,
+                  label: Text('Pendientes'),
+                  icon: Icon(Icons.lock_outline, size: 16)),
+            ],
+            selected: {_filter},
+            onSelectionChanged: (value) =>
+                setState(() => _filter = value.first)),
+        IconButton(
+            tooltip: 'Actualizar logros',
+            onPressed: _busy ? null : () => _load(refresh: true),
+            icon: const Icon(Icons.refresh)),
+      ]),
+      const SizedBox(height: 10),
+      ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+              minHeight: 8,
+              value: total == 0 ? 0 : (unlocked / total).toDouble())),
+      const SizedBox(height: 14),
       Expanded(
-          child: result['total'] == 0
+          child: total == 0
               ? const Center(
                   child: Text('Este juego no tiene logros en Steam.'))
               : achievements.isEmpty
-                  ? const Center(child: Text('No hay logros pendientes.'))
-                  : ListView.builder(
+                  ? const Center(child: Text('No hay logros en esta lista.'))
+                  : GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 480,
+                              mainAxisExtent: 92,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10),
                       itemCount: achievements.length,
-                      itemBuilder: (_, index) {
-                        final item = achievements[index];
-                        final unlocked = item['unlocked'] as bool?;
-                        final rarity = item['global_percent'] as num?;
-                        final timestamp = item['unlock_time'] as num?;
-                        final date = unlocked == true &&
-                                timestamp != null &&
-                                timestamp > 0
-                            ? DateTime.fromMillisecondsSinceEpoch(
-                                    timestamp.toInt() * 1000)
-                                .toLocal()
-                            : null;
-                        return ListTile(
-                          leading: Icon(unlocked == true
-                              ? Icons.emoji_events
-                              : unlocked == false
-                                  ? Icons.lock_outline
-                                  : Icons.help_outline),
-                          title: Text(item['name'] as String),
-                          subtitle: Text([
-                            if ((item['description'] as String).isNotEmpty)
-                              item['description'],
-                            unlocked == true
-                                ? 'Desbloqueado${date == null ? '' : ' el ${date.day}/${date.month}/${date.year}'}'
-                                : unlocked == false
-                                    ? 'Pendiente'
-                                    : 'Estado no disponible',
-                            if (rarity != null)
-                              '${rarity.toStringAsFixed(1).replaceAll('.', ',')} % de jugadores',
-                          ].join('\n')),
-                        );
-                      })),
+                      itemBuilder: (_, index) =>
+                          _AchievementTile(item: achievements[index]))),
     ]);
+  }
+
+  /// Primero los desbloqueados, del más reciente al más antiguo; después los
+  /// pendientes, de los más comunes a los más raros.
+  static int _compare(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final aOn = a['unlocked'] == true, bOn = b['unlocked'] == true;
+    if (aOn != bOn) return aOn ? -1 : 1;
+    if (aOn) {
+      return ((b['unlock_time'] as num?) ?? 0)
+          .compareTo((a['unlock_time'] as num?) ?? 0);
+    }
+    return ((b['global_percent'] as num?) ?? -1)
+        .compareTo((a['global_percent'] as num?) ?? -1);
   }
 
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(child: _content()),
-        const SizedBox(height: 12),
-        Wrap(spacing: 12, children: [
-          OutlinedButton.icon(
-              onPressed: _busy ? null : () => _load(refresh: true),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Actualizar')),
-          if (_appId != null)
-            TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => setState(() {
-                          _appId = null;
-                          _result = null;
-                          _error = null;
-                        }),
-                child: const Text('Cambiar juego')),
-        ]),
+        if (widget.allowChangeGame || _result == null) ...[
+          const SizedBox(height: 12),
+          Wrap(spacing: 12, children: [
+            if (_result == null)
+              OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _load(refresh: true),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Actualizar')),
+            if (_appId != null && widget.allowChangeGame)
+              TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                            _appId = null;
+                            _result = null;
+                            _error = null;
+                          }),
+                  child: const Text('Cambiar juego')),
+          ]),
+        ],
       ]);
+}
+
+String _decimal(num value) => value.toStringAsFixed(1).replaceAll('.', ',');
+
+class _AchievementTile extends StatelessWidget {
+  const _AchievementTile({required this.item});
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final unlocked = item['unlocked'] == true;
+    final rarity = item['global_percent'] as num?;
+    final timestamp = item['unlock_time'] as num?;
+    final date = unlocked && timestamp != null && timestamp > 0
+        ? DateTime.fromMillisecondsSinceEpoch(timestamp.toInt() * 1000)
+            .toLocal()
+        : null;
+    final description = (item['description'] as String? ?? '').trim();
+    final path = (unlocked
+        ? item['icon_path']
+        : item['icon_gray_path'] ?? item['icon_path']) as String?;
+    const gold = Color(0xFFC9A227);
+    final icon = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+            width: 64,
+            height: 64,
+            child: path == null
+                ? ColoredBox(
+                    color: scheme.surfaceContainerHighest,
+                    child: Icon(
+                        unlocked ? Icons.emoji_events : Icons.lock_outline,
+                        color: scheme.onSurfaceVariant))
+                : Image.file(File(path),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => ColoredBox(
+                        color: scheme.surfaceContainerHighest,
+                        child: const Icon(Icons.emoji_events_outlined)))));
+    return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: unlocked
+                    ? gold.withValues(alpha: .55)
+                    : scheme.outlineVariant)),
+        child: Row(children: [
+          Opacity(opacity: unlocked ? 1 : .6, child: icon),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(item['name'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                    description.isNotEmpty
+                        ? description
+                        : item['hidden'] == true
+                            ? 'Logro oculto'
+                            : 'Sin descripción',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 12.5, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Text(
+                    [
+                      unlocked
+                          ? 'Desbloqueado${date == null ? '' : ' el ${date.day}/${date.month}/${date.year}'}'
+                          : item['unlocked'] == false
+                              ? 'Pendiente'
+                              : 'Estado no disponible',
+                      if (rarity != null) '${_decimal(rarity)} % de jugadores',
+                    ].join('  ·  '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: unlocked
+                            ? const Color(0xFF8A6D00)
+                            : scheme.onSurfaceVariant)),
+              ])),
+        ]));
+  }
 }
