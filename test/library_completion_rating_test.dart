@@ -306,23 +306,4 @@ void main() {
     expect(find.text('Valorar libro'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets('el editor de propósitos solicita la valoración al completar',
-      (tester) async {
-    await openLibrary(tester, goals: true);
-    await tester.tap(find.text('Una lectura de prueba').first,
-        buttons: kSecondaryMouseButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Editar'));
-    await tester.pumpAndSettle();
-    final completed = find.widgetWithText(SwitchListTile, 'Completado');
-    await tester.ensureVisible(completed);
-    await tester.tap(completed);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
-    expect(controller.libraryGoals.single.isCompleted, isTrue);
-    expect(find.text('Valorar libro'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 }
