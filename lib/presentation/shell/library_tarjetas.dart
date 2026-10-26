@@ -207,6 +207,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                               item: item,
                               compact: true,
                               onDark: true,
+                              showUniverse: true,
                               alignment: WrapAlignment.center,
                             ),
                           ],
@@ -684,10 +685,12 @@ class _LibraryCollectionChips extends StatelessWidget {
     this.singleLine = false,
     this.onDark = false,
     this.alignment = WrapAlignment.start,
+    this.showUniverse = false,
   });
 
   final TodoWorkspace controller;
   final LibraryItem item;
+  final bool showUniverse;
   final bool compact;
   final bool singleLine;
   final bool onDark;
@@ -699,10 +702,22 @@ class _LibraryCollectionChips extends StatelessWidget {
     if (labels == null) {
       return const SizedBox.shrink();
     }
+    final universe = showUniverse ? labels.universe : null;
     if (compact || singleLine) {
-      return Row(
+      final row = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (universe != null && singleLine) ...[
+            Flexible(
+              child: _LibraryCollectionChip(
+                label: universe,
+                item: item,
+                compact: compact,
+                onDark: onDark,
+              ),
+            ),
+            const SizedBox(width: 5),
+          ],
           Flexible(
             child: _LibraryCollectionChip(
               label: labels.saga,
@@ -720,6 +735,20 @@ class _LibraryCollectionChips extends StatelessWidget {
               onDark: onDark,
             ),
           ],
+        ],
+      );
+      if (universe == null || singleLine) return row;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _LibraryCollectionChip(
+            label: universe,
+            item: item,
+            compact: compact,
+            onDark: onDark,
+          ),
+          const SizedBox(height: 4),
+          row,
         ],
       );
     }

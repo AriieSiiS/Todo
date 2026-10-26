@@ -1452,12 +1452,14 @@ String _libraryItemStatusMeta(LibraryItem item) {
   return _libraryStatusSingularLabel(item.status);
 }
 
-({String saga, String? installment})? _libraryCollectionLabels(
+({String saga, String? installment, String? universe})?
+    _libraryCollectionLabels(
   TodoWorkspace controller,
   LibraryItem item,
 ) {
   final collectionName = item.collectionName?.trim();
   final collectionNumber = item.collectionNumber;
+  final universe = item.universeName?.trim();
   if (collectionName == null || collectionName.isEmpty) {
     return null;
   }
@@ -1475,9 +1477,10 @@ String _libraryItemStatusMeta(LibraryItem item) {
       (distinctNumbers.length >= 2 || item.showCollectionNumber);
   return (
     saga: collectionName.toLowerCase().startsWith('saga ')
-        ? collectionName
-        : 'Saga $collectionName',
+        ? collectionName.substring(5).trim()
+        : collectionName,
     installment: showInstallment ? '#$collectionNumber' : null,
+    universe: universe == null || universe.isEmpty ? null : universe,
   );
 }
 
@@ -1719,7 +1722,7 @@ String _monthShortLibrary(int month) => const [
     ][month];
 
 String _sortLabel(LibrarySortOrder order) => switch (order) {
-      LibrarySortOrder.newestFirst => 'Más reciente',
+      LibrarySortOrder.newestFirst => 'Recientes',
       LibrarySortOrder.oldestFirst => 'Más antiguo',
       LibrarySortOrder.titleAsc => 'A-Z',
       LibrarySortOrder.titleDesc => 'Z-A',

@@ -87,7 +87,7 @@ class _LibraryPageState extends State<LibraryPage> {
       if (allUniverses.isNotEmpty)
         _LibraryFilterButton(
           tooltip: 'Filtrar por universo',
-          allLabel: 'Todos los universos',
+          allLabel: 'Universos',
           selected: _allUniverse,
           options: allUniverses,
           onSelected: (value) => setState(() {
@@ -98,7 +98,7 @@ class _LibraryPageState extends State<LibraryPage> {
       if (allSagas.isNotEmpty)
         _LibraryFilterButton(
           tooltip: 'Filtrar por saga',
-          allLabel: 'Todas las sagas',
+          allLabel: 'Sagas',
           selected: _allSaga,
           options: allSagas,
           onSelected: (value) => setState(() => _allSaga = value),
@@ -131,7 +131,11 @@ class _LibraryPageState extends State<LibraryPage> {
                         listenable: controller,
                         builder: (context, child) =>
                             AnnualReadingStatisticsDialog(
-                                books: controller.libraryItems))),
+                                books: controller.libraryItems,
+                                goals: controller.libraryGoals,
+                                coverBuilder: (book) => _LibraryCoverImage(
+                                    source: book.coverUrl,
+                                    type: book.type)))),
                 onAdd: area == LibraryAreaView.goals
                     ? _showAddGoalDialog
                     : _showAddDialog,
@@ -727,7 +731,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
     return _LibraryToolbarRow(
       chips: filters,
       controls: [
-        ...extraFilters.map((f) => _LibraryToolbarControl(f, 185, 60)),
+        ...extraFilters.map((f) => _LibraryToolbarControl(f, 120, 60)),
         _LibraryToolbarControl(
           SizedBox(
             width: 230,
@@ -737,7 +741,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
             ),
           ),
           230,
-          80,
+          64,
           elastico: true,
         ),
         _LibraryToolbarControl(
@@ -745,7 +749,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
             label: _sortLabel(_effectiveSortOrderForAll(sortOrder)),
             onSelected: onSortChanged,
           ),
-          140,
+          130,
           70,
         ),      ],
       trailing: _LibraryOverviewModeToggle(
@@ -1236,7 +1240,9 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   Widget build(BuildContext context) {
     final filtered = _filteredItems(widget.items);
     final sorted = _sortedItems(filtered);
-    final universes = _distinctNames(widget.items.map((i) => i.universeName));
+    final universes = _distinctNames(widget.controller.libraryItems
+        .where((i) => i.type == widget.type)
+        .map((i) => i.universeName));
     final sagas = _distinctNames(widget.items
         .where((i) => _universe == null || i.universeName == _universe)
         .map((i) => i.collectionName));
@@ -1250,7 +1256,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
               _LibraryToolbarControl(
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por universo',
-                  allLabel: 'Todos los universos',
+                  allLabel: 'Universos',
                   selected: _universe,
                   options: universes,
                   onSelected: (value) => setState(() {
@@ -1258,19 +1264,19 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                     _saga = null;
                   }),
                 ),
-                185,
+                130,
                 60,
               ),
             if (sagas.isNotEmpty)
               _LibraryToolbarControl(
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por saga',
-                  allLabel: 'Todas las sagas',
+                  allLabel: 'Sagas',
                   selected: _saga,
                   options: sagas,
                   onSelected: (value) => setState(() => _saga = value),
                 ),
-                155,
+                110,
                 60,
               ),
             _LibraryToolbarControl(
@@ -1282,7 +1288,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 ),
               ),
               230,
-              80,
+              64,
               elastico: true,
             ),
             _LibraryToolbarControl(
@@ -1291,7 +1297,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 type: widget.type,
                 onSelected: widget.onSortChanged,
               ),
-              140,
+              130,
               70,
             ),
           ],

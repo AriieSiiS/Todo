@@ -1016,12 +1016,12 @@ void main() {
       await tester.pump();
     });
 
-    expect(find.text('Saga Carl el mazmorrero'), findsNWidgets(2));
+    expect(find.text('Carl el mazmorrero'), findsNWidgets(4));
     expect(find.text('#1'), findsNWidgets(2));
     expect(find.text('#2'), findsOneWidget);
     expect(find.text('Entrega única'), findsNWidgets(2));
-    expect(find.text('Saga Otra saga'), findsOneWidget);
-    expect(find.text('Saga futura'), findsOneWidget);
+    expect(find.text('Otra saga'), findsOneWidget);
+    expect(find.text('futura'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

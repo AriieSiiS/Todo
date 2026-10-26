@@ -939,6 +939,7 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                                       controller: widget.controller,
                                       item: item,
                                       singleLine: true,
+                                      showUniverse: true,
                                     ),
                                   ),
                                 ),

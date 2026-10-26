@@ -102,11 +102,11 @@ void main() {
     double? headerHeight;
     for (final (id, title, saga) in [
       ('juego-corto', 'Juego breve', null),
-      ('libro-ficha', 'Libro de prueba', 'Saga de prueba'),
+      ('libro-ficha', 'Libro de prueba', 'de prueba'),
       (
         'juego-largo',
         'La Tierra Media: Sombras de Mordor',
-        'Saga La Tierra Media'
+        'La Tierra Media'
       ),
       ('pelicula-ficha', 'Película de prueba', null),
       ('serie-ficha', 'Serie de prueba', null),
