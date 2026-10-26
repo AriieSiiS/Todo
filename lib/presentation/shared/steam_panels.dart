@@ -455,7 +455,7 @@ class _AchievementTile extends StatelessWidget {
     final path = (unlocked
         ? item['icon_path']
         : item['icon_gray_path'] ?? item['icon_path']) as String?;
-    const gold = Color(0xFFC9A227);
+    const green = Color(0xFF607A4D);
     final icon = ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
@@ -478,9 +478,8 @@ class _AchievementTile extends StatelessWidget {
             color: scheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: unlocked
-                    ? gold.withValues(alpha: .55)
-                    : scheme.outlineVariant)),
+                color: unlocked ? green : scheme.outlineVariant,
+                width: unlocked ? 1.6 : 1)),
         child: Row(children: [
           Opacity(opacity: unlocked ? 1 : .6, child: icon),
           const SizedBox(width: 12),
@@ -508,21 +507,18 @@ class _AchievementTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                     [
-                      unlocked
-                          ? 'Desbloqueado${date == null ? '' : ' el ${date.day}/${date.month}/${date.year}'}'
-                          : item['unlocked'] == false
-                              ? 'Pendiente'
-                              : 'Estado no disponible',
-                      if (rarity != null) '${_decimal(rarity)} % de jugadores',
+                      if (unlocked && date != null)
+                        '${date.day}/${date.month}/${date.year}'
+                      else if (item['unlocked'] == null)
+                        'Estado no disponible',
+                      if (rarity != null) '${_decimal(rarity)} %',
                     ].join('  ·  '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: unlocked
-                            ? const Color(0xFF8A6D00)
-                            : scheme.onSurfaceVariant)),
+                        color: unlocked ? green : scheme.onSurfaceVariant)),
               ])),
         ]));
   }
