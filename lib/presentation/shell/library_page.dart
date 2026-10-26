@@ -706,7 +706,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
     return _LibraryToolbarRow(
       chips: filters,
       controls: [
-        ...extraFilters.map((f) => _LibraryToolbarControl(f, 120, 60)),
+        ...extraFilters.map((f) => _LibraryToolbarControl(f, 150, 60)),
         _LibraryToolbarControl(
           SizedBox(
             width: 230,
@@ -1269,7 +1269,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                     _saga = null;
                   }),
                 ),
-                130,
+                150,
                 60,
               ),
             if (sagas.isNotEmpty)

@@ -331,7 +331,7 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                     _saga = null;
                   }),
                 ),
-                120,
+                150,
                 60,
               ),
             if (showFilters && sagas.isNotEmpty)
