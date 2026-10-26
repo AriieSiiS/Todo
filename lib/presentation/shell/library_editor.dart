@@ -1822,6 +1822,7 @@ String _sortLabel(LibrarySortOrder order) => switch (order) {
       LibrarySortOrder.durationDesc => 'Más duración',
       LibrarySortOrder.durationAsc => 'Menos duración',
       LibrarySortOrder.countryAsc => 'País',
+      LibrarySortOrder.achievementsDesc => '% de logros',
     };
 
 String _sortLabelForType(LibrarySortOrder order, LibraryItemType type) {
@@ -1868,6 +1869,7 @@ List<LibrarySortOrder> _sortOptionsForType(LibraryItemType type) {
         LibrarySortOrder.formatAsc,
         LibrarySortOrder.durationDesc,
         LibrarySortOrder.durationAsc,
+        LibrarySortOrder.achievementsDesc,
       ],
     LibraryItemType.book => [
         ...common,
@@ -1947,11 +1949,29 @@ int _compareLibraryItems(
         .compareTo(_extractFirstNumber(right.duration)),
     LibrarySortOrder.countryAsc =>
       _sortText(left.country).compareTo(_sortText(right.country)),
+    LibrarySortOrder.achievementsDesc => _libraryAchievementPercent(right)
+        .compareTo(_libraryAchievementPercent(left)),
   };
   if (result != 0) {
     return result;
   }
   return _sortText(left.title).compareTo(_sortText(right.title));
+}
+
+/// Logros guardados en local de cada juego (desbloqueados, total). Se rellena
+/// al abrir Juegos leyendo del disco; nunca consulta la red.
+final Map<String, (int, int)> _libraryAchievementCache = {};
+
+/// Porcentaje de logros de 0 a 100; los juegos sin datos van al final (-1).
+double _libraryAchievementPercent(LibraryItem item) {
+  final logros = _libraryAchievementCache[item.id];
+  if (logros == null || logros.$2 <= 0) return -1;
+  return logros.$1 * 100 / logros.$2;
+}
+
+bool _libraryHasAllAchievements(LibraryItem item) {
+  final logros = _libraryAchievementCache[item.id];
+  return logros != null && logros.$2 > 0 && logros.$1 >= logros.$2;
 }
 
 String _searchableText(LibraryItem item) {

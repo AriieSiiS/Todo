@@ -583,22 +583,7 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
           ),
         ],
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _goalYearField(),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: SwitchListTile(
-                value: _favorite,
-                onChanged: (value) => setState(() => _favorite = value),
-                title: const Text('Prioritario'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ],
-        ),
+        _goalYearField(),
         if (_isEditing) ...[
           const SizedBox(height: 8),
           SwitchListTile(

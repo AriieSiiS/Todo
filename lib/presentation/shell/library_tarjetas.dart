@@ -177,12 +177,32 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
     if (found != _achievements) setState(() => _achievements = found);
   }
 
+  void _openMenu(LibraryItem item, Offset position) {
+    _showLibraryContextMenu(
+      context: context,
+      position: position,
+      onPages: () => _openKnowledgeWorkspace(
+        context,
+        widget.controller,
+        item,
+      ),
+      onComplete: item.status == LibraryItemStatus.completed
+          ? null
+          : () => _completeLibraryItem(context, widget.controller, item),
+      onRating: item.status != LibraryItemStatus.completed
+          ? null
+          : () => _editLibraryRating(context, widget.controller, item),
+      onProgress: _libraryMarkProgressAction(context, widget.controller, item),
+      progressLabel: _libraryMarkProgressLabel(item),
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final progress = _libraryCardProgress(item, achievements: _achievements);
-    final readingBadge = item.reading != null &&
-        !(progress != null && item.type == LibraryItemType.book);
     final allAchievements = item.type == LibraryItemType.game &&
         _achievements != null &&
         _achievements!.$2 > 0 &&
@@ -193,34 +213,10 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onSecondaryTapDown: (details) => _showLibraryContextMenu(
-          context: context,
-          position: details.globalPosition,
-          onPages: () => _openKnowledgeWorkspace(
-            context,
-            widget.controller,
-            item,
-          ),
-          onComplete: item.status == LibraryItemStatus.completed
-              ? null
-              : () => _completeLibraryItem(
-                    context,
-                    widget.controller,
-                    item,
-                  ),
-          onRating: item.status != LibraryItemStatus.completed
-              ? null
-              : () => _editLibraryRating(
-                    context,
-                    widget.controller,
-                    item,
-                  ),
-          onProgress:
-              _libraryMarkProgressAction(context, widget.controller, item),
-          progressLabel: _libraryMarkProgressLabel(item),
-          onEdit: widget.onEdit,
-          onDelete: widget.onDelete,
-        ),
+        // El clic derecho y la pulsación larga abren el mismo menú.
+        onSecondaryTapDown: (details) =>
+            _openMenu(item, details.globalPosition),
+        onLongPressStart: (details) => _openMenu(item, details.globalPosition),
         child: InkWell(
           onTap: widget.onTap,
           borderRadius: BorderRadius.circular(7),
@@ -290,10 +286,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     ),
                   ),
                 ),
-                if (allAchievements ||
-                    item.rating != null ||
-                    readingBadge ||
-                    rewatchCount > 1)
+                if (allAchievements || item.rating != null || rewatchCount > 1)
                   Positioned(
                     top: 8,
                     right: 8,
@@ -302,9 +295,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                       children: [
                         if (allAchievements) ...[
                           const _LibraryAllAchievementsBadge(),
-                          if (item.rating != null ||
-                              readingBadge ||
-                              rewatchCount > 1)
+                          if (item.rating != null || rewatchCount > 1)
                             const SizedBox(height: 5),
                         ],
                         if (item.rating != null)
@@ -312,15 +303,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                             icon: Icons.star_rounded,
                             label: _formatRating(item.rating!),
                           ),
-                        if (readingBadge) ...[
-                          if (item.rating != null) const SizedBox(height: 5),
-                          BookReadingBadge(
-                              reading: item.reading!,
-                              totalPages:
-                                  bookPageTotal(item.pages, item.reading)),
-                        ],
-                        if ((item.rating != null || readingBadge) &&
-                            rewatchCount > 1)
+                        if (item.rating != null && rewatchCount > 1)
                           const SizedBox(height: 5),
                         if (rewatchCount > 1)
                           _LibraryRewatchBadge(count: rewatchCount),
@@ -428,31 +411,9 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: _LibraryCoverMenuButton(
-                    onPages: () => _openKnowledgeWorkspace(
-                      context,
-                      widget.controller,
-                      item,
-                    ),
-                    onComplete: item.status == LibraryItemStatus.completed
-                        ? null
-                        : () => _completeLibraryItem(
-                              context,
-                              widget.controller,
-                              item,
-                            ),
-                    onRating: item.status != LibraryItemStatus.completed
-                        ? null
-                        : () => _editLibraryRating(
-                              context,
-                              widget.controller,
-                              item,
-                            ),
-                    onProgress: _libraryMarkProgressAction(
-                        context, widget.controller, item),
-                    progressLabel: _libraryMarkProgressLabel(item),
-                    onEdit: widget.onEdit,
-                    onDelete: widget.onDelete,
+                  child: _LibraryCoverTypeBadge(
+                    key: ValueKey('library-cover-type-${item.id}'),
+                    type: item.type,
                   ),
                 ),
               ],
@@ -746,112 +707,25 @@ class _LibraryStatusBadge extends StatelessWidget {
   }
 }
 
-class _LibraryCoverMenuButton extends StatelessWidget {
-  const _LibraryCoverMenuButton({
-    this.onPages,
-    this.onComplete,
-    this.onRating,
-    this.onProgress,
-    this.progressLabel = 'Marcar episodio visto',
-    required this.onEdit,
-    required this.onDelete,
-  });
+class _LibraryCoverTypeBadge extends StatelessWidget {
+  const _LibraryCoverTypeBadge({super.key, required this.type});
 
-  final VoidCallback? onPages;
-  final VoidCallback? onComplete;
-  final VoidCallback? onRating;
-  final VoidCallback? onProgress;
-  final String progressLabel;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final LibraryItemType type;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_LibraryContextAction>(
-      tooltip: 'Opciones',
-      position: PopupMenuPosition.under,
-      onSelected: (action) {
-        if (action == _LibraryContextAction.pages) {
-          onPages?.call();
-        } else if (action == _LibraryContextAction.complete) {
-          onComplete?.call();
-        } else if (action == _LibraryContextAction.rating) {
-          onRating?.call();
-        } else if (action == _LibraryContextAction.progress) {
-          onProgress?.call();
-        } else if (action == _LibraryContextAction.edit) {
-          onEdit();
-        } else if (action == _LibraryContextAction.delete) {
-          onDelete();
-        }
-      },
-      itemBuilder: (context) => [
-        if (onPages != null)
-          const PopupMenuItem(
-            value: _LibraryContextAction.pages,
-            child: ListTile(
-              dense: true,
-              leading: Icon(Icons.description_outlined),
-              title: Text('Abrir páginas'),
-            ),
-          ),
-        if (onComplete != null)
-          const PopupMenuItem(
-            value: _LibraryContextAction.complete,
-            child: ListTile(
-              dense: true,
-              leading: Icon(Icons.check_circle_outline_rounded),
-              title: Text('Marcar como completado'),
-            ),
-          ),
-        if (onRating != null)
-          const PopupMenuItem(
-            value: _LibraryContextAction.rating,
-            child: ListTile(
-              dense: true,
-              leading: Icon(Icons.star_outline_rounded),
-              title: Text('Cambiar/añadir valoración'),
-            ),
-          ),
-        if (onProgress != null)
-          PopupMenuItem(
-            value: _LibraryContextAction.progress,
-            child: ListTile(
-              dense: true,
-              leading: const Icon(Icons.add_task_rounded),
-              title: Text(progressLabel),
-            ),
-          ),
-        const PopupMenuItem(
-          value: _LibraryContextAction.edit,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.edit_outlined),
-            title: Text('Editar'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: _LibraryContextAction.delete,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.delete_outline_rounded),
-            title: Text('Borrar'),
-          ),
-        ),
-      ],
+    final color = _libraryColor(type);
+    return Tooltip(
+      message: _libraryTypeSingularLabelForType(type),
       child: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: const Color(0xC2202732),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+          color: const Color(0xD9202732),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
         ),
-        child: const Icon(
-          Icons.more_horiz_rounded,
-          color: Colors.white,
-          size: 18,
-        ),
+        child: Icon(_libraryIcon(type), size: 15, color: color),
       ),
     );
   }
@@ -972,12 +846,6 @@ class _LibraryItemRow extends StatelessWidget {
                 style:
                     TextStyle(color: context.visuals.textMuted, fontSize: 13),
               ),
-              if (item.reading != null) ...[
-                const SizedBox(width: 10),
-                BookReadingBadge(
-                    reading: item.reading!,
-                    totalPages: bookPageTotal(item.pages, item.reading)),
-              ],
             ],
           ),
         ),

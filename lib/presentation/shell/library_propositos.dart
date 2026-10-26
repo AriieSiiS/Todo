@@ -235,6 +235,8 @@ class _LibraryGoalsView extends StatefulWidget {
     required this.controller,
     required this.year,
     required this.selectedType,
+    required this.overviewMode,
+    required this.onOverviewModeChanged,
     required this.onSelectedTypeChanged,
     required this.onAdd,
   });
@@ -242,6 +244,8 @@ class _LibraryGoalsView extends StatefulWidget {
   final TodoWorkspace controller;
   final int year;
   final LibraryItemType? selectedType;
+  final _LibraryOverviewMode overviewMode;
+  final ValueChanged<_LibraryOverviewMode> onOverviewModeChanged;
   final ValueChanged<LibraryItemType?> onSelectedTypeChanged;
   final VoidCallback onAdd;
 
@@ -260,9 +264,20 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _LibraryTypeFilters(
-          selected: widget.selectedType,
-          onChanged: widget.onSelectedTypeChanged,
+        Row(
+          children: [
+            _LibraryTypeFilters(
+              selected: widget.selectedType,
+              onChanged: widget.onSelectedTypeChanged,
+            ),
+            const Spacer(),
+            // «Todos los propósitos» se puede ver por columnas o en portadas.
+            if (widget.selectedType == null)
+              _LibraryOverviewModeToggle(
+                value: widget.overviewMode,
+                onChanged: widget.onOverviewModeChanged,
+              ),
+          ],
         ),
         const SizedBox(height: 14),
         if (widget.selectedType != null)
@@ -271,6 +286,13 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
               : SizedBox(
                   height: 620,
                   child: _filteredGoalsPanel(context, goals),
+                )
+        else if (widget.overviewMode == _LibraryOverviewMode.covers)
+          wide
+              ? Expanded(child: _allGoalsCoversPanel(context, goals))
+              : SizedBox(
+                  height: 620,
+                  child: _allGoalsCoversPanel(context, goals),
                 )
         else if (wide)
           Expanded(
@@ -295,7 +317,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: (id) => _toggleLibraryGoalCompleted(
                         context, widget.controller, id),
-                    onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
                 ),
@@ -318,7 +339,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: (id) => _toggleLibraryGoalCompleted(
                         context, widget.controller, id),
-                    onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
                 ),
@@ -343,7 +363,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
                     onToggle: (id) => _toggleLibraryGoalCompleted(
                         context, widget.controller, id),
-                    onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
                 ),
@@ -366,7 +385,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                   onEdit: (goal) => _showGoalEditDialog(context, goal),
                   onToggle: (id) => _toggleLibraryGoalCompleted(
                       context, widget.controller, id),
-                  onFavorite: widget.controller.toggleLibraryGoalFavorite,
                   onDelete: (goal) => _deleteGoal(context, goal),
                 ),
                 const SizedBox(height: 14),
@@ -403,6 +421,15 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
     );
   }
 
+  Widget _allGoalsCoversPanel(BuildContext context, List<LibraryGoal> goals) {
+    return _LibraryGoalAllCoversPanel(
+      goals: goals,
+      onOpen: (goal) => _showGoalDetails(context, goals, goal),
+      onEdit: (goal) => _showGoalEditDialog(context, goal),
+      onDelete: (goal) => _deleteGoal(context, goal),
+    );
+  }
+
   Widget _filteredGoalsPanel(BuildContext context, List<LibraryGoal> goals) {
     final selectedType = widget.selectedType!;
     return _LibraryGoalFilteredCardsPanel(
@@ -415,7 +442,6 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
         goal,
       ),
       onEdit: (goal) => _showGoalEditDialog(context, goal),
-      onFavorite: widget.controller.toggleLibraryGoalFavorite,
       onDelete: (goal) => _deleteGoal(context, goal),
     );
   }
@@ -446,6 +472,83 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
   }
 }
 
+/// Portadas de todos los propósitos del año, de todos los tipos, con scroll.
+class _LibraryGoalAllCoversPanel extends StatelessWidget {
+  const _LibraryGoalAllCoversPanel({
+    required this.goals,
+    required this.onOpen,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<LibraryGoal> goals;
+  final ValueChanged<LibraryGoal> onOpen;
+  final ValueChanged<LibraryGoal> onEdit;
+  final ValueChanged<LibraryGoal> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 18, 20, 16),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Todos los propósitos',
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                _miniBadge(
+                  '${goals.length} ${goals.length == 1 ? 'propósito' : 'propósitos'}',
+                  const Color(0xFFE8F0E3),
+                  const Color(0xFF597743),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: goals.isEmpty
+                ? Center(
+                    child: Text(
+                      'Aún no hay propósitos para este año.',
+                      style: TextStyle(color: context.visuals.textMuted),
+                    ),
+                  )
+                : GridView.builder(
+                    key: const ValueKey('library-goals-covers-grid'),
+                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 194,
+                      mainAxisSpacing: 24,
+                      crossAxisSpacing: 20,
+                      childAspectRatio: 0.66,
+                    ),
+                    itemCount: goals.length,
+                    itemBuilder: (context, index) {
+                      final goal = goals[index];
+                      return _LibraryGoalLargeCard(
+                        goal: goal,
+                        onOpen: () => onOpen(goal),
+                        onEdit: () => onEdit(goal),
+                        onDelete: () => onDelete(goal),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
   const _LibraryGoalFilteredCardsPanel({
     required this.type,
@@ -453,7 +556,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
     required this.onAdd,
     required this.onOpen,
     required this.onEdit,
-    required this.onFavorite,
     required this.onDelete,
   });
 
@@ -462,7 +564,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<LibraryGoal> onOpen;
   final ValueChanged<LibraryGoal> onEdit;
-  final ValueChanged<String> onFavorite;
   final ValueChanged<LibraryGoal> onDelete;
 
   @override
@@ -559,7 +660,6 @@ class _LibraryGoalFilteredCardsPanel extends StatelessWidget {
                             goal: goal,
                             onOpen: () => onOpen(goal),
                             onEdit: () => onEdit(goal),
-                            onFavorite: () => onFavorite(goal.id),
                             onDelete: () => onDelete(goal),
                           );
                         },
@@ -578,14 +678,12 @@ class _LibraryGoalLargeCard extends StatefulWidget {
     required this.goal,
     required this.onOpen,
     required this.onEdit,
-    required this.onFavorite,
     required this.onDelete,
   });
 
   final LibraryGoal goal;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
-  final VoidCallback onFavorite;
   final VoidCallback onDelete;
 
   @override
@@ -682,17 +780,6 @@ class _LibraryGoalLargeCardState extends State<_LibraryGoalLargeCard> {
                       ),
                     ),
                   ),
-                  if (goal.isFavorite)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: _LibraryGoalTopIconButton(
-                        tooltip: 'Quitar prioridad',
-                        icon: Icons.star_rounded,
-                        color: const Color(0xFFF1A340),
-                        onPressed: widget.onFavorite,
-                      ),
-                    ),
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
@@ -772,47 +859,6 @@ class _LibraryGoalLargeCardState extends State<_LibraryGoalLargeCard> {
   }
 }
 
-class _LibraryGoalTopIconButton extends StatelessWidget {
-  const _LibraryGoalTopIconButton({
-    required this.tooltip,
-    required this.icon,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: const Color(0xDDEFF4E7),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, size: 18, color: color),
-        ),
-      ),
-    );
-  }
-}
-
 class _LibraryGoalTypeCard extends StatelessWidget {
   const _LibraryGoalTypeCard({
     required this.type,
@@ -821,7 +867,6 @@ class _LibraryGoalTypeCard extends StatelessWidget {
     required this.onOpen,
     required this.onEdit,
     required this.onToggle,
-    required this.onFavorite,
     required this.onDelete,
   });
 
@@ -831,7 +876,6 @@ class _LibraryGoalTypeCard extends StatelessWidget {
   final ValueChanged<LibraryGoal> onOpen;
   final ValueChanged<LibraryGoal> onEdit;
   final ValueChanged<String> onToggle;
-  final ValueChanged<String> onFavorite;
   final ValueChanged<LibraryGoal> onDelete;
 
   @override
@@ -888,7 +932,6 @@ class _LibraryGoalTypeCard extends StatelessWidget {
                             onOpen: () => onOpen(goal),
                             onEdit: () => onEdit(goal),
                             onToggle: () => onToggle(goal.id),
-                            onFavorite: () => onFavorite(goal.id),
                             onDelete: () => onDelete(goal),
                           ),
                       ],
@@ -921,7 +964,6 @@ class _LibraryGoalRow extends StatelessWidget {
     required this.onOpen,
     required this.onEdit,
     required this.onToggle,
-    required this.onFavorite,
     required this.onDelete,
   });
 
@@ -929,7 +971,6 @@ class _LibraryGoalRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onToggle;
-  final VoidCallback onFavorite;
   final VoidCallback onDelete;
 
   @override
@@ -997,18 +1038,6 @@ class _LibraryGoalRow extends StatelessWidget {
                         ],
                       ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: onFavorite,
-                    icon: Icon(
-                      goal.isFavorite
-                          ? Icons.star_rounded
-                          : Icons.star_border_rounded,
-                      color: goal.isFavorite
-                          ? const Color(0xFFF1A340)
-                          : context.visuals.textMuted,
-                    ),
-                    tooltip: 'Marcar como prioritario',
                   ),
                 ],
               ),

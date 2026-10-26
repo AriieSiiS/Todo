@@ -81,9 +81,10 @@ void main() {
         findsOneWidget);
     expect(
         find.descendant(of: strip, matching: find.text('2 %')), findsOneWidget);
-    final menu = find.descendant(
-        of: card, matching: find.byIcon(Icons.more_horiz_rounded));
-    expect(tester.getRect(strip).overlaps(tester.getRect(menu)), false);
+    // Sin círculo de porcentaje ni botón ⋯: el tipo va arriba a la izquierda.
+    expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+    expect(find.byKey(const ValueKey('library-cover-type-libro-prueba')),
+        findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('una serie pendiente muestra la franja al marcar un episodio',
@@ -148,6 +149,12 @@ void main() {
         4);
     expect(find.text('Marcado: T1 · 4 / 9 episodios'), findsOneWidget);
     await tester.tap(find.text('Deshacer'));
+    await tester.pumpAndSettle();
+    // La pulsación larga abre el mismo menú que el clic derecho.
+    await tester.longPress(find.byKey(ValueKey('library-cover-card-$id')));
+    await tester.pumpAndSettle();
+    expect(find.text('Marcar episodio visto'), findsOneWidget);
+    await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
     expect(
         controller.libraryItems

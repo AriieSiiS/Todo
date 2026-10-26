@@ -24,6 +24,7 @@ class _LibraryPageState extends State<LibraryPage> {
   LibraryItemType? _typeFilter;
   LibraryItemType? _goalsTypeFilter;
   _LibraryOverviewMode _overviewMode = _LibraryOverviewMode.covers;
+  _LibraryOverviewMode _goalsOverviewMode = _LibraryOverviewMode.columns;
   LibrarySortOrder _allSortOrder = LibrarySortOrder.newestFirst;
   late final TextEditingController _allSearchController;
   late int _year = DateTime.now().year;
@@ -187,6 +188,9 @@ class _LibraryPageState extends State<LibraryPage> {
                       controller: controller,
                       year: _year,
                       selectedType: _goalsTypeFilter,
+                      overviewMode: _goalsOverviewMode,
+                      onOverviewModeChanged: (mode) =>
+                          setState(() => _goalsOverviewMode = mode),
                       onSelectedTypeChanged: (type) =>
                           setState(() => _goalsTypeFilter = type),
                       onAdd: _showAddGoalDialog,
@@ -399,6 +403,8 @@ class _LibraryHeader extends StatelessWidget {
   }
 }
 
+/// Años visibles uno al lado del otro (sin desplegable), de menor a mayor,
+/// con el seleccionado resaltado.
 class _LibraryGoalYearButton extends StatelessWidget {
   const _LibraryGoalYearButton({
     required this.year,
@@ -414,82 +420,20 @@ class _LibraryGoalYearButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final historicalYears = availableYears
-        .where((candidate) => candidate < currentYear)
-        .toList(growable: false);
-    final futureYears = availableYears
-        .where((candidate) => candidate > currentYear)
-        .toList(growable: false)
-      ..sort();
-    final label = year < currentYear ? 'Histórico · $year' : '$year';
-
-    if (historicalYears.isEmpty && futureYears.isEmpty) {
-      return _HeaderSecondaryButton(
-        label: label,
-        icon: Icons.calendar_today_outlined,
-        onPressed: null,
-      );
-    }
-
-    return PopupMenuButton<int>(
-      tooltip: 'Cambiar año',
-      position: PopupMenuPosition.under,
-      offset: const Offset(0, 8),
-      constraints: const BoxConstraints(minWidth: 180),
-      onSelected: onSelected,
-      itemBuilder: (context) => [
-        const PopupMenuItem<int>(
-          enabled: false,
-          height: 34,
-          child: Text(
-            'Año actual',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+    final years = <int>{currentYear, year, ...availableYears}.toList()..sort();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final candidate in years)
+          _FilterPill(
+            key: ValueKey('library-year-$candidate'),
+            label: candidate < currentYear ? 'Histórico · $candidate' : '$candidate',
+            icon: Icons.calendar_today_outlined,
+            selected: candidate == year,
+            onTap: () => onSelected(candidate),
           ),
-        ),
-        PopupMenuItem<int>(
-          value: currentYear,
-          child: Text('$currentYear'),
-        ),
-        if (futureYears.isNotEmpty) ...[
-          const PopupMenuDivider(),
-          const PopupMenuItem<int>(
-            enabled: false,
-            height: 34,
-            child: Text(
-              'Próximo año',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-          ),
-          for (final futureYear in futureYears)
-            PopupMenuItem<int>(
-              value: futureYear,
-              child: Text('$futureYear'),
-            ),
-        ],
-        if (historicalYears.isNotEmpty) ...[
-          const PopupMenuDivider(),
-          const PopupMenuItem<int>(
-            enabled: false,
-            height: 34,
-            child: Text(
-              'Histórico',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-          ),
-          for (final historicalYear in historicalYears)
-            PopupMenuItem<int>(
-              value: historicalYear,
-              child: Text('$historicalYear'),
-            ),
-        ],
       ],
-      child: IgnorePointer(
-        child: _HeaderSecondaryButton(
-          label: label,
-          icon: Icons.calendar_today_outlined,
-          onPressed: () {},
-        ),
-      ),
     );
   }
 }
@@ -1250,6 +1194,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   late final TextEditingController _searchController;
   String? _universe;
   String? _saga;
+  String? _achievementsFilter;
+  static const _allAchievementsLabel = '100 % de logros';
 
   LibrarySortOrder get _sortOrder =>
       _effectiveSortOrderForType(widget.sortOrder, widget.type);
@@ -1258,6 +1204,38 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    unawaited(_loadAchievements());
+  }
+
+  @override
+  void didUpdateWidget(covariant _LibraryFilteredTypePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.type != widget.type) {
+      _achievementsFilter = null;
+      unawaited(_loadAchievements());
+    }
+  }
+
+  /// Lee del disco los logros guardados de los juegos, sin red, para poder
+  /// filtrar y ordenar por ellos.
+  Future<void> _loadAchievements() async {
+    if (widget.type != LibraryItemType.game) return;
+    var changed = false;
+    for (final item in widget.controller.libraryItems) {
+      if (item.type != LibraryItemType.game) continue;
+      final saved = await widget.controller.steam.savedAchievements(item.id);
+      final list = saved?['achievements'];
+      if (list is! List || list.isEmpty) continue;
+      final value = (
+        list.where((e) => e is Map && e['unlocked'] == true).length,
+        list.length,
+      );
+      if (_libraryAchievementCache[item.id] != value) {
+        _libraryAchievementCache[item.id] = value;
+        changed = true;
+      }
+    }
+    if (changed && mounted) setState(() {});
   }
 
   @override
@@ -1295,6 +1273,19 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   }),
                 ),
                 130,
+                60,
+              ),
+            if (widget.type == LibraryItemType.game)
+              _LibraryToolbarControl(
+                _LibraryFilterButton(
+                  tooltip: 'Filtrar por logros',
+                  allLabel: 'Logros',
+                  selected: _achievementsFilter,
+                  options: const [_allAchievementsLabel],
+                  onSelected: (value) =>
+                      setState(() => _achievementsFilter = value),
+                ),
+                110,
                 60,
               ),
             if (sagas.isNotEmpty)
@@ -1392,6 +1383,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
     return source
         .where((item) => _universe == null || item.universeName == _universe)
         .where((item) => _saga == null || item.collectionName == _saga)
+        .where((item) =>
+            _achievementsFilter == null || _libraryHasAllAchievements(item))
         .where((item) =>
             query.isEmpty || _searchableText(item).paraBuscar.contains(query))
         .toList();
