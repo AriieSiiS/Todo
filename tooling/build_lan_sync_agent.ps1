@@ -8,6 +8,7 @@ $resolvedRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
   $OutputDirectory = Join-Path $resolvedRoot 'build\windows\x64\runner\Release'
 }
+$OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 [System.IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
 
 $agentRoot = Join-Path $resolvedRoot 'lan_sync_agent'
@@ -54,3 +55,12 @@ Copy-Item -LiteralPath (Join-Path $resolvedRoot 'tooling\provision_lan_sync_cert
   -Destination (Join-Path $OutputDirectory 'provision_lan_sync_certificate.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $resolvedRoot 'tooling\register_lan_sync_agent.ps1') `
   -Destination (Join-Path $OutputDirectory 'register_lan_sync_agent.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $resolvedRoot 'tooling\install_kindle.ps1') `
+  -Destination (Join-Path $OutputDirectory 'install_kindle.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $resolvedRoot 'tooling\limitar_red_todo.ps1') `
+  -Destination (Join-Path $OutputDirectory 'limitar_red_todo.ps1') -Force
+$kindleOutput = Join-Path $OutputDirectory 'kindle\todo.koplugin'
+[System.IO.Directory]::CreateDirectory($kindleOutput) | Out-Null
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $resolvedRoot 'kindle\todo.koplugin') -File) {
+  Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $kindleOutput $file.Name) -Force
+}

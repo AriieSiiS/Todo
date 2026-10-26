@@ -3,11 +3,27 @@ part of 'todo_workspace.dart';
 extension TodoWorkspaceAgent on TodoWorkspace {
   Future<Map<String, dynamic>> executeAgentCommand(
       String name, Map<String, dynamic> arguments) {
+    if (_agentClosing) {
+      return Future.error(
+          StateError('Todo está cerrándose. Reintenta la operación.'));
+    }
     final result =
         _agentCommandQueue.then((_) => _executeAgentCommand(name, arguments));
     _agentCommandQueue =
         result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return result;
+  }
+
+  Future<void> prepareForExit() async {
+    _agentClosing = true;
+    try {
+      await _agentCommandQueue;
+      await flushPendingChanges();
+      await _agentBridge?.stop();
+    } catch (_) {
+      _agentClosing = false;
+      rethrow;
+    }
   }
 
   Map<String, dynamic> _agentTask(TaskModel task) => {
@@ -61,23 +77,23 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     });
   }
 
-  String _agentDigest(Object? value) {
-    Object? ordered(Object? item) {
-      if (item is Map) {
-        final keys = item.keys.cast<String>().toList()..sort();
-        return {for (final key in keys) key: ordered(item[key])};
-      }
-      if (item is List) return item.map(ordered).toList();
-      return item;
-    }
-
-    return sha256.convert(utf8.encode(jsonEncode(ordered(value)))).toString();
-  }
+  String _agentDigest(Object? value) => KindleWorkspace.digest(value);
 
   Future<Map<String, dynamic>> _executeAgentCommand(
       String name, Map<String, dynamic> arguments) async {
+    if (name == 'get_steam_games' || name == 'get_steam_achievements') {
+      return steam.agentQuery(name, arguments);
+    }
+    if (KindleWorkspace.schemas.containsKey(name)) {
+      return KindleWorkspace(tasks: _tasks, books: _libraryItems,
+        receipts: _agentOperationReceipts, agenda: _taskAgenda,
+        save: () async { _commit(); await _saveAgentChanges(); },
+      ).execute(name, arguments);
+    }
     const schemas = <String, Set<String>>{
       'get_today': {},
+      'get_steam_link': {'item_id'},
+      'link_steam_game': {'item_id', 'appid', 'request_id', 'expected_version'},
       'list_tasks': {'status', 'project_id', 'category_id', 'date'},
       'get_task': {'task_id'},
       'list_projects': {},
@@ -212,6 +228,17 @@ extension TodoWorkspaceAgent on TodoWorkspace {
       };
     }
 
+    LibraryItem steamItem() {
+      final id = text('item_id', required: true);
+      return _libraryItems.firstWhere(
+        (item) => item.id == id && item.type == LibraryItemType.game,
+        orElse: () => throw const FormatException('La ficha del juego ya no existe.'),
+      );
+    }
+
+    if (name == 'get_steam_link') {
+      return {'link': await steam.binding(steamItem().id), 'source': 'app'};
+    }
     if (name == 'get_today') {
       return {
         'date': _occurrenceKey(logicalDate()),
@@ -276,6 +303,17 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     if (_agentOperationReceipts.length >= 10000) {
       throw const FormatException(
           'El registro de operaciones está lleno. Revisa la conexión desde Todo.');
+    }
+    if (name == 'link_steam_game') {
+      final item = steamItem();
+      final appId = arguments['appid'];
+      if (appId is! int || appId < 1 || appId > 4294967295) {
+        throw const FormatException('El identificador del juego no es válido.');
+      }
+      await steam.link(item.id, appId, title: item.title,
+          expectedVersion: text('expected_version', required: true));
+      return _finishAgentOperation(requestId, fingerprint,
+          {'link': await steam.binding(item.id)});
     }
     List<String>? relation(String field, Iterable<String> available) {
       if (!arguments.containsKey(field)) return null;

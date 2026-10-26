@@ -21,6 +21,7 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     String? duration,
     String? pages,
     String? country,
+    String? universeName,
     String? collectionName,
     int? collectionNumber,
     bool showCollectionNumber = false,
@@ -57,6 +58,9 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       duration: duration?.trim().isEmpty == true ? null : duration?.trim(),
       pages: pages?.trim().isEmpty == true ? null : pages?.trim(),
       country: country?.trim().isEmpty == true ? null : country?.trim(),
+      universeName: universeName?.trim().isEmpty == true
+          ? null
+          : universeName?.trim(),
       collectionName: collectionName?.trim().isEmpty == true
           ? null
           : collectionName?.trim(),
@@ -111,13 +115,17 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     );
   }
 
-  void updateLibraryItem(LibraryItem updated) {
+  void updateLibraryItem(LibraryItem updated, {bool replaceReading = false}) {
     final index = _libraryItems.indexWhere((item) => item.id == updated.id);
     if (index == -1) {
       return;
     }
     final now = DateTime.now();
     final next = updated.copyWith(
+      reading: replaceReading
+          ? updated.reading
+          : _libraryItems[index].reading?.merge(updated.reading) ??
+              updated.reading,
       completedDate: updated.status == LibraryItemStatus.completed
           ? updated.completedDate ?? logicalDate()
           : null,
@@ -128,6 +136,72 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     _syncLibraryGoalFromItem(next, now);
     unawaited(_knowledgeService.syncLibraryItem(next));
     _commit();
+  }
+
+  bool updateBookReadingPage(String itemId, int page) {
+    final index = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (index == -1 || _libraryItems[index].type != LibraryItemType.book) {
+      return false;
+    }
+    final item = _libraryItems[index];
+    final total = bookPageTotal(item.pages, item.reading);
+    if (total == null || page < 0 || page > total) return false;
+    final old = item.reading;
+    final reading = LibraryReading(
+      progress: page / total,
+      observedAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      page: page.toString(),
+      totalPages: total,
+      position: '',
+      documents: old?.documents ?? const [],
+      cursors: old?.cursors ?? const {},
+      quotes: old?.quotes ?? const [],
+      statistics: old?.statistics ?? const {},
+    );
+    updateLibraryItem(item.copyWith(reading: reading), replaceReading: true);
+    return true;
+  }
+
+  bool updateBookQuote(
+    String itemId,
+    String quoteId, {
+    required String text,
+    required String page,
+    required String chapter,
+    required String note,
+  }) {
+    final index = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (index == -1 || text.trim().isEmpty) return false;
+    final item = _libraryItems[index];
+    final old = item.reading;
+    if (item.type != LibraryItemType.book || old == null) return false;
+    final quoteIndex = old.quotes.indexWhere((quote) => quote['id'] == quoteId);
+    if (quoteIndex == -1) return false;
+    final quotes =
+        old.quotes.map((quote) => Map<String, dynamic>.from(quote)).toList();
+    quotes[quoteIndex] = {
+      ...quotes[quoteIndex],
+      'text': text.trim(),
+      'page': page.trim(),
+      'chapter': chapter.trim(),
+      'note': note.trim(),
+      'manual_edit': true,
+      'observed_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    };
+    final reading = LibraryReading(
+      progress: old.progress,
+      observedAt: old.observedAt,
+      page: old.page,
+      totalPages: old.totalPages,
+      position: old.position,
+      chapter: old.chapter,
+      documents: old.documents,
+      cursors: old.cursors,
+      quotes: quotes,
+      statistics: old.statistics,
+    );
+    updateLibraryItem(item.copyWith(reading: reading), replaceReading: true);
+    return true;
   }
 
   void updateLibraryItemStatus(
@@ -590,6 +664,7 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       duration: primary.duration ?? secondary.duration,
       pages: primary.pages ?? secondary.pages,
       country: primary.country ?? secondary.country,
+      universeName: primary.universeName ?? secondary.universeName,
       collectionName: primary.collectionName ?? secondary.collectionName,
       collectionNumber: primary.collectionNumber ?? secondary.collectionNumber,
       showCollectionNumber:
@@ -603,6 +678,7 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       publicationStatus:
           primary.publicationStatus ?? secondary.publicationStatus,
       linkedGoalId: primary.linkedGoalId ?? secondary.linkedGoalId,
+      reading: primary.reading?.merge(secondary.reading) ?? secondary.reading,
       createdAt: keeper.createdAt.isBefore(incoming.createdAt)
           ? keeper.createdAt
           : incoming.createdAt,

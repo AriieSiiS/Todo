@@ -477,12 +477,13 @@ class _TodayPageState extends State<TodayPage> {
     });
   }
 
-  void _deleteSelectedTasks() {
+  Future<void> _deleteSelectedTasks() async {
     final ids = _selectedTaskIds.toList(growable: false);
     if (ids.isEmpty) {
       return;
     }
-    controller.deleteTasks(ids);
+    final deleted = await _confirmAndDeleteTasks(context, controller, ids);
+    if (!deleted || !mounted) return;
     setState(() {
       _selectionMode = false;
       _selectedTaskIds.clear();
@@ -725,31 +726,35 @@ class _TodayHeaderButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: Ink(
-          width: 154,
-          height: 48,
-          decoration: ShapeDecoration(
-            color: background,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(color: borderColor),
-              borderRadius: BorderRadius.circular(999),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 154),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 48,
+            decoration: ShapeDecoration(
+              color: background,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: borderColor),
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 18, color: foreground),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: 15,
-                    fontWeight: primary ? FontWeight.w700 : FontWeight.w500,
+            child: Center(
+              widthFactor: 1,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 18, color: foreground),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 15,
+                      fontWeight: primary ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1685,8 +1690,72 @@ Future<void> _handleTaskAction(
   } else if (value == 'unlink') {
     controller.unlinkTaskFromCalendarEvent(task.id);
   } else if (value == 'delete') {
-    controller.deleteTask(task.id);
+    await _confirmAndDeleteTasks(context, controller, <String>[task.id]);
   }
+}
+
+/// Pide confirmación antes de borrar tareas (y sus subtareas) y, tras
+/// borrarlas, ofrece deshacer. Devuelve si se han borrado.
+Future<bool> _confirmAndDeleteTasks(
+  BuildContext context,
+  TodoWorkspace controller,
+  List<String> taskIds,
+) async {
+  final ids = taskIds.toSet();
+  final tasks =
+      controller.tasks.where((task) => ids.contains(task.id)).toList();
+  final subtaskCount = controller.tasks
+      .where((task) =>
+          !ids.contains(task.id) &&
+          task.parentTaskId != null &&
+          ids.contains(task.parentTaskId))
+      .length;
+  final mainCount = tasks.isEmpty ? ids.length : tasks.length;
+  final subtasksText = subtaskCount == 0
+      ? ''
+      : subtaskCount == 1
+          ? ' También se borrará su subtarea.'
+          : ' También se borrarán sus $subtaskCount subtareas.';
+  final message = mainCount == 1 && tasks.isNotEmpty
+      ? 'Se borrará «${tasks.first.title}».$subtasksText'
+      : 'Se borrarán $mainCount tareas.$subtasksText';
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(mainCount == 1 ? 'Borrar tarea' : 'Borrar tareas'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('confirm-delete-tasks'),
+          style: FilledButton.styleFrom(
+            backgroundColor: dialogContext.visuals.danger,
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Borrar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return false;
+  final deletion = controller.deleteTasks(ids);
+  if (deletion.isEmpty || !context.mounted) return !deletion.isEmpty;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  messenger?.hideCurrentSnackBar();
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Text(
+          mainCount == 1 ? 'Tarea borrada.' : '$mainCount tareas borradas.'),
+      action: SnackBarAction(
+        label: 'Deshacer',
+        onPressed: () => controller.restoreDeletedTasks(deletion),
+      ),
+    ),
+  );
+  return true;
 }
 
 class _ReferenceInboxPanel extends StatelessWidget {

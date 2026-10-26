@@ -55,6 +55,54 @@ class FullBackupService {
         '${destinationRoot.path}${Platform.pathSeparator}last_backup_status.json',
       );
 
+  /// Carpeta de las fotos rápidas del estado antes de un cambio grande. Es la
+  /// misma que usa `tooling/guardar_antes_de_cambio.ps1`.
+  Directory get snapshotsBeforeChangesDirectory => Directory(
+        '${destinationRoot.path}${Platform.pathSeparator}_antes-de-cambios',
+      );
+
+  /// Guarda [snapshotJson] como foto rápida antes de un cambio grande,
+  /// comprueba que se ha escrito completa y conserva solo las [keep] últimas.
+  /// Devuelve el archivo creado o lanza un error si no se pudo verificar.
+  Future<File> saveSnapshotBeforeChange(
+    String snapshotJson, {
+    required String label,
+    int keep = 10,
+    DateTime? now,
+  }) async {
+    final folder = snapshotsBeforeChangesDirectory;
+    await folder.create(recursive: true);
+    final safeLabel = label
+        .replaceAll(RegExp(r'[^\p{L}\p{N}-]+', unicode: true), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    final moment = now ?? DateTime.now();
+    String two(int value) => value.toString().padLeft(2, '0');
+    final stamp = '${moment.year}${two(moment.month)}${two(moment.day)}-'
+        '${two(moment.hour)}${two(moment.minute)}${two(moment.second)}';
+    final file = File(
+      '${folder.path}${Platform.pathSeparator}'
+      'todo_state-${safeLabel.isEmpty ? 'cambio' : safeLabel}-$stamp.json',
+    );
+    await file.writeAsString(snapshotJson, flush: true);
+    if (await file.readAsString() != snapshotJson) {
+      await file.delete();
+      throw const FileSystemException('La copia previa no se pudo verificar.');
+    }
+    final copies = folder.listSync().whereType<File>().where((candidate) {
+      final name = candidate.uri.pathSegments.last;
+      return name.startsWith('todo_state-') && name.endsWith('.json');
+    }).toList()
+      ..sort((a, b) {
+        final byDate = b.lastModifiedSync().compareTo(a.lastModifiedSync());
+        return byDate != 0 ? byDate : b.path.compareTo(a.path);
+      });
+    for (final old in copies.skip(keep)) {
+      if (old.path == file.path) continue;
+      await old.delete();
+    }
+    return file;
+  }
+
   Future<FullBackupOverview> loadOverview() async {
     if (!isSupported) {
       return const FullBackupOverview(

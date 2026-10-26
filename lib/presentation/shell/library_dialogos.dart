@@ -836,10 +836,12 @@ class _LibraryGoalDialogState extends State<_LibraryGoalDialog> {
               _country.text.trim().isEmpty,
         ),
       );
+      final navigator = Navigator.of(context);
+      final parentContext = navigator.context;
+      navigator.pop();
       if (_completed != goal.isCompleted) {
-        widget.controller.toggleLibraryGoalCompleted(goal.id);
+        _toggleLibraryGoalCompleted(parentContext, widget.controller, goal.id);
       }
-      Navigator.of(context).pop();
       return;
     }
     widget.controller.createLibraryGoal(

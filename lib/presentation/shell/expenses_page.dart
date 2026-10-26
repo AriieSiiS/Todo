@@ -174,7 +174,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   List<Expense> _filteredExpenses() {
-    final query = _textFilter.trim().toLowerCase();
+    final query = _textFilter.trim().paraBuscar;
     return controller
         .expensesForMonth(_year, _month)
         .where((expense) =>
@@ -194,7 +194,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
           controller.paymentMethodById(expense.paymentMethodId ?? '')?.name ??
               '';
       return '${expense.concept} ${expense.note ?? ''} $category $method'
-          .toLowerCase()
+          .paraBuscar
           .contains(query);
     }).toList();
   }

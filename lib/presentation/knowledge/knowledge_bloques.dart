@@ -589,13 +589,13 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
         widget.node.attributes['knowledgeCollectionId']?.toString() ?? '';
     final collection = widget.service.collectionById(collectionId);
     final allRecords = widget.service.collectionRecords(collectionId);
-    final query = _searchController.text.trim().toLowerCase();
+    final query = _searchController.text.trim().paraBuscar;
     final filtered = query.isEmpty
         ? allRecords
         : allRecords.where((record) {
             final haystack =
                 '${record['title']} ${jsonEncode(record['properties'])}'
-                    .toLowerCase();
+                    .paraBuscar;
             return haystack.contains(query);
           }).toList();
     final pageCount = (filtered.length / _pageSize).ceil().clamp(1, 1 << 20);

@@ -35,6 +35,7 @@ def create_server(backend: LocalBackend) -> Server:
             "sin introducción, resumen, sugerencias ni casillas de seguimiento. "
             "Usa open_today_panel solo cuando solicite expresamente abrir el panel de Hoy. "
             "Para otras colecciones usa browse_content y get_content_item; responde solo a lo solicitado. "
+            "Para Steam usa get_steam_games y get_steam_achievements cuando estén disponibles; Todo debe estar abierto y conectado desde Ajustes. Nunca solicites la clave de Steam por chat. "
             "Distingue lo completado en Biblioteca de los objetivos pendientes, y no inventes fechas, usos o datos ausentes. "
             "source=snapshot indica los últimos datos guardados, no el estado en memoria. "
             "Antes de borrar, comprueba la ficha y el alcance; solo usa confirm=true ante una petición explícita de borrar. "

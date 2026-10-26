@@ -35,7 +35,7 @@ class _RecipesPageState extends State<RecipesPage> {
     categories.insert(0, 'Todas');
     final selectedCategory =
         categories.contains(_category) ? _category : 'Todas';
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim().paraBuscar;
     final recipes = active.where((recipe) {
       if (_favoritesOnly && !recipe.favorite) return false;
       if (selectedCategory != 'Todas' && recipe.category != selectedCategory) {
@@ -49,7 +49,7 @@ class _RecipesPageState extends State<RecipesPage> {
         recipe.cuisine,
         ...recipe.tags,
         ...recipe.ingredients.map((ingredient) => ingredient.text),
-      ].join(' ').toLowerCase().contains(query);
+      ].join(' ').paraBuscar.contains(query);
     }).toList()
       ..sort((left, right) {
         if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
@@ -74,6 +74,12 @@ class _RecipesPageState extends State<RecipesPage> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _HeaderSecondaryButton(
+                      label: 'Lista de la compra',
+                      icon: Icons.shopping_cart_outlined,
+                      onPressed: _showManualShoppingList,
+                    ),
+                    const SizedBox(width: 10),
                     PopupMenuButton<String>(
                       enabled: !_importing,
                       tooltip: 'Importar receta',
@@ -149,6 +155,7 @@ class _RecipesPageState extends State<RecipesPage> {
                           menu.id,
                           selectedEntryIds: selectedEntryIds,
                         ),
+                        shopping: true,
                       ),
                     ),
                 ],
@@ -255,7 +262,8 @@ class _RecipesPageState extends State<RecipesPage> {
     if (action == 'edit') {
       await _showRecipeEditor(context, controller, recipe: recipe);
     } else if (action == 'shopping') {
-      _createTask(() => controller.createRecipeShoppingTask(recipe.id));
+      _createTask(() => controller.createRecipeShoppingTask(recipe.id),
+          shopping: true);
     } else if (action == 'cooking') {
       _createTask(() => controller.createRecipeCookingTask(recipe.id));
     } else if (action == 'archive') {
@@ -263,11 +271,13 @@ class _RecipesPageState extends State<RecipesPage> {
     }
   }
 
-  void _createTask(TaskModel Function() create) {
+  void _createTask(TaskModel Function() create, {bool shopping = false}) {
     try {
       final task = create();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Tarea creada: ${task.title}'),
+        content: Text(shopping
+            ? 'Lista creada: ${task.title}. Aparecerá en Compra al sincronizar el móvil.'
+            : 'Tarea creada: ${task.title}'),
         action: SnackBarAction(
           label: 'Ver en Hoy',
           onPressed: () => controller.setSection(AppSection.today),
@@ -279,6 +289,63 @@ class _RecipesPageState extends State<RecipesPage> {
             content: Text(error.toString().replaceFirst('Bad state: ', ''))),
       );
     }
+  }
+
+  Future<void> _showManualShoppingList() async {
+    final title = TextEditingController();
+    final products = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Nueva lista de la compra'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: title,
+                autofocus: true,
+                decoration:
+                    const InputDecoration(labelText: 'Nombre de la lista'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: products,
+                minLines: 5,
+                maxLines: 10,
+                decoration: const InputDecoration(
+                  labelText: 'Productos',
+                  hintText: 'Un producto por línea',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Crear lista'),
+          ),
+        ],
+      ),
+    );
+    if (submitted == true && mounted) {
+      _createTask(
+        () => controller.createManualShoppingList(
+          title: title.text,
+          items: products.text.split('\n'),
+        ),
+        shopping: true,
+      );
+    }
+    title.dispose();
+    products.dispose();
   }
 
   Future<void> _importFromFile() async {
@@ -1199,7 +1266,7 @@ Future<Recipe?> _pickWeeklyMenuRecipe(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) {
-        final normalizedQuery = query.trim().toLowerCase();
+        final normalizedQuery = query.trim().paraBuscar;
         final recipes = controller.recipes
             .where((recipe) => !recipe.archived)
             .where((recipe) =>
@@ -1208,7 +1275,7 @@ Future<Recipe?> _pickWeeklyMenuRecipe(
                   recipe.title,
                   recipe.category,
                   ...recipe.tags,
-                ].join(' ').toLowerCase().contains(normalizedQuery))
+                ].join(' ').paraBuscar.contains(normalizedQuery))
             .toList()
           ..sort((left, right) {
             final leftSuggested = _recipeFitsMeal(left, mealType);

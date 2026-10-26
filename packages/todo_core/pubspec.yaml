@@ -1,0 +1,10 @@
+name: todo_core
+description: Lógica compartida de Todo para la aplicación y el agente sin interfaz.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  crypto: ^3.0.7

@@ -554,10 +554,10 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
     return Autocomplete<String>(
       initialValue: TextEditingValue(text: _material),
       optionsBuilder: (value) {
-        final query = value.text.trim().toLowerCase();
+        final query = value.text.trim().paraBuscar;
         if (query.isEmpty) return WardrobeTaxonomy.materialSuggestions;
         return WardrobeTaxonomy.materialSuggestions.where(
-          (option) => option.toLowerCase().contains(query),
+          (option) => option.paraBuscar.contains(query),
         );
       },
       onSelected: (value) => _material = value,

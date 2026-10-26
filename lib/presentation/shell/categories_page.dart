@@ -19,7 +19,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   Widget build(BuildContext context) {
     final categories = controller.categories
         .where((category) =>
-            category.name.toLowerCase().contains(_query.toLowerCase()))
+            coincideBusqueda(category.name, _query))
         .toList();
     final selected = _resolveSelectedCategory(categories);
     final wide = MediaQuery.sizeOf(context).width >= 1260;

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 /// Comunicación con la ventana de Windows: atajo global de captura rápida,
 /// argumentos de una segunda instancia y modo mini.
 class WindowsShellService extends ChangeNotifier {
-  WindowsShellService({this.enabled = true});
+  WindowsShellService({this.enabled = true, this.beforeExit});
 
   static const MethodChannel _channel = MethodChannel('todo/shell');
 
@@ -14,6 +14,7 @@ class WindowsShellService extends ChangeNotifier {
   static const String hotkeyLabel = 'Ctrl + Alt + N';
 
   final bool enabled;
+  final Future<void> Function()? beforeExit;
   final StreamController<String> _arguments =
       StreamController<String>.broadcast();
   bool _hotkeyRegistered = false;
@@ -29,6 +30,14 @@ class WindowsShellService extends ChangeNotifier {
     if (!enabled) return;
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
+        case 'requestExit':
+          try {
+            await beforeExit?.call();
+            await _channel.invokeMethod<void>('finishExit');
+          } catch (_) {
+            await _channel.invokeMethod<void>('exitFailed');
+          }
+          break;
         case 'quickCapture':
           _arguments.add('--quick-capture');
         case 'launchArgument':

@@ -52,7 +52,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
             ..sort();
           final selectedSubcategory =
               subcategories.contains(_subcategory) ? _subcategory : 'Todas';
-          final query = _query.trim().toLowerCase();
+          final query = _query.trim().paraBuscar;
           final items = active.where((item) {
             if (_status == 'Pendientes' &&
                 item.status == ShoppingStatus.purchased) {
@@ -79,7 +79,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
               item.notes,
               item.sourceUrl,
               ...item.offers.expand((offer) => [offer.name, offer.sourceUrl])
-            ].join(' ').toLowerCase().contains(query);
+            ].join(' ').paraBuscar.contains(query);
           }).toList()
             ..sort((a, b) {
               final priority =

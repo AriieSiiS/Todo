@@ -119,6 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
       const LanSyncDesktopStatus.unavailable();
   bool _backupBusy = false;
   bool _lanSyncBusy = false;
+  bool _kindleBackground = false;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -259,6 +260,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final homeAssistant = widget.homeAssistant == null
         ? null
         : HomeAssistantSettingsCard(controller: widget.homeAssistant!);
+
+    final steam = _SettingsSectionCard(
+      icon: Icons.sports_esports_outlined,
+      title: 'Steam',
+      child: SteamSettingsPanel(service: controller.steam),
+    );
 
     final notifications = _SettingsSectionCard(
       icon: Icons.notifications_active_outlined,
@@ -558,14 +565,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 text:
                     'El código está renovándose. Actualiza dentro de unos segundos.',
               ),
-            if (_lanSyncStatus.devices.isNotEmpty) ...[
+            if (_lanSyncStatus.devices.any((device) => device.profile == 'android')) ...[
               const Divider(height: 30),
               const Text(
                 'Dispositivos emparejados',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
-              for (final device in _lanSyncStatus.devices)
+              for (final device in _lanSyncStatus.devices.where((device) => device.profile == 'android'))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.smartphone_rounded),
@@ -591,6 +598,38 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+
+    final kindleConnection = _SettingsSectionCard(
+      icon: Icons.menu_book_rounded,
+      title: 'Conexión Kindle',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Consulta Hoy y la semana desde KOReader. Las marcas sin conexión se envían al regresar al Wi-Fi de casa.'),
+        const SizedBox(height: 12),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Conexión Kindle con Todo cerrado'),
+          subtitle: const Text('Al cerrar la ventana se libera la interfaz. El agente ligero sigue guardando tareas, progreso y citas.'),
+          value: _kindleBackground,
+          onChanged: _lanSyncBusy ? null : (enabled) async {
+            await _lanSyncService.setKindleBackgroundEnabled(enabled);
+            if (mounted) setState(() => _kindleBackground = enabled);
+          },
+        ),
+        for (final device in _lanSyncStatus.devices.where((device) => device.profile == 'kindle'))
+          ListTile(contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.menu_book_rounded), title: Text(device.name),
+            subtitle: const Text('Solo agenda y tareas completadas'),
+            trailing: IconButton(tooltip: 'Revocar acceso',
+              onPressed: () => _revokeLanSyncDevice(device), icon: const Icon(Icons.link_off_rounded))),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.usb_rounded), label: const Text('Instalar o actualizar por USB'),
+          onPressed: _lanSyncBusy ? null : _installKindle,
+        ),
+        const SizedBox(height: 8),
+        const Text('Cierra KOReader y conecta el Kindle en modo USB. La instalación conserva los libros y las marcas pendientes.'),
+      ]),
     );
 
     final backup = _SettingsSectionCard(
@@ -746,6 +785,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       androidConnection,
                       const SizedBox(height: 16),
+                      kindleConnection,
+                      const SizedBox(height: 16),
+                      steam,
+                      const SizedBox(height: 16),
                       if (homeAssistant != null) ...[
                         homeAssistant,
                         const SizedBox(height: 16),
@@ -775,6 +818,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           notifications,
                           const SizedBox(height: 16),
                           androidConnection,
+                          const SizedBox(height: 16),
+                          kindleConnection,
+                          const SizedBox(height: 16),
+                          steam,
                           const SizedBox(height: 16),
                           if (homeAssistant != null) ...[
                             homeAssistant,
@@ -821,9 +868,11 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!Platform.isWindows || _isSettingsWidgetTest()) return;
     setState(() => _lanSyncBusy = true);
     final status = await _lanSyncService.loadStatus();
+    final resident = await _lanSyncService.kindleBackgroundEnabled();
     if (!mounted) return;
     setState(() {
       _lanSyncStatus = status;
+      _kindleBackground = resident;
       _lanSyncBusy = false;
     });
   }
@@ -833,6 +882,23 @@ class _SettingsPageState extends State<SettingsPage> {
       return WidgetsBinding.instance.runtimeType.toString().contains('Test');
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _installKindle() async {
+    final directory = await getDirectoryPath(confirmButtonText: 'Seleccionar Kindle');
+    if (directory == null || !mounted) return;
+    setState(() => _lanSyncBusy = true);
+    try {
+      await _lanSyncService.loadStatus();
+      await _lanSyncService.installKindle(directory);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:
+          Text('Complemento copiado y verificado. Expulsa el Kindle y abre Todo desde KOReader para comprobar la conexión.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) await _loadLanSyncStatus();
     }
   }
 
@@ -922,72 +988,152 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showImport(BuildContext context) {
-    final importController = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Importar JSON'),
-        content: SizedBox(
-          width: 720,
-          child: TextField(
-            controller: importController,
-            minLines: 12,
-            maxLines: 20,
-            decoration: const InputDecoration(
-              hintText: 'Pega aquí un snapshot completo en JSON',
-            ),
+  /// Guarda una copia del estado actual antes de un cambio grande. Si no se
+  /// puede guardar, avisa y devuelve `null` para que no se siga adelante.
+  Future<File?> _saveCopyBeforeChange(String label) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      return await _backupService.saveSnapshotBeforeChange(
+        controller.exportSnapshot().toPrettyJson(),
+        label: label,
+      );
+    } catch (error) {
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se ha cambiado nada: no se pudo guardar la copia previa. $error',
           ),
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<bool> _confirmDataReplacement({
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(
+          '$message\n\nAntes se guardará una copia del estado actual en '
+          '«${_backupService.snapshotsBeforeChangesDirectory.path}».',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () {
-              final ok = controller.importStateFromJson(importController.text);
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(ok
-                      ? 'Estado importado correctamente.'
-                      : 'No se pudo importar ese JSON.'),
-                ),
-              );
-            },
-            child: const Text('Importar'),
+            key: const ValueKey('confirm-data-replacement'),
+            style: FilledButton.styleFrom(
+              backgroundColor: dialogContext.visuals.danger,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
           ),
         ],
       ),
     );
+    return confirmed == true;
   }
 
-  void _confirmReset(BuildContext context) {
+  void _showImport(BuildContext context) {
+    final importController = TextEditingController();
+    String? error;
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reiniciar datos'),
-        content: const Text(
-            'Esto sustituirá tu estado actual por la base inicial de la app.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Importar JSON'),
+          content: SizedBox(
+            width: 720,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: importController,
+                  minLines: 12,
+                  maxLines: 20,
+                  decoration: const InputDecoration(
+                    hintText: 'Pega aquí un snapshot completo en JSON',
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!,
+                      style: TextStyle(color: dialogContext.visuals.danger)),
+                ],
+              ],
+            ),
           ),
-          FilledButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-              await controller.resetToSeed();
-              navigator.pop();
-              messenger.showSnackBar(
-                const SnackBar(content: Text('Datos reiniciados.')),
-              );
-            },
-            child: const Text('Reiniciar'),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              key: const ValueKey('import-json-continue'),
+              onPressed: () async {
+                final raw = importController.text;
+                try {
+                  AppStateSnapshot.fromJson(
+                    (jsonDecode(raw) as Map<dynamic, dynamic>)
+                        .cast<String, dynamic>(),
+                  );
+                } catch (_) {
+                  setDialogState(() => error =
+                      'Ese texto no es un snapshot JSON válido. No se ha cambiado nada.');
+                  return;
+                }
+                final confirmed = await _confirmDataReplacement(
+                  title: 'Sustituir todos los datos',
+                  message:
+                      'Todos los datos actuales se sustituirán por los del JSON pegado.',
+                  confirmLabel: 'Sustituir',
+                );
+                if (!confirmed || !mounted) return;
+                final copy = await _saveCopyBeforeChange('importar-json');
+                if (copy == null || !mounted) return;
+                final ok = controller.importStateFromJson(raw);
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok
+                        ? 'Estado importado. La copia previa está en ${copy.path}.'
+                        : 'No se pudo importar ese JSON. No se ha cambiado nada.'),
+                  ),
+                );
+              },
+              child: const Text('Importar'),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(importController.dispose);
+  }
+
+  Future<void> _confirmReset(BuildContext context) async {
+    final confirmed = await _confirmDataReplacement(
+      title: 'Reiniciar datos',
+      message:
+          'Esto sustituirá tu estado actual por la base inicial de la app.',
+      confirmLabel: 'Reiniciar',
+    );
+    if (!confirmed || !mounted) return;
+    final copy = await _saveCopyBeforeChange('reiniciar-datos');
+    if (copy == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(this.context);
+    await controller.resetToSeed();
+    messenger.showSnackBar(
+      SnackBar(
+        content:
+            Text('Datos reiniciados. La copia previa está en ${copy.path}.'),
       ),
     );
   }

@@ -41,6 +41,14 @@ WRITE_TOOLS = {
     "archive_note": ("Archivar nota", "Archiva una nota local, conservando su contenido. Consulta primero note_version."),
     "delete_note": ("Borrar nota", "Borra permanentemente una nota solo ante una petición explícita de borrar. Consulta primero note_version y usa confirm: true."),
 }
+STEAM_TOOLS = {
+    'get_steam_link': ('Consultar enlace de Steam', 'Consulta el AppID enlazado con una ficha de juego y su link_version antes de modificar ese vínculo.'),
+    'get_steam_games': ('Consultar juegos de Steam', 'Consulta los juegos propios y los enlazados de Steam, con horas cuando Steam las facilita. from_owned_games indica si el juego procede de GetOwnedGames. Requiere Todo abierto y Steam configurado en Ajustes. Permite buscar y paginar; no importa ni modifica fichas.'),
+    'get_steam_achievements': ('Consultar logros de Steam', 'Consulta los logros obtenidos y pendientes de un appid, su porcentaje y su rareza. Obtén el appid con get_steam_games. No deduzcas el estado de los logros desconocidos ni confundas este porcentaje con haber terminado la historia.'),
+}
+STEAM_WRITES = {
+    'link_steam_game': ('Enlazar juego de Steam', 'Enlaza una ficha existente de Biblioteca con un AppID verificado. Consulta get_steam_link antes y usa su link_version como expected_version. Requiere request_id estable y confirma savedLocally. No modifica el título, las notas, el estado ni las valoraciones.'),
+}
 _CORE_LOCK = threading.RLock()
 
 
@@ -65,6 +73,10 @@ def tool_definitions(sandbox: bool = False, live: bool = False) -> list[dict[str
             "include_archived": {"type": "boolean"}, "limit": {"type": "integer", "minimum": 1, "maximum": 100}, "offset": {"type": "integer", "minimum": 0}}
     section = {"type": "string", "enum": list(SECTIONS)}
     custom = {
+        'get_steam_link': ({'item_id': string}, ['item_id']),
+        'link_steam_game': ({'item_id': string, 'appid': {'type': 'integer', 'minimum': 1, 'maximum': 4294967295}}, ['item_id', 'appid']),
+        'get_steam_games': ({'query': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}, 'refresh': {'type': 'boolean'}}, []),
+        'get_steam_achievements': ({'appid': {'type': 'integer', 'minimum': 1, 'maximum': 4294967295}, 'refresh': {'type': 'boolean'}}, ['appid']),
         "list_content_sections": ({}, []),
         "browse_content": ({**page, "section": section}, ["section"]),
         "get_content_item": ({"section": section, "item_id": string}, ["section", "item_id"]),
@@ -78,7 +90,7 @@ def tool_definitions(sandbox: bool = False, live: bool = False) -> list[dict[str
     }
     for name, (properties, required) in custom.items():
         definitions[name] = {"name": name, "inputSchema": {"type": "object", "properties": properties, "required": required}}
-    exposed = {**READ_TOOLS, **(WRITE_TOOLS if sandbox or live else {})}
+    exposed = {**READ_TOOLS, **(STEAM_TOOLS if live else {}), **(WRITE_TOOLS if sandbox or live else {}), **(STEAM_WRITES if live else {})}
     result = []
     for name, (title, description) in exposed.items():
         definition = copy.deepcopy(definitions[name])
@@ -86,7 +98,7 @@ def tool_definitions(sandbox: bool = False, live: bool = False) -> list[dict[str
         schema = definition["inputSchema"]
         schema["additionalProperties"] = False
         properties = schema["properties"]
-        if live and name in WRITE_TOOLS:
+        if live and (name in WRITE_TOOLS or name in STEAM_WRITES):
             supported = {
                 "create_task": {"title", "description", "scheduled_at", "priority", "category_ids", "project_ids", "recurrence_type", "recurrence_interval", "recurrence_weekdays"},
                 "update_task": {"task_id", "title", "description", "scheduled_at", "clear_scheduled_at", "priority", "category_ids", "project_ids"},
@@ -103,7 +115,7 @@ def tool_definitions(sandbox: bool = False, live: bool = False) -> list[dict[str
             if name not in {"create_task", "create_note"}:
                 properties["expected_version"] = {
                     "type": "string", "pattern": "^[a-f0-9]{64}$",
-                    "description": "task_version o note_version devuelto al consultar. Si cambió, vuelve a consultar antes de modificar.",
+                    "description": "task_version, note_version o link_version devuelto al consultar. Si cambió, vuelve a consultar antes de modificar.",
                 }
                 schema["required"].append("expected_version")
             definition["title"] = title.replace(" de prueba", "")
@@ -129,10 +141,10 @@ def tool_definitions(sandbox: bool = False, live: bool = False) -> list[dict[str
         if "recurrence_weekdays" in properties:
             properties["recurrence_weekdays"]["items"].update(minimum=1, maximum=7)
         definition["annotations"] = {
-            "readOnlyHint": name in READ_TOOLS,
+            "readOnlyHint": name in READ_TOOLS or name in STEAM_TOOLS,
             "destructiveHint": name in {"delete_task", "delete_note"},
             "idempotentHint": name in READ_TOOLS or live,
-            "openWorldHint": False,
+            "openWorldHint": name in STEAM_TOOLS or name in STEAM_WRITES,
         }
         result.append(definition)
     return result
@@ -188,9 +200,19 @@ class LocalBackend:
                 core.remote_enabled = original_remote
 
     def call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        allowed = set(READ_TOOLS) | (set(WRITE_TOOLS) if self.sandbox or self.live else set())
+        allowed = set(READ_TOOLS) | (set(STEAM_TOOLS) | set(STEAM_WRITES) if self.live else set()) | (set(WRITE_TOOLS) if self.sandbox or self.live else set())
         if name not in allowed:
             raise ValueError("La herramienta solicitada no está habilitada en este adaptador.")
+        if name in STEAM_TOOLS:
+            result = self._bridge_call(name, arguments, read_only=True)
+            if result is None:
+                raise BridgeError('Abre la instalación actualizada de Todo y configura Steam en Ajustes antes de consultar.', retryable=True)
+            return result
+        if name in STEAM_WRITES:
+            result = self._bridge_call(name, arguments)
+            if result is None:
+                raise BridgeError('Abre Todo antes de enlazar el juego de Steam. Reintenta con el mismo request_id.', retryable=True)
+            return result
         if name in {"list_content_sections", "browse_content", "get_content_item", "list_notes", "get_note"}:
             return self._content_call(name, arguments)
         if "title" in arguments and not arguments["title"].strip():

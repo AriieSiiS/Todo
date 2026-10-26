@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)]
   [string]$InstallDirectory
 )
@@ -34,35 +34,10 @@ Register-ScheduledTask `
   -Force | Out-Null
 
 try {
-  $applicationFilters = Get-NetFirewallApplicationFilter -ErrorAction Stop |
-    Where-Object { $_.Program -eq $agentPath }
-  $firewallRules = @($applicationFilters | Get-NetFirewallRule -ErrorAction Stop)
-  if ($firewallRules.Count -eq 0) {
-    $firewallRules = @(
-      New-NetFirewallRule `
-        -DisplayName 'Todo - Android local' `
-        -Description 'Permite compartir tareas solo en la red privada local.' `
-        -Direction Inbound `
-        -Program $agentPath `
-        -Action Allow `
-        -Profile Private `
-        -RemoteAddress LocalSubnet `
-        -Protocol TCP `
-        -LocalPort 47832
-    )
-  }
-  foreach ($firewallRule in $firewallRules) {
-    $firewallRule | Set-NetFirewallRule `
-      -Enabled True `
-      -Profile Private `
-      -Direction Inbound `
-      -Action Allow | Out-Null
-    $firewallRule | Get-NetFirewallAddressFilter |
-      Set-NetFirewallAddressFilter -RemoteAddress LocalSubnet | Out-Null
-  }
+  & (Join-Path $resolvedDirectory 'limitar_red_todo.ps1') -InstallDirectory $resolvedDirectory | Out-Null
 }
 catch {
-  Write-Warning 'No fue posible limitar la regla de red. Revisa el Firewall de Windows.'
+  Write-Warning 'No se ha limitado el firewall. Ejecuta limitar_red_todo.ps1 una vez desde PowerShell como administrador.'
 }
 
 Start-ScheduledTask -TaskName $taskName

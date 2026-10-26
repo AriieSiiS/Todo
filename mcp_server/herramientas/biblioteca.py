@@ -165,6 +165,7 @@ def library_item_from_args(arguments: dict[str, Any]) -> dict[str, Any]:
         "duration": (arguments.get("duration") or "").strip() or None,
         "pages": (arguments.get("pages") or "").strip() or None,
         "country": (arguments.get("country") or "").strip() or None,
+        "universeName": (arguments.get("universe_name") or "").strip() or None,
         "collectionName": (arguments.get("collection_name") or "").strip()
         or None,
         "collectionNumber": (
@@ -271,6 +272,12 @@ def apply_library_item_updates(item: dict[str, Any], arguments: dict[str, Any]) 
         updated["country"] = (arguments.get("country") or "").strip() or None
     if arguments.get("clear_country"):
         updated["country"] = None
+    if "universe_name" in arguments:
+        updated["universeName"] = (
+            arguments.get("universe_name") or ""
+        ).strip() or None
+    if arguments.get("clear_universe_name"):
+        updated["universeName"] = None
     if "collection_name" in arguments:
         updated["collectionName"] = (
             arguments.get("collection_name") or ""
@@ -820,6 +827,7 @@ def merge_library_items(keeper: dict[str, Any], incoming: dict[str, Any]) -> dic
         "duration",
         "pages",
         "country",
+        "universeName",
         "collectionName",
         "collectionNumber",
         "showCollectionNumber",

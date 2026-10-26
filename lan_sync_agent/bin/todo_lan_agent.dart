@@ -6,22 +6,44 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import 'package:todo_lan_sync_agent/kindle_gateway.dart';
+
 const int protocolVersion = 1;
 const int defaultPort = 47832;
 const String serviceType = '_todo-sync._tcp.local';
 
 Future<void> main(List<String> arguments) async {
   final agent = TodoLanAgent();
-  await agent.start();
+  try {
+    await agent.start();
+  } catch (error, stack) {
+    await agent.dataDirectory.create(recursive: true);
+    await File('${agent.dataDirectory.path}/startup_error.json').writeAsString(
+      jsonEncode({'at': DateTime.now().toUtc().toIso8601String(), 'pid': pid,
+        'type': error.runtimeType.toString(), 'error': error.toString(),
+        'stack': stack.toString()}), flush: true);
+    rethrow;
+  }
 }
 
 class TodoLanAgent {
-  TodoLanAgent({Directory? dataDirectory, Directory? stateDirectory})
+  TodoLanAgent(
+      {Directory? dataDirectory,
+      Directory? stateDirectory,
+      this.port = defaultPort,
+      this.advertise = true})
       : dataDirectory = dataDirectory ?? _defaultDataDirectory(),
         stateDirectory = stateDirectory ?? _defaultStateDirectory();
 
   final Directory dataDirectory;
   final Directory stateDirectory;
+  final int port;
+  final bool advertise;
+  int get listeningPort => _server?.port ?? port;
+
+  late final KindleBridgeClient _kindleClient = KindleBridgeClient(stateDirectory,
+      allowBackground: () => File('${dataDirectory.path}/kindle_enabled').exists());
+
   final Random _random = Random.secure();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   HttpServer? _server;
@@ -90,7 +112,7 @@ class TodoLanAgent {
       );
     _server = await HttpServer.bindSecure(
       InternetAddress.anyIPv4,
-      defaultPort,
+      port,
       context,
       shared: true,
     );
@@ -111,11 +133,11 @@ class TodoLanAgent {
     }
 
     final addresses = await privateIpv4Addresses();
-    if (addresses.isNotEmpty) {
+    if (advertise && addresses.isNotEmpty) {
       _mdns = MdnsAdvertiser(
         serverId: _serverId,
         address: addresses.first,
-        port: defaultPort,
+        port: listeningPort,
       );
       await _mdns!.start();
     }
@@ -133,14 +155,14 @@ class TodoLanAgent {
         : <ProcessSignal>[ProcessSignal.sigint, ProcessSignal.sigterm];
     for (final signal in signals) {
       try {
-        signal.watch().listen((_) => stop());
+        _subscriptions.add(signal.watch().listen((_) => stop()));
       } catch (_) {
         // Algunas señales POSIX no están disponibles en Windows.
       }
     }
   }
 
-  Future<void> stop() async {
+  Future<void> stop({bool exitProcess = true}) async {
     _pairingTimer?.cancel();
     _snapshotDebounce?.cancel();
     await _mdns?.close();
@@ -148,7 +170,7 @@ class TodoLanAgent {
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
-    exit(0);
+    if (exitProcess) exit(0);
   }
 
   Future<String> _loadOrCreateServerId() async {
@@ -290,6 +312,13 @@ class TodoLanAgent {
         ..set('X-Content-Type-Options', 'nosniff')
         ..set('Cache-Control', 'no-store');
 
+      if (await KindleGateway(
+        authorize: (value) => _isAuthorized(value, profile: 'kindle'),
+        command: _kindleClient.call,
+      ).handle(request)) {
+        return;
+      }
+
       if (request.method == 'GET' && request.uri.path == '/v1/health') {
         return _json(request.response, 200, {
           'protocolVersion': protocolVersion,
@@ -414,16 +443,19 @@ class TodoLanAgent {
     });
   }
 
-  Future<bool> _isAuthorized(HttpRequest request) async {
+  Future<bool> _isAuthorized(HttpRequest request,
+      {String profile = 'android'}) async {
     final header = request.headers.value(HttpHeaders.authorizationHeader);
     if (header == null || !header.startsWith('Bearer ')) return false;
     final actual = sha256.convert(utf8.encode(header.substring(7))).toString();
     final devices = await _loadDevices();
     return devices.any(
-      (device) => _constantTimeEquals(
-        device['tokenHash'] as String? ?? '',
-        actual,
-      ),
+      (device) =>
+          (device['profile'] ?? 'android') == profile &&
+          _constantTimeEquals(
+            device['tokenHash'] as String? ?? '',
+            actual,
+          ),
     );
   }
 
@@ -445,13 +477,13 @@ class TodoLanAgent {
     final addresses = await privateIpv4Addresses();
     final endpoint = addresses.isEmpty
         ? ''
-        : 'https://${addresses.first.address}:$defaultPort';
+        : 'https://${addresses.first.address}:$listeningPort';
     await _writeJsonAtomically(_statusFile, {
       'running': true,
       'protocolVersion': protocolVersion,
       'serverId': _serverId,
       'serviceType': serviceType,
-      'port': defaultPort,
+      'port': listeningPort,
       'addresses': addresses.map((value) => value.address).toList(),
       'endpoint': endpoint,
       'certificateFingerprint': _certificateConfig['fingerprintSha256'],

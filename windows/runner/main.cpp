@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "flutter_window.h"
 #include "shell_bridge.h"
@@ -228,7 +229,7 @@ bool FocusExistingInstance(const std::string& important_alarm_id,
     data.cbData = static_cast<DWORD>(launch_argument.size() + 1);
     data.lpData = const_cast<char*>(launch_argument.c_str());
     ::SendMessageW(window, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data));
-    if (::IsIconic(window)) {
+    if (::IsIconic(window) || !::IsWindowVisible(window)) {
       ::ShowWindow(window, SW_RESTORE);
     }
   } else {

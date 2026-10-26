@@ -131,6 +131,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                 ),
                 if (widget.showTypeBadge ||
                     item.rating != null ||
+                    item.reading != null ||
                     rewatchCount > 1)
                   Positioned(
                     top: 8,
@@ -144,14 +145,24 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                             type: item.type,
                           ),
                         if (widget.showTypeBadge &&
-                            (item.rating != null || rewatchCount > 1))
+                            (item.rating != null ||
+                                item.reading != null ||
+                                rewatchCount > 1))
                           const SizedBox(height: 5),
                         if (item.rating != null)
                           _LibraryPosterBadge(
                             icon: Icons.star_rounded,
                             label: _formatRating(item.rating!),
                           ),
-                        if (item.rating != null && rewatchCount > 1)
+                        if (item.reading != null) ...[
+                          if (item.rating != null) const SizedBox(height: 5),
+                          BookReadingBadge(
+                              reading: item.reading!,
+                              totalPages:
+                                  bookPageTotal(item.pages, item.reading)),
+                        ],
+                        if ((item.rating != null || item.reading != null) &&
+                            rewatchCount > 1)
                           const SizedBox(height: 5),
                         if (rewatchCount > 1)
                           _LibraryRewatchBadge(count: rewatchCount),
@@ -651,6 +662,12 @@ class _LibraryItemRow extends StatelessWidget {
                 style:
                     TextStyle(color: context.visuals.textMuted, fontSize: 13),
               ),
+              if (item.reading != null) ...[
+                const SizedBox(width: 10),
+                BookReadingBadge(
+                    reading: item.reading!,
+                    totalPages: bookPageTotal(item.pages, item.reading)),
+              ],
             ],
           ),
         ),
@@ -664,6 +681,7 @@ class _LibraryCollectionChips extends StatelessWidget {
     required this.controller,
     required this.item,
     this.compact = false,
+    this.singleLine = false,
     this.onDark = false,
     this.alignment = WrapAlignment.start,
   });
@@ -671,6 +689,7 @@ class _LibraryCollectionChips extends StatelessWidget {
   final TodoWorkspace controller;
   final LibraryItem item;
   final bool compact;
+  final bool singleLine;
   final bool onDark;
   final WrapAlignment alignment;
 
@@ -680,7 +699,7 @@ class _LibraryCollectionChips extends StatelessWidget {
     if (labels == null) {
       return const SizedBox.shrink();
     }
-    if (compact) {
+    if (compact || singleLine) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -688,7 +707,7 @@ class _LibraryCollectionChips extends StatelessWidget {
             child: _LibraryCollectionChip(
               label: labels.saga,
               item: item,
-              compact: true,
+              compact: compact,
               onDark: onDark,
             ),
           ),
@@ -697,7 +716,7 @@ class _LibraryCollectionChips extends StatelessWidget {
             _LibraryCollectionChip(
               label: labels.installment!,
               item: item,
-              compact: true,
+              compact: compact,
               onDark: onDark,
             ),
           ],

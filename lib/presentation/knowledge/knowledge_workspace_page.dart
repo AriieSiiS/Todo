@@ -16,6 +16,7 @@ import '../../application/state/todo_workspace.dart';
 import '../../domain/models.dart';
 import '../../services/knowledge_service.dart';
 import '../../services/clipboard_image_service.dart';
+import '../shared/texto_busqueda.dart';
 
 part 'knowledge_arbol.dart';
 part 'knowledge_bloque_multimedia.dart';

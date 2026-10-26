@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../shared/book_reading_panel.dart';
+import '../shared/book_statistics_panel.dart';
 import 'dart:convert';
 import 'dart:math' show atan2, cos, max, min, pi, sin, sqrt;
 import 'dart:io';
@@ -29,6 +31,8 @@ import '../../services/windows_shell_service.dart';
 import '../../services/lan_sync_desktop_service.dart';
 import '../../domain/models.dart';
 import '../shared/editors.dart';
+import '../shared/texto_busqueda.dart';
+import '../shared/steam_panels.dart';
 import '../knowledge/knowledge_workspace_page.dart';
 
 part 'shell_chrome.dart';

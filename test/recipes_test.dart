@@ -125,6 +125,7 @@ void main() {
     );
 
     expect(task.title, 'Comprar Menú semanal 01');
+    expect(task.origin, TaskOrigin.shoppingList);
     expect(controller.subtasksOf(task).map((item) => item.title),
         ['Salmón congelado', 'Aguacate']);
     expect(partialTask.title, 'Comprar selección de Menú semanal 01');
@@ -159,6 +160,22 @@ void main() {
         editedMenu.mealEntries.map((entry) => entry.id),
       ),
       isFalse,
+    );
+  });
+
+  test('una lista manual conserva sus productos como subtareas', () {
+    final controller = TodoWorkspace.createForTest();
+    final list = controller.createManualShoppingList(
+      title: 'Compra del sábado',
+      items: [' Pan ', '', 'Leche'],
+    );
+    expect(list.origin, TaskOrigin.shoppingList);
+    expect(list.title, 'Compra del sábado');
+    expect(controller.subtasksOf(list).map((item) => item.title),
+        ['Pan', 'Leche']);
+    expect(
+      () => controller.createManualShoppingList(title: '', items: ['Pan']),
+      throwsStateError,
     );
   });
 

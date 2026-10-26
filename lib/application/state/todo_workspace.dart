@@ -4,11 +4,13 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:crypto/crypto.dart';
 
 import '../../config/supabase_config.dart';
 import '../../core/date/date_helpers.dart';
 import '../../data/local_store.dart';
+import 'package:todo_core/runtime_writer_lock.dart';
+import 'package:todo_core/kindle_workspace.dart';
+import 'package:todo_core/task_agenda.dart';
 import '../../data/repositories/calendar_service_repository.dart';
 import '../../data/repositories/local_todo_state_repository.dart';
 import '../../data/repositories/notification_service_repository.dart';
@@ -33,6 +35,7 @@ import '../../services/task_scheduler_service.dart';
 import '../../services/wardrobe_asset_service.dart';
 import '../../services/agent_bridge_service.dart';
 import '../../services/shopping_price_service.dart';
+import '../../services/steam_service.dart';
 
 part 'todo_workspace_agent.dart';
 part 'todo_workspace_biblioteca.dart';
@@ -62,8 +65,10 @@ class TodoWorkspace extends ChangeNotifier {
       this._feedback,
       this._knowledgeService,
       {PlantAssetService? plantAssets,
-      ShoppingPriceService? priceService})
+      ShoppingPriceService? priceService,
+      SteamService? steamService})
       : _plantAssets = plantAssets ?? PlantAssetService(),
+        steam = steamService ?? SteamService(),
         priceTracking = priceService ?? ShoppingPriceService() {
     _isaacSaveSync = IsaacSaveSyncService(_knowledgeService);
     _notificationActionSubscription =
@@ -83,6 +88,7 @@ class TodoWorkspace extends ChangeNotifier {
       KnowledgeService(),
     );
     try {
+      controller._writerLock = await RuntimeWriterLock.acquire(RuntimeWriterLock.defaultDirectory());
       await controller._load();
       controller.resumeFocusAfterStartup();
       await controller._importantAlarmService.initialize(
@@ -137,6 +143,7 @@ class TodoWorkspace extends ChangeNotifier {
     PlantAssetService? plantAssets,
     TodoStateRepository? stateRepository,
     ShoppingPriceService? priceService,
+    SteamService? steamService,
   }) {
     final controller = TodoWorkspace._(
       stateRepository ?? _InMemoryTodoStateRepository(snapshot),
@@ -149,6 +156,7 @@ class TodoWorkspace extends ChangeNotifier {
       KnowledgeService.inMemory(),
       plantAssets: plantAssets,
       priceService: priceService ?? ShoppingPriceService(enabled: false),
+      steamService: steamService,
     );
     if (snapshot != null) {
       controller._applySnapshot(snapshot);
@@ -165,6 +173,7 @@ class TodoWorkspace extends ChangeNotifier {
 
   final TodoStateRepository _store;
   final ShoppingPriceService priceTracking;
+  final SteamService steam;
   final CloudSyncRepository _cloudService;
   final CalendarRepository _calendarService;
   final NotificationRepository _notificationService;
@@ -251,11 +260,13 @@ class TodoWorkspace extends ChangeNotifier {
   LocalSyncMetadata _syncMetadata = const LocalSyncMetadata();
   SyncConflict? _syncConflict;
   Timer? _saveDebounce;
+  RuntimeWriterLock? _writerLock;
   Timer? _externalWardrobePoll;
   Timer? _focusTimer;
   bool _checkingExternalWardrobe = false;
   AgentBridgeService? _agentBridge;
   Future<void> _agentCommandQueue = Future<void>.value();
+  bool _agentClosing = false;
   final Map<String, dynamic> _agentOperationReceipts = {};
 
   void _notifyAgentChange() => notifyListeners();
@@ -505,35 +516,17 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
-  DateTime logicalDate([DateTime? instant]) {
-    final value = instant ?? now;
-    final manual = _activeManualLogicalDate(value);
-    if (manual != null) {
-      return manual;
-    }
-    return _ruleBasedLogicalDate(value);
-  }
+  TaskAgenda get _taskAgenda => TaskAgenda(
+    tasks: _tasks, daySettings: _daySettings, now: now,
+    manualDate: _manualLogicalDate, manualStartedAt: _manualLogicalDateStartedAt,
+    sort: _todaySort,
+    categoryNames: TaskAgenda.firstNames(_categories.map((item) => (item.id, item.name))),
+    projectNames: TaskAgenda.firstNames(_projects.map((item) => (item.id, item.name))),
+  );
 
-  DateTime _ruleBasedLogicalDate(DateTime value) {
-    if (value.hour < _daySettings.dayEndsAtHour) {
-      final previous = value.subtract(const Duration(days: 1));
-      return DateTime(previous.year, previous.month, previous.day);
-    }
-    return DateTime(value.year, value.month, value.day);
-  }
-
-  DateTime? _activeManualLogicalDate(DateTime value) {
-    final manual = _manualLogicalDate;
-    final startedAt = _manualLogicalDateStartedAt;
-    if (manual == null || startedAt == null || value.isBefore(startedAt)) {
-      return null;
-    }
-    final natural = _ruleBasedLogicalDate(value);
-    if (!_sameDay(natural, manual)) {
-      return manual;
-    }
-    return null;
-  }
+  DateTime logicalDate([DateTime? instant]) => _taskAgenda.logicalDate(instant);
+  DateTime _ruleBasedLogicalDate(DateTime value) => _taskAgenda.ruleBasedLogicalDate(value);
+  DateTime? _activeManualLogicalDate(DateTime value) => _taskAgenda.activeManualDate(value);
 
   void advanceToNextLogicalDay() {
     final value = now;
@@ -1268,43 +1261,7 @@ class TodoWorkspace extends ChangeNotifier {
     );
   }
 
-  bool _recursOnDay(TaskModel task, DateTime day) {
-    final start = task.scheduledAt == null
-        ? day
-        : DateTime(
-            task.scheduledAt!.year,
-            task.scheduledAt!.month,
-            task.scheduledAt!.day,
-          );
-    final target = DateTime(day.year, day.month, day.day);
-    if (target.isBefore(start)) {
-      return false;
-    }
-    if (task.recurrence.activeMonths.isNotEmpty &&
-        !task.recurrence.activeMonths.contains(target.month)) {
-      return false;
-    }
-    final days = target.difference(start).inDays;
-    switch (task.recurrence.type) {
-      case RecurrenceType.none:
-        return false;
-      case RecurrenceType.daily:
-      case RecurrenceType.everyXDays:
-        return days % task.recurrence.interval == 0;
-      case RecurrenceType.weekly:
-        return days % (7 * task.recurrence.interval) == 0;
-      case RecurrenceType.monthly:
-        final months =
-            (target.year - start.year) * 12 + target.month - start.month;
-        if (months % task.recurrence.interval != 0) return false;
-        final lastDay = DateTime(target.year, target.month + 1, 0).day;
-        return target.day == min(start.day, lastDay);
-      case RecurrenceType.yearly:
-        return target.month == start.month &&
-            target.day == start.day &&
-            (target.year - start.year) % task.recurrence.interval == 0;
-    }
-  }
+  bool _recursOnDay(TaskModel task, DateTime day) => TaskAgenda.recursOnDay(task, day);
 
   Iterable<TaskModel> _completedRecurringOccurrences(TaskModel task) {
     return task.recurrenceCompletions.entries.map((entry) {
@@ -1662,8 +1619,10 @@ class TodoWorkspace extends ChangeNotifier {
 
   @override
   void dispose() {
+    steam.dispose();
     priceTracking.dispose();
     unawaited(_agentBridge?.stop());
+    unawaited(_writerLock?.release());
     _saveDebounce?.cancel();
     _externalWardrobePoll?.cancel();
     _focusTimer?.cancel();

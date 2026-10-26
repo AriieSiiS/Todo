@@ -21,6 +21,24 @@ class MobileTaskSnapshot {
   final List<ProjectModel> projects;
   final DaySettings daySettings;
 
+  List<TaskModel> get shoppingLists {
+    final values = tasks
+        .where((task) =>
+            task.status == TaskStatus.active &&
+            !task.isSubtask &&
+            isShoppingList(task))
+        .toList();
+    values.sort(_compareTasks);
+    return values;
+  }
+
+  bool isShoppingList(TaskModel task) =>
+      task.origin == TaskOrigin.shoppingList ||
+      (task.subtaskIds.isNotEmpty &&
+          task.categoryIds
+              .any((id) => categoryById(id)?.name.toLowerCase() == 'compras') &&
+          task.title.toLowerCase().startsWith('comprar '));
+
   factory MobileTaskSnapshot.fromJson(Map<String, dynamic> json) {
     if ((json['protocolVersion'] as num?)?.toInt() != 1) {
       throw const FormatException(
@@ -64,6 +82,7 @@ class MobileTaskSnapshot {
     final values = tasks
         .where((task) => task.status == TaskStatus.active)
         .where((task) => !task.isSubtask)
+        .where((task) => !isShoppingList(task))
         .where((task) => occursOnDay(task, day, today: day))
         .toList();
     values.sort(_compareTasks);
@@ -73,9 +92,11 @@ class MobileTaskSnapshot {
   List<TaskModel> upcomingTasks([DateTime? now]) {
     final today = logicalDate(now);
     final result = <TaskModel>[];
-    for (final task in tasks.where(
-      (value) => value.status == TaskStatus.active && !value.isSubtask,
-    )) {
+    for (final task in tasks
+        .where(
+          (value) => value.status == TaskStatus.active && !value.isSubtask,
+        )
+        .where((value) => !isShoppingList(value))) {
       if (!task.recurrence.isRecurring) {
         if (task.scheduledAt != null &&
             _date(task.scheduledAt!).isAfter(today)) {
@@ -109,6 +130,7 @@ class MobileTaskSnapshot {
   List<TaskModel> allActiveTasks() {
     final values = tasks
         .where((task) => task.status == TaskStatus.active && !task.isSubtask)
+        .where((task) => !isShoppingList(task))
         .toList();
     values.sort(_compareTasks);
     return values;

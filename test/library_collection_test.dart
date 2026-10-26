@@ -38,6 +38,28 @@ void main() {
     expect(item.showCollectionNumber, isTrue);
   });
 
+  test('el universo cuelga de la saga y se conserva en el JSON', () {
+    final controller = TodoWorkspace.createForTest();
+
+    final item = controller.createLibraryItem(
+      type: LibraryItemType.book,
+      title: 'Horus Rising',
+      universeName: '  Warhammer 40.000 ',
+      collectionName: 'La Herejía de Horus',
+      collectionNumber: 1,
+    );
+    final restored = LibraryItem.fromJson(item.toJson());
+
+    expect(restored.universeName, 'Warhammer 40.000');
+    expect(restored.collectionName, 'La Herejía de Horus');
+    expect(restored.collectionNumber, 1);
+    expect(
+      LibraryItem.fromJson({...item.toJson()}..remove('universeName'))
+          .universeName,
+      isNull,
+    );
+  });
+
   test('guarda temporadas, rewatch y publicación de un manga', () {
     final item = LibraryItem(
       id: 'serie-manga',

@@ -115,6 +115,10 @@ class MobileLanStore {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_configKey);
     await _secureStorage.delete(key: _tokenKey);
+    await clearSnapshot();
+  }
+
+  Future<void> clearSnapshot() async {
     final file = await _cacheFile();
     if (await file.exists()) await file.delete();
   }

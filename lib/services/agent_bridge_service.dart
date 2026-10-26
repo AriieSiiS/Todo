@@ -121,12 +121,15 @@ class AgentBridgeService {
         final bytes = <int>[];
         await for (final chunk in request.timeout(const Duration(seconds: 5))) {
           bytes.addAll(chunk);
-          if (bytes.length > 65536) {
+          if (bytes.length > 1048576) {
             throw const FormatException(
                 'La petición supera el tamaño permitido.');
           }
         }
         final data = jsonDecode(utf8.decode(bytes));
+        if (bytes.length > 65536 && (data is! Map || data['name'] != 'sync_kindle_book')) {
+          throw const FormatException('La petición supera el tamaño permitido.');
+        }
         if (data is! Map<String, dynamic> ||
             data.keys.any((key) => !{'name', 'arguments'}.contains(key)) ||
             data['name'] is! String ||

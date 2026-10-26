@@ -170,6 +170,7 @@ extension TodoWorkspaceRecetas on TodoWorkspace {
           '${menu.people == 1 ? 'persona' : 'personas'} · $scope$price',
       categoryIds: <String>[category.id],
       scheduledAt: date,
+      origin: TaskOrigin.shoppingList,
     );
     final seen = <String>{};
     for (final item in shoppingItems) {
@@ -508,6 +509,7 @@ extension TodoWorkspaceRecetas on TodoWorkspace {
           '${recipe.servings == 1 ? 'ración' : 'raciones'}.',
       categoryIds: <String>[category.id],
       scheduledAt: date,
+      origin: TaskOrigin.shoppingList,
     );
     final shoppingLabels = <String>[];
     final seenLabels = <String>{};
@@ -523,6 +525,39 @@ extension TodoWorkspaceRecetas on TodoWorkspace {
         title: label,
         categoryIds: <String>[category.id],
         scheduledAt: date,
+        parentTaskId: task.id,
+      );
+    }
+    return taskById(task.id) ?? task;
+  }
+
+  TaskModel createManualShoppingList({
+    required String title,
+    required Iterable<String> items,
+  }) {
+    final names = items
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    if (title.trim().isEmpty || names.isEmpty) {
+      throw StateError('Escribe un nombre y al menos un producto.');
+    }
+    final category = _ensureTaskCategory(
+      'Compras',
+      const Color(0xFFDBA62D),
+      Icons.shopping_cart_rounded,
+    );
+    final task = createTask(
+      title: title.trim(),
+      categoryIds: <String>[category.id],
+      scheduledAt: logicalDate(),
+      origin: TaskOrigin.shoppingList,
+    );
+    for (final name in names) {
+      createTask(
+        title: name,
+        categoryIds: <String>[category.id],
+        scheduledAt: task.scheduledAt,
         parentTaskId: task.id,
       );
     }

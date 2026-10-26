@@ -17,6 +17,10 @@ esa regla siga vigente.
 
 ## Idea clave
 
+Las consultas `get_steam_games` y `get_steam_achievements` del adaptador privado
+usan la conexión configurada en «Ajustes → Steam» mediante Todo abierto.
+No reciben ni devuelven la clave. Véase [la guía de Steam](../docs/STEAM.md).
+
 No es un servidor en internet. Es un proceso local dentro del mismo repo.
 
 Eso significa que cuando lleves este proyecto a otro PC:

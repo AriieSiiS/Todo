@@ -1354,6 +1354,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.0"
+  todo_core:
+    dependency: "direct main"
+    description:
+      path: "packages/todo_core"
+      relative: true
+    source: path
+    version: "1.0.0"
   typed_data:
     dependency: transitive
     description:

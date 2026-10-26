@@ -494,11 +494,13 @@ class McpServerTest(unittest.TestCase):
             {
                 "type": "book",
                 "title": "Carl el mazmorrero",
+                "universe_name": "Universo de prueba",
                 "collection_name": "Carl el mazmorrero",
                 "collection_number": 1,
                 "show_collection_number": True,
             },
         )["created"]
+        self.assertEqual(collection_item["universeName"], "Universo de prueba")
         self.assertEqual(collection_item["collectionName"], "Carl el mazmorrero")
         self.assertEqual(collection_item["collectionNumber"], 1)
         self.assertTrue(collection_item["showCollectionNumber"])

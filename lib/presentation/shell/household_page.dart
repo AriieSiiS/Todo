@@ -35,7 +35,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
     categories.insert(0, 'Todos');
     final selectedCategory =
         categories.contains(_category) ? _category : 'Todos';
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim().paraBuscar;
     final items = active.where((item) {
       if (selectedCategory != 'Todos' && item.category != selectedCategory) {
         return false;
@@ -50,7 +50,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
         item.location,
         item.retailer,
         ...item.tags,
-      ].join(' ').toLowerCase().contains(query);
+      ].join(' ').paraBuscar.contains(query);
     }).toList()
       ..sort((left, right) {
         final category =

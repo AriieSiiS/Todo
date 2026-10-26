@@ -2,6 +2,18 @@
 
 ## Lecciones
 
+- Cuando se añadan textos al ejecutable nativo de Windows, compilar sus fuentes en UTF-8 y comprobar las tildes en el binario instalado.
+- Cuando se unifiquen las fichas de Biblioteca, fijar la misma altura de cabecera para todas y colocar saga y orden a la derecha del título; mantener los datos en una columna ajustada al alto disponible sin scroll. En lectura, integrar «Información» y «Citas» en la cabecera, omitir «Libro», colocar el porcentaje en la esquina de las portadas y mostrar página, total y capítulo al pasar el cursor, sin fechas ni posiciones técnicas en las citas.
+- Cuando se cotejen o trasladen libros del Kindle, normalizar metadatos y enlazar las fichas existentes, incluidas las completadas, antes de crear otras; comprobar la apertura real de los formatos ofrecidos y preparar EPUB para AZW3/KF8.
+- Cuando se ajuste la ficha de lectura, mostrar el progreso editable en «Información» y aprovechar la altura de «Citas» con varias citas y edición individual; paginar solo las que no quepan, sin scroll ni títulos o contadores redundantes.
+- Cuando se ajuste la barra de lectura del Kindle, usar todo el ancho entre márgenes con un trazo continuo sin marcas de capítulos y el dato debajo; sincronizar la escala con «Libro» o «Capítulo», conservar el formato de tiempo elegido y comprobar el carrusel mediante capturas y su persistencia, sin hora, batería ni páginas restantes.
+- Cuando se termine una instalación del Kindle, retirar los instaladores, marcadores informativos, volcados de diagnóstico y sus carpetas auxiliares; comprobar la limpieza sin borrar libros ni componentes activos.
+- Cuando se use un selector dentro de una fila de Biblioteca, ajustar el control al contenido y anclar su menú justo debajo; mantener la tipografía del valor de la fila.
+- Cuando se revise el índice de un ómnibus, distinguir las obras, sus capítulos y sus epígrafes, y contrastar las entradas con los encabezados del texto antes de afirmar que está completo.
+- Cuando se cambie una función del Kindle, mantener su fuente y pruebas en `kindle/` y verificar la actualización en el Kindle definitivo; conservar sus credenciales, libros, progreso y citas. No preparar paquetes ni perfiles de traslado salvo petición nueva del usuario.
+- Cuando se revise una pantalla congelada en KOReader, comprobar primero si el lector sigue vivo y revisar su error; probar los accesos a Todo desde lectura y explorador con las API de cierre propias de cada menú. Verificar también el refresco físico y los controles posteriores, porque el framebuffer no valida la tinta electrónica; mantener cancelables las consultas de red y probar con el PC inaccesible.
+- Cuando se facilite el acceso a los libros del Kindle, hacer que la casa y el botón de explorador dentro de un libro abran «Mis libros», ofrecer un botón visible para volver a Todo, configurar KOReader en español y conservar Todo como inicio predeterminado; al abrir un libro, mostrar un aviso breve sin rutas de archivos.
+- Cuando se ajuste la vista del Kindle, mostrar las subtareas con sus casillas desplazadas a la derecha según su nivel, aprovechar la altura útil y equilibrar la cabecera; ocultar prioridades, el reloj durante el reposo y los mensajes explicativos de reposo.
 - Cuando se agrupen elementos en carpetas, ofrecer desagrupar y volver a agrupar desde la interfaz, y conservar esa elección al reiniciar.
 - Cuando se amplíe la conexión de ChatGPT, reutilizar las herramientas del MCP local existente y añadir solo la adaptación necesaria del transporte y las escrituras de Todo abierto.
 - Cuando se añadan tarjetas de Compras en Windows, ofrecer las acciones de edición y eliminación también mediante clic derecho, con confirmación antes de eliminar.
@@ -62,7 +74,7 @@ La app tiene:
 - `lib/application/state/todo_workspace.dart`: estado de aplicación y operaciones del producto
 - `lib/application/providers/todo_providers.dart`: providers Riverpod
 
-`TodoWorkspace` es la fuente de verdad de runtime. Maneja tareas, proyectos, categorías, notas, calendario, ajustes, notificaciones, persistencia y sincronización.
+`TodoWorkspace` es la fuente de verdad de runtime con la interfaz abierta. Maneja tareas, proyectos, categorías, notas, calendario, ajustes, notificaciones, persistencia y sincronización. Al cerrarla, el agente ligero atiende al Kindle con la lógica compartida de `packages/todo_core/`; ambos adquieren `runtime/todo_state.json.lock` antes de cargar o modificar el estado para impedir escritores simultáneos.
 
 ### Domain
 

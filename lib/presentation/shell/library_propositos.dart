@@ -293,7 +293,8 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                       goal,
                     ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
-                    onToggle: widget.controller.toggleLibraryGoalCompleted,
+                    onToggle: (id) => _toggleLibraryGoalCompleted(
+                        context, widget.controller, id),
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
@@ -315,7 +316,8 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                       goal,
                     ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
-                    onToggle: widget.controller.toggleLibraryGoalCompleted,
+                    onToggle: (id) => _toggleLibraryGoalCompleted(
+                        context, widget.controller, id),
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
@@ -339,7 +341,8 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                       goal,
                     ),
                     onEdit: (goal) => _showGoalEditDialog(context, goal),
-                    onToggle: widget.controller.toggleLibraryGoalCompleted,
+                    onToggle: (id) => _toggleLibraryGoalCompleted(
+                        context, widget.controller, id),
                     onFavorite: widget.controller.toggleLibraryGoalFavorite,
                     onDelete: (goal) => _deleteGoal(context, goal),
                   ),
@@ -361,7 +364,8 @@ class _LibraryGoalsViewState extends State<_LibraryGoalsView> {
                     goal,
                   ),
                   onEdit: (goal) => _showGoalEditDialog(context, goal),
-                  onToggle: widget.controller.toggleLibraryGoalCompleted,
+                  onToggle: (id) => _toggleLibraryGoalCompleted(
+                      context, widget.controller, id),
                   onFavorite: widget.controller.toggleLibraryGoalFavorite,
                   onDelete: (goal) => _deleteGoal(context, goal),
                 ),

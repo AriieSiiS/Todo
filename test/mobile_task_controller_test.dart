@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todo/mobile/mobile_lan_client.dart';
 import 'package:todo/mobile/mobile_lan_store.dart';
 import 'package:todo/mobile/mobile_notification_service.dart';
+import 'package:todo/mobile/mobile_shopping.dart';
+import 'package:todo/mobile/mobile_shopping_store.dart';
 import 'package:todo/mobile/mobile_task_controller.dart';
 import 'package:todo/mobile/mobile_task_snapshot.dart';
 import 'package:todo/mobile/mobile_wardrobe_snapshot.dart';
@@ -18,7 +20,8 @@ void main() {
         store: store,
         client: client,
         notifications: _Notifications(),
-        wardrobeStore: _WardrobeStore());
+        wardrobeStore: _WardrobeStore(),
+        shoppingStore: _ShoppingStore());
     addTearDown(controller.dispose);
     await controller.initialize();
     expect(controller.syncing, isTrue);
@@ -37,7 +40,8 @@ void main() {
         store: store,
         client: client,
         notifications: _Notifications(),
-        wardrobeStore: _WardrobeStore());
+        wardrobeStore: _WardrobeStore(),
+        shoppingStore: _ShoppingStore());
     await controller.initialize();
     store.token.complete('credencial-de-prueba');
     await client.started.future;
@@ -56,7 +60,8 @@ void main() {
         store: store,
         client: _Client(),
         notifications: _Notifications(),
-        wardrobeStore: _WardrobeStore());
+        wardrobeStore: _WardrobeStore(),
+        shoppingStore: _ShoppingStore());
     addTearDown(controller.dispose);
     await controller.initialize();
     store.token.completeError(StateError('Credencial inaccesible'));
@@ -91,6 +96,7 @@ void main() {
       client: _Client(),
       notifications: _Notifications(),
       wardrobeStore: wardrobe,
+      shoppingStore: _ShoppingStore(),
     );
     await controller.initialize();
     final entry =
@@ -109,11 +115,58 @@ void main() {
       client: _Client(),
       notifications: _Notifications(),
       wardrobeStore: wardrobe,
+      shoppingStore: _ShoppingStore(),
     );
     addTearDown(reopened.dispose);
     await reopened.initialize();
     expect(reopened.remainingUnits('viaje', entry), 1);
   });
+
+  test('la compra conserva marcas y precios sin conexión', () async {
+    final shopping = _ShoppingStore();
+    final controller = MobileTaskController(
+      store: _PairedStore(),
+      client: _Client(),
+      notifications: _Notifications(),
+      wardrobeStore: _WardrobeStore(),
+      shoppingStore: shopping,
+    );
+    await controller.initialize();
+    await controller.setShoppingBought('lista', 'pan', true);
+    await controller.setShoppingPrice('lista', 'pan', 125);
+    await controller.setShoppingReceiptTotal('lista', 140);
+    controller.dispose();
+
+    final reopened = MobileTaskController(
+      store: _PairedStore(),
+      client: _Client(),
+      notifications: _Notifications(),
+      wardrobeStore: _WardrobeStore(),
+      shoppingStore: shopping,
+    );
+    addTearDown(reopened.dispose);
+    await reopened.initialize();
+    expect(reopened.shoppingProgress.isBought('lista', 'pan'), isTrue);
+    expect(reopened.shoppingProgress.priceCents('lista', 'pan'), 125);
+    expect(reopened.shoppingProgress.receiptTotalCents('lista'), 140);
+  });
+}
+
+class _ShoppingStore extends MobileShoppingStore {
+  MobileShoppingProgress progress = MobileShoppingProgress();
+
+  @override
+  Future<MobileShoppingProgress> load() async => progress;
+
+  @override
+  Future<void> save(MobileShoppingProgress value) async {
+    progress = value;
+  }
+
+  @override
+  Future<void> clear() async {
+    progress = MobileShoppingProgress();
+  }
 }
 
 class _Store extends MobileLanStore {

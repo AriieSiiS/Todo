@@ -27,7 +27,7 @@ class _WardrobeOutfitSelectorState extends State<_WardrobeOutfitSelector> {
         .toList();
     final categories = all.map((item) => item.category).toSet().toList()
       ..sort(WardrobeTaxonomy.compareCategories);
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim().paraBuscar;
     final items = all.where((item) {
       if (_category != null && item.category != _category) return false;
       if (_selectedOnly && !widget.selected.contains(item.id)) return false;
@@ -40,7 +40,7 @@ class _WardrobeOutfitSelectorState extends State<_WardrobeOutfitSelector> {
         ...item.tags,
         ...item.seasons,
         ...item.occasions
-      ].join(' ').toLowerCase().contains(query);
+      ].join(' ').paraBuscar.contains(query);
     }).toList()
       ..sort((left, right) {
         if (left.favorite != right.favorite) return left.favorite ? -1 : 1;
@@ -188,7 +188,7 @@ Future<void> _showEditOutfit(BuildContext context, TodoWorkspace controller,
         final selectedItems = controller.wardrobeItems
             .where((item) => selected.contains(item.id))
             .toList();
-        final normalizedQuery = query.trim().toLowerCase();
+        final normalizedQuery = query.trim().paraBuscar;
         final availableItems = controller.wardrobeItems.where((item) {
           if (item.archived || selected.contains(item.id)) return false;
           if (category != 'Todas' && item.category != category) return false;
@@ -201,7 +201,7 @@ Future<void> _showEditOutfit(BuildContext context, TodoWorkspace controller,
             ...item.tags,
             ...item.seasons,
             ...item.occasions,
-          ].join(' ').toLowerCase();
+          ].join(' ').paraBuscar;
           return searchable.contains(normalizedQuery);
         }).toList();
         return AlertDialog(

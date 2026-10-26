@@ -41,6 +41,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _musicController = AmbientMusicController(enabled: _shouldInitializeMusic);
     _windowShell = WindowsShellService(
       enabled: Platform.isWindows && !_isWidgetTest(),
+      beforeExit: controller.prepareForExit,
     )..addListener(_onWindowShellChanged);
     _shellArguments = _windowShell.arguments.listen(_handleLaunchArgument);
     unawaited(_windowShell.initialize());

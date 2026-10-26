@@ -37,12 +37,14 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   final _duration = TextEditingController();
   final _country = TextEditingController();
   final _pages = TextEditingController();
+  final _currentPage = TextEditingController();
   final _note = TextEditingController();
   final _ratingFocus = FocusNode();
   final _ratingKey = GlobalKey();
   final _rating = TextEditingController();
   final _cover = TextEditingController();
   final _externalUrl = TextEditingController();
+  final _universeName = TextEditingController();
   final _collectionName = TextEditingController();
   final _collectionNumber = TextEditingController();
   final _seasonCount = TextEditingController();
@@ -85,10 +87,12 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _duration.text = item.duration ?? '';
     _country.text = item.country ?? '';
     _pages.text = item.pages ?? '';
+    _currentPage.text = item.reading?.page ?? '';
     _note.text = item.note ?? '';
     _rating.text = item.rating?.toString() ?? '';
     _cover.text = item.coverUrl ?? '';
     _externalUrl.text = item.externalUrl ?? '';
+    _universeName.text = item.universeName ?? '';
     _collectionName.text = item.collectionName ?? '';
     _collectionNumber.text = item.collectionNumber?.toString() ?? '';
     _seasonCount.text = item.seasonCount?.toString() ?? '';
@@ -110,11 +114,13 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _duration.dispose();
     _country.dispose();
     _pages.dispose();
+    _currentPage.dispose();
     _note.dispose();
     _ratingFocus.dispose();
     _rating.dispose();
     _cover.dispose();
     _externalUrl.dispose();
+    _universeName.dispose();
     _collectionName.dispose();
     _collectionNumber.dispose();
     _seasonCount.dispose();
@@ -393,6 +399,16 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 8),
             _dialogField(_pages, 'Páginas / Volúmenes',
                 'Ej. 832 páginas / 3 tomos (opcional)'),
+            if (_isEditing) ...[
+              const SizedBox(height: 8),
+              _dialogField(
+                _currentPage,
+                'Página actual (progreso)',
+                'Ej. 27; el porcentaje se calcula con el total',
+                fieldKey: const ValueKey('library-current-page-editor'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
           ],
         ),
       LibraryItemType.movieSeries => Column(
@@ -468,6 +484,12 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     return [
       const SizedBox(height: 8),
       _dialogField(
+        _universeName,
+        'Universo',
+        'Ej. Warhammer 40.000 (opcional)',
+      ),
+      const SizedBox(height: 8),
+      _dialogField(
         _collectionName,
         'Saga / colección',
         'Ej. Carl el mazmorrero',
@@ -518,10 +540,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       FocusNode? focusNode,
       Key? fieldKey}) {
     return _LibraryEditLine(
-      key: fieldKey,
       label: label,
       alignTop: maxLines > 1,
       child: TextField(
+        key: fieldKey,
         controller: controller,
         focusNode: focusNode,
         keyboardType: keyboardType,
@@ -744,6 +766,19 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     }
     final item = widget.item;
     if (item != null) {
+      final pageText = _currentPage.text.trim();
+      final pageChanged = _type == LibraryItemType.book &&
+          (pageText != (item.reading?.page ?? '') ||
+              _pages.text.trim() != (item.pages ?? ''));
+      if (pageChanged && pageText.isNotEmpty) {
+        final total = bookPageTotal(_pages.text.trim(), item.reading);
+        final page = int.tryParse(pageText);
+        if (total == null || page == null || page < 0 || page > total) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Indica una página válida y el total de páginas.')));
+          return;
+        }
+      }
       widget.controller.updateLibraryItem(
         item.copyWith(
           title: _title.text.trim(),
@@ -801,6 +836,10 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               : null,
           clearCountry: _type != LibraryItemType.movieSeries ||
               _country.text.trim().isEmpty,
+          universeName: _universeName.text.trim().isEmpty
+              ? null
+              : _universeName.text.trim(),
+          clearUniverseName: _universeName.text.trim().isEmpty,
           collectionName: _collectionName.text.trim().isEmpty
               ? null
               : _collectionName.text.trim(),
@@ -828,10 +867,14 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               _type != LibraryItemType.book || _creator.text != 'Manga',
         ),
       );
-      Navigator.of(context).pop();
+      if (pageChanged && pageText.isNotEmpty) {
+        widget.controller.updateBookReadingPage(item.id, int.parse(pageText));
+      }
+      _closeAfterSave(item.id,
+          newlyCompleted: item.status != LibraryItemStatus.completed);
       return;
     }
-    widget.controller.createLibraryItem(
+    final created = widget.controller.createLibraryItem(
       type: _type,
       title: _title.text,
       status: _status,
@@ -855,6 +898,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       duration: _duration.text,
       pages: _type == LibraryItemType.book ? _pages.text : null,
       country: _type == LibraryItemType.movieSeries ? _country.text : null,
+      universeName: _universeName.text,
       collectionName: _collectionName.text,
       collectionNumber: _validCollectionNumber,
       showCollectionNumber: _validCollectionNumber != null &&
@@ -872,7 +916,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
               ? _publicationStatus
               : null,
     );
-    Navigator.of(context).pop();
+    _closeAfterSave(created.id, newlyCompleted: true);
+  }
+
+  void _closeAfterSave(String itemId, {required bool newlyCompleted}) {
+    final navigator = Navigator.of(context);
+    final parentContext = navigator.context;
+    navigator.pop();
+    if (newlyCompleted) {
+      unawaited(
+          _promptCompletedBookRating(parentContext, widget.controller, itemId));
+    }
   }
 
   /// Solo se guarda un enlace web válido; los juegos no tienen ficha externa.
@@ -894,9 +948,82 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   }
 }
 
+class _BookRatingDialog extends StatefulWidget {
+  const _BookRatingDialog({required this.title});
+
+  final String title;
+
+  @override
+  State<_BookRatingDialog> createState() => _BookRatingDialogState();
+}
+
+class _BookRatingDialogState extends State<_BookRatingDialog> {
+  final _rating = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _rating.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final value = double.tryParse(_rating.text.trim().replaceAll(',', '.'));
+    if (value == null || !value.isFinite || value < 0 || value > 10) {
+      setState(() => _error = 'Introduce una nota entre 0 y 10.');
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      icon: Icon(Icons.star_outline_rounded,
+          color: Theme.of(context).colorScheme.primary),
+      title: const Text('Valorar libro'),
+      content: SizedBox(
+        width: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _rating,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: 'Tu valoración',
+                hintText: 'Ej. 8,5',
+                suffixText: '/ 10',
+                errorText: _error,
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Ahora no'),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: const Text('Guardar valoración'),
+        ),
+      ],
+    );
+  }
+}
+
 class _LibraryEditLine extends StatelessWidget {
   const _LibraryEditLine({
-    super.key,
     required this.label,
     required this.child,
     this.alignTop = false,
@@ -1457,17 +1584,22 @@ int _libraryRewatchCount(LibraryItem item) {
   return item.rewatchCount > legacyCount ? item.rewatchCount : legacyCount;
 }
 
-String _detailTitle(LibraryItemType type) => switch (type) {
-      LibraryItemType.game => 'Información del juego',
-      LibraryItemType.book => 'Información del libro / manga',
-      LibraryItemType.movieSeries => 'Información de la película / serie',
-    };
+String _detailTitle(LibraryItemType _) => 'Información';
 
 String _goalDetailTitle(LibraryItemType type) => _detailTitle(type);
+
+String _bookProgressLabel(LibraryItem item) {
+  final total = bookPageTotal(item.pages, item.reading);
+  if (total == null) return 'Indica el total de páginas en Editar';
+  final page = item.reading?.page.isNotEmpty == true ? item.reading!.page : '0';
+  return 'Página $page de $total · ${bookReadingPercent(item.reading, total)} %';
+}
 
 List<(String, String)> _detailFields(LibraryItem item) {
   final common = <(String, String)>[
     ('Estado', _libraryStatusSingularLabel(item.status)),
+    if (item.universeName?.isNotEmpty == true)
+      ('Universo', item.universeName!),
     if (item.collectionName?.isNotEmpty == true)
       ('Saga / colección', item.collectionName!),
     if (item.collectionNumber != null)
@@ -1494,6 +1626,7 @@ List<(String, String)> _detailFields(LibraryItem item) {
     LibraryItemType.book => [
         if (item.author?.isNotEmpty == true) ('Autor', item.author!),
         ...common,
+        ('Progreso', _bookProgressLabel(item)),
         if (item.creatorOrDirector?.isNotEmpty == true)
           ('Tipo', item.creatorOrDirector!),
         if (item.creatorOrDirector == 'Manga' && item.publicationStatus != null)
@@ -1749,6 +1882,7 @@ String _searchableText(LibraryItem item) {
     item.pages,
     item.country,
     item.note,
+    item.universeName,
     item.collectionName,
     item.collectionNumber?.toString(),
   ].whereType<String>().join(' ');

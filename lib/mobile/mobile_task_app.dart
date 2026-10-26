@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../domain/models.dart';
 import 'mobile_task_controller.dart';
+import 'mobile_shopping_page.dart';
 import 'mobile_wardrobe_pages.dart';
 
 class MobileTaskApp extends StatefulWidget {
@@ -312,6 +313,7 @@ class _MobileTaskShellState extends State<_MobileTaskShell> {
         tasks: controller.allTasks,
         controller: controller,
       ),
+      MobileShoppingPage(controller: controller),
       MobileWardrobePage(controller: controller),
       MobilePackingPage(controller: controller),
     ];
@@ -386,6 +388,11 @@ class _MobileTaskShellState extends State<_MobileTaskShell> {
                 icon: Icon(Icons.list_alt_outlined),
                 selectedIcon: Icon(Icons.list_alt_rounded),
                 label: 'Todas',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(Icons.shopping_cart_rounded),
+                label: 'Compra',
               ),
               NavigationDestination(
                 icon: Icon(Icons.checkroom_outlined),
@@ -810,7 +817,7 @@ class _MobileSettingsPage extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Desconectar móvil'),
         content: const Text(
-          'Se eliminarán de este móvil las tareas, la ropa descargada, las marcas de uso de las maletas, la credencial y los avisos programados. Los datos del ordenador no cambiarán.',
+          'Se eliminarán de este móvil las tareas, la ropa descargada, las marcas de uso de las maletas, las compras y precios anotados, la credencial y los avisos programados. Los datos del ordenador no cambiarán.',
         ),
         actions: [
           TextButton(

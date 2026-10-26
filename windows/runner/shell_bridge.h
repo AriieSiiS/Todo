@@ -23,14 +23,20 @@ class ShellBridge {
   // Devuelve true si el atajo registrado es el que ha saltado.
   bool HandleHotKey(WPARAM id);
   void ForwardLaunchArgument(const std::string& argument);
+  bool HandleCloseRequest();
+  bool exiting() const { return exiting_; }
 
  private:
   void BringToFront();
   bool SetCompactMode(bool enabled);
+  void RequestExit();
 
   HWND window_;
   bool hotkey_registered_ = false;
   bool compact_ = false;
+  bool exiting_ = false;
+  bool exit_requested_ = false;
+  bool dart_ready_ = false;
   bool placement_saved_ = false;
   WINDOWPLACEMENT saved_placement_{sizeof(WINDOWPLACEMENT)};
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;

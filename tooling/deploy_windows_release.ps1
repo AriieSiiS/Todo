@@ -60,7 +60,7 @@ $registrationScript = Join-Path $target 'register_lan_sync_agent.ps1'
 if (-not (Test-Path -LiteralPath $registrationScript -PathType Leaf)) {
   throw 'La instalación no contiene register_lan_sync_agent.ps1.'
 }
-& powershell -NoProfile -ExecutionPolicy Bypass -File $registrationScript -InstallDirectory $target
+& powershell -NoProfile -ExecutionPolicy Bypass -File $registrationScript -InstallDirectory $target | Out-Host
 if ($LASTEXITCODE -ne 0) {
   throw 'No se pudo registrar el agente de sincronización local.'
 }

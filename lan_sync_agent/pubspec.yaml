@@ -1,5 +1,5 @@
 name: todo_lan_sync_agent
-description: Agente local de solo lectura para compartir tareas de Todo por la red privada.
+description: Agente local para consultar Todo y sincronizar el Kindle sin interfaz gráfica.
 publish_to: none
 version: 1.0.0
 
@@ -7,6 +7,8 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  todo_core:
+    path: ../packages/todo_core
   crypto: ^3.0.7
 
 dev_dependencies:

@@ -47,7 +47,7 @@ class _InboxPageState extends State<InboxPage> {
       if (_query.trim().isEmpty) {
         return true;
       }
-      return note.content.toLowerCase().contains(_query.trim().toLowerCase());
+      return coincideBusqueda(note.content, _query);
     }).toList();
     if (_sort != _InboxSort.manual) {
       filteredNotes.sort(
@@ -67,6 +67,8 @@ class _InboxPageState extends State<InboxPage> {
         children: [
           _InboxHeader(
             noteCount: notes.length,
+            archivedCount: controller.archivedNotes().length,
+            onShowArchived: () => _showArchivedNotes(context, controller),
             onCreate: () async {
               await showQuickNoteComposer(context, controller);
               if (mounted) setState(() {});
@@ -373,9 +375,16 @@ class _InboxPageState extends State<InboxPage> {
 }
 
 class _InboxHeader extends StatelessWidget {
-  const _InboxHeader({required this.noteCount, required this.onCreate});
+  const _InboxHeader({
+    required this.noteCount,
+    required this.archivedCount,
+    required this.onShowArchived,
+    required this.onCreate,
+  });
 
   final int noteCount;
+  final int archivedCount;
+  final VoidCallback onShowArchived;
   final VoidCallback onCreate;
 
   @override
@@ -399,9 +408,34 @@ class _InboxHeader extends StatelessWidget {
                         ?.copyWith(fontSize: 40, height: 1),
                   ),
                   const SizedBox(height: 7),
-                  Text(
-                    '$noteCount ${noteCount == 1 ? 'nota' : 'notas'}',
-                    style: TextStyle(color: visuals.textMuted),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    children: [
+                      Text(
+                        '$noteCount ${noteCount == 1 ? 'nota' : 'notas'}',
+                        style: TextStyle(color: visuals.textMuted),
+                      ),
+                      if (archivedCount > 0) ...[
+                        Text('·', style: TextStyle(color: visuals.textMuted)),
+                        TextButton.icon(
+                          key: const ValueKey('inbox-show-archived'),
+                          onPressed: onShowArchived,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            minimumSize: const Size(0, 32),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon:
+                              const Icon(Icons.inventory_2_outlined, size: 16),
+                          label: Text(
+                            archivedCount == 1
+                                ? '1 archivada'
+                                : '$archivedCount archivadas',
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -2078,4 +2112,180 @@ String _monthShortInbox(int month) {
     'dic',
   ];
   return names[month];
+}
+
+/// Muestra las notas archivadas para restaurarlas o eliminarlas.
+Future<void> _showArchivedNotes(
+  BuildContext context,
+  TodoWorkspace controller,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _ArchivedNotesDialog(controller: controller),
+  );
+}
+
+class _ArchivedNotesDialog extends StatefulWidget {
+  const _ArchivedNotesDialog({required this.controller});
+
+  final TodoWorkspace controller;
+
+  @override
+  State<_ArchivedNotesDialog> createState() => _ArchivedNotesDialogState();
+}
+
+class _ArchivedNotesDialogState extends State<_ArchivedNotesDialog> {
+  String _query = '';
+
+  TodoWorkspace get controller => widget.controller;
+
+  void _restore(QuickNote note) {
+    controller.restoreNote(note.id);
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: const Text('Nota restaurada en Notas.'),
+        action: SnackBarAction(
+          label: 'Deshacer',
+          onPressed: () => controller.archiveNote(note.id),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _delete(QuickNote note) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar nota'),
+        content: Text(
+          'Se eliminará definitivamente «${_noteTitleFromContent(note.content)}».',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: context.visuals.danger,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) controller.deleteNote(note.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final archived = controller
+            .archivedNotes()
+            .where((note) => coincideBusqueda(note.content, _query))
+            .toList();
+        final hasAny = controller.archivedNotes().isNotEmpty;
+        return AlertDialog(
+          title: const Text('Notas archivadas'),
+          content: SizedBox(
+            width: 560,
+            height: 460,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (hasAny) ...[
+                  TextField(
+                    key: const ValueKey('archived-notes-search'),
+                    autofocus: true,
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search_rounded),
+                      hintText: 'Buscar en archivadas…',
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Expanded(
+                  child: archived.isEmpty
+                      ? Center(
+                          child: Text(
+                            hasAny
+                                ? 'Ninguna nota archivada coincide con la búsqueda.'
+                                : 'No hay notas archivadas.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: visuals.textMuted),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: archived.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final note = archived[index];
+                            final body =
+                                _noteDescriptionFromContent(note.content) ?? '';
+                            return ListTile(
+                              key: ValueKey('archived-note-${note.id}'),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              leading: note.emoji.isEmpty
+                                  ? Icon(Icons.sticky_note_2_outlined,
+                                      color: visuals.textMuted)
+                                  : Text(note.emoji,
+                                      style: const TextStyle(fontSize: 22)),
+                              title: Text(
+                                _noteTitleFromContent(note.content),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                [
+                                  _formatInboxCreatedAt(
+                                      note.effectiveUpdatedAt),
+                                  if (body.isNotEmpty)
+                                    body.replaceAll('\n', ' '),
+                                ].join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextButton.icon(
+                                    key: ValueKey(
+                                        'archived-note-restore-${note.id}'),
+                                    onPressed: () => _restore(note),
+                                    icon: const Icon(Icons.unarchive_outlined,
+                                        size: 18),
+                                    label: const Text('Restaurar'),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Eliminar definitivamente',
+                                    onPressed: () => _delete(note),
+                                    icon: Icon(Icons.delete_outline_rounded,
+                                        color: visuals.danger),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

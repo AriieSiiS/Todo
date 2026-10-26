@@ -8,6 +8,8 @@ import 'mobile_background_sync.dart';
 import 'mobile_lan_client.dart';
 import 'mobile_lan_store.dart';
 import 'mobile_notification_service.dart';
+import 'mobile_shopping.dart';
+import 'mobile_shopping_store.dart';
 import 'mobile_task_snapshot.dart';
 import 'mobile_wardrobe_snapshot.dart';
 import 'mobile_wardrobe_store.dart';
@@ -18,16 +20,20 @@ class MobileTaskController extends ChangeNotifier {
     MobileLanClient? client,
     MobileNotificationService? notifications,
     MobileWardrobeStore? wardrobeStore,
+    MobileShoppingStore? shoppingStore,
   })  : _store = store ?? MobileLanStore(),
         _client = client ?? MobileLanClient(),
         _notifications = notifications ?? MobileNotificationService(),
-        _wardrobeStore = wardrobeStore ?? MobileWardrobeStore();
+        _wardrobeStore = wardrobeStore ?? MobileWardrobeStore(),
+        _shoppingStore = shoppingStore ?? MobileShoppingStore();
 
   final MobileLanStore _store;
   final MobileLanClient _client;
   final MobileNotificationService _notifications;
   final MobileWardrobeStore _wardrobeStore;
+  final MobileShoppingStore _shoppingStore;
   Future<void> _usageWrite = Future<void>.value();
+  Future<void> _shoppingWrite = Future<void>.value();
   bool _disposed = false;
   int _wardrobeEpoch = 0;
   // Invalida la sincronización de tareas en curso al desconectar o cerrar.
@@ -52,6 +58,7 @@ class MobileTaskController extends ChangeNotifier {
   int _missingPhotos = 0;
   bool _wardrobeReady = false;
   String _wardrobeError = '';
+  MobileShoppingProgress _shoppingProgress = MobileShoppingProgress();
 
   LanConnectionConfig? get config => _config;
   MobileTaskSnapshot? get snapshot => _snapshot;
@@ -68,6 +75,8 @@ class MobileTaskController extends ChangeNotifier {
   int get missingPhotos => _missingPhotos;
   bool get wardrobeReady => _wardrobeReady;
   String get wardrobeError => _wardrobeError;
+  MobileShoppingProgress get shoppingProgress => _shoppingProgress;
+  List<TaskModel> get shoppingLists => _snapshot?.shoppingLists ?? const [];
 
   int usedUnits(String listId, MobilePackingEntry entry) =>
       (_usedUnits[listId]?[entry.itemId] ?? 0).clamp(0, entry.quantity);
@@ -95,6 +104,7 @@ class MobileTaskController extends ChangeNotifier {
     await _notifications.initialize();
     _config = await _store.loadConfig();
     _snapshot = await _store.loadSnapshot();
+    _shoppingProgress = await _shoppingStore.load();
     _wardrobeSnapshot = await _wardrobeStore.loadSnapshot();
     if (_wardrobeSnapshot != null &&
         _wardrobeSnapshot!.serverId != _config?.serverId) {
@@ -128,9 +138,13 @@ class MobileTaskController extends ChangeNotifier {
       final result = await _client.pair(pairing, deviceName: deviceName);
       if (_config?.serverId != null &&
           _config!.serverId != result.config.serverId) {
+        await _store.clearSnapshot();
+        _snapshot = null;
         await _wardrobeStore.clear();
         _wardrobeSnapshot = null;
         _usedUnits = {};
+        await _shoppingStore.clear();
+        _shoppingProgress = MobileShoppingProgress();
       }
       await _store.saveToken(result.token);
       await _store.saveConfig(result.config);
@@ -323,6 +337,34 @@ class MobileTaskController extends ChangeNotifier {
     await _usageWrite;
   }
 
+  Future<void> setShoppingBought(
+      String listId, String itemId, bool bought) async {
+    _shoppingProgress = _shoppingProgress.withBought(listId, itemId, bought);
+    notifyListeners();
+    await _saveShoppingProgress();
+  }
+
+  Future<void> setShoppingPrice(
+      String listId, String itemId, int? cents) async {
+    _shoppingProgress = _shoppingProgress.withPrice(listId, itemId, cents);
+    notifyListeners();
+    await _saveShoppingProgress();
+  }
+
+  Future<void> setShoppingReceiptTotal(String listId, int? cents) async {
+    _shoppingProgress = _shoppingProgress.withReceiptTotal(listId, cents);
+    notifyListeners();
+    await _saveShoppingProgress();
+  }
+
+  Future<void> _saveShoppingProgress() async {
+    final current = _shoppingProgress;
+    _shoppingWrite = _shoppingWrite
+        .catchError((_) {})
+        .then((_) => _shoppingStore.save(current));
+    await _shoppingWrite;
+  }
+
   Future<void> _clampUsage(MobileWardrobeSnapshot snapshot) async {
     var changed = false;
     for (final list in snapshot.packingLists) {
@@ -388,14 +430,17 @@ class MobileTaskController extends ChangeNotifier {
     await _wardrobeIdle?.future;
     await _syncIdle?.future;
     await _usageWrite;
+    await _shoppingWrite;
     await cancelMobileDailySync();
     await _notifications.cancelAllTodoNotifications();
     await _store.clear();
     await _wardrobeStore.clear();
+    await _shoppingStore.clear();
     _config = null;
     _snapshot = null;
     _wardrobeSnapshot = null;
     _usedUnits = {};
+    _shoppingProgress = MobileShoppingProgress();
     _wardrobeReady = false;
     _error = '';
     notifyListeners();

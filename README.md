@@ -10,12 +10,60 @@ La app está migrada a una estructura por capas:
 
 - `domain/`: entidades, snapshots JSON y contratos
 - `application/`: estado principal `TodoWorkspace` y providers Riverpod
+- `packages/todo_core/`: modelos y operaciones de agenda y Kindle compartidos con el agente, sin Flutter
 - `data/`: adaptadores de persistencia, Supabase, calendario y notificaciones
 - `presentation/`: shell, vistas y editores
 
 Windows es la plataforma prioritaria. La persistencia de escritorio usa archivo local en `runtime/todo_state.json`, y la validación principal recomendada es `flutter build windows --debug`.
 
+El ejecutable nativo de Windows se compila con `/utf-8` para conservar las tildes
+en los textos de la bandeja y los demás controles nativos.
+
+## Kindle y lectura
+
+La [sincronización de lectura](docs/KINDLE_LECTURA.md) muestra el porcentaje de
+KOReader sobre cada libro y sus citas, notas y páginas dentro de la ficha.
+
+La [guía de capítulos de Eisenhorn](docs/KINDLE_CAPITULOS.md) recoge el EPUB
+de Calibre con el índice completo y su comprobación con KOReader y Todo.
+
+Las mejoras de KOReader y Todo se conservan en `kindle/`. La
+[guía de funcionamiento](docs/KINDLE.md) describe el Kindle definitivo y su
+mantenimiento. Las fichas incluyen «Información», «Citas» y «Estadísticas», y
+Biblioteca ofrece un resumen anual de lectura. Los paquetes y perfiles preparados
+para trasladar la instalación a otro Kindle se han retirado.
+
+## Valoración al terminar un libro
+
+Al marcar un libro como completado desde Biblioteca, su ficha o un propósito,
+si todavía no tiene valoración se abre un diálogo para puntuarlo de 0 a 10.
+Admite decimales con coma o punto. «Ahora no» permite dejarlo completado y
+valorarlo después; los libros que ya tienen nota no vuelven a pedirla.
+
+## Fichas de Biblioteca
+
+Las fichas de juegos, libros, películas y series comparten tamaño y distribución:
+portada de tamaño fijo centrada junto a los datos y cabecera de altura uniforme,
+con saga y número de entrega a la derecha del título, sin una segunda etiqueta
+de tipo. Los datos ocupan una sola columna sin scroll interno;
+la ficha se ajusta al alto disponible y las notas extensas se abrevian. Al
+pulsarlas se abre el texto completo. El estado se cambia directamente desde
+un selector ajustado al contenido y al tamaño de los demás valores, con el menú
+justo debajo, sin abrir «Editar»; completar un libro sigue ofreciendo la
+valoración cuando todavía no la tiene.
+En libros, «Información» muestra la página actual y el porcentaje calculado con
+el total de páginas de la ficha, editables desde «Editar». La pestaña «Citas»
+muestra en una columna tantas citas como quepan en el alto disponible, sin
+scroll, y solo pagina cuando quedan más. Cada cita tiene su propia acción de
+edición para corregir texto, página, capítulo y nota, sin alterar el vínculo
+técnico con KOReader. Las acciones del pie
+comparten un estilo secundario, salvo «Editar», que es la acción principal.
+
 ## Estado actual
+
+La [conexión con Steam](docs/STEAM.md) permite consultar horas y logros desde
+las fichas de juegos de Biblioteca y desde el MCP, con la clave guardada solo
+en el almacenamiento seguro del PC. Se configura en «Ajustes → Steam».
 
 Este repositorio contiene:
 
@@ -214,6 +262,16 @@ Scripts útiles:
 
 Para completar el login real de la app, todavía hace falta tener Google activado en `Authentication > Providers > Google` dentro de Supabase y permitir el redirect URL local que vayas a usar.
 
+### Kindle por Wi-Fi local
+
+La integración con KOReader permite consultar Hoy y la semana, y marcar tareas
+y subtareas de Hoy sin conexión para enviarlas después. Al dejar el Kindle en reposo,
+muestra Hoy como salvapantallas fijo y actualiza la agenda al despertar.
+Al cerrar la ventana termina la interfaz; el agente ligero mantiene la conexión
+con el Kindle sin cargar Flutter y coordina las escrituras con la app.
+Instalación USB, contrato y límites
+en [Todo en KOReader](docs/KINDLE.md).
+
 ### Android por Wi-Fi local
 
 La versión Android permite consultar tareas y ropa. Se empareja mediante el QR
@@ -227,6 +285,16 @@ durante el viaje. Estas marcas se guardan solo en el móvil y no modifican el
 archivo de datos de Windows. La aplicación indica el progreso de descarga y
 cuándo la ropa está lista para consultarla sin Wi-Fi. Desconectar el PC desde
 Android borra también las fotos y las marcas locales.
+
+`Recetas` puede crear listas de la compra desde una receta o un menú semanal;
+también permite redactar una lista manual. Android las muestra en la pestaña
+`Compra`, separadas de las tareas habituales. Los productos, las marcas de
+comprado y los precios anotados se conservan sin conexión en el móvil. Las
+marcas y los importes son locales: no modifican las tareas ni las finanzas de
+Windows. El total se calcula con los importes individuales y se puede anotar
+aparte el total del ticket. Una sincronización posterior actualiza los
+productos de Windows sin borrar las anotaciones de los que sigan en la lista.
+La lectura automática de tickets y el registro en Finanzas quedan pendientes.
 
 Windows instala `todo_lan_agent.exe`, un agente por usuario que arranca con la
 sesión y continúa disponible aunque la ventana de Todo esté cerrada. Su

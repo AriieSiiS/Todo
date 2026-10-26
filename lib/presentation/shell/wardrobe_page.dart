@@ -93,7 +93,7 @@ class _WardrobePageState extends State<WardrobePage> {
     final excludedCategories =
         _excludedCategories.where(categorySet.contains).toSet();
     final allCategoriesSelected = excludedCategories.isEmpty;
-    final normalizedQuery = _query.trim().toLowerCase();
+    final normalizedQuery = _query.trim().paraBuscar;
     final items = controller.wardrobeItems.where((item) {
       if (item.archived) return false;
       if (_favoritesOnly && !item.favorite) return false;
@@ -109,7 +109,7 @@ class _WardrobePageState extends State<WardrobePage> {
         ...item.tags,
         ...item.seasons,
         ...item.occasions,
-      ].join(' ').toLowerCase();
+      ].join(' ').paraBuscar;
       return searchable.contains(normalizedQuery);
     }).toList()
       ..sort((left, right) {
@@ -866,7 +866,7 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
         .toSet()
         .toList()
       ..sort(WardrobeTaxonomy.compareCategories);
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim().paraBuscar;
     final items = visibleGroup.where((item) {
       if (_category != null && item.category != _category) return false;
       if (query.isEmpty) return true;
@@ -878,7 +878,7 @@ class _WardrobePackingTabState extends State<_WardrobePackingTab> {
         ...item.tags,
         ...item.seasons,
         ...item.occasions,
-      ].join(' ').toLowerCase().contains(query);
+      ].join(' ').paraBuscar.contains(query);
     }).toList()
       ..sort((left, right) {
         if (left.favorite != right.favorite) return left.favorite ? -1 : 1;

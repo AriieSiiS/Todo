@@ -60,6 +60,12 @@ extension TodoWorkspaceTareas on TodoWorkspace {
     return _notes.where((note) => note.status == NoteStatus.inbox).toList();
   }
 
+  /// Notas archivadas, de la editada más recientemente a la más antigua.
+  List<QuickNote> archivedNotes() {
+    return _notes.where((note) => note.status == NoteStatus.archived).toList()
+      ..sort((a, b) => b.effectiveUpdatedAt.compareTo(a.effectiveUpdatedAt));
+  }
+
   CategoryModel? categoryById(String id) {
     for (final category in _categories) {
       if (category.id == id) {
@@ -173,34 +179,53 @@ extension TodoWorkspaceTareas on TodoWorkspace {
     _commit();
   }
 
-  void deleteTask(String taskId) {
-    _tasks.removeWhere(
-        (task) => task.id == taskId || task.parentTaskId == taskId);
-    for (var i = 0; i < _tasks.length; i++) {
-      final task = _tasks[i];
-      if (task.subtaskIds.contains(taskId)) {
-        _tasks[i] = task.copyWith(
-          subtaskIds: task.subtaskIds.where((id) => id != taskId).toList(),
-        );
-      }
-    }
-    _commit();
-  }
+  /// Borra una tarea y sus subtareas. Devuelve lo necesario para deshacerlo.
+  TaskDeletion deleteTask(String taskId) => deleteTasks(<String>[taskId]);
 
-  void deleteTasks(Iterable<String> taskIds) {
+  /// Borra varias tareas y sus subtareas. Devuelve lo necesario para
+  /// deshacerlo con [restoreDeletedTasks].
+  TaskDeletion deleteTasks(Iterable<String> taskIds) {
     final ids = taskIds.toSet();
     if (ids.isEmpty) {
-      return;
+      return const TaskDeletion._(
+          <(int, TaskModel)>[], <String, List<String>>{});
+    }
+    final removed = <(int, TaskModel)>[];
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      if (ids.contains(task.id) || ids.contains(task.parentTaskId)) {
+        removed.add((i, task));
+      }
     }
     _tasks.removeWhere(
       (task) => ids.contains(task.id) || ids.contains(task.parentTaskId),
     );
+    final previousSubtaskIds = <String, List<String>>{};
     for (var i = 0; i < _tasks.length; i++) {
       final task = _tasks[i];
       final filtered =
           task.subtaskIds.where((id) => !ids.contains(id)).toList();
       if (filtered.length != task.subtaskIds.length) {
+        previousSubtaskIds[task.id] = task.subtaskIds;
         _tasks[i] = task.copyWith(subtaskIds: filtered);
+      }
+    }
+    if (removed.isNotEmpty) _commit();
+    return TaskDeletion._(removed, previousSubtaskIds);
+  }
+
+  /// Devuelve a su sitio las tareas de un borrado anterior.
+  void restoreDeletedTasks(TaskDeletion deletion) {
+    if (deletion.isEmpty) return;
+    final existing = _tasks.map((task) => task.id).toSet();
+    for (final (index, task) in deletion._removed) {
+      if (existing.contains(task.id)) continue;
+      _tasks.insert(index.clamp(0, _tasks.length), task);
+    }
+    for (final entry in deletion._previousSubtaskIds.entries) {
+      final index = _tasks.indexWhere((task) => task.id == entry.key);
+      if (index != -1) {
+        _tasks[index] = _tasks[index].copyWith(subtaskIds: entry.value);
       }
     }
     _commit();
@@ -932,76 +957,9 @@ extension TodoWorkspaceTareas on TodoWorkspace {
     return true;
   }
 
-  List<TaskModel> _tasksForDay(DateTime day) {
-    final logicalToday = logicalDate();
-    final occurrenceKey = _occurrenceKey(day);
-    final isToday = _sameDay(day, logicalToday);
-    return _tasks
-        .where((task) => task.status == TaskStatus.active)
-        .where((task) => !task.isSubtask)
-        .where((task) {
-      if (task.recurrence.isRecurring &&
-          (task.recurrenceCompletions.containsKey(occurrenceKey) ||
-              task.skippedRecurrenceOccurrences.contains(occurrenceKey))) {
-        return false;
-      }
-      if (task.recurrence.isRecurring) {
-        if (!isToday && task.recurrence.type == RecurrenceType.daily) {
-          return false;
-        }
-        return _recursOnDay(task, day);
-      }
-      final scheduled = task.scheduledAt;
-      if (scheduled == null) {
-        return true;
-      }
-      if (isToday && scheduled.isBefore(logicalToday)) {
-        return true;
-      }
-      return _sameDay(scheduled, day);
-    }).toList();
-  }
+  List<TaskModel> _tasksForDay(DateTime day) => _taskAgenda.tasksForDay(day);
 
-  List<TaskModel> _sortTasks(List<TaskModel> list) {
-    final sorted = List<TaskModel>.from(list);
-    switch (_todaySort) {
-      case TodaySort.manual:
-        sorted.sort(
-            (left, right) => left.manualOrder.compareTo(right.manualOrder));
-        break;
-      case TodaySort.category:
-        final names = <String, String>{};
-        for (final category in _categories) {
-          names.putIfAbsent(category.id, () => category.name);
-        }
-        String label(TaskModel task) => task.categoryIds.isEmpty
-            ? 'zzz'
-            : names[task.categoryIds.first] ?? 'zzz';
-        sorted.sort((left, right) => label(left).compareTo(label(right)));
-        break;
-      case TodaySort.time:
-        sorted.sort(
-          (left, right) => (left.scheduledAt ?? logicalDate())
-              .compareTo(right.scheduledAt ?? logicalDate()),
-        );
-        break;
-      case TodaySort.project:
-        final names = <String, String>{};
-        for (final project in _projects) {
-          names.putIfAbsent(project.id, () => project.name);
-        }
-        String label(TaskModel task) => task.projectIds.isEmpty
-            ? 'zzz'
-            : names[task.projectIds.first] ?? 'zzz';
-        sorted.sort((left, right) => label(left).compareTo(label(right)));
-        break;
-      case TodaySort.priority:
-        sorted.sort((left, right) =>
-            right.priority.index.compareTo(left.priority.index));
-        break;
-    }
-    return sorted;
-  }
+  List<TaskModel> _sortTasks(List<TaskModel> list) => _taskAgenda.sortTasks(list);
 
   DateTime _defaultNoteDate() {
     final day = logicalDate();
@@ -1031,4 +989,17 @@ extension TodoWorkspaceTareas on TodoWorkspace {
     }
     return lines.skip(1).join('\n');
   }
+}
+
+/// Resultado de borrar tareas, con lo necesario para deshacer el borrado.
+class TaskDeletion {
+  const TaskDeletion._(this._removed, this._previousSubtaskIds);
+
+  final List<(int, TaskModel)> _removed;
+  final Map<String, List<String>> _previousSubtaskIds;
+
+  /// Número total de tareas borradas, subtareas incluidas.
+  int get count => _removed.length;
+
+  bool get isEmpty => _removed.isEmpty;
 }

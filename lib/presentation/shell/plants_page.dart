@@ -27,7 +27,7 @@ class _PlantsPageState extends State<PlantsPage> {
       ..sort();
     locations.insert(0, 'Todas');
     final location = locations.contains(_location) ? _location : 'Todas';
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim().paraBuscar;
     final plants = active.where((plant) {
       if (location != 'Todas' && plant.location != location) return false;
       if (_safety != null && plant.catSafety != _safety) return false;
@@ -39,7 +39,7 @@ class _PlantsPageState extends State<PlantsPage> {
         plant.cultivar,
         plant.location,
         ...plant.tags,
-      ].join(' ').toLowerCase().contains(query);
+      ].join(' ').paraBuscar.contains(query);
     }).toList()
       ..sort((left, right) =>
           left.name.toLowerCase().compareTo(right.name.toLowerCase()));

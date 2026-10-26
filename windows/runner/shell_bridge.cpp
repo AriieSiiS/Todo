@@ -27,12 +27,14 @@ ShellBridge::ShellBridge(flutter::BinaryMessenger* messenger, HWND window)
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
                  result) {
         if (call.method_name() == "getStatus") {
+          dart_ready_ = true;
           flutter::EncodableMap status;
           status[flutter::EncodableValue("hotkeyRegistered")] =
               flutter::EncodableValue(hotkey_registered_);
           status[flutter::EncodableValue("compact")] =
               flutter::EncodableValue(compact_);
           result->Success(flutter::EncodableValue(status));
+          if (exit_requested_) channel_->InvokeMethod("requestExit", nullptr);
         } else if (call.method_name() == "setCompactMode") {
           const bool* enabled = std::get_if<bool>(call.arguments());
           if (enabled == nullptr) {
@@ -40,16 +42,41 @@ ShellBridge::ShellBridge(flutter::BinaryMessenger* messenger, HWND window)
             return;
           }
           result->Success(flutter::EncodableValue(SetCompactMode(*enabled)));
+        } else if (call.method_name() == "finishExit") {
+          exiting_ = true;
+          result->Success();
+          ::PostMessageW(window_, WM_CLOSE, 0, 0);
+        } else if (call.method_name() == "exitFailed") {
+          exit_requested_ = false;
+          ::EnableWindow(window_, TRUE);
+          BringToFront();
+          ::MessageBoxW(window_, L"No se pudieron guardar los cambios. Todo sigue abierto para que puedas reintentarlo.",
+                        L"Todo", MB_OK | MB_ICONERROR);
+          result->Success();
         } else {
           result->NotImplemented();
         }
       });
+
 }
 
 ShellBridge::~ShellBridge() {
   if (hotkey_registered_) {
     ::UnregisterHotKey(window_, kQuickCaptureHotKeyId);
   }
+}
+
+void ShellBridge::RequestExit() {
+  if (exit_requested_) return;
+  exit_requested_ = true;
+  ::EnableWindow(window_, FALSE);
+  if (dart_ready_) channel_->InvokeMethod("requestExit", nullptr);
+}
+
+bool ShellBridge::HandleCloseRequest() {
+  if (exiting_) return false;
+  RequestExit();
+  return true;
 }
 
 bool ShellBridge::HandleHotKey(WPARAM id) {

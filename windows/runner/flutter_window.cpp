@@ -57,10 +57,11 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
-  if (message == WM_CLOSE && important_alarm_bridge_ &&
+  if (message == WM_CLOSE && !(shell_bridge_ && shell_bridge_->exiting()) && important_alarm_bridge_ &&
       important_alarm_bridge_->HandleCloseRequest()) {
     return 0;
   }
+  if (message == WM_CLOSE && shell_bridge_ && shell_bridge_->HandleCloseRequest()) return 0;
   if (message == WM_HOTKEY && shell_bridge_ &&
       shell_bridge_->HandleHotKey(wparam)) {
     return 0;

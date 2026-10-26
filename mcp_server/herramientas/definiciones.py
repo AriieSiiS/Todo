@@ -877,6 +877,8 @@ def extra_tool_definitions() -> list[dict[str, Any]]:
         "duration": string,
         "pages": string,
         "country": string,
+        "universe_name": string,
+        "clear_universe_name": boolean,
         "collection_name": string,
         "collection_number": integer,
         "show_collection_number": boolean,

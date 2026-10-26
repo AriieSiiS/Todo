@@ -94,6 +94,13 @@ class _LibraryPageState extends State<LibraryPage> {
                 isGoals: area == LibraryAreaView.goals,
                 libraryStatus: status,
                 onYearChanged: (year) => setState(() => _year = year),
+                onStatistics: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => ListenableBuilder(
+                        listenable: controller,
+                        builder: (context, child) =>
+                            AnnualReadingStatisticsDialog(
+                                books: controller.libraryItems))),
                 onAdd: area == LibraryAreaView.goals
                     ? _showAddGoalDialog
                     : _showAddDialog,
@@ -237,12 +244,12 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   List<LibraryItem> _filterAndSortAllItems(List<LibraryItem> source) {
-    final query = _allSearchController.text.trim().toLowerCase();
+    final query = _allSearchController.text.trim().paraBuscar;
     final filtered = query.isEmpty
         ? source
         : source
             .where(
-              (item) => _searchableText(item).toLowerCase().contains(query),
+              (item) => _searchableText(item).paraBuscar.contains(query),
             )
             .toList();
     final sorted = [...filtered];
@@ -293,6 +300,7 @@ class _LibraryHeader extends StatelessWidget {
     required this.libraryStatus,
     required this.onYearChanged,
     required this.onAdd,
+    required this.onStatistics,
   });
 
   final int year;
@@ -302,6 +310,7 @@ class _LibraryHeader extends StatelessWidget {
   final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
+  final VoidCallback onStatistics;
 
   @override
   Widget build(BuildContext context) {
@@ -315,6 +324,11 @@ class _LibraryHeader extends StatelessWidget {
         runSpacing: 10,
         alignment: WrapAlignment.end,
         children: [
+          if (!isGoals)
+            IconButton(
+                tooltip: 'Estadísticas de lectura',
+                onPressed: onStatistics,
+                icon: const Icon(Icons.insights_outlined)),
           if (isGoals || libraryStatus == LibraryItemStatus.completed)
             _LibraryGoalYearButton(
               year: year,
@@ -1086,6 +1100,8 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
 
 class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   late final TextEditingController _searchController;
+  String? _universe;
+  String? _saga;
 
   LibrarySortOrder get _sortOrder =>
       _effectiveSortOrderForType(widget.sortOrder, widget.type);
@@ -1106,6 +1122,10 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   Widget build(BuildContext context) {
     final filtered = _filteredItems(widget.items);
     final sorted = _sortedItems(filtered);
+    final universes = _distinctNames(widget.items.map((i) => i.universeName));
+    final sagas = _distinctNames(widget.items
+        .where((i) => _universe == null || i.universeName == _universe)
+        .map((i) => i.collectionName));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1118,6 +1138,29 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 background: _libraryColor(widget.type).withValues(alpha: 0.12),
                 foreground: _libraryColor(widget.type),
               ),
+              if (universes.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                _LibraryFilterButton(
+                  tooltip: 'Filtrar por universo',
+                  allLabel: 'Todos los universos',
+                  selected: _universe,
+                  options: universes,
+                  onSelected: (value) => setState(() {
+                    _universe = value;
+                    _saga = null;
+                  }),
+                ),
+              ],
+              if (sagas.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                _LibraryFilterButton(
+                  tooltip: 'Filtrar por saga',
+                  allLabel: 'Todas las sagas',
+                  selected: _saga,
+                  options: sagas,
+                  onSelected: (value) => setState(() => _saga = value),
+                ),
+              ],
               const SizedBox(width: 10),
               SizedBox(
                 width: 230,
@@ -1211,13 +1254,23 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   }
 
   List<LibraryItem> _filteredItems(List<LibraryItem> source) {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      return source;
-    }
+    final query = _searchController.text.trim().paraBuscar;
     return source
-        .where((item) => _searchableText(item).toLowerCase().contains(query))
+        .where((item) => _universe == null || item.universeName == _universe)
+        .where((item) => _saga == null || item.collectionName == _saga)
+        .where((item) =>
+            query.isEmpty || _searchableText(item).paraBuscar.contains(query))
         .toList();
+  }
+
+  List<String> _distinctNames(Iterable<String?> values) {
+    final names = values
+        .map((value) => value?.trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList();
+    names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
   }
 
   List<LibraryItem> _sortedItems(List<LibraryItem> source) {
@@ -1329,6 +1382,71 @@ class _LibrarySortButton extends StatelessWidget {
                   color: Color(0xFF34362F),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.expand_more_rounded,
+                size: 18,
+                color: Color(0xFF34362F),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryFilterButton extends StatelessWidget {
+  const _LibraryFilterButton({
+    required this.tooltip,
+    required this.allLabel,
+    required this.selected,
+    required this.options,
+    required this.onSelected,
+  });
+
+  final String tooltip;
+  final String allLabel;
+  final String? selected;
+  final List<String> options;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: tooltip,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      onSelected: (value) => onSelected(value.isEmpty ? null : value),
+      itemBuilder: (context) => [
+        PopupMenuItem(value: '', child: Text(allLabel)),
+        for (final option in options)
+          PopupMenuItem(value: option, child: Text(option)),
+      ],
+      child: IgnorePointer(
+        child: Container(
+          height: 38,
+          constraints: const BoxConstraints(maxWidth: 220),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.62),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFE8DCCB)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  selected ?? allLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF34362F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

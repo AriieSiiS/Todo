@@ -82,6 +82,38 @@ void main() {
     return result['task']['task_version'] as String;
   }
 
+  test('solo lectura admite lotes mayores de 64 KiB en el puente', () async {
+    final response = await call('sync_kindle_book', {
+      'request_id': 'lectura-puente-0001',
+      'document_id': 'a' * 32,
+      'source_id': 'kindle-prueba',
+      'sequence': 1,
+      'title': 'Libro no vinculado',
+      'author': 'Autora',
+      'observed_at': 100,
+      'progress': .14,
+      'page': '42',
+      'position': '/p[42]',
+      'quotes': [
+        {
+          'anchor': '/p[5]',
+          'text': 'a' * 60000,
+          'note': 'b' * 10000,
+          'page': '5',
+          'chapter': '',
+          'created_at': ''
+        }
+      ],
+    });
+    expect(response.$1, 200);
+    expect(response.$2['status'], 'needs_link');
+    expect(
+        (await call('create_note',
+                {'request_id': 'nota-grande-0001', 'content': 'x' * 70000}))
+            .$1,
+        400);
+  });
+
   test(
       'notas: guarda, conserva campos, rechaza versiones antiguas y reconoce reintentos',
       () async {

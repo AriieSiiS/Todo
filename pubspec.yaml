@@ -1,13 +1,15 @@
 name: todo
-description: Aplicación personal de tareas para Windows.
+description: AplicaciÃ³n personal de tareas para Windows.
 publish_to: none
 
-version: 0.4.0+24
+version: 0.4.3+27
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  todo_core:
+    path: packages/todo_core
   appflowy_editor: ^6.2.0
   archive: ^4.0.7
   crypto: ^3.0.7

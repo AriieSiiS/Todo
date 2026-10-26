@@ -46,11 +46,13 @@ class LanSyncPairedDevice {
     required this.id,
     required this.name,
     required this.pairedAt,
+    this.profile = 'android',
   });
 
   final String id;
   final String name;
   final DateTime? pairedAt;
+  final String profile;
 }
 
 class LanSyncDesktopService {
@@ -58,6 +60,51 @@ class LanSyncDesktopService {
       : configDirectory = configDirectory ?? _defaultConfigDirectory();
 
   final Directory configDirectory;
+
+  File get _kindleMarker => File('${configDirectory.path}/kindle_enabled');
+  Future<bool> kindleBackgroundEnabled() => _kindleMarker.exists();
+
+  Future<void> setKindleBackgroundEnabled(bool enabled) async {
+    if (enabled) {
+      await configDirectory.create(recursive: true);
+      await _kindleMarker.writeAsString('1', flush: true);
+    } else if (await _kindleMarker.exists()) {
+      await _kindleMarker.delete();
+    }
+  }
+
+  Future<void> installKindle(String root) async {
+    final installed = File(
+        '${File(Platform.resolvedExecutable).parent.path}/install_kindle.ps1');
+    final script = await installed.exists()
+        ? installed
+        : File('${Directory.current.path}/tooling/install_kindle.ps1');
+    if (!await script.exists()) {
+      throw StateError('Falta el instalador Kindle. Actualiza Todo.');
+    }
+    final result = await Process.run(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          script.path,
+          '-KindleRoot',
+          root,
+          '-ConfigDirectory',
+          configDirectory.path,
+        ],
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8);
+    if (result.exitCode != 0) {
+      throw StateError('No se pudo instalar en el Kindle: ${result.stderr}');
+    }
+    final report = jsonDecode(result.stdout as String) as Map;
+    if (report['estado'] != 'copiado_y_verificado') {
+      throw StateError('La copia USB no quedó verificada.');
+    }
+  }
 
   File get _statusFile => File(
         '${configDirectory.path}${Platform.pathSeparator}status.json',
@@ -143,6 +190,7 @@ class LanSyncDesktopService {
             name: value['name'] as String? ?? 'Android',
             pairedAt: DateTime.tryParse(value['pairedAt'] as String? ?? '')
                 ?.toLocal(),
+            profile: value['profile'] as String? ?? 'android',
           ),
         )
         .where((value) => value.id.isNotEmpty)
