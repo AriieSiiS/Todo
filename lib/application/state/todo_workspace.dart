@@ -345,7 +345,11 @@ class TodoWorkspace extends ChangeNotifier {
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   AppVisibilitySettings get visibilitySettings => _visibilitySettings;
   List<AppSection> get visibleNavOrder =>
-      navOrder.where(_visibilitySettings.sectionVisible).toList();
+      navOrder
+          .where((section) =>
+              section != AppSection.completed &&
+              _visibilitySettings.sectionVisible(section))
+          .toList();
 
   void setSectionVisible(AppSection section, bool visible) {
     if (section == AppSection.settings) return;
@@ -490,7 +494,7 @@ class TodoWorkspace extends ChangeNotifier {
     next.insert(newIndex.clamp(0, next.length), moved);
     var visibleIndex = 0;
     _navOrder = _navOrder
-        .map((section) => _visibilitySettings.sectionVisible(section)
+        .map((section) => next.contains(section)
             ? next[visibleIndex++]
             : section)
         .toList();

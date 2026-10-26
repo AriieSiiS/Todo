@@ -198,7 +198,7 @@ class _CompletedSectionData {
   final List<TaskModel> tasks;
 }
 
-class _CompletedSectionCard extends StatelessWidget {
+class _CompletedSectionCard extends StatefulWidget {
   const _CompletedSectionCard({
     required this.controller,
     required this.section,
@@ -208,8 +208,22 @@ class _CompletedSectionCard extends StatelessWidget {
   final _CompletedSectionData section;
 
   @override
+  State<_CompletedSectionCard> createState() => _CompletedSectionCardState();
+}
+
+class _CompletedSectionCardState extends State<_CompletedSectionCard> {
+  static const _pageSize = 10;
+  int _page = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final section = widget.section;
     final visuals = context.visuals;
+    final pages = max(1, (section.tasks.length / _pageSize).ceil());
+    final page = min(_page, pages - 1);
+    final visibleTasks =
+        section.tasks.skip(page * _pageSize).take(_pageSize).toList();
     return _CompletedCard(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       child: Column(
@@ -260,17 +274,47 @@ class _CompletedSectionCard extends StatelessWidget {
               ),
             )
           else
-            for (var index = 0; index < section.tasks.length; index++) ...[
+            for (var index = 0; index < visibleTasks.length; index++) ...[
               _CompletedTaskRow(
                 controller: controller,
-                task: section.tasks[index],
+                task: visibleTasks[index],
               ),
-              if (index != section.tasks.length - 1)
+              if (index != visibleTasks.length - 1)
                 Divider(
                   height: 1,
                   color: visuals.panelBorder.withValues(alpha: 0.72),
                 ),
             ],
+          if (pages > 1) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    key: ValueKey('completadas-anterior-${section.id}'),
+                    tooltip: 'Página anterior',
+                    onPressed:
+                        page > 0 ? () => setState(() => _page = page - 1) : null,
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  Text(
+                    'Página ${page + 1} de $pages',
+                    style: TextStyle(color: visuals.textMuted, fontSize: 13),
+                  ),
+                  IconButton(
+                    key: ValueKey('completadas-siguiente-${section.id}'),
+                    tooltip: 'Página siguiente',
+                    onPressed: page < pages - 1
+                        ? () => setState(() => _page = page + 1)
+                        : null,
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

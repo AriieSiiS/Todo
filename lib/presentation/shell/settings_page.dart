@@ -1,5 +1,18 @@
 part of 'app_shell.dart';
 
+const _seccionesOcultables = [
+  AppSection.calendar,
+  AppSection.library,
+  AppSection.wardrobe,
+  AppSection.household,
+  AppSection.recipes,
+  AppSection.plants,
+  AppSection.expenses,
+  AppSection.journal,
+  AppSection.trips,
+  AppSection.focus,
+];
+
 Future<void> _showVisibilityPreferences(
     BuildContext context, TodoWorkspace controller) {
   return showDialog<void>(
@@ -14,9 +27,10 @@ Future<void> _showVisibilityPreferences(
           child: ListView(
             children: [
               const Text(
-                  'Ajustes estará siempre disponible. Cada sección conservará al menos una pestaña.'),
+                  'Las secciones de tareas y Ajustes están siempre disponibles. Cada sección conservará al menos una pestaña.'),
               const SizedBox(height: 12),
-              for (final section in controller.navOrder)
+              for (final section in controller.navOrder
+                  .where(_seccionesOcultables.contains))
                 CheckboxListTile(
                   key: ValueKey('visible-section-${section.name}'),
                   title: Text(_sidebarDestinationFor(section).label),
@@ -238,6 +252,44 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => _showVisibilityPreferences(context, controller),
           ),
         ],
+      ),
+    );
+
+    final categorias = _SettingsSectionCard(
+      icon: Icons.category_outlined,
+      title: 'Categorías',
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => Column(
+          children: [
+            for (final section in controller.navOrder
+                .where(_seccionesOcultables.contains))
+              SwitchListTile(
+                key: ValueKey('categoria-${section.name}'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: Icon(_sidebarDestinationFor(section).icon),
+                title: Text(_sidebarDestinationFor(section).label),
+                value: controller.visibilitySettings.sectionVisible(section),
+                onChanged: (value) =>
+                    controller.setSectionVisible(section, value),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    final completadas = _SettingsSectionCard(
+      icon: Icons.done_all_rounded,
+      title: 'Completadas',
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.icon(
+          key: const ValueKey('abrir-completadas'),
+          onPressed: () => controller.setSection(AppSection.completed),
+          icon: const Icon(Icons.done_all_rounded),
+          label: const Text('Abrir tareas completadas'),
+        ),
       ),
     );
 
@@ -692,6 +744,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       visibility,
                       const SizedBox(height: 16),
+                      categorias,
+                      const SizedBox(height: 16),
+                      completadas,
+                      const SizedBox(height: 16),
                       backup,
                       const SizedBox(height: 16),
                       status,
@@ -728,6 +784,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           wardrobe,
                           const SizedBox(height: 16),
                           visibility,
+                          const SizedBox(height: 16),
+                          categorias,
+                          const SizedBox(height: 16),
+                          completadas,
                           const SizedBox(height: 16),
                           status,
                           const SizedBox(height: 16),

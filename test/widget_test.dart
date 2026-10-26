@@ -1325,7 +1325,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ajustes'), findsWidgets);
-    expect(find.text('Completadas'), findsWidgets);
+    expect(find.text('Completadas'), findsNothing);
   });
 
   test('el controlador importa JSON y restablece el estado inicial', () async {
