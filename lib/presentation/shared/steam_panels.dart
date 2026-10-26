@@ -221,10 +221,27 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
   }
 
   Future<void> _load({bool refresh = false}) async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    // Con datos guardados se muestran al instante y Steam los renueva detrás.
+    var silent = false;
+    if (!refresh && _result == null && widget.itemId != null) {
+      final saved = await widget.service.savedAchievements(widget.itemId!);
+      if (!mounted) return;
+      if (saved != null && saved['appid'] is int) {
+        silent = true;
+        setState(() {
+          _appId = saved['appid'] as int;
+          _result = saved;
+          _busy = false;
+          _error = null;
+        });
+      }
+    }
+    if (!silent) {
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+    }
     try {
       final games = await widget.service.games(refresh: refresh);
       if (!mounted) return;
@@ -239,7 +256,7 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
       if (!mounted) return;
       _result = result;
     } catch (error) {
-      if (mounted) _error = _steamMessage(error);
+      if (mounted && !silent) _error = _steamMessage(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -386,7 +403,7 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
                       gridDelegate:
                           const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 480,
-                              mainAxisExtent: 92,
+                              mainAxisExtent: 112,
                               mainAxisSpacing: 10,
                               crossAxisSpacing: 10),
                       itemCount: achievements.length,
@@ -485,7 +502,6 @@ class _AchievementTile extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
               child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(item['name'] as String,
@@ -494,17 +510,17 @@ class _AchievementTile extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 14.5, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text(
-                    description.isNotEmpty
-                        ? description
-                        : item['hidden'] == true
-                            ? 'Logro oculto'
-                            : 'Sin descripción',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12.5, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 4),
+                Expanded(
+                    child: Text(
+                        description.isNotEmpty
+                            ? description
+                            : item['hidden'] == true
+                                ? 'Logro oculto'
+                                : 'Sin descripción',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12.5, color: scheme.onSurfaceVariant))),
                 Text(
                     [
                       if (unlocked && date != null)

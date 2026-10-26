@@ -316,7 +316,36 @@ class SteamService {
     };
     _checkRevision(revision);
     _cache['app:$appId'] = (DateTime.now(), result);
+    await _saveResult(appId, result);
     return result;
+  }
+
+  static File _resultFile(int appId) => File(
+      '${_iconsDirectory(appId).path}${Platform.pathSeparator}logros.json');
+
+  Future<void> _saveResult(int appId, Map<String, dynamic> result) async {
+    try {
+      final file = _resultFile(appId);
+      await file.parent.create(recursive: true);
+      await file.writeAsString(jsonEncode(result));
+    } catch (_) {}
+  }
+
+  /// Últimos logros guardados en disco del juego enlazado, para mostrarlos al
+  /// instante mientras se consulta Steam. No usa la red.
+  Future<Map<String, dynamic>?> savedAchievements(String itemId) async {
+    try {
+      final appId = ((await _configuration())?['links'] as Map?)?[itemId];
+      if (appId is! int) return null;
+      final file = _resultFile(appId);
+      if (!file.existsSync()) return null;
+      final data = jsonDecode(await file.readAsString());
+      return data is Map<String, dynamic> && data['achievements'] is List
+          ? data
+          : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   static final _iconHosts =
