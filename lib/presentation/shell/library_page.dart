@@ -31,6 +31,7 @@ class _LibraryPageState extends State<LibraryPage> {
   void initState() {
     super.initState();
     _allSearchController = TextEditingController();
+    _typeFilter = controller.libraryTypeView;
     // Completados era el valor histórico inicial, así que Todo es la nueva
     // vista inicial. Los filtros Pendiente y En curso sí representan una
     // elección anterior persistida y se mantienen al volver a abrir.
@@ -186,8 +187,10 @@ class _LibraryPageState extends State<LibraryPage> {
                                 yearItems: yearItems,
                                 year: _year,
                                 selectedType: _typeFilter,
-                                onSelectedTypeChanged: (type) =>
-                                    setState(() => _typeFilter = type),
+                                onSelectedTypeChanged: (type) {
+                                  controller.setLibraryTypeView(type);
+                                  setState(() => _typeFilter = type);
+                                },
                                 status: status,
                                 showStatus: false,
                                 overviewMode: _overviewMode,
@@ -223,8 +226,10 @@ class _LibraryPageState extends State<LibraryPage> {
                               yearItems: yearItems,
                               year: _year,
                               selectedType: _typeFilter,
-                              onSelectedTypeChanged: (type) =>
-                                  setState(() => _typeFilter = type),
+                              onSelectedTypeChanged: (type) {
+                                controller.setLibraryTypeView(type);
+                                setState(() => _typeFilter = type);
+                              },
                               status: status,
                               showStatus: false,
                               overviewMode: _overviewMode,

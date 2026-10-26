@@ -33,6 +33,7 @@ class AppStateSnapshot {
     this.libraryItems = const <LibraryItem>[],
     this.libraryGoals = const <LibraryGoal>[],
     this.libraryStatusView = LibraryItemStatus.completed,
+    this.libraryTypeView,
     this.libraryAreaView = LibraryAreaView.library,
     this.wardrobeItems = const <WardrobeItem>[],
     this.wardrobeOutfits = const <WardrobeOutfit>[],
@@ -77,6 +78,7 @@ class AppStateSnapshot {
   final List<LibraryItem> libraryItems;
   final List<LibraryGoal> libraryGoals;
   final LibraryItemStatus libraryStatusView;
+  final LibraryItemType? libraryTypeView;
   final LibraryAreaView libraryAreaView;
   final List<WardrobeItem> wardrobeItems;
   final List<WardrobeOutfit> wardrobeOutfits;
@@ -129,6 +131,7 @@ class AppStateSnapshot {
       'libraryItems': libraryItems.map((item) => item.toJson()).toList(),
       'libraryGoals': libraryGoals.map((goal) => goal.toJson()).toList(),
       'libraryStatusView': libraryStatusView.name,
+      'libraryTypeView': libraryTypeView?.name,
       'libraryAreaView': libraryAreaView.name,
       'wardrobeItems': wardrobeItems.map((item) => item.toJson()).toList(),
       'wardrobeOutfits': wardrobeOutfits.map((item) => item.toJson()).toList(),
@@ -222,6 +225,9 @@ class AppStateSnapshot {
         json['libraryStatusView'] as String?,
         LibraryItemStatus.completed,
       ),
+      libraryTypeView: LibraryItemType.values
+          .where((type) => type.name == json['libraryTypeView'])
+          .firstOrNull,
       libraryAreaView: enumByName(
         LibraryAreaView.values,
         json['libraryAreaView'] as String?,

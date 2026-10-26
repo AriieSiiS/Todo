@@ -240,6 +240,7 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem? _openKnowledgeLibraryItem;
   TodaySort _todaySort = TodaySort.manual;
   LibraryItemStatus _libraryStatusView = LibraryItemStatus.completed;
+  LibraryItemType? _libraryTypeView;
   LibraryAreaView _libraryAreaView = LibraryAreaView.library;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   AppVisibilitySettings _visibilitySettings = const AppVisibilitySettings();
@@ -339,6 +340,7 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryItem? get openKnowledgeLibraryItem => _openKnowledgeLibraryItem;
   TodaySort get todaySort => _todaySort;
   LibraryItemStatus get libraryStatusView => _libraryStatusView;
+  LibraryItemType? get libraryTypeView => _libraryTypeView;
   LibraryAreaView get libraryAreaView => _libraryAreaView;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   AppVisibilitySettings get visibilitySettings => _visibilitySettings;
@@ -505,6 +507,14 @@ class TodoWorkspace extends ChangeNotifier {
       return;
     }
     _libraryStatusView = value;
+    _commit();
+  }
+
+  void setLibraryTypeView(LibraryItemType? value) {
+    if (_libraryTypeView == value) {
+      return;
+    }
+    _libraryTypeView = value;
     _commit();
   }
 
@@ -814,6 +824,7 @@ class TodoWorkspace extends ChangeNotifier {
     _section = snapshot.section;
     _todaySort = snapshot.todaySort;
     _libraryStatusView = snapshot.libraryStatusView;
+    _libraryTypeView = snapshot.libraryTypeView;
     _libraryAreaView = snapshot.libraryAreaView;
     _manualLogicalDate = snapshot.manualLogicalDate;
     _manualLogicalDateStartedAt = snapshot.manualLogicalDateStartedAt;
@@ -1276,6 +1287,7 @@ class TodoWorkspace extends ChangeNotifier {
       section: section,
       todaySort: todaySort,
       libraryStatusView: libraryStatusView,
+      libraryTypeView: libraryTypeView,
       libraryAreaView: libraryAreaView,
       manualLogicalDate: _manualLogicalDate,
       manualLogicalDateStartedAt: _manualLogicalDateStartedAt,
@@ -1408,6 +1420,7 @@ class TodoWorkspace extends ChangeNotifier {
     _section = AppSection.today;
     _todaySort = TodaySort.manual;
     _libraryStatusView = LibraryItemStatus.completed;
+    _libraryTypeView = null;
     _libraryAreaView = LibraryAreaView.library;
     _manualLogicalDate = null;
     _manualLogicalDateStartedAt = null;
