@@ -101,13 +101,13 @@ class TodoWorkspace extends ChangeNotifier {
     if (!controller._isFlutterTest) {
       controller._agentBridge =
           AgentBridgeService(controller.executeAgentCommand);
+      // El puente arranca con la ventana ya abierta: comprobar si queda una
+      // sesión anterior puede tardar un segundo y no debe retrasar la app.
       // Una conexión de agente fallida no impide utilizar Todo.
-      try {
-        await controller._agentBridge!.start();
-      } catch (error) {
+      unawaited(controller._agentBridge!.start().catchError((Object error) {
         debugPrint(
             'No se pudo iniciar el puente local de Todo: ${error.runtimeType}');
-      }
+      }));
       unawaited(controller._initializeStartupIntegrations());
       unawaited(controller.priceTracking.start());
       controller._externalWardrobePoll = Timer.periodic(
@@ -1093,6 +1093,12 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   String _cleanSpanishText(String value) {
+    // Todo texto estropeado contiene algún carácter entre U+0080 y U+00BF
+    // (los bytes de continuación de UTF-8 leídos como Latin-1). Sin ellos no
+    // hay nada que corregir, y así el arranque no reprocesa cada texto.
+    if (!value.codeUnits.any((unit) => unit >= 0x80 && unit <= 0xBF)) {
+      return value;
+    }
     var result = value
         .replaceAll('ÃƒÆ’Ã‚Â¡', 'á')
         .replaceAll('ÃƒÆ’Ã‚Â©', 'é')
