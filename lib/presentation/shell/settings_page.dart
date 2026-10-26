@@ -416,37 +416,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
-    final data = _SettingsSectionCard(
-      icon: Icons.storage_rounded,
-      title: 'Datos',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                onPressed: () => _showExport(context),
-                icon: const Icon(Icons.file_upload_outlined, size: 18),
-                label: const Text('Exportar datos'),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: () => _showImport(context),
-                icon: const Icon(Icons.file_download_outlined, size: 18),
-                label: const Text('Importar datos'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _confirmReset(context),
-                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                label: const Text('Reiniciar datos'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
     final androidConnection = _SettingsSectionCard(
       icon: Icons.phonelink_rounded,
       title: 'Conexión Android',
@@ -725,8 +694,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       backup,
                       const SizedBox(height: 16),
-                      data,
-                      const SizedBox(height: 16),
                       status,
                       const SizedBox(height: 16),
                       tips,
@@ -750,8 +717,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           steam,
                           const SizedBox(height: 16),
                           backup,
-                          const SizedBox(height: 16),
-                          data,
                         ],
                       ),
                     ),
@@ -888,176 +853,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     }
-  }
-
-  void _showExport(BuildContext context) {
-    final snapshot = controller.exportSnapshot().toPrettyJson();
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Exportar JSON'),
-        content: SizedBox(
-          width: 720,
-          child: SingleChildScrollView(child: SelectableText(snapshot)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Guarda una copia del estado actual antes de un cambio grande. Si no se
-  /// puede guardar, avisa y devuelve `null` para que no se siga adelante.
-  Future<File?> _saveCopyBeforeChange(String label) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    try {
-      return await _backupService.saveSnapshotBeforeChange(
-        controller.exportSnapshot().toPrettyJson(),
-        label: label,
-      );
-    } catch (error) {
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se ha cambiado nada: no se pudo guardar la copia previa. $error',
-          ),
-        ),
-      );
-      return null;
-    }
-  }
-
-  Future<bool> _confirmDataReplacement({
-    required String title,
-    required String message,
-    required String confirmLabel,
-  }) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(
-          '$message\n\nAntes se guardará una copia del estado actual en '
-          '«${_backupService.snapshotsBeforeChangesDirectory.path}».',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirm-data-replacement'),
-            style: FilledButton.styleFrom(
-              backgroundColor: dialogContext.visuals.danger,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      ),
-    );
-    return confirmed == true;
-  }
-
-  void _showImport(BuildContext context) {
-    final importController = TextEditingController();
-    String? error;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Importar JSON'),
-          content: SizedBox(
-            width: 720,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: importController,
-                  minLines: 12,
-                  maxLines: 20,
-                  decoration: const InputDecoration(
-                    hintText: 'Pega aquí un snapshot completo en JSON',
-                  ),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(error!,
-                      style: TextStyle(color: dialogContext.visuals.danger)),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              key: const ValueKey('import-json-continue'),
-              onPressed: () async {
-                final raw = importController.text;
-                try {
-                  AppStateSnapshot.fromJson(
-                    (jsonDecode(raw) as Map<dynamic, dynamic>)
-                        .cast<String, dynamic>(),
-                  );
-                } catch (_) {
-                  setDialogState(() => error =
-                      'Ese texto no es un snapshot JSON válido. No se ha cambiado nada.');
-                  return;
-                }
-                final confirmed = await _confirmDataReplacement(
-                  title: 'Sustituir todos los datos',
-                  message:
-                      'Todos los datos actuales se sustituirán por los del JSON pegado.',
-                  confirmLabel: 'Sustituir',
-                );
-                if (!confirmed || !mounted) return;
-                final copy = await _saveCopyBeforeChange('importar-json');
-                if (copy == null || !mounted) return;
-                final ok = controller.importStateFromJson(raw);
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                if (!mounted) return;
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(ok
-                        ? 'Estado importado. La copia previa está en ${copy.path}.'
-                        : 'No se pudo importar ese JSON. No se ha cambiado nada.'),
-                  ),
-                );
-              },
-              child: const Text('Importar'),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(importController.dispose);
-  }
-
-  Future<void> _confirmReset(BuildContext context) async {
-    final confirmed = await _confirmDataReplacement(
-      title: 'Reiniciar datos',
-      message:
-          'Esto sustituirá tu estado actual por la base inicial de la app.',
-      confirmLabel: 'Reiniciar',
-    );
-    if (!confirmed || !mounted) return;
-    final copy = await _saveCopyBeforeChange('reiniciar-datos');
-    if (copy == null || !mounted) return;
-    final messenger = ScaffoldMessenger.of(this.context);
-    await controller.resetToSeed();
-    messenger.showSnackBar(
-      SnackBar(
-        content:
-            Text('Datos reiniciados. La copia previa está en ${copy.path}.'),
-      ),
-    );
   }
 }
 

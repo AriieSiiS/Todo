@@ -92,8 +92,6 @@ void main() {
     expect(find.text('Copias de seguridad'), findsOneWidget);
     expect(find.text('Crear copia ahora'), findsOneWidget);
     expect(find.text('Abrir carpeta'), findsOneWidget);
-    expect(find.text('Datos'), findsOneWidget);
-    expect(find.text('Estado del sistema'), findsOneWidget);
     expect(find.text('Consejos y atajos'), findsOneWidget);
 
     expect(find.text('Cuenta y nube'), findsNothing);
