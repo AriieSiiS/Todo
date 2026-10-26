@@ -1157,21 +1157,15 @@ class _LibraryGoalThumbnail extends StatelessWidget {
   }
 }
 
-/// Edita un propósito con la misma ficha que Biblioteca cuando tiene un
-/// elemento enlazado, porque ambos son el mismo contenido.
+/// Edita un propósito siempre con la ficha de Biblioteca, porque ambos son el
+/// mismo ítem; el diálogo de propósito solo queda si el propósito ya no existe.
 Future<void> _showLibraryGoalEditor(
   BuildContext context,
   TodoWorkspace controller,
   int year,
   LibraryGoal goal,
 ) {
-  final linkedId = goal.linkedLibraryItemId;
-  LibraryItem? item;
-  if (linkedId != null) {
-    for (final candidate in controller.libraryItems) {
-      if (candidate.id == linkedId) item = candidate;
-    }
-  }
+  final item = controller.ensureLibraryItemForGoal(goal.id);
   return showDialog<void>(
     context: context,
     builder: (context) => item != null

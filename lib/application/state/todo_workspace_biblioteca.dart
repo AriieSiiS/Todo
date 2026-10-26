@@ -359,6 +359,30 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     _commit();
   }
 
+  /// Devuelve la ficha de Biblioteca de un propósito; si aún no existe o el
+  /// enlace se perdió, la enlaza o la crea para que ambos sean el mismo ítem.
+  LibraryItem? ensureLibraryItemForGoal(String goalId) {
+    final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
+    if (index == -1) {
+      return null;
+    }
+    LibraryItem? find() {
+      final id = _libraryGoals[index].linkedLibraryItemId;
+      for (final item in _libraryItems) {
+        if (item.id == id) return item;
+      }
+      return null;
+    }
+
+    final existing = find();
+    if (existing != null) {
+      return existing;
+    }
+    _syncLibraryItemFromGoal(_libraryGoals[index], DateTime.now());
+    _commit();
+    return find();
+  }
+
   void deleteLibraryGoal(String goalId) {
     final index = _libraryGoals.indexWhere((goal) => goal.id == goalId);
     if (index == -1) {
