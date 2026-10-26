@@ -1176,7 +1176,9 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                 onSelected: widget.onSortChanged,
               ),
             ];
-            if (constraints.maxWidth >= 1260) {
+            final anchoFiltros =
+                (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 190 : 0);
+            if (constraints.maxWidth >= 1260 + anchoFiltros) {
               return Row(
                 children: [
                   Expanded(child: widget.typeFilters),

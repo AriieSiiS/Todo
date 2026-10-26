@@ -1376,7 +1376,7 @@ Color _libraryColor(LibraryItemType type) => switch (type) {
 String _libraryTypePluralLabel(LibraryItemType type) => switch (type) {
       LibraryItemType.game => 'Juegos',
       LibraryItemType.book => 'Libros',
-      LibraryItemType.movieSeries => 'Películas y series',
+      LibraryItemType.movieSeries => 'Pelis y series',
     };
 
 String _libraryTypeSingularLabelForType(LibraryItemType type) => switch (type) {
