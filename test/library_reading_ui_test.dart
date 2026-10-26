@@ -104,7 +104,8 @@ void main() {
         tester.getTopLeft(find.text('Libro de prueba').last);
     await tester.tap(find.widgetWithText(Tab, 'Estadísticas'));
     await tester.pumpAndSettle();
-    expect(find.text('Tu próxima lectura empieza aquí'), findsOneWidget);
+    expect(find.text('Tiempo leído'), findsOneWidget);
+    expect(find.text('Tu próxima lectura empieza aquí'), findsNothing);
     expect(tester.getTopLeft(find.text('Libro de prueba').last),
         informationHeader);
     expect(tester.takeException(), isNull);

@@ -30,11 +30,9 @@ class BookStatisticsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = ReadingStatisticsSummary(reading?.statistics.values ?? []);
-    if (summary.seconds == 0) {
-      return const _ReadingEmpty();
-    }
     final dates = summary.dailySeconds.keys.toList()..sort();
-    final year = dates.last.year;
+    final empty = dates.isEmpty;
+    final year = empty ? DateTime.now().year : dates.last.year;
     return LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxHeight < 380;
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -48,7 +46,7 @@ class BookStatisticsPanel extends StatelessWidget {
           ('Días de lectura', '${summary.days}', Icons.calendar_today_outlined),
           (
             'Mejor racha',
-            '${summary.longestStreak} días',
+            '${summary.longestStreak} ${summary.longestStreak == 1 ? 'día' : 'días'}',
             Icons.local_fire_department_outlined
           ),
         ]),
@@ -67,10 +65,15 @@ class BookStatisticsPanel extends StatelessWidget {
               summary.pages == 0
                   ? '—'
                   : '${(summary.seconds / summary.pages).round()} s / página'),
-          _ReadingNote('Media por día de lectura',
-              readingDuration((summary.seconds / summary.days).round())),
-          _ReadingNote('Primera lectura', _readingDate(dates.first)),
-          _ReadingNote('Última lectura', _readingDate(dates.last)),
+          _ReadingNote(
+              'Media por día de lectura',
+              empty
+                  ? '—'
+                  : readingDuration((summary.seconds / summary.days).round())),
+          _ReadingNote(
+              'Primera lectura', empty ? '—' : _readingDate(dates.first)),
+          _ReadingNote(
+              'Última lectura', empty ? '—' : _readingDate(dates.last)),
         ]),
       ]);
     });
@@ -247,34 +250,6 @@ class _AnnualReadingStatisticsDialogState
         ),
       ),
     );
-  }
-}
-
-class _ReadingEmpty extends StatelessWidget {
-  const _ReadingEmpty();
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.colorScheme.primary.withValues(alpha: .07)),
-          child: Icon(Icons.insights_rounded,
-              size: 36, color: theme.colorScheme.primary)),
-      const SizedBox(height: 20),
-      Text('Tu próxima lectura empieza aquí',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      Text('El tiempo y la actividad se sincronizarán desde el Kindle.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-    ]));
   }
 }
 
