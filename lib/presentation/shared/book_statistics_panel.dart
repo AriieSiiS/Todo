@@ -33,11 +33,13 @@ class BookStatisticsPanel extends StatelessWidget {
     final dates = summary.dailySeconds.keys.toList()..sort();
     final empty = dates.isEmpty;
     final dailyPages = <DateTime, int>{};
+    final hourlySeconds = List.filled(24, 0);
     for (final source
         in reading?.statistics.values ?? <BookReadingStatistics>[]) {
       for (final period in source.periods) {
         if (period.seconds == 0) continue;
         final date = period.localDate;
+        hourlySeconds[date.hour] += period.seconds;
         dailyPages.update(DateTime(date.year, date.month, date.day),
             (value) => value + period.pages,
             ifAbsent: () => period.pages);
@@ -62,9 +64,15 @@ class BookStatisticsPanel extends StatelessWidget {
         ]),
         SizedBox(height: compact ? 12 : 24),
         Expanded(
-            child: _ReadingHeatmap(
+            child: _TemporaryReadingViews(
           dailySeconds: summary.dailySeconds,
           dailyPages: dailyPages,
+          hourlySeconds: hourlySeconds,
+          monthlySeconds: ReadingStatisticsSummary(
+                  reading?.statistics.values ?? [],
+                  year: empty ? DateTime.now().year : dates.last.year)
+              .monthlySeconds,
+          year: empty ? DateTime.now().year : dates.last.year,
         )),
         SizedBox(height: compact ? 10 : 20),
         Wrap(spacing: 28, runSpacing: 8, children: [
@@ -312,6 +320,184 @@ class _ReadingMetrics extends StatelessWidget {
           ]),
         )),
       ]
+    ]);
+  }
+}
+
+/// Selector temporal para comparar visualizaciones; se retirará al elegir.
+class _TemporaryReadingViews extends StatefulWidget {
+  const _TemporaryReadingViews({
+    required this.dailySeconds,
+    required this.dailyPages,
+    required this.hourlySeconds,
+    required this.monthlySeconds,
+    required this.year,
+  });
+  final Map<DateTime, int> dailySeconds, dailyPages;
+  final List<int> hourlySeconds, monthlySeconds;
+  final int year;
+  @override
+  State<_TemporaryReadingViews> createState() => _TemporaryReadingViewsState();
+}
+
+class _TemporaryReadingViewsState extends State<_TemporaryReadingViews> {
+  static const _names = [
+    'Calendario de calor',
+    'Por días',
+    'Por hora',
+    'Por meses'
+  ];
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final days = widget.dailySeconds.keys.toList()..sort();
+    final Widget view;
+    switch (_index) {
+      case 1:
+        final today = DateTime.now();
+        final last = days.isEmpty ? today : days.last;
+        final first = days.isEmpty ? last : days.first;
+        var span = last.difference(first).inDays + 1;
+        if (span < 14) span = 14;
+        if (span > 60) span = 60;
+        final dates = [
+          for (var i = span - 1; i >= 0; i--)
+            DateTime(last.year, last.month, last.day - i)
+        ];
+        view = _ReadingBars(
+          title: 'Cada día de lectura',
+          values: [for (final d in dates) widget.dailySeconds[d] ?? 0],
+          labels: [for (final d in dates) '${d.day}'],
+          tooltips: [
+            for (final d in dates)
+              '${_readingDate(d)} · ${readingDuration(widget.dailySeconds[d] ?? 0)}'
+                  ' · ${widget.dailyPages[d] ?? 0} páginas'
+          ],
+          labelEvery: span > 31
+              ? 5
+              : span > 20
+                  ? 2
+                  : 1,
+        );
+      case 2:
+        view = _ReadingBars(
+          title: 'A qué hora lees',
+          values: widget.hourlySeconds,
+          labels: [for (var h = 0; h < 24; h++) '$h'],
+          tooltips: [
+            for (var h = 0; h < 24; h++)
+              '$h:00 – ${h + 1}:00 · ${readingDuration(widget.hourlySeconds[h])}'
+          ],
+          labelEvery: 3,
+        );
+      case 3:
+        view = _ReadingMonthlyChart(
+            values: widget.monthlySeconds,
+            title: 'Actividad de ${widget.year}');
+      default:
+        view = _ReadingHeatmap(
+            dailySeconds: widget.dailySeconds, dailyPages: widget.dailyPages);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+            color: colors.onSurface.withValues(alpha: .06),
+            borderRadius: BorderRadius.circular(9)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < _names.length; i++)
+            InkWell(
+              borderRadius: BorderRadius.circular(7),
+              onTap: () => setState(() => _index = i),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                    color: i == _index ? colors.surface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(7)),
+                child: Text(_names[i],
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            i == _index ? FontWeight.w700 : FontWeight.w500,
+                        color: i == _index
+                            ? colors.primary
+                            : colors.onSurfaceVariant)),
+              ),
+            ),
+        ]),
+      ),
+      const SizedBox(height: 14),
+      Expanded(child: view),
+    ]);
+  }
+}
+
+class _ReadingBars extends StatelessWidget {
+  const _ReadingBars({
+    required this.title,
+    required this.values,
+    required this.labels,
+    required this.tooltips,
+    required this.labelEvery,
+  });
+  final String title;
+  final List<int> values;
+  final List<String> labels, tooltips;
+  final int labelEvery;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    final maximum = values.fold<int>(1, (a, b) => a > b ? a : b);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title,
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 14),
+      Expanded(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        for (var i = 0; i < values.length; i++)
+          Expanded(
+              child: Tooltip(
+                  message: tooltips[i],
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                      child: Column(children: [
+                        Expanded(
+                            child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: FractionallySizedBox(
+                                    heightFactor: values[i] == 0
+                                        ? .02
+                                        : .06 + .94 * values[i] / maximum,
+                                    child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                            color: values[i] == 0
+                                                ? colors.onSurface
+                                                    .withValues(alpha: .07)
+                                                : colors.primary.withValues(
+                                                    alpha: values[i] == maximum
+                                                        ? 1
+                                                        : .65),
+                                            borderRadius:
+                                                BorderRadius.circular(3)))))),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                            height: 14,
+                            child: i % labelEvery == 0
+                                ? OverflowBox(
+                                    maxWidth: 40,
+                                    child: Text(labels[i],
+                                        softWrap: false,
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: colors.onSurfaceVariant)))
+                                : null),
+                      ])))),
+      ])),
     ]);
   }
 }
