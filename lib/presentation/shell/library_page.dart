@@ -683,11 +683,6 @@ class _LibraryOverviewToolbar extends StatelessWidget {
       value: mode,
       onChanged: onModeChanged,
     );
-    final countBadge = _LibraryToolbarCountBadge(
-      label: '$totalCount ${_libraryStatusCountLabel(status, totalCount)}',
-      background: const Color(0xFFE8EEE5),
-      foreground: const Color(0xFF70835D),
-    );
     final searchField = SizedBox(
       width: 280,
       child: _CompactLibrarySearchField(
@@ -700,8 +695,6 @@ class _LibraryOverviewToolbar extends StatelessWidget {
       onSelected: onSortChanged,
     );
     final controls = <Widget>[
-      countBadge,
-      const SizedBox(width: 10),
       searchField,
       const SizedBox(width: 10),
       sortButton,
@@ -1131,15 +1124,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final controls = <Widget>[
-              _LibraryToolbarCountBadge(
-                label:
-                    '${widget.totalCount} ${_libraryStatusCountLabel(widget.status, widget.totalCount)}',
-                background: _libraryColor(widget.type).withValues(alpha: 0.12),
-                foreground: _libraryColor(widget.type),
-              ),
-              if (universes.isNotEmpty) ...[
-                const SizedBox(width: 10),
+            final filtros = <Widget>[
+              if (universes.isNotEmpty)
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por universo',
                   allLabel: 'Todos los universos',
@@ -1150,9 +1136,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                     _saga = null;
                   }),
                 ),
-              ],
-              if (sagas.isNotEmpty) ...[
-                const SizedBox(width: 10),
+              if (sagas.isNotEmpty)
                 _LibraryFilterButton(
                   tooltip: 'Filtrar por saga',
                   allLabel: 'Todas las sagas',
@@ -1160,8 +1144,6 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   options: sagas,
                   onSelected: (value) => setState(() => _saga = value),
                 ),
-              ],
-              const SizedBox(width: 10),
               SizedBox(
                 width: 230,
                 child: _CompactLibrarySearchField(
@@ -1169,7 +1151,6 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
                   onChanged: () => setState(() {}),
                 ),
               ),
-              const SizedBox(width: 10),
               _LibrarySortButton(
                 label: _sortLabelForType(_sortOrder, widget.type),
                 type: widget.type,
@@ -1178,29 +1159,26 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
             ];
             final anchoFiltros =
                 (universes.isNotEmpty ? 190 : 0) + (sagas.isNotEmpty ? 190 : 0);
-            if (constraints.maxWidth >= 1260 + anchoFiltros) {
+            if (constraints.maxWidth >= 1130 + anchoFiltros) {
               return Row(
                 children: [
                   Expanded(child: widget.typeFilters),
                   const SizedBox(width: 16),
-                  ...controls,
+                  for (var i = 0; i < filtros.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 10),
+                    filtros[i],
+                  ],
                 ],
               );
             }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                widget.typeFilters,
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: controls,
-                ),
-              ],
+            return Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [widget.typeFilters, ...filtros],
             );
           },
-        ),
-        const SizedBox(height: 12),
+        ),        const SizedBox(height: 12),
         Expanded(
           child: sorted.isEmpty
               ? Center(
@@ -1459,40 +1437,6 @@ class _LibraryFilterButton extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LibraryToolbarCountBadge extends StatelessWidget {
-  const _LibraryToolbarCountBadge({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 38,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: foreground.withValues(alpha: 0.14)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: foreground,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
