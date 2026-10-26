@@ -22,6 +22,8 @@ class _LibraryPageState extends State<LibraryPage> {
   late int _year = DateTime.now().year;
   double? _minRating;
   bool _showAllStatuses = false;
+  String? _allUniverse;
+  String? _allSaga;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -75,6 +77,32 @@ class _LibraryPageState extends State<LibraryPage> {
     }.toList()
       ..sort((left, right) => right.compareTo(left));
     final wide = MediaQuery.sizeOf(context).width >= 1320;
+    final allUniverses =
+        _libraryDistinctNames(statusFilteredItems.map((i) => i.universeName));
+    final allSagas = _libraryDistinctNames(statusFilteredItems
+        .where((i) => _allUniverse == null || i.universeName == _allUniverse)
+        .map((i) => i.collectionName));
+    final allFilters = <Widget>[
+      if (allUniverses.isNotEmpty)
+        _LibraryFilterButton(
+          tooltip: 'Filtrar por universo',
+          allLabel: 'Todos los universos',
+          selected: _allUniverse,
+          options: allUniverses,
+          onSelected: (value) => setState(() {
+            _allUniverse = value;
+            _allSaga = null;
+          }),
+        ),
+      if (allSagas.isNotEmpty)
+        _LibraryFilterButton(
+          tooltip: 'Filtrar por saga',
+          allLabel: 'Todas las sagas',
+          selected: _allSaga,
+          options: allSagas,
+          onSelected: (value) => setState(() => _allSaga = value),
+        ),
+    ];
 
     return DefaultTabController(
       key: ValueKey(tabs.join(',')),
@@ -166,6 +194,7 @@ class _LibraryPageState extends State<LibraryPage> {
                                 onOverviewModeChanged: (mode) =>
                                     setState(() => _overviewMode = mode),
                                 allSearchController: _allSearchController,
+                                allFilters: allFilters,
                                 allSortOrder: _allSortOrder,
                                 onAllSearchChanged: () => setState(() {}),
                                 onAllSortChanged: (order) =>
@@ -202,6 +231,7 @@ class _LibraryPageState extends State<LibraryPage> {
                               onOverviewModeChanged: (mode) =>
                                   setState(() => _overviewMode = mode),
                               allSearchController: _allSearchController,
+                              allFilters: allFilters,
                               allSortOrder: _allSortOrder,
                               onAllSearchChanged: () => setState(() {}),
                               onAllSortChanged: (order) =>
@@ -245,13 +275,13 @@ class _LibraryPageState extends State<LibraryPage> {
 
   List<LibraryItem> _filterAndSortAllItems(List<LibraryItem> source) {
     final query = _allSearchController.text.trim().paraBuscar;
-    final filtered = query.isEmpty
-        ? source
-        : source
-            .where(
-              (item) => _searchableText(item).paraBuscar.contains(query),
-            )
-            .toList();
+    final filtered = source
+        .where(
+            (item) => _allUniverse == null || item.universeName == _allUniverse)
+        .where((item) => _allSaga == null || item.collectionName == _allSaga)
+        .where((item) =>
+            query.isEmpty || _searchableText(item).paraBuscar.contains(query))
+        .toList();
     final sorted = [...filtered];
     sorted.sort(
       (left, right) => _compareLibraryItems(
@@ -497,6 +527,7 @@ class _LibraryMainContent extends StatelessWidget {
     required this.overviewMode,
     required this.onOverviewModeChanged,
     required this.allSearchController,
+    required this.allFilters,
     required this.allSortOrder,
     required this.onAllSearchChanged,
     required this.onAllSortChanged,
@@ -515,6 +546,7 @@ class _LibraryMainContent extends StatelessWidget {
   final _LibraryOverviewMode overviewMode;
   final ValueChanged<_LibraryOverviewMode> onOverviewModeChanged;
   final TextEditingController allSearchController;
+  final List<Widget> allFilters;
   final LibrarySortOrder allSortOrder;
   final VoidCallback onAllSearchChanged;
   final ValueChanged<LibrarySortOrder> onAllSortChanged;
@@ -582,6 +614,7 @@ class _LibraryMainContent extends StatelessWidget {
       totalCount: items.length,
       status: status,
       searchController: allSearchController,
+      extraFilters: allFilters,
       sortOrder: allSortOrder,
       onSearchChanged: onAllSearchChanged,
       onSortChanged: onAllSortChanged,
@@ -662,6 +695,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
     required this.totalCount,
     required this.status,
     required this.searchController,
+    required this.extraFilters,
     required this.sortOrder,
     required this.onSearchChanged,
     required this.onSortChanged,
@@ -673,6 +707,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
   final int totalCount;
   final LibraryItemStatus? status;
   final TextEditingController searchController;
+  final List<Widget> extraFilters;
   final LibrarySortOrder sortOrder;
   final VoidCallback onSearchChanged;
   final ValueChanged<LibrarySortOrder> onSortChanged;
@@ -684,7 +719,7 @@ class _LibraryOverviewToolbar extends StatelessWidget {
       onChanged: onModeChanged,
     );
     final searchField = SizedBox(
-      width: 280,
+      width: extraFilters.isEmpty ? 280 : 190,
       child: _CompactLibrarySearchField(
         controller: searchController,
         onChanged: onSearchChanged,
@@ -695,6 +730,10 @@ class _LibraryOverviewToolbar extends StatelessWidget {
       onSelected: onSortChanged,
     );
     final controls = <Widget>[
+      for (final filter in extraFilters) ...[
+        filter,
+        const SizedBox(width: 10),
+      ],
       searchField,
       const SizedBox(width: 10),
       sortButton,
@@ -1238,15 +1277,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
         .toList();
   }
 
-  List<String> _distinctNames(Iterable<String?> values) {
-    final names = values
-        .map((value) => value?.trim() ?? '')
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList();
-    names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return names;
-  }
+  List<String> _distinctNames(Iterable<String?> values) =>
+      _libraryDistinctNames(values);
 
   List<LibraryItem> _sortedItems(List<LibraryItem> source) {
     final sorted = [...source];
@@ -1371,6 +1403,16 @@ class _LibrarySortButton extends StatelessWidget {
       ),
     );
   }
+}
+
+List<String> _libraryDistinctNames(Iterable<String?> values) {
+  final names = values
+      .map((value) => value?.trim() ?? '')
+      .where((value) => value.isNotEmpty)
+      .toSet()
+      .toList();
+  names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return names;
 }
 
 class _LibraryFilterButton extends StatelessWidget {
