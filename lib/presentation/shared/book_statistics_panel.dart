@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 
+String _statisticsPageUnit(Iterable<BookReadingStatistics> sources) {
+  final units = {
+    for (final source in sources)
+      if (source.periods.any((p) => p.pages > 0)) source.pageUnit
+  };
+  return units.length == 1 ? units.single : 'unknown';
+}
+
+String _statisticsPageTitle(String unit) => switch (unit) {
+      'screen' => 'Pantallas leídas',
+      'page' => 'Páginas leídas',
+      _ => 'Posiciones registradas'
+    };
+
 String readingDuration(int seconds) {
   if (seconds == 0) return '0 min';
   if (seconds < 60) return '<1 min';
@@ -30,6 +44,7 @@ class BookStatisticsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = ReadingStatisticsSummary(reading?.statistics.values ?? []);
+    final pageUnit = _statisticsPageUnit(reading?.statistics.values ?? []);
     final dates = summary.dailySeconds.keys.toList()..sort();
     final empty = dates.isEmpty;
     final dailyPages = <DateTime, int>{};
@@ -54,7 +69,11 @@ class BookStatisticsPanel extends StatelessWidget {
             readingDuration(summary.seconds),
             Icons.schedule_rounded
           ),
-          ('Páginas leídas', '${summary.pages}', Icons.auto_stories_outlined),
+          (
+            _statisticsPageTitle(pageUnit),
+            '${summary.pages}',
+            Icons.auto_stories_outlined
+          ),
           ('Días de lectura', '${summary.days}', Icons.calendar_today_outlined),
           (
             'Mejor racha',
@@ -65,6 +84,7 @@ class BookStatisticsPanel extends StatelessWidget {
         SizedBox(height: compact ? 12 : 24),
         Expanded(
             child: _TemporaryReadingViews(
+          pageUnit: pageUnit,
           dailySeconds: summary.dailySeconds,
           dailyPages: dailyPages,
           hourlySeconds: hourlySeconds,
@@ -80,7 +100,7 @@ class BookStatisticsPanel extends StatelessWidget {
               'Ritmo medio',
               summary.pages == 0
                   ? '—'
-                  : '${(summary.seconds / summary.pages).round()} s / página'),
+                  : '${(summary.seconds / summary.pages).round()} s / ${readingPageUnitLabel(pageUnit)}'),
           _ReadingNote(
               'Media por día de lectura',
               empty
@@ -142,6 +162,7 @@ class _AnnualReadingStatisticsDialogState
     final books =
         widget.books.where((b) => b.type == LibraryItemType.book).toList();
     final sources = combinedReadingStatistics(books);
+    final pageUnit = _statisticsPageUnit(sources.values);
     final summary = ReadingStatisticsSummary(sources.values, year: _year);
     final previous = ReadingStatisticsSummary(sources.values, year: _year - 1);
     final years = <int>{
@@ -238,7 +259,7 @@ class _AnnualReadingStatisticsDialogState
                 Icons.calendar_today_outlined
               ),
               (
-                'Páginas leídas',
+                _statisticsPageTitle(pageUnit),
                 '${summary.pages}',
                 Icons.auto_stories_outlined
               ),
@@ -282,12 +303,14 @@ class _AnnualReadingStatisticsDialogState
                   active: active,
                   coverBuilder: widget.coverBuilder),
               2 => _ReadingRecords(
+                  pageUnit: pageUnit,
                   summary: summary,
                   finished: finished,
                   hourly: hourly,
                   weekdays: weekdays),
               _ => _calendar
                   ? _ReadingHeatmap(
+                      pageUnit: pageUnit,
                       dailySeconds: summary.dailySeconds,
                       dailyPages: dailyPages,
                       from: DateTime(_year),
@@ -484,17 +507,17 @@ class _ReadingShelf extends StatelessWidget {
 class _ReadingRecords extends StatelessWidget {
   const _ReadingRecords(
       {required this.summary,
+      required this.pageUnit,
       required this.finished,
       required this.hourly,
       required this.weekdays});
   final ReadingStatisticsSummary summary;
+  final String pageUnit;
   final List<LibraryItem> finished;
   final List<int> hourly, weekdays;
 
   int? _pages(LibraryItem book) {
-    final digits = RegExp(r'\d+').firstMatch(book.pages ?? '')?.group(0);
-    final pages = int.tryParse(digits ?? '') ?? book.reading?.totalPages ?? 0;
-    return pages > 0 ? pages : null;
+    return bookPageTotal(book.pages, null, manual: true);
   }
 
   int? _daysToFinish(LibraryItem book) {
@@ -608,7 +631,7 @@ class _ReadingRecords extends StatelessWidget {
             'Ritmo medio',
             summary.pages == 0
                 ? '—'
-                : '${(summary.seconds / summary.pages).round()} s / página'),
+                : '${(summary.seconds / summary.pages).round()} s / ${readingPageUnitLabel(pageUnit)}'),
         const SizedBox(height: 4),
         Expanded(
             child: _ReadingBars(
@@ -727,6 +750,7 @@ class _ReadingMetrics extends StatelessWidget {
 /// Selector temporal para comparar visualizaciones; se retirará al elegir.
 class _TemporaryReadingViews extends StatefulWidget {
   const _TemporaryReadingViews({
+    required this.pageUnit,
     required this.dailySeconds,
     required this.dailyPages,
     required this.hourlySeconds,
@@ -734,6 +758,7 @@ class _TemporaryReadingViews extends StatefulWidget {
     required this.year,
   });
   final Map<DateTime, int> dailySeconds, dailyPages;
+  final String pageUnit;
   final List<int> hourlySeconds, monthlySeconds;
   final int year;
   @override
@@ -773,7 +798,7 @@ class _TemporaryReadingViewsState extends State<_TemporaryReadingViews> {
           tooltips: [
             for (final d in dates)
               '${_readingDate(d)} · ${readingDuration(widget.dailySeconds[d] ?? 0)}'
-                  ' · ${widget.dailyPages[d] ?? 0} páginas'
+                  ' · ${widget.dailyPages[d] ?? 0} ${readingPageUnitLabel(widget.pageUnit, plural: true)}'
           ],
           labelEvery: span > 31
               ? 5
@@ -798,7 +823,9 @@ class _TemporaryReadingViewsState extends State<_TemporaryReadingViews> {
             title: 'Actividad de ${widget.year}');
       default:
         view = _ReadingHeatmap(
-            dailySeconds: widget.dailySeconds, dailyPages: widget.dailyPages);
+            pageUnit: widget.pageUnit,
+            dailySeconds: widget.dailySeconds,
+            dailyPages: widget.dailyPages);
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
@@ -906,11 +933,13 @@ class _ReadingBars extends StatelessWidget {
 class _ReadingHeatmap extends StatelessWidget {
   const _ReadingHeatmap(
       {required this.dailySeconds,
+      required this.pageUnit,
       required this.dailyPages,
       this.from,
       this.to,
       this.title = 'Calendario de lectura'});
   final Map<DateTime, int> dailySeconds;
+  final String pageUnit;
   final Map<DateTime, int> dailyPages;
   // Con un intervalo fijo (un año completo) no se ajusta a las lecturas.
   final DateTime? from, to;
@@ -1013,9 +1042,12 @@ class _ReadingHeatmap extends StatelessWidget {
                       height: cell,
                       alignment: Alignment.centerLeft,
                       margin: EdgeInsets.only(bottom: row < 6 ? _gap : 0),
-                      child: Text(row.isEven ? _weekdays[row] : '',
+                      child: Text(_weekdays[row],
+                          softWrap: false,
                           style: TextStyle(
-                              fontSize: 11, color: colors.onSurfaceVariant))),
+                              fontSize: cell < 14 ? 9 : 11,
+                              height: 1,
+                              color: colors.onSurfaceVariant))),
               ]),
               for (var week = 0; week < shown; week++) ...[
                 if (week > 0) const SizedBox(width: _gap),
@@ -1056,7 +1088,7 @@ class _ReadingHeatmap extends StatelessWidget {
                               seconds == 0
                                   ? label
                                   : '$label · ${readingDuration(seconds)}'
-                                      ' · $pages ${pages == 1 ? 'página' : 'páginas'}');
+                                      ' · $pages ${readingPageUnitLabel(pageUnit, plural: pages != 1)}');
                         }()),
                 ]),
               ],
