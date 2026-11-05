@@ -388,8 +388,15 @@ class SteamService {
       final file = _resultFile(appId);
       await file.parent.create(recursive: true);
       await file.writeAsString(jsonEncode(result));
+      await File('${file.parent.path}${Platform.pathSeparator}logros.js')
+          .writeAsString(guideScript(result));
     } catch (_) {}
   }
+
+  /// Una página abierta desde disco no puede leer un JSON local, pero sí
+  /// cargar un script: así las guías personales ven los logros actualizados.
+  static String guideScript(Map<String, dynamic> result) =>
+      'window.LOGROS_STEAM=${jsonEncode(result)};';
 
   /// Últimos logros guardados en disco del juego enlazado, para mostrarlos al
   /// instante mientras se consulta Steam. No usa la red.

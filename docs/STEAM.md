@@ -40,6 +40,14 @@ El título visible se obtiene de la biblioteca de Steam: el esquema de logros
 puede devolver un nombre interno distinto. Los porcentajes globales se
 normalizan tanto si Steam los envía como números como si los envía como texto.
 
+## Guías personales
+
+Cada consulta guarda los logros en
+`Documents/Todo/steam_icons/<appid>/logros.json` y escribe junto a él
+`logros.js`, con los mismos datos en `window.LOGROS_STEAM`. Una guía abierta
+desde disco no puede leer el JSON, pero sí cargar ese script para retirar los
+logros obtenidos. Los datos son los de la última actualización de logros en Todo.
+
 ## Consulta desde agentes
 
 El adaptador MCP existente expone `get_steam_games` y

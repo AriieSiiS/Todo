@@ -203,6 +203,23 @@ void main() {
     expect(result['completion_percent'], isNull);
   });
 
+  test('prepara los logros como script para las guías abiertas desde disco',
+      () {
+    final script = SteamService.guideScript({
+      'appid': 42,
+      'achievements': [
+        {'id': 'Oculto', 'name': 'Décimo mundo', 'unlocked': true}
+      ],
+    });
+
+    expect(script, startsWith('window.LOGROS_STEAM='));
+    expect(script, endsWith(';'));
+    final data = jsonDecode(
+        script.substring('window.LOGROS_STEAM='.length, script.length - 1));
+    expect(data['appid'], 42);
+    expect(data['achievements'].single['unlocked'], isTrue);
+  });
+
   test('completa la descripción de los logros ocultos desde la página pública',
       () async {
     final service = SteamService(
