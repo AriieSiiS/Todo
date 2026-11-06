@@ -38,6 +38,9 @@ class _LibraryPageState extends State<LibraryPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_cargarColecciones().then((_) {
+      if (mounted) setState(() {});
+    }));
     _allSearchController = TextEditingController();
     _typeFilter = controller.libraryTypeView;
     // Completados era el valor histórico inicial, así que Todo es la nueva
@@ -131,11 +134,9 @@ class _LibraryPageState extends State<LibraryPage> {
                 currentYear: currentYear,
                 availableYears: availableYears,
                 isGoals: area == LibraryAreaView.goals,
-                showAdd: area != LibraryAreaView.collections,
                 showStatistics: area == LibraryAreaView.library &&
                     _typeFilter == LibraryItemType.book,
-                libraryStatus:
-                    area == LibraryAreaView.collections ? null : status,
+                libraryStatus: status,
                 onYearChanged: (year) => setState(() => _year = year),
                 onStatistics: () => showDialog<void>(
                     context: context,
@@ -185,9 +186,7 @@ class _LibraryPageState extends State<LibraryPage> {
             ],
             const SizedBox(height: 14),
             Expanded(
-              child: area == LibraryAreaView.collections
-                  ? _LibraryCollectionsView(controller: controller)
-                  : area == LibraryAreaView.goals
+              child: area == LibraryAreaView.goals
                   ? _LibraryGoalsView(
                       controller: controller,
                       year: _year,
@@ -355,7 +354,6 @@ class _LibraryHeader extends StatelessWidget {
     required this.currentYear,
     required this.availableYears,
     required this.isGoals,
-    required this.showAdd,
     required this.showStatistics,
     required this.libraryStatus,
     required this.onYearChanged,
@@ -367,7 +365,6 @@ class _LibraryHeader extends StatelessWidget {
   final int currentYear;
   final List<int> availableYears;
   final bool isGoals;
-  final bool showAdd;
   final bool showStatistics;
   final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
@@ -398,12 +395,11 @@ class _LibraryHeader extends StatelessWidget {
               availableYears: availableYears,
               onSelected: onYearChanged,
             ),
-          if (showAdd)
-            _HeaderActionButton(
-              label: isGoals ? 'Añadir propósito' : 'Añadir a Biblioteca',
-              icon: Icons.add_rounded,
-              onPressed: onAdd,
-            ),
+          _HeaderActionButton(
+            label: isGoals ? 'Añadir propósito' : 'Añadir a Biblioteca',
+            icon: Icons.add_rounded,
+            onPressed: onAdd,
+          ),
         ],
       ),
     );

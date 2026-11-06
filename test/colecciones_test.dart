@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo/application/state/todo_workspace.dart';
 import 'package:todo/domain/models.dart';
 
 void main() {
@@ -21,18 +22,40 @@ void main() {
 
   test('cada obra llega lista para la Biblioteca y con portada real', () {
     for (final coleccion in colecciones) {
-      for (final portada in coleccion.portadas) {
-        expect(File(portada).existsSync(), isTrue, reason: portada);
-      }
       for (final obra in coleccion.obras) {
         expect(File(obra.coverUrl!).existsSync(), isTrue, reason: obra.title);
         expect(obra.status, LibraryItemStatus.pending);
-        expect(obra.collectionName, coleccion.nombre);
         expect(obra.note, isNotEmpty, reason: obra.title);
         expect(obra.genre, isNotEmpty, reason: obra.title);
-        expect(obra.developer, isNotEmpty, reason: obra.title);
-        expect(obra.platform, isNotEmpty, reason: obra.title);
       }
     }
+  });
+
+  test('cada colección tiene obras únicas', () {
+    expect(colecciones.map((coleccion) => coleccion.id).toSet(),
+        hasLength(colecciones.length));
+    for (final coleccion in colecciones) {
+      expect(coleccion.obras.map((obra) => obra.id).toSet(),
+          hasLength(coleccion.obras.length),
+          reason: coleccion.nombre);
+    }
+  });
+
+  test('las obras quitadas se guardan y se pueden recuperar', () {
+    final controller = TodoWorkspace.createForTest();
+
+    controller.setCollectionWorkHidden('persona/persona-3', true);
+    final copia = AppVisibilitySettings.fromJson(
+      controller.visibilitySettings.toJson(),
+    );
+    expect(copia.hiddenCollectionWorks, ['persona/persona-3']);
+
+    controller.setSectionVisible(AppSection.recipes, false);
+    expect(controller.visibilitySettings.hiddenCollectionWorks,
+        ['persona/persona-3'],
+        reason: 'ocultar una sección no debe perder las obras quitadas');
+
+    controller.setCollectionWorkHidden('persona/persona-3', false);
+    expect(controller.visibilitySettings.hiddenCollectionWorks, isEmpty);
   });
 }

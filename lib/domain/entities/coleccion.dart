@@ -16,16 +16,18 @@ class Coleccion {
   const Coleccion({
     required this.id,
     required this.nombre,
-    required this.descripcion,
-    required this.portadas,
+    required this.alias,
     required this.grupos,
   });
 
   final String id;
   final String nombre;
-  final String descripcion;
-  final List<String> portadas;
+
+  /// Otros nombres de saga o universo que abren esta colección.
+  final List<String> alias;
   final List<GrupoColeccion> grupos;
+
+  List<String> get nombres => [nombre, ...alias];
 
   List<LibraryItem> get obras => [for (final grupo in grupos) ...grupo.obras];
 
@@ -44,14 +46,13 @@ class Coleccion {
           ...campos,
           'status': 'pending',
           'universeName': datos['universo'],
-          'collectionName': nombre,
+          'collectionName': campos['collectionName'] ?? nombre,
           'showCollectionNumber': campos['collectionNumber'] != null,
         });
     return Coleccion(
       id: datos['id'] as String,
       nombre: nombre,
-      descripcion: datos['descripcion'] as String,
-      portadas: (datos['portadas'] as List).cast<String>(),
+      alias: (datos['alias'] as List? ?? const []).cast<String>(),
       grupos: [
         for (final grupo
             in (datos['grupos'] as List).cast<Map<String, dynamic>>())

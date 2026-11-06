@@ -2,6 +2,25 @@ part of 'app_shell.dart';
 
 const _rutaCatalogoColecciones = 'assets/colecciones/colecciones.json';
 
+List<Coleccion>? _colecciones;
+
+Future<void> _cargarColecciones() async {
+  _colecciones ??= Coleccion.desdeJson(
+    await rootBundle.loadString(_rutaCatalogoColecciones),
+  );
+}
+
+/// Colección de una saga o universo de la Biblioteca, si está en el catálogo.
+Coleccion? _coleccionPorNombre(String nombre) {
+  final buscado = nombre.paraBuscar;
+  for (final coleccion in _colecciones ?? const <Coleccion>[]) {
+    if (coleccion.nombres.any((otro) => otro.paraBuscar == buscado)) {
+      return coleccion;
+    }
+  }
+  return null;
+}
+
 /// Elemento de la Biblioteca que corresponde a una obra del catálogo, si existe.
 LibraryItem? _obraEnBiblioteca(TodoWorkspace controller, LibraryItem obra) {
   final titulo = obra.title.paraBuscar;
@@ -45,166 +64,37 @@ Future<void> _anadirObraABiblioteca(
   );
 }
 
-String _resumenColeccion(TodoWorkspace controller, Coleccion coleccion) {
-  final obras = coleccion.obras;
-  final tipos = obras.map((obra) => obra.type).toSet();
-  final nombre = tipos.length == 1
-      ? _libraryTypePluralLabel(tipos.first).toLowerCase()
-      : 'obras';
-  final enBiblioteca =
-      obras.where((obra) => _obraEnBiblioteca(controller, obra) != null).length;
-  return '${obras.length} $nombre · $enBiblioteca en tu Biblioteca';
-}
-
-/// Sagas del catálogo. Sus obras solo entran en la Biblioteca al añadirlas.
-class _LibraryCollectionsView extends StatefulWidget {
-  const _LibraryCollectionsView({required this.controller});
-
-  final TodoWorkspace controller;
-
-  @override
-  State<_LibraryCollectionsView> createState() =>
-      _LibraryCollectionsViewState();
-}
-
-class _LibraryCollectionsViewState extends State<_LibraryCollectionsView> {
-  List<Coleccion>? _colecciones;
-  Coleccion? _abierta;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_cargar());
-  }
-
-  Future<void> _cargar() async {
-    final texto = await rootBundle.loadString(_rutaCatalogoColecciones);
-    if (mounted) setState(() => _colecciones = Coleccion.desdeJson(texto));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colecciones = _colecciones;
-    if (colecciones == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return ListenableBuilder(
-      listenable: widget.controller,
-      builder: (context, _) {
-        final abierta = _abierta;
-        if (abierta != null) {
-          return _ColeccionDetalle(
-            controller: widget.controller,
-            coleccion: abierta,
-            onBack: () => setState(() => _abierta = null),
-          );
-        }
-        return SingleChildScrollView(
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            children: [
-              for (final coleccion in colecciones)
-                _ColeccionTarjeta(
-                  coleccion: coleccion,
-                  resumen: _resumenColeccion(widget.controller, coleccion),
-                  onTap: () => setState(() => _abierta = coleccion),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ColeccionTarjeta extends StatelessWidget {
-  const _ColeccionTarjeta({
-    required this.coleccion,
-    required this.resumen,
-    required this.onTap,
-  });
-
-  final Coleccion coleccion;
-  final String resumen;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final visuals = context.visuals;
-    return SizedBox(
-      key: ValueKey('coleccion-${coleccion.id}'),
-      width: 470,
-      child: Material(
-        color: visuals.panel,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: visuals.panelBorder),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 141,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final portada in coleccion.portadas)
-                      Expanded(
-                        child: _LibraryCoverImage(
-                          source: portada,
-                          type: coleccion.obras.first.type,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      coleccion.nombre,
-                      style: TextStyle(
-                        color: visuals.textStrong,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      resumen,
-                      style: TextStyle(
-                        color: visuals.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+/// Abre la saga sobre la vista actual. Colecciones no tiene entrada propia:
+/// solo se llega pulsando la chapa de una saga.
+Future<void> _abrirColeccion(
+  BuildContext context,
+  TodoWorkspace controller,
+  Coleccion coleccion,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.all(28),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 8),
+        child: ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => _ColeccionDetalle(
+            controller: controller,
+            coleccion: coleccion,
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _ColeccionDetalle extends StatefulWidget {
-  const _ColeccionDetalle({
-    required this.controller,
-    required this.coleccion,
-    required this.onBack,
-  });
+  const _ColeccionDetalle({required this.controller, required this.coleccion});
 
   final TodoWorkspace controller;
   final Coleccion coleccion;
-  final VoidCallback onBack;
 
   @override
   State<_ColeccionDetalle> createState() => _ColeccionDetalleState();
@@ -212,20 +102,55 @@ class _ColeccionDetalle extends StatefulWidget {
 
 class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   final _anadiendo = <String>{};
+  bool _verQuitadas = false;
+
+  TodoWorkspace get controller => widget.controller;
+
+  String _clave(LibraryItem obra) => '${widget.coleccion.id}/${obra.id}';
+
+  bool _quitada(LibraryItem obra) =>
+      controller.visibilitySettings.hiddenCollectionWorks
+          .contains(_clave(obra));
+
+  void _alternar(LibraryItem obra) =>
+      controller.setCollectionWorkHidden(_clave(obra), !_quitada(obra));
 
   Future<void> _anadir(LibraryItem obra) async {
     if (!_anadiendo.add(obra.id)) return;
     try {
-      await _anadirObraABiblioteca(widget.controller, obra);
+      await _anadirObraABiblioteca(controller, obra);
     } finally {
       _anadiendo.remove(obra.id);
     }
+  }
+
+  String _resumen(List<LibraryItem> obras) {
+    final tipos = obras.map((obra) => obra.type).toSet();
+    final nombre = tipos.length == 1
+        ? _libraryTypePluralLabel(tipos.first).toLowerCase()
+        : 'obras';
+    final enBiblioteca = obras
+        .where((obra) => _obraEnBiblioteca(controller, obra) != null)
+        .length;
+    return '${obras.length} $nombre · $enBiblioteca en tu Biblioteca';
   }
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     final coleccion = widget.coleccion;
+    final quitadas = coleccion.obras.where(_quitada).toList();
+    final verQuitadas = _verQuitadas && quitadas.isNotEmpty;
+    final grupos = [
+      for (final grupo in coleccion.grupos)
+        GrupoColeccion(
+          nombre: grupo.nombre,
+          obras: grupo.obras
+              .where((obra) => _quitada(obra) == verQuitadas)
+              .toList(),
+        ),
+    ].where((grupo) => grupo.obras.isNotEmpty).toList();
+    final obras = [for (final grupo in grupos) ...grupo.obras];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -234,8 +159,8 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
             const SizedBox(width: 6),
             IconButton(
               key: const ValueKey('coleccion-volver'),
-              tooltip: 'Volver a Colecciones',
-              onPressed: widget.onBack,
+              tooltip: 'Cerrar',
+              onPressed: () => Navigator.of(context).pop(),
               padding: EdgeInsets.zero,
               alignment: Alignment.centerLeft,
               constraints: const BoxConstraints.tightFor(width: 36, height: 40),
@@ -254,7 +179,9 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                     ),
                   ),
                   Text(
-                    _resumenColeccion(widget.controller, coleccion),
+                    _resumen(coleccion.obras
+                        .where((obra) => !_quitada(obra))
+                        .toList()),
                     style: TextStyle(
                       color: visuals.textMuted,
                       fontSize: 13,
@@ -264,6 +191,22 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                 ],
               ),
             ),
+            if (quitadas.isNotEmpty)
+              OutlinedButton.icon(
+                key: const ValueKey('coleccion-ver-quitadas'),
+                onPressed: () => setState(() => _verQuitadas = !verQuitadas),
+                icon: Icon(
+                  verQuitadas
+                      ? Icons.collections_bookmark_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 18,
+                ),
+                label: Text(verQuitadas
+                    ? 'Ver la colección'
+                    : 'Quitadas (${quitadas.length})'),
+                style: _libraryDetailSecondaryButtonStyle(context),
+              ),
+            const SizedBox(width: 6),
           ],
         ),
         const SizedBox(height: 14),
@@ -276,7 +219,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                     : 154.0;
             return CustomScrollView(
               slivers: [
-                for (final grupo in coleccion.grupos) ...[
+                for (final grupo in grupos) ...[
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(6, 0, 6, 10),
@@ -303,17 +246,21 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                       itemBuilder: (context, index) {
                         final obra = grupo.obras[index];
                         return _ColeccionObraTarjeta(
+                          key: ValueKey(_clave(obra)),
                           obra: obra,
-                          enBiblioteca:
-                              _obraEnBiblioteca(widget.controller, obra),
+                          quitada: verQuitadas,
+                          enBiblioteca: _obraEnBiblioteca(controller, obra),
                           onTap: () => _mostrarObraColeccion(
                             context,
-                            widget.controller,
-                            coleccion.obras,
+                            controller,
+                            obras,
                             obra,
+                            verQuitadas,
                             _anadir,
+                            _alternar,
                           ),
                           onAdd: () => _anadir(obra),
+                          onToggle: () => _alternar(obra),
                         );
                       },
                     ),
@@ -330,16 +277,21 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
 class _ColeccionObraTarjeta extends StatefulWidget {
   const _ColeccionObraTarjeta({
+    required super.key,
     required this.obra,
+    required this.quitada,
     required this.enBiblioteca,
     required this.onTap,
     required this.onAdd,
+    required this.onToggle,
   });
 
   final LibraryItem obra;
+  final bool quitada;
   final LibraryItem? enBiblioteca;
   final VoidCallback onTap;
   final VoidCallback onAdd;
+  final VoidCallback onToggle;
 
   @override
   State<_ColeccionObraTarjeta> createState() => _ColeccionObraTarjetaState();
@@ -463,25 +415,38 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                   ),
                 ),
               ),
+              if (_hovered)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: _ColeccionBotonCubierta(
+                    key: ValueKey('coleccion-quitar-${obra.id}'),
+                    tooltip: widget.quitada
+                        ? 'Recuperar en la colección'
+                        : 'Quitar de la colección',
+                    icon: widget.quitada
+                        ? Icons.undo_rounded
+                        : Icons.close_rounded,
+                    color: const Color(0xE63B4654),
+                    onPressed: widget.onToggle,
+                  ),
+                ),
               if (enBiblioteca != null)
                 Positioned(
                   top: 8,
                   right: 8,
                   child: _LibraryStatusBadge(status: enBiblioteca.status),
                 )
-              else if (_hovered)
+              else if (_hovered && !widget.quitada)
                 Positioned(
                   top: 6,
                   right: 6,
-                  child: IconButton.filled(
+                  child: _ColeccionBotonCubierta(
                     key: ValueKey('coleccion-anadir-${obra.id}'),
                     tooltip: 'Añadir a Biblioteca',
+                    icon: Icons.add_rounded,
+                    color: const Color(0xFF607A4D),
                     onPressed: widget.onAdd,
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF607A4D),
-                      foregroundColor: Colors.white,
-                    ),
                   ),
                 ),
             ],
@@ -492,12 +457,42 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
   }
 }
 
+class _ColeccionBotonCubierta extends StatelessWidget {
+  const _ColeccionBotonCubierta({
+    required super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton.filled(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      style: IconButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+      ),
+    );
+  }
+}
+
 Future<void> _mostrarObraColeccion(
   BuildContext context,
   TodoWorkspace controller,
   List<LibraryItem> obras,
   LibraryItem obra,
+  bool quitada,
   Future<void> Function(LibraryItem obra) onAdd,
+  void Function(LibraryItem obra) onToggle,
 ) {
   return showDialog<void>(
     context: context,
@@ -507,7 +502,9 @@ Future<void> _mostrarObraColeccion(
         controller: controller,
         obras: obras,
         inicial: obras.indexOf(obra),
+        quitada: quitada,
         onAdd: onAdd,
+        onToggle: onToggle,
         origen: context,
       ),
     ),
@@ -520,16 +517,20 @@ class _ColeccionObraDialog extends StatefulWidget {
     required this.controller,
     required this.obras,
     required this.inicial,
+    required this.quitada,
     required this.onAdd,
+    required this.onToggle,
     required this.origen,
   });
 
   final TodoWorkspace controller;
   final List<LibraryItem> obras;
   final int inicial;
+  final bool quitada;
   final Future<void> Function(LibraryItem obra) onAdd;
+  final void Function(LibraryItem obra) onToggle;
 
-  /// Contexto de la página, para abrir la ficha tras cerrar este diálogo.
+  /// Contexto de la colección, para abrir la ficha tras cerrar este diálogo.
   final BuildContext origen;
 
   @override
@@ -554,9 +555,9 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
     final visuals = context.visuals;
     final obra = widget.obras[_indice];
     final enBiblioteca = _obraEnBiblioteca(widget.controller, obra);
-    final campos = _detailFields(obra)
-        .where((campo) => campo.$1 != 'Estado' && campo.$1 != 'Notas')
-        .toList();
+    const sinCampo = {'Estado', 'Notas', 'Progreso'};
+    final campos =
+        _detailFields(obra).where((campo) => !sinCampo.contains(campo.$1));
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -647,6 +648,24 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                     onPressed: () => Navigator.of(context).pop(),
                     style: _libraryDetailSecondaryButtonStyle(context),
                     child: const Text('Cerrar'),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    key: const ValueKey('coleccion-obra-quitar'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onToggle(obra);
+                    },
+                    icon: Icon(
+                      widget.quitada
+                          ? Icons.undo_rounded
+                          : Icons.visibility_off_outlined,
+                      size: 18,
+                    ),
+                    label: Text(widget.quitada
+                        ? 'Recuperar'
+                        : 'Quitar de la colección'),
+                    style: _libraryDetailSecondaryButtonStyle(context),
                   ),
                   const Spacer(),
                   if (_indice > 0) ...[

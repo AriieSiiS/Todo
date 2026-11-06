@@ -1543,7 +1543,9 @@ String _libraryItemStatusMeta(LibraryItem item) {
   final collectionNumber = item.collectionNumber;
   final universe = item.universeName?.trim();
   if (collectionName == null || collectionName.isEmpty) {
-    return null;
+    // Sin saga propia, el universo hace de chapa para poder abrir su colección.
+    if (universe == null || universe.isEmpty) return null;
+    return (saga: universe, installment: null, universe: null);
   }
   final collectionKey = _libraryCollectionKey(collectionName);
   final distinctNumbers = controller.libraryItems

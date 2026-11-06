@@ -356,6 +356,7 @@ class TodoWorkspace extends ChangeNotifier {
     _visibilitySettings = AppVisibilitySettings(
       hiddenSections: hidden.toList(),
       hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
     );
     if (!_visibilitySettings.sectionVisible(_section)) {
       _section = visibleNavOrder.first;
@@ -382,6 +383,23 @@ class TodoWorkspace extends ChangeNotifier {
         ..._visibilitySettings.hiddenTabs,
         section.name: hidden.toList()
       },
+      hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
+    );
+    _commit();
+  }
+
+  /// Quita de una colección una obra, o la recupera. `clave` es `coleccion/obra`.
+  void setCollectionWorkHidden(String clave, bool hidden) {
+    final obras = _visibilitySettings.hiddenCollectionWorks.toSet();
+    if (hidden) {
+      obras.add(clave);
+    } else {
+      obras.remove(clave);
+    }
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: _visibilitySettings.hiddenSections,
+      hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenCollectionWorks: obras.toList(),
     );
     _commit();
   }

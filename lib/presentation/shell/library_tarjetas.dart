@@ -319,6 +319,7 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                       ? (_hovered ? 78 : 66)
                       : (_hovered ? 50 : 38),
                   child: IgnorePointer(
+                    ignoring: !_hovered,
                     child: AnimatedOpacity(
                       opacity: _hovered ? 1 : 0,
                       duration: const Duration(milliseconds: 150),
@@ -887,6 +888,7 @@ class _LibraryCollectionChips extends StatelessWidget {
           if (universe != null && singleLine) ...[
             Flexible(
               child: _LibraryCollectionChip(
+                controller: controller,
                 label: universe,
                 item: item,
                 compact: compact,
@@ -897,6 +899,7 @@ class _LibraryCollectionChips extends StatelessWidget {
           ],
           Flexible(
             child: _LibraryCollectionChip(
+              controller: controller,
               label: labels.saga,
               item: item,
               compact: compact,
@@ -906,6 +909,7 @@ class _LibraryCollectionChips extends StatelessWidget {
           if (labels.installment != null) ...[
             const SizedBox(width: 5),
             _LibraryCollectionChip(
+              controller: controller,
               label: labels.installment!,
               item: item,
               compact: compact,
@@ -919,6 +923,7 @@ class _LibraryCollectionChips extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _LibraryCollectionChip(
+            controller: controller,
             label: universe,
             item: item,
             compact: compact,
@@ -935,6 +940,7 @@ class _LibraryCollectionChips extends StatelessWidget {
       alignment: alignment,
       children: [
         _LibraryCollectionChip(
+          controller: controller,
           label: labels.saga,
           item: item,
           compact: compact,
@@ -942,6 +948,7 @@ class _LibraryCollectionChips extends StatelessWidget {
         ),
         if (labels.installment != null)
           _LibraryCollectionChip(
+            controller: controller,
             label: labels.installment!,
             item: item,
             compact: compact,
@@ -954,12 +961,14 @@ class _LibraryCollectionChips extends StatelessWidget {
 
 class _LibraryCollectionChip extends StatelessWidget {
   const _LibraryCollectionChip({
+    required this.controller,
     required this.label,
     required this.item,
     required this.compact,
     required this.onDark,
   });
 
+  final TodoWorkspace controller;
   final String label;
   final LibraryItem item;
   final bool compact;
@@ -968,7 +977,8 @@ class _LibraryCollectionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _libraryColor(item.type);
-    return Container(
+    final coleccion = _coleccionPorNombre(label);
+    final chip = Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,
         vertical: compact ? 3 : 5,
@@ -988,6 +998,15 @@ class _LibraryCollectionChip extends StatelessWidget {
           fontSize: compact ? 10.5 : 12,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+    if (coleccion == null) return chip;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        key: ValueKey('coleccion-abrir-${coleccion.id}'),
+        onTap: () => _abrirColeccion(context, controller, coleccion),
+        child: chip,
       ),
     );
   }

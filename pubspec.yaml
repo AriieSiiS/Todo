@@ -2,7 +2,7 @@ name: todo
 description: AplicaciÃ³n personal de tareas para Windows.
 publish_to: none
 
-version: 0.4.38+62
+version: 0.4.39+63
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -56,7 +56,7 @@ flutter:
   assets:
     - assets/branding/todo_logo.png
     - assets/colecciones/
-    - assets/colecciones/persona/
+    - assets/colecciones/portadas/
     - assets/branding/todo-app-icon.svg
     - assets/home_twin_web/index.html
     - assets/home_twin_web/scene.js

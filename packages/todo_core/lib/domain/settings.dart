@@ -4,10 +4,14 @@ class AppVisibilitySettings {
   const AppVisibilitySettings({
     this.hiddenSections = const [],
     this.hiddenTabs = const {},
+    this.hiddenCollectionWorks = const [],
   });
 
   final List<String> hiddenSections;
   final Map<String, List<String>> hiddenTabs;
+
+  /// Obras quitadas de una colección, como `coleccion/obra`.
+  final List<String> hiddenCollectionWorks;
 
   static const tabs = <AppSection, Map<String, String>>{
     AppSection.wardrobe: {
@@ -24,11 +28,7 @@ class AppVisibilitySettings {
       'twin': 'Gemelo 3D',
       'qr': 'Códigos QR',
     },
-    AppSection.library: {
-      'library': 'Biblioteca',
-      'goals': 'Propósitos',
-      'collections': 'Colecciones',
-    },
+    AppSection.library: {'library': 'Biblioteca', 'goals': 'Propósitos'},
     AppSection.recipes: {'recipes': 'Recetas', 'menus': 'Menús semanales'},
     AppSection.expenses: {
       'monthly': 'Vista mensual',
@@ -56,6 +56,7 @@ class AppVisibilitySettings {
   Map<String, dynamic> toJson() => {
         'hiddenSections': hiddenSections,
         'hiddenTabs': hiddenTabs,
+        'hiddenCollectionWorks': hiddenCollectionWorks,
       };
 
   factory AppVisibilitySettings.fromJson(Map<String, dynamic> json) =>
@@ -66,6 +67,10 @@ class AppVisibilitySettings {
         hiddenTabs: (json['hiddenTabs'] as Map<String, dynamic>? ?? const {})
             .map((section, value) => MapEntry(section,
                 (value as List<dynamic>).whereType<String>().toList())),
+        hiddenCollectionWorks:
+            (json['hiddenCollectionWorks'] as List<dynamic>? ?? const [])
+                .whereType<String>()
+                .toList(),
       );
 }
 

@@ -1,294 +1,4249 @@
 {
-  "colecciones": [
+ "colecciones": [
+  {
+   "id": "28-dias-despues",
+   "nombre": "28 días después",
+   "grupos": [
     {
-      "id": "persona",
-      "nombre": "Persona",
-      "universo": "Persona",
-      "descripcion": "Rol japonés de Atlus: instituto, vínculos y mazmorras contra las Sombras, con los Persona como manifestación del interior de cada personaje.",
-      "portadas": [
-        "assets/colecciones/persona/persona-3-reload.jpg",
-        "assets/colecciones/persona/persona-4-golden.jpg",
-        "assets/colecciones/persona/persona-5-royal.jpg",
-        "assets/colecciones/persona/persona-q2.jpg",
-        "assets/colecciones/persona/persona-5-strikers.jpg"
-      ],
-      "grupos": [
-        {
-          "nombre": "Saga principal",
-          "obras": [
-            {
-              "id": "persona",
-              "type": "game",
-              "title": "Persona",
-              "coverUrl": "assets/colecciones/persona/persona.jpg",
-              "platform": "PSP",
-              "developer": "Atlus",
-              "releaseYear": 1996,
-              "genre": "JRPG y mazmorras",
-              "collectionNumber": 1,
-              "note": "El origen de la saga, publicado en Occidente como Revelations: Persona. Un grupo de estudiantes del instituto St. Hermelin despierta sus Personas tras un juego de adivinación y se enfrenta a los demonios que invaden la ciudad de Mikage-cho. La versión más accesible es la de PSP, de 2009."
-            },
-            {
-              "id": "persona-2-innocent-sin",
-              "type": "game",
-              "title": "Persona 2: Innocent Sin",
-              "coverUrl": "assets/colecciones/persona/persona-2-innocent-sin.jpg",
-              "platform": "PSP",
-              "developer": "Atlus",
-              "releaseYear": 1999,
-              "genre": "JRPG y mazmorras",
-              "collectionNumber": 2,
-              "note": "En la ciudad de Sumaru, los rumores se hacen realidad. Tatsuya Suou y sus amigos se enfrentan al Joker, una figura que concede deseos a cambio de los sueños de la gente, y a un pasado que habían olvidado. La versión de PlayStation no salió de Japón; en Occidente llegó con la de PSP, en 2011."
-            },
-            {
-              "id": "persona-2-eternal-punishment",
-              "type": "game",
-              "title": "Persona 2: Eternal Punishment",
-              "coverUrl": "assets/colecciones/persona/persona-2-eternal-punishment.jpg",
-              "platform": "PlayStation",
-              "developer": "Atlus",
-              "releaseYear": 2000,
-              "genre": "JRPG y mazmorras",
-              "collectionNumber": 2,
-              "note": "Continuación directa de Innocent Sin. La periodista Maya Amano investiga una oleada de rumores en Sumaru que vuelven a hacerse realidad, y descubre que lo ocurrido en el juego anterior sigue teniendo consecuencias."
-            },
-            {
-              "id": "persona-3",
-              "type": "game",
-              "title": "Persona 3",
-              "coverUrl": "assets/colecciones/persona/persona-3.jpg",
-              "platform": "PS2",
-              "developer": "Atlus",
-              "releaseYear": 2006,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 3,
-              "note": "Un estudiante recién llegado al instituto Gekkoukan descubre la Hora Oscura, un momento oculto entre un día y el siguiente en el que aparece la torre Tártaro. Con el grupo SEES combate a las Sombras mientras vive su día a día. Es la entrega que introdujo los vínculos y el calendario."
-            },
-            {
-              "id": "persona-3-fes",
-              "type": "game",
-              "title": "Persona 3 FES",
-              "coverUrl": "assets/colecciones/persona/persona-3-fes.jpg",
-              "platform": "PS2",
-              "developer": "Atlus",
-              "releaseYear": 2007,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 3,
-              "note": "Versión ampliada de Persona 3 con mejoras jugables y The Answer, un epílogo protagonizado por Aigis que continúa la historia tras el final original."
-            },
-            {
-              "id": "persona-3-portable",
-              "type": "game",
-              "title": "Persona 3 Portable",
-              "coverUrl": "assets/colecciones/persona/persona-3-portable.jpg",
-              "platform": "PC",
-              "developer": "Atlus",
-              "releaseYear": 2009,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 3,
-              "note": "Reedición de Persona 3 que añade una protagonista femenina con vínculos propios y permite controlar directamente a todo el grupo en combate. Nació en PSP en 2009 y llegó a PC y consolas actuales en 2023."
-            },
-            {
-              "id": "persona-3-reload",
-              "type": "game",
-              "title": "Persona 3 Reload",
-              "coverUrl": "assets/colecciones/persona/persona-3-reload.jpg",
-              "platform": "PC",
-              "developer": "P-Studio / Atlus",
-              "releaseYear": 2024,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 3,
-              "note": "Remake completo de Persona 3 con gráficos, voces y combate renovados. El pase de expansión añade Episode Aigis: The Answer."
-            },
-            {
-              "id": "persona-4",
-              "type": "game",
-              "title": "Persona 4",
-              "coverUrl": "assets/colecciones/persona/persona-4.jpg",
-              "platform": "PS2",
-              "developer": "Atlus",
-              "releaseYear": 2008,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 4,
-              "note": "Yu Narukami pasa un año en el pueblo rural de Inaba, donde una serie de asesinatos se relaciona con el Canal de Medianoche, un programa que solo aparece en las noches de lluvia. Con sus amigos entra en el mundo dentro de la televisión para salvar a las víctimas y dar con el culpable."
-            },
-            {
-              "id": "persona-4-golden",
-              "type": "game",
-              "title": "Persona 4 Golden",
-              "coverUrl": "assets/colecciones/persona/persona-4-golden.jpg",
-              "platform": "PC",
-              "developer": "Atlus",
-              "releaseYear": 2012,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 4,
-              "note": "Versión definitiva de Persona 4, con un personaje nuevo, Marie, más vínculos y eventos, y contenido adicional para el tramo final. Nació en PS Vita en 2012 y llegó a PC en 2020."
-            },
-            {
-              "id": "persona-4-revival",
-              "type": "game",
-              "title": "Persona 4 Revival",
-              "coverUrl": "assets/colecciones/persona/persona-4-revival.jpg",
-              "platform": "PC",
-              "developer": "P-Studio / Atlus",
-              "releaseYear": 2027,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 4,
-              "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series."
-            },
-            {
-              "id": "persona-5",
-              "type": "game",
-              "title": "Persona 5",
-              "coverUrl": "assets/colecciones/persona/persona-5.jpg",
-              "platform": "PS4",
-              "developer": "P-Studio / Atlus",
-              "releaseYear": 2016,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 5,
-              "note": "Un estudiante en libertad condicional llega a Tokio y funda los Ladrones Fantasma de Corazones, que se infiltran en los palacios mentales de adultos corruptos para robarles sus deseos distorsionados y obligarlos a confesar."
-            },
-            {
-              "id": "persona-5-royal",
-              "type": "game",
-              "title": "Persona 5 Royal",
-              "coverUrl": "assets/colecciones/persona/persona-5-royal.jpg",
-              "platform": "PC",
-              "developer": "P-Studio",
-              "releaseYear": 2019,
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 5,
-              "note": "Versión definitiva de Persona 5, con Kasumi Yoshizawa, un semestre adicional y un palacio nuevo. Nació en PS4 en 2019 y llegó a PC y al resto de consolas en 2022."
-            },
-            {
-              "id": "persona-6",
-              "type": "game",
-              "title": "Persona 6",
-              "coverUrl": "assets/colecciones/persona/persona-6.jpg",
-              "platform": "PC",
-              "developer": "Atlus",
-              "genre": "JRPG, simulación social y mazmorras",
-              "collectionNumber": 6,
-              "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival."
-            }
-          ]
-        },
-        {
-          "nombre": "Spin-offs",
-          "obras": [
-            {
-              "id": "persona-4-arena",
-              "type": "game",
-              "title": "Persona 4 Arena",
-              "coverUrl": "assets/colecciones/persona/persona-4-arena.jpg",
-              "platform": "PS3",
-              "developer": "Arc System Works / Atlus",
-              "releaseYear": 2012,
-              "genre": "Lucha",
-              "note": "Juego de lucha que continúa la historia de Persona 4. El P-1 Grand Prix, un torneo en el Canal de Medianoche, enfrenta al grupo de Inaba con personajes de Persona 3."
-            },
-            {
-              "id": "persona-4-arena-ultimax",
-              "type": "game",
-              "title": "Persona 4 Arena Ultimax",
-              "coverUrl": "assets/colecciones/persona/persona-4-arena-ultimax.jpg",
-              "platform": "PC",
-              "developer": "Arc System Works / Atlus",
-              "releaseYear": 2013,
-              "genre": "Lucha",
-              "note": "Secuela directa de Persona 4 Arena, con una niebla roja sobre Inaba, más luchadores de Persona 3 y el cierre de la historia iniciada en el primer juego. La versión de PC llegó en 2022."
-            },
-            {
-              "id": "persona-q",
-              "type": "game",
-              "title": "Persona Q: Shadow of the Labyrinth",
-              "coverUrl": "assets/colecciones/persona/persona-q.jpg",
-              "platform": "Nintendo 3DS",
-              "developer": "P-Studio",
-              "releaseYear": 2014,
-              "genre": "JRPG y mazmorras en primera persona",
-              "note": "Cruce entre Persona 3 y Persona 4 con mazmorras en primera persona y mapas dibujados a mano. Ambos grupos quedan atrapados en una versión extraña del festival cultural del instituto Yasogami."
-            },
-            {
-              "id": "persona-4-dancing-all-night",
-              "type": "game",
-              "title": "Persona 4: Dancing All Night",
-              "coverUrl": "assets/colecciones/persona/persona-4-dancing-all-night.jpg",
-              "platform": "PS Vita",
-              "developer": "P-Studio",
-              "releaseYear": 2015,
-              "genre": "Ritmo",
-              "note": "Juego de ritmo con el reparto de Persona 4 y música de la saga. Rise y sus amigos se ven arrastrados a un escenario misterioso donde bailar es la única forma de rescatar a un grupo de ídolos."
-            },
-            {
-              "id": "persona-q2",
-              "type": "game",
-              "title": "Persona Q2: New Cinema Labyrinth",
-              "coverUrl": "assets/colecciones/persona/persona-q2.jpg",
-              "platform": "Nintendo 3DS",
-              "developer": "P-Studio",
-              "releaseYear": 2018,
-              "genre": "JRPG y mazmorras en primera persona",
-              "note": "Reúne a los protagonistas de Persona 3, 4 y 5 en un cine misterioso cuyas películas son laberintos de los que tienen que escapar."
-            },
-            {
-              "id": "persona-3-dancing-in-moonlight",
-              "type": "game",
-              "title": "Persona 3: Dancing in Moonlight",
-              "coverUrl": "assets/colecciones/persona/persona-3-dancing-in-moonlight.jpg",
-              "platform": "PS4",
-              "developer": "P-Studio",
-              "releaseYear": 2018,
-              "genre": "Ritmo",
-              "note": "Juego de ritmo con el reparto de Persona 3. Los residentes de la Sala de Terciopelo los retan a un concurso de baile dentro de un sueño, con remezclas de la música del juego."
-            },
-            {
-              "id": "persona-5-dancing-in-starlight",
-              "type": "game",
-              "title": "Persona 5: Dancing in Starlight",
-              "coverUrl": "assets/colecciones/persona/persona-5-dancing-in-starlight.jpg",
-              "platform": "PS4",
-              "developer": "P-Studio",
-              "releaseYear": 2018,
-              "genre": "Ritmo",
-              "note": "Juego de ritmo con el reparto de Persona 5. Los residentes de la Sala de Terciopelo proponen a los Ladrones Fantasma un concurso de baile en un sueño, con remezclas de la música del juego."
-            },
-            {
-              "id": "persona-5-strikers",
-              "type": "game",
-              "title": "Persona 5 Strikers",
-              "coverUrl": "assets/colecciones/persona/persona-5-strikers.jpg",
-              "platform": "PC",
-              "developer": "Omega Force / P-Studio",
-              "releaseYear": 2020,
-              "genre": "Acción y rol",
-              "note": "Secuela de acción de Persona 5 ambientada medio año después. Durante un viaje de verano por Japón, los Ladrones Fantasma se enfrentan a realidades distorsionadas en varias ciudades, con combates contra hordas de enemigos."
-            },
-            {
-              "id": "persona-5-tactica",
-              "type": "game",
-              "title": "Persona 5 Tactica",
-              "coverUrl": "assets/colecciones/persona/persona-5-tactica.jpg",
-              "platform": "PC",
-              "developer": "P-Studio",
-              "releaseYear": 2023,
-              "genre": "Rol táctico por turnos",
-              "note": "Rol táctico con los Ladrones Fantasma, que quedan atrapados en un reino extraño y se unen a Erina, una joven revolucionaria que lidera una revuelta contra sus tiranos."
-            },
-            {
-              "id": "persona-5-the-phantom-x",
-              "type": "game",
-              "title": "Persona 5: The Phantom X",
-              "coverUrl": "assets/colecciones/persona/persona-5-the-phantom-x.jpg",
-              "platform": "PC",
-              "developer": "Black Wings Game Studio",
-              "releaseYear": 2025,
-              "genre": "JRPG por turnos, gratuito",
-              "note": "Juego gratuito ambientado en el universo de Persona 5, con protagonista y grupo de Ladrones Fantasma nuevos. Lo desarrolla un estudio de Perfect World con licencia de Atlus."
-            }
-          ]
-        }
-      ]
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "28-dias-despues",
+       "type": "movieSeries",
+       "title": "28 días después",
+       "coverUrl": "assets/colecciones/portadas/28-dias-despues-28-dias-despues.jpg",
+       "releaseYear": 2002,
+       "genre": "Terror, suspense, ciencia ficción",
+       "note": "Un mensajero despierta del coma en un Londres desierto, arrasado por un virus que convierte a la gente en infectados violentos, y busca a otros supervivientes.",
+       "mediaType": "movie",
+       "duration": "1h 53m",
+       "creatorOrDirector": "Danny Boyle",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/28-days-later/"
+      },
+      {
+       "id": "28-semanas-despues",
+       "type": "movieSeries",
+       "title": "28 semanas después",
+       "coverUrl": "assets/colecciones/portadas/28-dias-despues-28-semanas-despues.jpg",
+       "releaseYear": 2007,
+       "genre": "Terror, suspense, ciencia ficción",
+       "note": "Medio año después del brote, el ejército estadounidense repuebla Londres en una zona segura, hasta que una portadora del virus lo desata de nuevo.",
+       "mediaType": "movie",
+       "duration": "1h 36m",
+       "creatorOrDirector": "Juan Carlos Fresnadillo",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/28-weeks-later/"
+      },
+      {
+       "id": "28-anos-despues",
+       "type": "movieSeries",
+       "title": "28 años después",
+       "coverUrl": "assets/colecciones/portadas/28-dias-despues-28-anos-despues.jpg",
+       "releaseYear": 2025,
+       "genre": "Terror, suspense, ciencia ficción",
+       "note": "Casi tres décadas después, una comunidad vive aislada en una isla británica. Un niño acompaña a su padre a tierra firme y descubre hasta dónde han cambiado los infectados.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Danny Boyle",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/28-years-later/"
+      },
+      {
+       "id": "28-anos-despues-el-templo-de-los-huesos",
+       "type": "movieSeries",
+       "title": "28 años después: El templo de los huesos",
+       "coverUrl": "assets/colecciones/portadas/28-dias-despues-28-anos-despues-el-templo-de-los-huesos.jpg",
+       "releaseYear": 2026,
+       "genre": "Terror, suspense, ciencia ficción",
+       "note": "Continuación directa de 28 años después: el joven Spike se cruza con una secta peligrosa mientras un médico descubre algo que puede cambiar el destino de los infectados.",
+       "mediaType": "movie",
+       "duration": "1h 49m",
+       "creatorOrDirector": "Nia DaCosta",
+       "collectionNumber": 4,
+       "externalUrl": "https://letterboxd.com/film/28-years-later-the-bone-temple/"
+      }
+     ]
     }
-  ]
+   ]
+  },
+  {
+   "id": "bioshock",
+   "nombre": "BioShock",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "bioshock-remastered",
+       "type": "game",
+       "title": "BioShock Remastered",
+       "coverUrl": "assets/colecciones/portadas/bioshock-bioshock-remastered.jpg",
+       "platform": "PC",
+       "developer": "2K Boston",
+       "releaseYear": 2007,
+       "genre": "Disparos en primera persona y terror",
+       "note": "En 1960, un superviviente de un accidente aéreo descubre Rapture, una ciudad submarina utópica destruida por la ambición y por una sustancia que altera el genoma.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "bioshock-2-remastered",
+       "type": "game",
+       "title": "BioShock 2 Remastered",
+       "coverUrl": "assets/colecciones/portadas/bioshock-bioshock-2-remastered.jpg",
+       "platform": "PC",
+       "developer": "2K Marin",
+       "releaseYear": 2010,
+       "genre": "Disparos en primera persona y terror",
+       "note": "Regreso a Rapture diez años después en la piel de un Big Daddy, en busca de la Little Sister a la que estaba unido.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "bioshock-infinite",
+       "type": "game",
+       "title": "BioShock Infinite",
+       "coverUrl": "assets/colecciones/portadas/bioshock-bioshock-infinite.jpg",
+       "platform": "PC",
+       "developer": "Irrational Games",
+       "releaseYear": 2013,
+       "genre": "Disparos en primera persona y fantasía",
+       "note": "En 1912, el exdetective Booker DeWitt viaja a la ciudad flotante de Columbia para rescatar a Elizabeth, una joven con el poder de abrir brechas entre mundos.",
+       "collectionNumber": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "blasphemous",
+   "nombre": "Blasphemous",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "blasphemous",
+       "type": "game",
+       "title": "Blasphemous",
+       "coverUrl": "assets/colecciones/portadas/blasphemous-blasphemous.jpg",
+       "platform": "PC",
+       "developer": "The Game Kitchen",
+       "releaseYear": 2019,
+       "genre": "Metroidvania y acción",
+       "note": "El Penitente recorre Cvstodia, una tierra de inspiración andaluza castigada por el Milagro, en un juego exigente de acción y plataformas.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "blasphemous-2",
+       "type": "game",
+       "title": "Blasphemous 2",
+       "coverUrl": "assets/colecciones/portadas/blasphemous-blasphemous-2.jpg",
+       "platform": "PC",
+       "developer": "The Game Kitchen",
+       "releaseYear": 2023,
+       "genre": "Metroidvania y acción",
+       "note": "El Penitente despierta de nuevo para detener el nacimiento de un hijo del Milagro, con tres armas que cambian el combate y la exploración.",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "carl-el-mazmorrero",
+   "nombre": "Carl el mazmorrero",
+   "grupos": [
+    {
+     "nombre": "Saga",
+     "obras": [
+      {
+       "id": "carl-el-mazmorrero",
+       "type": "book",
+       "title": "Carl el mazmorrero",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-carl-el-mazmorrero.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Carl y Princesa Donut, la gata de su exnovia, sobreviven al fin del mundo en un reality alienígena con forma de mazmorra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2025,
+       "pages": "448 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/231280059-carl-el-mazmorrero",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-juicio-final-de-carl",
+       "type": "book",
+       "title": "El Juicio Final de Carl",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-el-juicio-final-de-carl.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Carl y Donut bajan al tercer piso de la mazmorra, con cada vez más espectadores y menos reglas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2025,
+       "externalUrl": "https://www.goodreads.com/book/show/237911433-el-juicio-final-de-carl",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-libro-de-cocina-del-anarquista-de-la-mazmorra",
+       "type": "book",
+       "title": "El libro de cocina del anarquista de la mazmorra",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-el-libro-de-cocina-del-anarquista-de-la-mazmorra.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Cuarto piso: un tren que recorre un mundo en guerra, y un libro que puede cambiar las reglas de la mazmorra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "544 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/242017045-el-libro-de-cocina-del-anarquista-de-la-mazmorra",
+       "collectionNumber": 3
+      },
+      {
+       "id": "el-portal-de-los-dioses-ferales",
+       "type": "book",
+       "title": "El portal de los dioses ferales",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-el-portal-de-los-dioses-ferales.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Cuarto libro: Carl y Donut llegan a un piso cada vez más retorcido, con dioses que se juegan su favor.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "592 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/247752357-el-portal-de-los-dioses-ferales",
+       "collectionNumber": 4
+      },
+      {
+       "id": "la-mascarada-del-carnicero",
+       "type": "book",
+       "title": "La mascarada del carnicero",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-la-mascarada-del-carnicero.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Quinto libro: Donut y Carl afrontan un piso de intrigas donde se juega algo más que la vida.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "744",
+       "externalUrl": "https://www.goodreads.com/book/show/250700425-la-mascarada-del-carnicero",
+       "collectionNumber": 5
+      },
+      {
+       "id": "el-ojo-de-la-novia-frenopatica",
+       "type": "book",
+       "title": "El ojo de la novia frenopática",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-el-ojo-de-la-novia-frenopatica.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Sexto libro de la saga de Carl y Princesa Donut, en un piso aún más peligroso.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "832",
+       "externalUrl": "https://www.goodreads.com/book/show/254125747",
+       "collectionNumber": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "control",
+   "nombre": "Control",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "control",
+       "type": "game",
+       "title": "Control",
+       "coverUrl": "assets/colecciones/portadas/control-control.jpg",
+       "platform": "PC",
+       "developer": "Remedy Entertainment",
+       "releaseYear": 2019,
+       "genre": "Acción y aventura sobrenatural",
+       "note": "Jesse Faden llega a la Oficina Federal de Control en busca de su hermano y acaba siendo su directora, en un edificio cambiante invadido por una fuerza llamada el Siseo.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "control-resonant",
+       "type": "game",
+       "title": "Control Resonant",
+       "coverUrl": "assets/colecciones/portadas/control-control-resonant.jpg",
+       "platform": "PC",
+       "developer": "Remedy Entertainment",
+       "releaseYear": 2026,
+       "genre": "Acción y rol",
+       "note": "Secuela protagonizada por Dylan Faden, que recorre un Manhattan deformado al borde de la aniquilación.",
+       "collectionNumber": 2
+      }
+     ]
+    },
+    {
+     "nombre": "Spin-offs",
+     "obras": [
+      {
+       "id": "fbc-firebreak",
+       "type": "game",
+       "title": "FBC: Firebreak",
+       "coverUrl": "assets/colecciones/portadas/control-fbc-firebreak.jpg",
+       "platform": "PC",
+       "developer": "Remedy Entertainment",
+       "releaseYear": 2025,
+       "genre": "Disparos cooperativos",
+       "note": "Juego cooperativo de hasta tres jugadores ambientado en el universo de Control: un equipo de voluntarios limpia la Casa Inmemorial."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cosmere",
+   "nombre": "Cosmere",
+   "grupos": [
+    {
+     "nombre": "Otras novelas",
+     "obras": [
+      {
+       "id": "elantris",
+       "type": "book",
+       "title": "Elantris",
+       "coverUrl": "assets/colecciones/portadas/cosmere-elantris.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "La ciudad de los dioses cayó hace diez años bajo una maldición. El príncipe Raoden despierta transformado en uno de sus habitantes y la princesa Sarene intenta salvar el reino de Arelon.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2005,
+       "pages": "638",
+       "externalUrl": "https://www.goodreads.com/book/show/68427.Elantris",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-aliento-de-los-dioses",
+       "type": "book",
+       "title": "El aliento de los dioses",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-aliento-de-los-dioses.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "En el reino de Hallandren, los colores dan poder y los muertos vuelven como dioses. Dos hermanas se ven atrapadas en una conspiración política.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "pages": "720",
+       "externalUrl": "https://www.goodreads.com/book/show/30055560-el-aliento-de-los-dioses"
+      },
+      {
+       "id": "arcanum-ilimitado",
+       "type": "book",
+       "title": "Arcanum ilimitado",
+       "coverUrl": "assets/colecciones/portadas/cosmere-arcanum-ilimitado.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Colección de relatos del Cosmere, con historias de varios mundos y escritos sobre la relación entre ellos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2016,
+       "pages": "672",
+       "externalUrl": "https://www.goodreads.com/book/show/28595941-arcanum-unbounded"
+      },
+      {
+       "id": "trenza-del-mar-esmeralda",
+       "type": "book",
+       "title": "Trenza del mar Esmeralda",
+       "coverUrl": "assets/colecciones/portadas/cosmere-trenza-del-mar-esmeralda.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Una joven de una isla sin horizonte se embarca para rescatar a su amado en mares de esporas de colores.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "pages": "560",
+       "externalUrl": "https://www.goodreads.com/book/show/75509306-trenza-del-mar-esmeralda"
+      },
+      {
+       "id": "yumi-y-el-pintor-de-pesadillas",
+       "type": "book",
+       "title": "Yumi y el pintor de pesadillas",
+       "coverUrl": "assets/colecciones/portadas/cosmere-yumi-y-el-pintor-de-pesadillas.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Una invocadora de espíritus y un pintor de pesadillas se intercambian el cuerpo y deben trabajar juntos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "pages": "560",
+       "externalUrl": "https://www.goodreads.com/book/show/178158298-yumi-y-el-pintor-de-pesadillas"
+      },
+      {
+       "id": "el-hombre-iluminado",
+       "type": "book",
+       "title": "El hombre iluminado",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-hombre-iluminado.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Un exsoldado inmortal huye de sus perseguidores por un mundo extraño lleno de magia y peste.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "pages": "544",
+       "externalUrl": "https://www.goodreads.com/book/show/195568783-el-hombre-iluminado"
+      }
+     ]
+    },
+    {
+     "nombre": "Nacidos de la Bruma",
+     "obras": [
+      {
+       "id": "el-imperio-final",
+       "type": "book",
+       "title": "El Imperio Final",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-imperio-final.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Durante mil años, el Lord Legislador ha gobernado un mundo de ceniza. Kelsier reúne a una banda de ladrones y a la joven Vin para dar el golpe más audaz de la historia.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "690",
+       "externalUrl": "https://www.goodreads.com/book/show/7183286-el-imperio-final",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-pozo-de-la-ascension",
+       "type": "book",
+       "title": "El Pozo de la Ascensión",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-pozo-de-la-ascension.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Tras la caída del Imperio, Vin y Elend intentan gobernar Luthadel mientras tres ejércitos asedian la ciudad y un poder antiguo despierta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "800",
+       "externalUrl": "https://www.goodreads.com/book/show/6568801-el-pozo-de-la-ascensi-n",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-heroe-de-las-eras",
+       "type": "book",
+       "title": "El Héroe de las Eras",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-heroe-de-las-eras.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Cierre de la primera trilogía de Nacidos de la Bruma: el fin del mundo se acerca y Vin debe descubrir el secreto del Héroe de las Eras.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008,
+       "pages": "768",
+       "externalUrl": "https://www.goodreads.com/book/show/7935023-el-h-roe-de-las-eras",
+       "collectionNumber": 3
+      },
+      {
+       "id": "aleacion-de-ley",
+       "type": "book",
+       "title": "Aleación de ley",
+       "coverUrl": "assets/colecciones/portadas/cosmere-aleacion-de-ley.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Trescientos años después de la primera trilogía, el vigilante Wax vuelve a la ciudad de Elendel y se enfrenta a un secuestrador en un mundo con ferrocarriles y pistolas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2011,
+       "pages": "368",
+       "externalUrl": "https://www.goodreads.com/book/show/15749863-aleaci-n-de-ley",
+       "collectionNumber": 4
+      },
+      {
+       "id": "sombras-de-identidad",
+       "type": "book",
+       "title": "Sombras de identidad",
+       "coverUrl": "assets/colecciones/portadas/cosmere-sombras-de-identidad.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Wax y Wayne investigan a un asesino que se hace pasar por un dios en plena tensión social en Elendel.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2015,
+       "pages": "440",
+       "externalUrl": "https://www.goodreads.com/book/show/32495123-sombras-de-identidad",
+       "collectionNumber": 5
+      },
+      {
+       "id": "brazales-de-duelo",
+       "type": "book",
+       "title": "Brazales de duelo",
+       "coverUrl": "assets/colecciones/portadas/cosmere-brazales-de-duelo.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Wax viaja a la ciudad de Nueva Seran tras un artefacto que podría cambiar el equilibrio de poder en Scadrial.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2016,
+       "pages": "512",
+       "externalUrl": "https://www.goodreads.com/book/show/35449024-brazales-de-duelo",
+       "collectionNumber": 6
+      },
+      {
+       "id": "el-metal-perdido",
+       "type": "book",
+       "title": "El metal perdido",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-metal-perdido.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Cierre de la segunda era de Nacidos de la Bruma: Wax y Marasi se enfrentan a una amenaza que llega de fuera de Scadrial.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2022,
+       "pages": "652",
+       "externalUrl": "https://www.goodreads.com/book/show/62070465-el-metal-perdido",
+       "collectionNumber": 7
+      }
+     ]
+    },
+    {
+     "nombre": "El Archivo de las Tormentas",
+     "obras": [
+      {
+       "id": "el-camino-de-los-reyes",
+       "type": "book",
+       "title": "El camino de los reyes",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-camino-de-los-reyes.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "En un mundo azotado por tormentas, un esclavo, una erudita y un alto príncipe se ven arrastrados a la guerra y al regreso de un peligro olvidado.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2010,
+       "pages": "1196",
+       "externalUrl": "https://www.goodreads.com/book/show/25686515-el-camino-de-los-reyes",
+       "collectionNumber": 1
+      },
+      {
+       "id": "palabras-radiantes",
+       "type": "book",
+       "title": "Palabras radiantes",
+       "coverUrl": "assets/colecciones/portadas/cosmere-palabras-radiantes.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Kaladin se forja como líder mientras Shallan busca una ciudad perdida y los Portadores del Vacío regresan a Roshar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2014,
+       "pages": "1248",
+       "externalUrl": "https://www.goodreads.com/book/show/25686563-palabras-radiantes",
+       "collectionNumber": 2
+      },
+      {
+       "id": "juramentada",
+       "type": "book",
+       "title": "Juramentada",
+       "coverUrl": "assets/colecciones/portadas/cosmere-juramentada.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Dalinar debe unir a las naciones de Roshar frente a la Tormenta Eterna y enfrentarse a su propio pasado.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2017,
+       "pages": "1918",
+       "externalUrl": "https://www.goodreads.com/book/show/38920518-juramentada",
+       "collectionNumber": 3
+      },
+      {
+       "id": "el-ritmo-de-la-guerra",
+       "type": "book",
+       "title": "El ritmo de la guerra",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-ritmo-de-la-guerra.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Con parte de Urithiru ocupada, Navani investiga la ciencia de la luz tormentosa y Kaladin lucha contra sus heridas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2020,
+       "pages": "1424",
+       "externalUrl": "https://www.goodreads.com/book/show/54317058-el-ritmo-de-la-guerra",
+       "collectionNumber": 4
+      },
+      {
+       "id": "viento-y-verdad",
+       "type": "book",
+       "title": "Viento y verdad",
+       "coverUrl": "assets/colecciones/portadas/cosmere-viento-y-verdad.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Cierre de la primera etapa de El Archivo de las Tormentas: Dalinar se prepara para el duelo final con Odium.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2024,
+       "pages": "1408",
+       "externalUrl": "https://www.goodreads.com/book/show/216837600-viento-y-verdad",
+       "collectionNumber": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dark-souls",
+   "nombre": "Dark Souls",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "dark-souls-remastered",
+       "type": "game",
+       "title": "Dark Souls Remastered",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-remastered.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2011,
+       "genre": "Rol de acción",
+       "note": "Un no muerto maldito viaja a Lordran para decidir el destino de la Era del Fuego. Es la versión mejorada del original, con todo su contenido adicional.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "dark-souls-ii-scholar-of-the-first-sin",
+       "type": "game",
+       "title": "Dark Souls II: Scholar of the First Sin",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-ii-scholar-of-the-first-sin.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2014,
+       "genre": "Rol de acción",
+       "note": "Un maldito llega a Drangleic en busca de la cura a su condición. Esta edición incluye las expansiones y reordena enemigos y encuentros.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "dark-souls-iii",
+       "type": "game",
+       "title": "Dark Souls III",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-iii.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2016,
+       "genre": "Rol de acción",
+       "note": "Un Latente debe devolver a sus tronos a los Señores de la Ceniza en un mundo que agoniza. Es el cierre de la trilogía.",
+       "collectionNumber": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dead-space",
+   "nombre": "Dead Space",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "dead-space-2008",
+       "type": "game",
+       "title": "Dead Space (2008)",
+       "coverUrl": "assets/colecciones/portadas/dead-space-dead-space-2008.jpg",
+       "platform": "PC",
+       "developer": "EA Redwood Shores",
+       "releaseYear": 2008,
+       "genre": "Terror y disparos en tercera persona",
+       "note": "El ingeniero Isaac Clarke sube a la nave minera USG Ishimura y la encuentra plagada de necromorfos. Es el juego original.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "dead-space-2",
+       "type": "game",
+       "title": "Dead Space 2",
+       "coverUrl": "assets/colecciones/portadas/dead-space-dead-space-2.jpg",
+       "platform": "PC",
+       "developer": "Visceral Games",
+       "releaseYear": 2011,
+       "genre": "Terror y disparos en tercera persona",
+       "note": "Isaac despierta en la estación del Ensanche, en Titán, sin memoria de los últimos años y en mitad de un nuevo brote de necromorfos.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "dead-space-3",
+       "type": "game",
+       "title": "Dead Space 3",
+       "coverUrl": "assets/colecciones/portadas/dead-space-dead-space-3.jpg",
+       "platform": "PC",
+       "developer": "Visceral Games",
+       "releaseYear": 2013,
+       "genre": "Terror y disparos en tercera persona",
+       "note": "Isaac viaja al helado planeta Tau Volantis para acabar con el origen de las Efigies. Se puede jugar en cooperativo.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "dead-space",
+       "type": "game",
+       "title": "Dead Space",
+       "coverUrl": "assets/colecciones/portadas/dead-space-dead-space.jpg",
+       "platform": "PC",
+       "developer": "Motive",
+       "releaseYear": 2023,
+       "genre": "Terror y disparos en tercera persona",
+       "note": "Remake del original de 2008 con gráficos, sonido y guion renovados, y la USG Ishimura recorrida sin pantallas de carga.",
+       "collectionNumber": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "death-stranding",
+   "nombre": "Death Stranding",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "death-stranding",
+       "type": "game",
+       "title": "Death Stranding",
+       "coverUrl": "assets/colecciones/portadas/death-stranding-death-stranding.jpg",
+       "platform": "PC",
+       "developer": "Kojima Productions",
+       "releaseYear": 2019,
+       "genre": "Acción y exploración",
+       "note": "En unos Estados Unidos devastados, Sam Porter Bridges reconecta el país entregando paquetes a pie, entre criaturas del Más Allá.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "death-stranding-2-on-the-beach",
+       "type": "game",
+       "title": "Death Stranding 2: On the Beach",
+       "coverUrl": "assets/colecciones/portadas/death-stranding-death-stranding-2-on-the-beach.jpg",
+       "platform": "PC",
+       "developer": "Kojima Productions",
+       "releaseYear": 2025,
+       "genre": "Acción y exploración",
+       "note": "Sam vuelve a ponerse en marcha para conectar Australia a la red quiral, en un viaje con un reparto nuevo y un mundo más hostil. Llegó a PC en 2026.",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "distrito-13",
+   "nombre": "Distrito 13",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "distrito-13",
+       "type": "movieSeries",
+       "title": "Distrito 13",
+       "coverUrl": "assets/colecciones/portadas/distrito-13-distrito-13.jpg",
+       "releaseYear": 2004,
+       "genre": "Acción, suspense, ciencia ficción",
+       "note": "En un barrio amurallado de las afueras de París, un policía y un experto en parkour deben desactivar una bomba robada por el capo de la zona.",
+       "mediaType": "movie",
+       "duration": "1h 24m",
+       "creatorOrDirector": "Pierre Morel",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/district-b13/"
+      },
+      {
+       "id": "distrito-13-ultimatum",
+       "type": "movieSeries",
+       "title": "Distrito 13: Ultimatum",
+       "coverUrl": "assets/colecciones/portadas/distrito-13-distrito-13-ultimatum.jpg",
+       "releaseYear": 2009,
+       "genre": "Acción, suspense, crimen",
+       "note": "Damien y Leïto vuelven a unirse cuando una conspiración del gobierno amenaza con demoler el distrito y acabar con sus habitantes.",
+       "mediaType": "movie",
+       "duration": "1h 41m",
+       "creatorOrDirector": "Patrick Alessandrin",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/district-13-ultimatum/"
+      },
+      {
+       "id": "brick-mansions-la-fortaleza",
+       "type": "movieSeries",
+       "title": "Brick Mansions (La fortaleza)",
+       "coverUrl": "assets/colecciones/portadas/distrito-13-brick-mansions-la-fortaleza.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, crimen, drama",
+       "note": "Versión estadounidense ambientada en Detroit, con Paul Walker como policía infiltrado y David Belle repitiendo como experto en parkour.",
+       "mediaType": "movie",
+       "duration": "1h 26m",
+       "creatorOrDirector": "Camille Delamarre",
+       "externalUrl": "https://letterboxd.com/film/brick-mansions/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dragon-age",
+   "nombre": "Dragon Age",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "dragon-age-origins",
+       "type": "game",
+       "title": "Dragon Age: Origins",
+       "coverUrl": "assets/colecciones/portadas/dragon-age-dragon-age-origins.jpg",
+       "platform": "PC",
+       "developer": "BioWare",
+       "releaseYear": 2009,
+       "genre": "Rol",
+       "note": "Un Guarda Gris debe unir a Ferelden contra la Ruina, una marea de engendros tenebrosos. El origen de tu personaje cambia la historia.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "dragon-age-ii",
+       "type": "game",
+       "title": "Dragon Age II",
+       "coverUrl": "assets/colecciones/portadas/dragon-age-dragon-age-ii.jpg",
+       "platform": "PC",
+       "developer": "BioWare",
+       "releaseYear": 2011,
+       "genre": "Rol de acción",
+       "note": "Hawke huye de la Ruina y prospera en Kirkwall durante una década, en la que la tensión entre magos y templarios lleva a la ciudad al desastre.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "dragon-age-inquisition",
+       "type": "game",
+       "title": "Dragon Age: Inquisition",
+       "coverUrl": "assets/colecciones/portadas/dragon-age-dragon-age-inquisition.jpg",
+       "platform": "PC",
+       "developer": "BioWare",
+       "releaseYear": 2014,
+       "genre": "Rol de acción",
+       "note": "Una brecha en el cielo libera demonios en Thedas. La Inquisición debe cerrarla y enfrentarse a quien está detrás.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "dragon-age-the-veilguard",
+       "type": "game",
+       "title": "Dragon Age: The Veilguard",
+       "coverUrl": "assets/colecciones/portadas/dragon-age-dragon-age-the-veilguard.jpg",
+       "platform": "PC",
+       "developer": "BioWare",
+       "releaseYear": 2024,
+       "genre": "Rol de acción",
+       "note": "Rook reúne a un grupo de compañeros para detener a dos dioses antiguos y a Solas, en la entrega que cierra la historia del Velo.",
+       "collectionNumber": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eisenhorn",
+   "nombre": "Eisenhorn",
+   "universo": "Warhammer 40.000",
+   "grupos": [
+    {
+     "nombre": "Inquisidor Eisenhorn",
+     "obras": [
+      {
+       "id": "xenos",
+       "type": "book",
+       "title": "Xenos",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-xenos.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "El inquisidor Eisenhorn persigue a un hereje por los mundos del Imperio y descubre el Necrotheosis, un libro prohibido.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2001,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/1009259.Xenos",
+       "collectionNumber": 1
+      },
+      {
+       "id": "malleus",
+       "type": "book",
+       "title": "Malleus",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-malleus.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Eisenhorn es acusado de traidor por la propia Inquisición después de un ataque en una gran celebración.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2001,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/1507375.Malleus",
+       "collectionNumber": 2
+      },
+      {
+       "id": "hereticus",
+       "type": "book",
+       "title": "Hereticus",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-hereticus.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Eisenhorn, cada vez más cerca de la herejía que perseguía, se enfrenta a un viejo enemigo.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2002,
+       "pages": "320",
+       "externalUrl": "https://www.goodreads.com/book/show/1507378.Hereticus",
+       "collectionNumber": 3
+      },
+      {
+       "id": "eisenhorn-omnibus",
+       "type": "book",
+       "title": "Eisenhorn Omnibus",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-eisenhorn-omnibus.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Reúne en un volumen la trilogía del inquisidor Gregor Eisenhorn: Xenos, Malleus y Hereticus, en el imperio de Warhammer 40.000.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2017,
+       "pages": "1088",
+       "externalUrl": "https://www.goodreads.com/book/show/33871217-eisenhorn"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "el-padrino",
+   "nombre": "El Padrino",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "el-padrino",
+       "type": "movieSeries",
+       "title": "El padrino",
+       "coverUrl": "assets/colecciones/portadas/el-padrino-el-padrino.jpg",
+       "releaseYear": 1972,
+       "genre": "Drama, crimen",
+       "note": "Don Vito Corleone dirige la familia mafiosa más poderosa de Nueva York. Cuando sobrevive a un atentado, su hijo Michael, que siempre quiso quedarse fuera, acaba entrando en el negocio.",
+       "mediaType": "movie",
+       "duration": "2h 55m",
+       "creatorOrDirector": "Francis Ford Coppola",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/the-godfather/"
+      },
+      {
+       "id": "el-padrino-ii",
+       "type": "movieSeries",
+       "title": "El padrino II",
+       "coverUrl": "assets/colecciones/portadas/el-padrino-el-padrino-ii.jpg",
+       "releaseYear": 1974,
+       "genre": "Drama, crimen",
+       "note": "Michael consolida su poder mientras destruye a su propia familia, en paralelo a la juventud de Vito Corleone en la Nueva York de principios del siglo XX.",
+       "mediaType": "movie",
+       "duration": "3h 20m",
+       "creatorOrDirector": "Francis Ford Coppola",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/the-godfather-part-ii/"
+      },
+      {
+       "id": "el-padrino-iii",
+       "type": "movieSeries",
+       "title": "El padrino III",
+       "coverUrl": "assets/colecciones/portadas/el-padrino-el-padrino-iii.jpg",
+       "releaseYear": 1990,
+       "genre": "Crimen, drama, suspense",
+       "note": "Un Michael Corleone envejecido intenta legitimar a la familia a través del Vaticano, pero el pasado no le deja salir.",
+       "mediaType": "movie",
+       "duration": "2h 42m",
+       "creatorOrDirector": "Francis Ford Coppola",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/the-godfather-part-iii/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-fantasy",
+   "nombre": "Final Fantasy",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "final-fantasy",
+       "type": "game",
+       "title": "Final Fantasy",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1987,
+       "genre": "JRPG por turnos",
+       "note": "Cuatro Guerreros de la Luz recorren el mundo para reavivar los cristales. Es la edición Pixel Remaster del juego que inició la saga.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "final-fantasy-ii",
+       "type": "game",
+       "title": "Final Fantasy II",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-ii.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1988,
+       "genre": "JRPG por turnos",
+       "note": "Cuatro jóvenes se unen a la rebelión contra el Imperio de Palamecia, con un sistema en el que los personajes mejoran por el uso. Pixel Remaster.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "final-fantasy-iii",
+       "type": "game",
+       "title": "Final Fantasy III",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-iii.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1990,
+       "genre": "JRPG por turnos",
+       "note": "Cuatro huérfanos elegidos por el cristal del viento emprenden un viaje con el sistema de trabajos que definiría a la saga. Pixel Remaster.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "final-fantasy-iv",
+       "type": "game",
+       "title": "Final Fantasy IV",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-iv.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1991,
+       "genre": "JRPG por turnos",
+       "note": "El caballero oscuro Cecil cuestiona las órdenes de su rey y emprende un camino de redención hasta la Luna. Pixel Remaster.",
+       "collectionNumber": 4
+      },
+      {
+       "id": "final-fantasy-v",
+       "type": "game",
+       "title": "Final Fantasy V",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-v.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1992,
+       "genre": "JRPG por turnos",
+       "note": "Bartz y sus amigos protegen los cristales elementales con un sistema de trabajos muy flexible. Pixel Remaster.",
+       "collectionNumber": 5
+      },
+      {
+       "id": "final-fantasy-vi",
+       "type": "game",
+       "title": "Final Fantasy VI",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-vi.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1994,
+       "genre": "JRPG por turnos",
+       "note": "Un grupo de rebeldes se enfrenta al Imperio Gestahl y al desquiciado Kefka en un mundo de magia y máquinas. Pixel Remaster.",
+       "collectionNumber": 6
+      },
+      {
+       "id": "final-fantasy-vii",
+       "type": "game",
+       "title": "Final Fantasy VII",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-vii.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1997,
+       "genre": "JRPG por turnos",
+       "note": "El mercenario Cloud Strife se une a Avalancha contra la corporación Shinra y acaba persiguiendo a Sefirot. Es el juego original.",
+       "collectionNumber": 7
+      },
+      {
+       "id": "final-fantasy-vii-remake-intergrade",
+       "type": "game",
+       "title": "Final Fantasy VII Remake Intergrade",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-vii-remake-intergrade.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2020,
+       "genre": "Rol de acción",
+       "note": "Primera parte de la nueva versión de Final Fantasy VII, centrada en Midgar, con combate en tiempo real y un episodio dedicado a Yuffie.",
+       "collectionNumber": 7
+      },
+      {
+       "id": "final-fantasy-vii-rebirth",
+       "type": "game",
+       "title": "Final Fantasy VII Rebirth",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-vii-rebirth.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2024,
+       "genre": "Rol de acción",
+       "note": "Segunda parte de la nueva versión: Cloud y sus amigos salen de Midgar a un mundo abierto tras los pasos de Sefirot.",
+       "collectionNumber": 7
+      },
+      {
+       "id": "final-fantasy-viii-remastered",
+       "type": "game",
+       "title": "Final Fantasy VIII Remastered",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-viii-remastered.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1999,
+       "genre": "JRPG por turnos",
+       "note": "Squall Leonhart y otros alumnos del Jardín de Balamb se forman como mercenarios y acaban ante una hechicera que amenaza el futuro.",
+       "collectionNumber": 8
+      },
+      {
+       "id": "final-fantasy-ix",
+       "type": "game",
+       "title": "Final Fantasy IX",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-ix.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2000,
+       "genre": "JRPG por turnos",
+       "note": "El ladrón Yitán secuestra a la princesa Garnet y se ve envuelto en una guerra, en un homenaje a los primeros juegos de la saga.",
+       "collectionNumber": 9
+      },
+      {
+       "id": "final-fantasy-x",
+       "type": "game",
+       "title": "Final Fantasy X",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-x.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2001,
+       "genre": "JRPG por turnos",
+       "note": "Tidus, estrella del blitzbol, llega a Spira y acompaña a la invocadora Yuna en su peregrinación contra Sinh. La edición HD incluye Final Fantasy X-2.",
+       "collectionNumber": 10
+      },
+      {
+       "id": "final-fantasy-xii-the-zodiac-age",
+       "type": "game",
+       "title": "Final Fantasy XII: The Zodiac Age",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xii-the-zodiac-age.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2006,
+       "genre": "Rol táctico",
+       "note": "En Ivalice, la princesa Ashe y el joven Vaan se enfrentan al Imperio de Archadia. Versión remasterizada con sistema de licencias renovado.",
+       "collectionNumber": 12
+      },
+      {
+       "id": "final-fantasy-xiii",
+       "type": "game",
+       "title": "Final Fantasy XIII",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xiii.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2009,
+       "genre": "JRPG",
+       "note": "Lightning y un grupo de marcados por los fal'Cie huyen de su propio mundo, Cocoon, y luchan contra su destino.",
+       "collectionNumber": 13
+      },
+      {
+       "id": "final-fantasy-xiii-2",
+       "type": "game",
+       "title": "Final Fantasy XIII-2",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xiii-2.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2011,
+       "genre": "JRPG",
+       "note": "Serah y Noel viajan por el tiempo para encontrar a Lightning y cambiar un futuro destruido.",
+       "collectionNumber": 13
+      },
+      {
+       "id": "lightning-returns-final-fantasy-xiii",
+       "type": "game",
+       "title": "Lightning Returns: Final Fantasy XIII",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-lightning-returns-final-fantasy-xiii.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2013,
+       "genre": "Rol de acción",
+       "note": "En los últimos trece días del mundo, Lightning debe salvar almas antes del fin. Cierre de la trilogía de Final Fantasy XIII.",
+       "collectionNumber": 13
+      },
+      {
+       "id": "final-fantasy-xiv-online",
+       "type": "game",
+       "title": "Final Fantasy XIV Online",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xiv-online.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2013,
+       "genre": "Rol multijugador masivo",
+       "note": "Juego en línea ambientado en Eorzea, con una historia premiada que crece con cada expansión. Requiere suscripción.",
+       "collectionNumber": 14
+      },
+      {
+       "id": "final-fantasy-xv",
+       "type": "game",
+       "title": "Final Fantasy XV",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xv.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2016,
+       "genre": "Rol de acción",
+       "note": "El príncipe Noctis recorre el mundo abierto de Eos en coche con sus tres amigos para recuperar su reino.",
+       "collectionNumber": 15
+      },
+      {
+       "id": "final-fantasy-xvi",
+       "type": "game",
+       "title": "Final Fantasy XVI",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xvi.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2023,
+       "genre": "Rol de acción",
+       "note": "Clive Rosfield jura venganza en Valisthea, un mundo de fantasía oscura donde los Dominantes invocan a poderosos Eikons.",
+       "collectionNumber": 16
+      }
+     ]
+    },
+    {
+     "nombre": "Spin-offs",
+     "obras": [
+      {
+       "id": "crisis-core-final-fantasy-vii-reunion",
+       "type": "game",
+       "title": "Crisis Core: Final Fantasy VII Reunion",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-crisis-core-final-fantasy-vii-reunion.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2007,
+       "genre": "Rol de acción",
+       "note": "Precuela de Final Fantasy VII sobre Zack Fair, soldado de SOLDADO. Versión remasterizada del juego de PSP, con combate y voces nuevos."
+      },
+      {
+       "id": "final-fantasy-tactics-the-ivalice-chronicles",
+       "type": "game",
+       "title": "Final Fantasy Tactics: The Ivalice Chronicles",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-tactics-the-ivalice-chronicles.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 1997,
+       "genre": "Rol táctico",
+       "note": "Ramza Beoulve se ve arrastrado a la Guerra de los Leones en Ivalice. Versión renovada del clásico de rol táctico."
+      },
+      {
+       "id": "final-fantasy-type-0-hd",
+       "type": "game",
+       "title": "Final Fantasy Type-0 HD",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-type-0-hd.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2011,
+       "genre": "Rol de acción",
+       "note": "Los alumnos de la Clase Cero defienden el dominio de Rubrum en una guerra entre naciones."
+      },
+      {
+       "id": "stranger-of-paradise-final-fantasy-origin",
+       "type": "game",
+       "title": "Stranger of Paradise: Final Fantasy Origin",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-stranger-of-paradise-final-fantasy-origin.jpg",
+       "platform": "PC",
+       "developer": "Team Ninja",
+       "releaseYear": 2022,
+       "genre": "Rol de acción",
+       "note": "Jack Garland lucha contra Caos en un Final Fantasy muy exigente, reinterpretación oscura del primer juego."
+      },
+      {
+       "id": "world-of-final-fantasy",
+       "type": "game",
+       "title": "World of Final Fantasy",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-world-of-final-fantasy.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2016,
+       "genre": "JRPG por turnos",
+       "note": "Los mellizos Lann y Reynn recorren Grymoire junto a versiones pequeñas de personajes de la saga, capturando monstruos."
+      },
+      {
+       "id": "dissidia-final-fantasy-nt",
+       "type": "game",
+       "title": "Dissidia Final Fantasy NT",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-dissidia-final-fantasy-nt.jpg",
+       "platform": "PC",
+       "developer": "Team Ninja",
+       "releaseYear": 2018,
+       "genre": "Lucha",
+       "note": "Combates de tres contra tres con héroes y villanos de toda la saga."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "goool",
+   "nombre": "¡Goool!",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "goool-la-pelicula",
+       "type": "movieSeries",
+       "title": "¡Goool! La película",
+       "coverUrl": "assets/colecciones/portadas/goool-goool-la-pelicula.jpg",
+       "releaseYear": 2005,
+       "genre": "Drama, familia",
+       "note": "Santiago Muñez, un joven mexicano de Los Ángeles, recibe la oportunidad de hacer una prueba en el Newcastle United y cumplir su sueño.",
+       "mediaType": "movie",
+       "duration": "1h 58m",
+       "creatorOrDirector": "Danny Cannon",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/goal-the-dream-begins/"
+      },
+      {
+       "id": "goool-2-viviendo-el-sueno",
+       "type": "movieSeries",
+       "title": "¡Goool 2! Viviendo el sueño",
+       "coverUrl": "assets/colecciones/portadas/goool-goool-2-viviendo-el-sueno.jpg",
+       "releaseYear": 2007,
+       "genre": "Drama",
+       "note": "Santiago ficha por el Real Madrid y descubre que la fama y el dinero complican todo lo que dejó en Newcastle.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Jaume Collet-Serra",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/goal-ii-living-the-dream/"
+      },
+      {
+       "id": "goal-3",
+       "type": "movieSeries",
+       "title": "Goal 3",
+       "coverUrl": "assets/colecciones/portadas/goool-goal-3.jpg",
+       "releaseYear": 2008,
+       "genre": "Drama",
+       "note": "Tres compañeros de la selección inglesa viven el Mundial de 2006 de Alemania, dentro y fuera del campo.",
+       "mediaType": "movie",
+       "duration": "1h 31m",
+       "creatorOrDirector": "Andrew Morahan",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/goal-iii-taking-on-the-world/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "half-life",
+   "nombre": "Half-Life",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "half-life",
+       "type": "game",
+       "title": "Half-Life",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life.jpg",
+       "platform": "PC",
+       "developer": "Valve",
+       "releaseYear": 1998,
+       "genre": "Disparos en primera persona",
+       "note": "El científico Gordon Freeman lucha por salir de Black Mesa después de que un experimento abra un portal a otro mundo.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "half-life-2",
+       "type": "game",
+       "title": "Half-Life 2",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-2.jpg",
+       "platform": "PC",
+       "developer": "Valve",
+       "releaseYear": 2004,
+       "genre": "Disparos en primera persona",
+       "note": "Gordon Freeman despierta en City 17, bajo el yugo de la Alianza, y se une a la resistencia.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "half-life-2-episode-one",
+       "type": "game",
+       "title": "Half-Life 2: Episode One",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-2-episode-one.jpg",
+       "platform": "PC",
+       "developer": "Valve",
+       "releaseYear": 2006,
+       "genre": "Disparos en primera persona",
+       "note": "Gordon y Alyx escapan de City 17 antes de que estalle la Ciudadela.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "half-life-2-episode-two",
+       "type": "game",
+       "title": "Half-Life 2: Episode Two",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-2-episode-two.jpg",
+       "platform": "PC",
+       "developer": "Valve",
+       "releaseYear": 2007,
+       "genre": "Disparos en primera persona",
+       "note": "Gordon y Alyx llevan a la resistencia datos vitales por la Costa Blanca, con la Alianza pisándoles los talones.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "half-life-alyx",
+       "type": "game",
+       "title": "Half-Life: Alyx",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-alyx.jpg",
+       "platform": "PC",
+       "developer": "Valve",
+       "releaseYear": 2020,
+       "genre": "Disparos en realidad virtual",
+       "note": "Precuela de Half-Life 2 en realidad virtual, con Alyx Vance en City 17. Necesita un visor de realidad virtual."
+      }
+     ]
+    },
+    {
+     "nombre": "Expansiones y remakes",
+     "obras": [
+      {
+       "id": "half-life-opposing-force",
+       "type": "game",
+       "title": "Half-Life: Opposing Force",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-opposing-force.jpg",
+       "platform": "PC",
+       "developer": "Gearbox Software",
+       "releaseYear": 1999,
+       "genre": "Disparos en primera persona",
+       "note": "Expansión de Half-Life desde el punto de vista de Adrian Shephard, soldado enviado a limpiar Black Mesa."
+      },
+      {
+       "id": "half-life-blue-shift",
+       "type": "game",
+       "title": "Half-Life: Blue Shift",
+       "coverUrl": "assets/colecciones/portadas/half-life-half-life-blue-shift.jpg",
+       "platform": "PC",
+       "developer": "Gearbox Software",
+       "releaseYear": 2001,
+       "genre": "Disparos en primera persona",
+       "note": "Expansión de Half-Life protagonizada por Barney Calhoun, guardia de seguridad de Black Mesa."
+      },
+      {
+       "id": "black-mesa",
+       "type": "game",
+       "title": "Black Mesa",
+       "coverUrl": "assets/colecciones/portadas/half-life-black-mesa.jpg",
+       "platform": "PC",
+       "developer": "Crowbar Collective",
+       "releaseYear": 2020,
+       "genre": "Disparos en primera persona",
+       "note": "Remake del primer Half-Life creado por aficionados y publicado con el permiso de Valve, con el tramo de Xen rehecho."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hercules-poirot",
+   "nombre": "Hércules Poirot",
+   "grupos": [
+    {
+     "nombre": "Novelas",
+     "obras": [
+      {
+       "id": "el-misterioso-caso-de-styles",
+       "type": "book",
+       "title": "El misterioso caso de Styles",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-misterioso-caso-de-styles.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Primera aparición de Hércules Poirot: la acaudalada señora Inglethorp muere envenenada en la mansión de Styles, y el detective belga, refugiado de guerra, investiga con Hastings.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1920,
+       "pages": "218",
+       "externalUrl": "https://www.goodreads.com/book/show/39692707-el-misterioso-caso-de-styles",
+       "collectionNumber": 1
+      },
+      {
+       "id": "asesinato-en-el-campo-de-golf",
+       "type": "book",
+       "title": "Asesinato en el campo de golf",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-asesinato-en-el-campo-de-golf.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un millonario aparece apuñalado en un campo de golf en Francia. Poirot se enfrenta a un detective de la Sûreté.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1923,
+       "pages": "271",
+       "externalUrl": "https://www.goodreads.com/book/show/26168515-asesinato-en-el-campo-de-golf",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-asesinato-de-roger-ackroyd",
+       "type": "book",
+       "title": "El asesinato de Roger Ackroyd",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-asesinato-de-roger-ackroyd.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un hombre rico aparece muerto en su estudio y su médico narra la investigación de Poirot, en una de las novelas policíacas más famosas de la autora.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1926,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/16328.The_Murder_of_Roger_Ackroyd",
+       "collectionNumber": 3
+      },
+      {
+       "id": "los-cuatro-grandes",
+       "type": "book",
+       "title": "Los cuatro grandes",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-los-cuatro-grandes.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Poirot y Hastings se enfrentan a una organización criminal internacional en una historia más cercana al espionaje.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1927,
+       "pages": "222",
+       "externalUrl": "https://www.goodreads.com/book/show/601530.Los_cuatro_grandes",
+       "collectionNumber": 4
+      },
+      {
+       "id": "el-misterio-del-tren-azul",
+       "type": "book",
+       "title": "El misterio del tren azul",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-misterio-del-tren-azul.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "La heredera Ruth Kettering aparece asesinada en el Tren Azul rumbo a la Riviera, y un rubí famoso ha desaparecido.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1928,
+       "pages": "285",
+       "externalUrl": "https://www.goodreads.com/book/show/60652295-el-misterio-del-tren-azul-biblioteca-agatha-christie",
+       "collectionNumber": 5
+      },
+      {
+       "id": "peligro-inminente",
+       "type": "book",
+       "title": "Peligro inminente",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-peligro-inminente.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Poirot se encuentra con una joven que ha sufrido varios accidentes sospechosos en Cornualles.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1932,
+       "pages": "183",
+       "externalUrl": "https://www.goodreads.com/book/show/9282991-peligro-inminente",
+       "collectionNumber": 6
+      },
+      {
+       "id": "la-muerte-de-lord-edgware",
+       "type": "book",
+       "title": "La muerte de Lord Edgware",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-la-muerte-de-lord-edgware.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una actriz anuncia que quiere matar a su marido, y Lord Edgware aparece muerto, pero todos la vieron en otro lugar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1933,
+       "pages": "260",
+       "externalUrl": "https://www.goodreads.com/book/show/205028274-la-muerte-de-lord-edgware-biblioteca-agatha-christie",
+       "collectionNumber": 7
+      },
+      {
+       "id": "asesinato-en-el-orient-express",
+       "type": "book",
+       "title": "Asesinato en el Orient Express",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-asesinato-en-el-orient-express.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El tren queda detenido por la nieve y un pasajero aparece apuñalado. Poirot tiene doce sospechosos y una coartada para cada uno.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1934,
+       "pages": "245 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/29973746-asesinato-en-el-orient-express-biblioteca-agatha-christie",
+       "collectionNumber": 8
+      },
+      {
+       "id": "tragedia-en-tres-actos",
+       "type": "book",
+       "title": "Tragedia en tres actos",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-tragedia-en-tres-actos.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un clérigo muere en una fiesta tras beber un cóctel, y otro invitado corre la misma suerte poco después.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1935,
+       "pages": "183",
+       "externalUrl": "https://www.goodreads.com/book/show/9310360-tragedia-en-tres-actos",
+       "collectionNumber": 9
+      },
+      {
+       "id": "muerte-en-las-nubes",
+       "type": "book",
+       "title": "Muerte en las nubes",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-muerte-en-las-nubes.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una prestamista francesa muere en un vuelo de París a Londres, en el que viaja el propio Poirot.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1935,
+       "pages": "208",
+       "externalUrl": "https://www.goodreads.com/book/show/25982935-muerte-en-las-nubes",
+       "collectionNumber": 10
+      },
+      {
+       "id": "el-misterio-de-la-guia-de-ferrocarriles",
+       "type": "book",
+       "title": "El misterio de la guía de ferrocarriles",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-misterio-de-la-guia-de-ferrocarriles.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un asesino envía a Poirot cartas firmadas ABC y mata a sus víctimas en orden alfabético.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1936,
+       "pages": "220",
+       "externalUrl": "https://www.goodreads.com/book/show/24905702-el-misterio-de-la-gu-a-de-ferrocarriles",
+       "collectionNumber": 11
+      },
+      {
+       "id": "asesinato-en-mesopotamia",
+       "type": "book",
+       "title": "Asesinato en Mesopotamia",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-asesinato-en-mesopotamia.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Poirot investiga la muerte de la esposa de un arqueólogo en una excavación en Irak, narrada por una enfermera.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1936,
+       "pages": "216",
+       "externalUrl": "https://www.goodreads.com/book/show/25069477-asesinato-en-mesopotamia",
+       "collectionNumber": 12
+      },
+      {
+       "id": "cartas-sobre-la-mesa",
+       "type": "book",
+       "title": "Cartas sobre la mesa",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-cartas-sobre-la-mesa.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El anfitrión de una partida de bridge aparece muerto y cuatro asesinos que nunca fueron descubiertos eran sus invitados.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1936,
+       "pages": "224 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/2814112-cartas-sobre-la-mesa",
+       "collectionNumber": 13
+      },
+      {
+       "id": "el-testigo-mudo",
+       "type": "book",
+       "title": "El testigo mudo",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-testigo-mudo.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una anciana rica escribe a Poirot antes de morir, y el detective llega demasiado tarde para resolver el misterio de su carta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1937,
+       "pages": "285",
+       "externalUrl": "https://www.goodreads.com/book/show/1010502.El_testigo_mudo",
+       "collectionNumber": 14
+      },
+      {
+       "id": "muerte-en-el-nilo",
+       "type": "book",
+       "title": "Muerte en el Nilo",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-muerte-en-el-nilo.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una heredera recién casada es asesinada en un crucero por el Nilo, y Poirot, a bordo, debe resolver un caso de pasiones.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1937,
+       "pages": "50",
+       "externalUrl": "https://www.goodreads.com/book/show/48550171-muerte-en-el-nilo",
+       "collectionNumber": 15
+      },
+      {
+       "id": "cita-con-la-muerte",
+       "type": "book",
+       "title": "Cita con la muerte",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-cita-con-la-muerte.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "En un viaje a Petra, una matriarca tiránica aparece muerta, y Poirot tiene veinticuatro horas para resolverlo.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1938,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/590454.Cita_con_la_muerte",
+       "collectionNumber": 16
+      },
+      {
+       "id": "navidades-tragicas",
+       "type": "book",
+       "title": "Navidades trágicas",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-navidades-tragicas.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un patriarca millonario reúne a su familia por Navidad y aparece degollado en una habitación cerrada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1938,
+       "pages": "188",
+       "externalUrl": "https://www.goodreads.com/book/show/574205.Navidades_tr_gicas",
+       "collectionNumber": 17
+      },
+      {
+       "id": "un-triste-cipres",
+       "type": "book",
+       "title": "Un triste ciprés",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-un-triste-cipres.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Elinor Carlisle es juzgada por envenenar a su rival, y Poirot debe averiguar si es culpable.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1940,
+       "pages": "236",
+       "externalUrl": "https://www.goodreads.com/book/show/9285653-un-triste-cipr-s",
+       "collectionNumber": 18
+      },
+      {
+       "id": "la-muerte-visita-al-dentista",
+       "type": "book",
+       "title": "La muerte visita al dentista",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-la-muerte-visita-al-dentista.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un dentista aparece muerto tras una cita con Poirot, en un caso en el que se enreda la política.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1940,
+       "pages": "151",
+       "externalUrl": "https://www.goodreads.com/book/show/35059414-la-muerte-visita-al-dentista",
+       "collectionNumber": 19
+      },
+      {
+       "id": "muerte-bajo-el-sol",
+       "type": "book",
+       "title": "Muerte bajo el sol",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-muerte-bajo-el-sol.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una actriz seductora aparece muerta en una playa de una isla de Devon, durante las vacaciones de Poirot.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1941,
+       "externalUrl": "https://www.goodreads.com/book/show/46027198-muerte-bajo-el-sol-biblioteca-agatha-christie",
+       "collectionNumber": 20
+      },
+      {
+       "id": "cinco-cerditos",
+       "type": "book",
+       "title": "Cinco cerditos",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-cinco-cerditos.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Dieciséis años después, la hija de una mujer condenada por asesinato pide a Poirot que limpie su nombre.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1942,
+       "pages": "296 páginas",
+       "externalUrl": "https://www.goodreads.com/book/show/41795721-cinco-cerditos-biblioteca-agatha-christie",
+       "collectionNumber": 21
+      },
+      {
+       "id": "sangre-en-la-piscina",
+       "type": "book",
+       "title": "Sangre en la piscina",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-sangre-en-la-piscina.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Poirot llega a una casa de campo y encuentra a un hombre muriendo junto a la piscina y a su esposa con un revólver.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1946,
+       "pages": "304",
+       "externalUrl": "https://www.goodreads.com/book/show/51845242-sangre-en-la-piscina",
+       "collectionNumber": 22
+      },
+      {
+       "id": "pleamares-de-la-vida",
+       "type": "book",
+       "title": "Pleamares de la vida",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-pleamares-de-la-vida.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un millonario muere en un bombardeo y deja a su joven viuda como heredera, para disgusto de su familia.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1948,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/7571975-pleamares-de-la-vida",
+       "collectionNumber": 23
+      },
+      {
+       "id": "la-senora-mcginty-ha-muerto",
+       "type": "book",
+       "title": "La señora McGinty ha muerto",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-la-senora-mcginty-ha-muerto.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Poirot intenta salvar de la horca a un joven condenado por matar a una asistenta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1952,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/131372.La_se_ora_McGinty_ha_muerto",
+       "collectionNumber": 24
+      },
+      {
+       "id": "despues-del-funeral",
+       "type": "book",
+       "title": "Después del funeral",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-despues-del-funeral.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "En el funeral de un hombre rico, su hermana dice que fue asesinado, y al día siguiente aparece muerta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1953,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/19221827-despu-s-del-funeral",
+       "collectionNumber": 25
+      },
+      {
+       "id": "asesinato-en-la-calle-hickory",
+       "type": "book",
+       "title": "Asesinato en la calle Hickory",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-asesinato-en-la-calle-hickory.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Unos robos extraños en una residencia de estudiantes de Londres acaban en asesinato.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1955,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/601506.Asesinato_en_la_calle_Hickory",
+       "collectionNumber": 26
+      },
+      {
+       "id": "el-templete-de-nasse-house",
+       "type": "book",
+       "title": "El templete de Nasse-House",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-el-templete-de-nasse-house.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "La novelista Ariadne Oliver organiza un juego de asesinato en una mansión, hasta que la víctima aparece muerta de verdad.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1956,
+       "pages": "237",
+       "externalUrl": "https://www.goodreads.com/book/show/238502562-el-templete-de-nasse-house-biblioteca-agatha-christie",
+       "collectionNumber": 27
+      },
+      {
+       "id": "un-gato-en-el-palomar",
+       "type": "book",
+       "title": "Un gato en el palomar",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-un-gato-en-el-palomar.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un asesinato en un colegio de señoritas se relaciona con una revolución en Oriente Medio.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1959,
+       "pages": "317",
+       "externalUrl": "https://www.goodreads.com/book/show/213621118-un-gato-en-el-palomar-biblioteca-agatha-christie",
+       "collectionNumber": 28
+      },
+      {
+       "id": "los-relojes",
+       "type": "book",
+       "title": "Los relojes",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-los-relojes.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una mecanógrafa encuentra un cadáver en una casa rodeada de relojes. Poirot lo resuelve desde su sillón.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1963,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/7571973-los-relojes",
+       "collectionNumber": 29
+      },
+      {
+       "id": "tercera-muchacha",
+       "type": "book",
+       "title": "Tercera muchacha",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-tercera-muchacha.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una joven dice a Poirot que ha podido cometer un asesinato y desaparece sin decir más.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1966,
+       "externalUrl": "https://www.goodreads.com/book/show/68652361-novelas-de-agatha-christie",
+       "collectionNumber": 30
+      },
+      {
+       "id": "las-manzanas",
+       "type": "book",
+       "title": "Las manzanas",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-las-manzanas.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una niña presume de haber visto un asesinato en una fiesta de Halloween y aparece ahogada en un cubo de manzanas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1969,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/601525.Las_manzanas",
+       "collectionNumber": 31
+      },
+      {
+       "id": "los-elefantes-pueden-recordar",
+       "type": "book",
+       "title": "Los elefantes pueden recordar",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-los-elefantes-pueden-recordar.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Ariadne Oliver y Poirot investigan un viejo doble suicidio a partir de los recuerdos de quienes lo vivieron.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1972,
+       "pages": "222",
+       "externalUrl": "https://www.goodreads.com/book/show/7531001-los-elefantes-pueden-recordar",
+       "collectionNumber": 32
+      },
+      {
+       "id": "telon",
+       "type": "book",
+       "title": "Telón",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-telon.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El último caso de Poirot: vuelve con Hastings a Styles, donde empezó todo, para detener a un asesino sin igual.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1975,
+       "pages": "208",
+       "externalUrl": "https://www.goodreads.com/book/show/9282927-tel-n",
+       "collectionNumber": 33
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "high-school-musical",
+   "nombre": "High School Musical",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "high-school-musical",
+       "type": "movieSeries",
+       "title": "High School Musical",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical.jpg",
+       "releaseYear": 2006,
+       "genre": "Comedia, familia, música",
+       "note": "Troy, estrella del baloncesto, y Gabriella, una alumna estudiosa, se presentan juntos a las pruebas del musical del instituto y rompen el orden establecido.",
+       "mediaType": "movie",
+       "duration": "1h 38m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical/"
+      },
+      {
+       "id": "high-school-musical-2",
+       "type": "movieSeries",
+       "title": "High School Musical 2",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-2.jpg",
+       "releaseYear": 2007,
+       "genre": "Comedia, familia, música",
+       "note": "Verano en el club de campo: Troy trabaja allí con sus amigos mientras Sharpay intenta separarlo de Gabriella.",
+       "mediaType": "movie",
+       "duration": "1h 51m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical-2/"
+      },
+      {
+       "id": "high-school-musical-3-fin-de-curso",
+       "type": "movieSeries",
+       "title": "High School Musical 3: Fin de curso",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-3-fin-de-curso.jpg",
+       "releaseYear": 2008,
+       "genre": "Comedia, drama, familia",
+       "note": "Último año de instituto. El grupo prepara un musical de despedida mientras decide qué hacer con la universidad y con su futuro juntos.",
+       "mediaType": "movie",
+       "duration": "1h 52m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical-3-senior-year/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hollow-knight",
+   "nombre": "Hollow Knight",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "hollow-knight",
+       "type": "game",
+       "title": "Hollow Knight",
+       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight.jpg",
+       "platform": "PC",
+       "developer": "Team Cherry",
+       "releaseYear": 2017,
+       "genre": "Metroidvania y acción",
+       "note": "Un caballero sin nombre explora Hallownest, un reino de insectos en ruinas lleno de secretos y jefes.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "hollow-knight-silksong",
+       "type": "game",
+       "title": "Hollow Knight: Silksong",
+       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight-silksong.jpg",
+       "platform": "PC",
+       "developer": "Team Cherry",
+       "releaseYear": 2025,
+       "genre": "Metroidvania y acción",
+       "note": "Hornet, capturada y llevada a Pharloom, asciende hacia la ciudadela de un reino gobernado por la seda.",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hora-punta",
+   "nombre": "Hora punta",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "hora-punta",
+       "type": "movieSeries",
+       "title": "Hora punta",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta.jpg",
+       "releaseYear": 1998,
+       "genre": "Acción, comedia, crimen",
+       "note": "Un inspector de Hong Kong y un bocazas de la policía de Los Ángeles deben entenderse para rescatar a la hija secuestrada de un diplomático chino.",
+       "mediaType": "movie",
+       "duration": "1h 38m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/rush-hour/"
+      },
+      {
+       "id": "hora-punta-2",
+       "type": "movieSeries",
+       "title": "Hora punta 2",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-2.jpg",
+       "releaseYear": 2001,
+       "genre": "Acción, comedia, crimen",
+       "note": "Lee y Carter pasan de unas vacaciones en Hong Kong a perseguir a una banda de falsificadores tras un atentado en la embajada estadounidense.",
+       "mediaType": "movie",
+       "duration": "1h 30m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/rush-hour-2/"
+      },
+      {
+       "id": "hora-punta-3",
+       "type": "movieSeries",
+       "title": "Hora punta 3",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-3.jpg",
+       "releaseYear": 2007,
+       "genre": "Acción, comedia, crimen",
+       "note": "Tras un atentado contra un embajador chino, la pareja viaja a París para enfrentarse a las tríadas.",
+       "mediaType": "movie",
+       "duration": "1h 31m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/rush-hour-3/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "kill-bill",
+   "nombre": "Kill Bill",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "kill-bill-vol-1",
+       "type": "movieSeries",
+       "title": "Kill Bill: Vol. 1",
+       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-vol-1.jpg",
+       "releaseYear": 2003,
+       "genre": "Acción, crimen",
+       "note": "Una asesina a la que dieron por muerta el día de su boda despierta del coma cuatro años después y empieza a tachar nombres de su lista de venganza.",
+       "mediaType": "movie",
+       "duration": "1h 51m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/kill-bill-vol-1/"
+      },
+      {
+       "id": "kill-bill-vol-2",
+       "type": "movieSeries",
+       "title": "Kill Bill: Vol. 2",
+       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-vol-2.jpg",
+       "releaseYear": 2004,
+       "genre": "Acción, crimen, suspense",
+       "note": "La Novia sigue su venganza hasta llegar a Bill, y la película revela qué ocurrió realmente en la capilla.",
+       "mediaType": "movie",
+       "duration": "2h 16m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/kill-bill-vol-2/"
+      },
+      {
+       "id": "kill-bill-the-whole-bloody-affair",
+       "type": "movieSeries",
+       "title": "Kill Bill: The Whole Bloody Affair",
+       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-the-whole-bloody-affair.jpg",
+       "releaseYear": 2011,
+       "genre": "Acción, crimen",
+       "note": "Las dos partes unidas en una sola película, tal y como Tarantino la concibió, con una secuencia animada ampliada.",
+       "mediaType": "movie",
+       "duration": "4h 35m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "externalUrl": "https://letterboxd.com/film/kill-bill-the-whole-bloody-affair/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "la-herejia-de-horus",
+   "nombre": "La Herejía de Horus",
+   "universo": "Warhammer 40.000",
+   "grupos": [
+    {
+     "nombre": "Novelas",
+     "obras": [
+      {
+       "id": "horus-senor-de-la-guerra",
+       "type": "book",
+       "title": "Horus, señor de la guerra",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-horus-senor-de-la-guerra.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción bélica",
+       "note": "El Emperador deja la Gran Cruzada y nombra Señor de la Guerra a su hijo Horus, en el arranque de la guerra civil que hundirá a la humanidad.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "416",
+       "externalUrl": "https://www.goodreads.com/book/show/625603.Horus_Rising",
+       "collectionNumber": 1
+      },
+      {
+       "id": "falsos-dioses",
+       "type": "book",
+       "title": "Falsos dioses",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-falsos-dioses.jpg",
+       "author": "Graham McNeill",
+       "genre": "Ciencia ficción bélica",
+       "note": "Una herida mortal lleva a Horus a una secta en Davin, y las semillas de la traición empiezan a germinar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "320",
+       "externalUrl": "https://www.goodreads.com/book/show/13634723-falsos-dioses",
+       "collectionNumber": 2
+      },
+      {
+       "id": "galaxia-en-llamas",
+       "type": "book",
+       "title": "Galaxia en llamas",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-galaxia-en-llamas.jpg",
+       "author": "Ben Counter",
+       "genre": "Ciencia ficción bélica",
+       "note": "Horus declara su rebelión e Istvaan III arde con los leales de su propia legión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "304",
+       "externalUrl": "https://www.goodreads.com/book/show/16457866-la-galaxia-en-llamas",
+       "collectionNumber": 3
+      },
+      {
+       "id": "el-vuelo-del-eisenstein",
+       "type": "book",
+       "title": "El vuelo del Eisenstein",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-el-vuelo-del-eisenstein.jpg",
+       "author": "James Swallow",
+       "genre": "Ciencia ficción bélica",
+       "note": "La Guardia de la Muerte toma partido por Horus, y Nathaniel Garro huye en una fragata para avisar a Terra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "416",
+       "externalUrl": "https://www.goodreads.com/book/show/80155.The_Flight_of_the_Eisenstein",
+       "collectionNumber": 4
+      },
+      {
+       "id": "fulgrim",
+       "type": "book",
+       "title": "Fulgrim",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-fulgrim.jpg",
+       "author": "Graham McNeill",
+       "genre": "Ciencia ficción bélica",
+       "note": "Los Hijos del Emperador, obsesionados con la perfección, caen ante una espada maldita.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "512",
+       "externalUrl": "https://www.goodreads.com/book/show/957931.Fulgrim",
+       "collectionNumber": 5
+      },
+      {
+       "id": "descenso-de-angeles",
+       "type": "book",
+       "title": "Descenso de ángeles",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-descenso-de-angeles.jpg",
+       "author": "Mitchel Scanlon",
+       "genre": "Ciencia ficción bélica",
+       "note": "Historia de los Ángeles Oscuros y de Caliban, antes de la Herejía.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "309",
+       "externalUrl": "https://www.goodreads.com/book/show/18803712-el-descenso-de-los-ngeles",
+       "collectionNumber": 6
+      },
+      {
+       "id": "legion",
+       "type": "book",
+       "title": "Legión",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-legion.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción bélica",
+       "note": "La Legión Alfa, la más misteriosa de todas, se revela en una guerra en Nurth.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008,
+       "pages": "416",
+       "externalUrl": "https://www.goodreads.com/book/show/1678745.Legion",
+       "collectionNumber": 7
+      },
+      {
+       "id": "batalla-por-el-abismo",
+       "type": "book",
+       "title": "Batalla por el abismo",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-batalla-por-el-abismo.jpg",
+       "author": "Ben Counter",
+       "genre": "Ciencia ficción bélica",
+       "note": "Los Ultramarines se enfrentan a una nave de los Portadores de la Palabra rumbo a Calth.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/22461698-batalla-por-el-abismo",
+       "collectionNumber": 8
+      },
+      {
+       "id": "mechanicum",
+       "type": "book",
+       "title": "Mechanicum",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-mechanicum.jpg",
+       "author": "Graham McNeill",
+       "genre": "Ciencia ficción bélica",
+       "note": "La guerra civil llega a Marte, donde el Mechanicum se divide entre el Emperador y Horus.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008,
+       "pages": "416",
+       "externalUrl": "https://www.goodreads.com/book/show/2941259-mechanicum",
+       "collectionNumber": 9
+      },
+      {
+       "id": "relatos-de-la-herejia",
+       "type": "book",
+       "title": "Relatos de la Herejía",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-relatos-de-la-herejia.jpg",
+       "author": "Nick Kyme",
+       "genre": "Ciencia ficción bélica",
+       "note": "Antología de relatos ambientados en los primeros años de la Herejía de Horus.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "pages": "416",
+       "externalUrl": "https://www.goodreads.com/book/show/6057020-tales-of-heresy",
+       "collectionNumber": 10
+      },
+      {
+       "id": "angeles-caidos",
+       "type": "book",
+       "title": "Ángeles caídos",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-angeles-caidos.jpg",
+       "author": "Mike Lee",
+       "genre": "Ciencia ficción bélica",
+       "note": "Luther y los Ángeles Oscuros se enfrentan a un cisma en Caliban.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "pages": "299",
+       "externalUrl": "https://www.goodreads.com/book/show/7992940-los-ngeles-ca-dos",
+       "collectionNumber": 11
+      },
+      {
+       "id": "mil-hijos",
+       "type": "book",
+       "title": "Mil hijos",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-mil-hijos.jpg",
+       "author": "Graham McNeill",
+       "genre": "Ciencia ficción bélica",
+       "note": "Magnus el Rojo y su legión de hechiceros desobedecen al Emperador y acaban ante los Lobos Espaciales.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2010,
+       "pages": "504",
+       "externalUrl": "https://www.goodreads.com/book/show/25271788-los-mil-hijos",
+       "collectionNumber": 12
+      },
+      {
+       "id": "nemesis",
+       "type": "book",
+       "title": "Némesis",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-nemesis.jpg",
+       "author": "James Swallow",
+       "genre": "Ciencia ficción bélica",
+       "note": "Los Oficio Asesinorum preparan una misión imposible para matar a Horus.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2010,
+       "pages": "507",
+       "externalUrl": "https://www.goodreads.com/book/show/7113690-nemesis",
+       "collectionNumber": 13
+      },
+      {
+       "id": "el-primer-hereje",
+       "type": "book",
+       "title": "El primer hereje",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-el-primer-hereje.jpg",
+       "author": "Aaron Dembski-Bowden",
+       "genre": "Ciencia ficción bélica",
+       "note": "Lorgar y los Portadores de la Palabra, los primeros en caer ante el Caos, cuentan el origen de la Herejía.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2010,
+       "pages": "448",
+       "externalUrl": "https://www.goodreads.com/book/show/25611667-el-primer-hereje",
+       "collectionNumber": 14
+      },
+      {
+       "id": "prospero-en-llamas",
+       "type": "book",
+       "title": "Prospero en llamas",
+       "coverUrl": "assets/colecciones/portadas/la-herejia-de-horus-prospero-en-llamas.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción bélica",
+       "note": "Los Lobos Espaciales arrasan el mundo natal de Magnus, contado desde dentro de la legión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2010,
+       "pages": "531",
+       "externalUrl": "https://www.goodreads.com/book/show/30968790-pr-spero-en-llamas",
+       "collectionNumber": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "la-tierra-media",
+   "nombre": "La Tierra Media",
+   "universo": "La Tierra Media",
+   "alias": [
+    "El Señor de los Anillos"
+   ],
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "el-senor-de-los-anillos-la-comunidad-del-anillo",
+       "type": "movieSeries",
+       "title": "El Señor de los Anillos: La Comunidad del Anillo",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-la-comunidad-del-anillo.jpg",
+       "releaseYear": 2001,
+       "genre": "Aventura, fantasía, acción",
+       "note": "Frodo hereda el Anillo Único y parte hacia Mordor para destruirlo, acompañado por una compañía de hobbits, hombres, un elfo, un enano y el mago Gandalf.",
+       "mediaType": "movie",
+       "duration": "2h 59m",
+       "creatorOrDirector": "Peter Jackson",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/the-lord-of-the-rings-the-fellowship-of-the-ring/",
+       "collectionName": "El Señor de los Anillos"
+      },
+      {
+       "id": "el-senor-de-los-anillos-las-dos-torres",
+       "type": "movieSeries",
+       "title": "El Señor de los Anillos: Las Dos Torres",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-las-dos-torres.jpg",
+       "releaseYear": 2002,
+       "genre": "Aventura, fantasía, acción",
+       "note": "La Compañía se ha roto. Frodo y Sam siguen hacia Mordor guiados por Gollum, mientras Rohan se prepara para resistir al ejército de Saruman en el Abismo de Helm.",
+       "mediaType": "movie",
+       "duration": "3h",
+       "creatorOrDirector": "Peter Jackson",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/the-lord-of-the-rings-the-two-towers/",
+       "collectionName": "El Señor de los Anillos"
+      },
+      {
+       "id": "el-senor-de-los-anillos-el-retorno-del-rey",
+       "type": "movieSeries",
+       "title": "El Señor de los Anillos: El Retorno del Rey",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-el-retorno-del-rey.jpg",
+       "releaseYear": 2003,
+       "genre": "Aventura, fantasía, acción",
+       "note": "Sauron lanza su ataque final sobre Minas Tirith. Aragorn asume su destino mientras Frodo llega al Monte del Destino con el Anillo.",
+       "mediaType": "movie",
+       "duration": "3h 22m",
+       "creatorOrDirector": "Peter Jackson",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/the-lord-of-the-rings-the-return-of-the-king/",
+       "collectionName": "El Señor de los Anillos"
+      },
+      {
+       "id": "el-hobbit-un-viaje-inesperado",
+       "type": "movieSeries",
+       "title": "El hobbit: Un viaje inesperado",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-hobbit-un-viaje-inesperado.jpg",
+       "releaseYear": 2012,
+       "genre": "Aventura, fantasía, acción",
+       "note": "Bilbo Bolsón se une a Gandalf y a trece enanos para recuperar Erebor, el reino arrebatado por el dragón Smaug.",
+       "mediaType": "movie",
+       "duration": "2h 49m",
+       "creatorOrDirector": "Peter Jackson",
+       "externalUrl": "https://letterboxd.com/film/the-hobbit-an-unexpected-journey/"
+      },
+      {
+       "id": "el-hobbit-la-desolacion-de-smaug",
+       "type": "movieSeries",
+       "title": "El hobbit: La desolación de Smaug",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-hobbit-la-desolacion-de-smaug.jpg",
+       "releaseYear": 2013,
+       "genre": "Fantasía, aventura, acción",
+       "note": "La compañía de Thorin cruza el Bosque Negro y llega a la Montaña Solitaria, donde Bilbo se enfrenta por fin al dragón.",
+       "mediaType": "movie",
+       "duration": "2h 41m",
+       "creatorOrDirector": "Peter Jackson",
+       "externalUrl": "https://letterboxd.com/film/the-hobbit-the-desolation-of-smaug/"
+      },
+      {
+       "id": "el-hobbit-la-batalla-de-los-cinco-ejercitos",
+       "type": "movieSeries",
+       "title": "El hobbit: La batalla de los cinco ejércitos",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-hobbit-la-batalla-de-los-cinco-ejercitos.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, aventura, fantasía",
+       "note": "Enanos, elfos y hombres se disputan el tesoro de Erebor mientras los orcos se acercan a la Montaña Solitaria.",
+       "mediaType": "movie",
+       "duration": "2h 24m",
+       "creatorOrDirector": "Peter Jackson",
+       "externalUrl": "https://letterboxd.com/film/the-hobbit-the-battle-of-the-five-armies/"
+      },
+      {
+       "id": "el-senor-de-los-anillos-la-guerra-de-los-rohirrim",
+       "type": "movieSeries",
+       "title": "El Señor de los Anillos: La guerra de los Rohirrim",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-la-guerra-de-los-rohirrim.jpg",
+       "releaseYear": 2024,
+       "genre": "Animación, fantasía, aventura",
+       "note": "Película de animación ambientada casi dos siglos antes de la trilogía, sobre Helm Mano de Hierro, rey de Rohan, y su hija Héra.",
+       "mediaType": "movie",
+       "duration": "2h 14m",
+       "creatorOrDirector": "Kenji Kamiyama",
+       "externalUrl": "https://letterboxd.com/film/the-lord-of-the-rings-the-war-of-the-rohirrim/"
+      },
+      {
+       "id": "el-senor-de-los-anillos-los-anillos-de-poder",
+       "type": "movieSeries",
+       "title": "El Señor de los Anillos: Los Anillos de Poder",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-los-anillos-de-poder.jpg",
+       "releaseYear": 2022,
+       "genre": "Aventura, fantasía",
+       "note": "Serie ambientada en la Segunda Edad, milenios antes de El Hobbit, que narra la forja de los Anillos de Poder y el ascenso de Sauron.",
+       "mediaType": "series"
+      }
+     ]
+    },
+    {
+     "nombre": "Libros",
+     "obras": [
+      {
+       "id": "la-comunidad-del-anillo",
+       "type": "book",
+       "title": "La Comunidad del Anillo",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-la-comunidad-del-anillo.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Primera parte de El Señor de los Anillos: Frodo hereda el Anillo Único y parte de la Comarca con una compañía de nueve.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1954,
+       "pages": "398",
+       "externalUrl": "https://www.goodreads.com/book/show/34.The_Fellowship_of_the_Ring",
+       "collectionNumber": 1
+      },
+      {
+       "id": "las-dos-torres",
+       "type": "book",
+       "title": "Las Dos Torres",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-las-dos-torres.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Segunda parte: la Compañía se rompe, Frodo sigue a Mordor con Sam y Gollum, y Rohan se alza contra Saruman.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1954,
+       "pages": "464",
+       "externalUrl": "https://www.goodreads.com/book/show/15280.Las_dos_torres",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-retorno-del-rey",
+       "type": "book",
+       "title": "El Retorno del Rey",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-retorno-del-rey.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Tercera parte: la guerra del Anillo llega a su fin en Gondor y en el Monte del Destino.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1955,
+       "pages": "603",
+       "externalUrl": "https://www.goodreads.com/book/show/63358.El_retorno_del_rey",
+       "collectionNumber": 3
+      },
+      {
+       "id": "el-hobbit",
+       "type": "book",
+       "title": "El hobbit",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-hobbit.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Bilbo Bolsón, un tranquilo hobbit, parte con trece enanos y Gandalf para recuperar el tesoro del dragón Smaug.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1937,
+       "pages": "366",
+       "externalUrl": "https://www.goodreads.com/book/show/5907.The_Hobbit"
+      },
+      {
+       "id": "el-silmarillion",
+       "type": "book",
+       "title": "El Silmarillion",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-silmarillion.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "La historia antigua de la Tierra Media: la creación del mundo, los Silmarils y la larga guerra contra Morgoth.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1977,
+       "pages": "386",
+       "externalUrl": "https://www.goodreads.com/book/show/7332.The_Silmarillion"
+      },
+      {
+       "id": "los-hijos-de-hurin",
+       "type": "book",
+       "title": "Los hijos de Húrin",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-los-hijos-de-hurin.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "La tragedia de Túrin Turambar, maldito por Morgoth en la Primera Edad.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/907102.Los_hijos_de_H_rin"
+      },
+      {
+       "id": "cuentos-inconclusos",
+       "type": "book",
+       "title": "Cuentos inconclusos",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-cuentos-inconclusos.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Relatos y borradores de la Primera a la Tercera Edad, editados por Christopher Tolkien.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1980,
+       "pages": "574",
+       "externalUrl": "https://www.goodreads.com/book/show/54719.Cuentos_inconclusos_de_N_menor_y_la_Tierra_Media"
+      }
+     ]
+    },
+    {
+     "nombre": "Juegos",
+     "obras": [
+      {
+       "id": "la-tierra-media-sombras-de-mordor",
+       "type": "game",
+       "title": "La Tierra Media: Sombras de Mordor",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-la-tierra-media-sombras-de-mordor.jpg",
+       "platform": "PC",
+       "developer": "Monolith Productions",
+       "releaseYear": 2014,
+       "genre": "Acción y mundo abierto",
+       "note": "El montaraz Talion, unido al espectro del elfo Celebrimbor, busca venganza en Mordor gracias al sistema Némesis.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "la-tierra-media-sombras-de-guerra",
+       "type": "game",
+       "title": "La Tierra Media: Sombras de Guerra",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-la-tierra-media-sombras-de-guerra.jpg",
+       "platform": "PC",
+       "developer": "Monolith Productions",
+       "releaseYear": 2017,
+       "genre": "Acción y mundo abierto",
+       "note": "Talion y Celebrimbor forjan un nuevo Anillo y crean un ejército para enfrentarse a Sauron.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-senor-de-los-anillos-regreso-a-moria",
+       "type": "game",
+       "title": "El Señor de los Anillos: Regreso a Moria",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-el-senor-de-los-anillos-regreso-a-moria.jpg",
+       "platform": "PC",
+       "developer": "Free Range Games",
+       "releaseYear": 2023,
+       "genre": "Supervivencia y artesanía",
+       "note": "Un grupo de enanos vuelve a las minas de Moria en un juego de supervivencia y construcción ambientado en la Cuarta Edad."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "las-raices-del-caos",
+   "nombre": "Las raíces del caos",
+   "grupos": [
+    {
+     "nombre": "Novelas",
+     "obras": [
+      {
+       "id": "a-day-of-fallen-night",
+       "type": "book",
+       "title": "A Day of Fallen Night",
+       "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-a-day-of-fallen-night.jpg",
+       "author": "Samantha Shannon",
+       "genre": "Fantasía épica",
+       "note": "Precuela de El priorato del naranjo, ambientada 500 años antes, con la Gran Desolación y el regreso de los dragones de fuego. Todavía sin edición confirmada en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "pages": "868",
+       "externalUrl": "https://www.goodreads.com/book/show/60766189-a-day-of-fallen-night",
+       "collectionNumber": 0
+      },
+      {
+       "id": "el-priorato-del-naranjo",
+       "type": "book",
+       "title": "El priorato del naranjo",
+       "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-el-priorato-del-naranjo.jpg",
+       "author": "Samantha Shannon",
+       "genre": "Fantasía épica",
+       "note": "Un mundo dividido por el miedo a los dragones: una reina sin heredero, una espía de un priorato secreto y una jinete de dragones se enfrentan al regreso del Innombrable.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2019,
+       "externalUrl": "https://www.goodreads.com/book/show/46006142-el-priorato-del-naranjo",
+       "collectionNumber": 1
+      },
+      {
+       "id": "among-the-burning-flowers",
+       "type": "book",
+       "title": "Among the Burning Flowers",
+       "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-among-the-burning-flowers.jpg",
+       "author": "Samantha Shannon",
+       "genre": "Fantasía épica",
+       "note": "Nueva novela de la saga, ambientada entre las otras dos y centrada en la princesa Sabran. Todavía sin edición confirmada en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2025,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/222376983-among-the-burning-flowers",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "marvel",
+   "nombre": "Marvel",
+   "universo": "Marvel",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "iron-man",
+       "type": "movieSeries",
+       "title": "Iron Man",
+       "coverUrl": "assets/colecciones/portadas/marvel-iron-man.jpg",
+       "releaseYear": 2008,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "El magnate de las armas Tony Stark es secuestrado y escapa con una armadura que él mismo construye. Decide cambiar de rumbo y convertirse en Iron Man.",
+       "mediaType": "movie",
+       "duration": "2h 6m",
+       "creatorOrDirector": "Jon Favreau",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/iron-man-2008/"
+      },
+      {
+       "id": "el-increible-hulk",
+       "type": "movieSeries",
+       "title": "El increíble Hulk",
+       "coverUrl": "assets/colecciones/portadas/marvel-el-increible-hulk.jpg",
+       "releaseYear": 2008,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Bruce Banner vive oculto buscando una cura mientras el ejército lo persigue por lo que lleva dentro.",
+       "mediaType": "movie",
+       "duration": "1h 54m",
+       "creatorOrDirector": "Louis Leterrier",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/the-incredible-hulk/"
+      },
+      {
+       "id": "iron-man-2",
+       "type": "movieSeries",
+       "title": "Iron Man 2",
+       "coverUrl": "assets/colecciones/portadas/marvel-iron-man-2.jpg",
+       "releaseYear": 2010,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "Stark se enfrenta a la presión del gobierno, a su propia salud y a Whiplash, un enemigo ligado al pasado de su padre.",
+       "mediaType": "movie",
+       "duration": "2h 5m",
+       "creatorOrDirector": "Jon Favreau",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/iron-man-2/"
+      },
+      {
+       "id": "thor",
+       "type": "movieSeries",
+       "title": "Thor",
+       "coverUrl": "assets/colecciones/portadas/marvel-thor.jpg",
+       "releaseYear": 2011,
+       "genre": "Aventura, fantasía, acción",
+       "note": "Odín destierra a la Tierra a su arrogante hijo Thor sin sus poderes, mientras su hermano Loki conspira en Asgard.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Kenneth Branagh",
+       "collectionNumber": 4,
+       "externalUrl": "https://letterboxd.com/film/thor/"
+      },
+      {
+       "id": "capitan-america-el-primer-vengador",
+       "type": "movieSeries",
+       "title": "Capitán América: El primer vengador",
+       "coverUrl": "assets/colecciones/portadas/marvel-capitan-america-el-primer-vengador.jpg",
+       "releaseYear": 2011,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "En plena Segunda Guerra Mundial, el enclenque Steve Rogers se convierte en un supersoldado para enfrentarse a Hydra.",
+       "mediaType": "movie",
+       "duration": "2h 4m",
+       "creatorOrDirector": "Joe Johnston",
+       "collectionNumber": 5,
+       "externalUrl": "https://letterboxd.com/film/captain-america-the-first-avenger/"
+      },
+      {
+       "id": "los-vengadores",
+       "type": "movieSeries",
+       "title": "Los Vengadores",
+       "coverUrl": "assets/colecciones/portadas/marvel-los-vengadores.jpg",
+       "releaseYear": 2012,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Nick Fury reúne a Iron Man, Capitán América, Thor, Hulk, Viuda Negra y Ojo de Halcón para detener la invasión de Loki.",
+       "mediaType": "movie",
+       "duration": "2h 22m",
+       "creatorOrDirector": "Joss Whedon",
+       "collectionNumber": 6,
+       "externalUrl": "https://letterboxd.com/film/the-avengers-2012/"
+      },
+      {
+       "id": "iron-man-3",
+       "type": "movieSeries",
+       "title": "Iron Man 3",
+       "coverUrl": "assets/colecciones/portadas/marvel-iron-man-3.jpg",
+       "releaseYear": 2013,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Marcado por la batalla de Nueva York, Stark pierde lo que tiene y debe enfrentarse al Mandarín sin su armadura.",
+       "mediaType": "movie",
+       "duration": "2h 10m",
+       "creatorOrDirector": "Shane Black",
+       "collectionNumber": 7,
+       "externalUrl": "https://letterboxd.com/film/iron-man-3/"
+      },
+      {
+       "id": "thor-el-mundo-oscuro",
+       "type": "movieSeries",
+       "title": "Thor: El mundo oscuro",
+       "coverUrl": "assets/colecciones/portadas/marvel-thor-el-mundo-oscuro.jpg",
+       "releaseYear": 2013,
+       "genre": "Acción, aventura, fantasía",
+       "note": "Thor se alía con Loki para detener a los elfos oscuros, que quieren usar una fuerza ancestral para sumir el universo en tinieblas.",
+       "mediaType": "movie",
+       "duration": "1h 52m",
+       "creatorOrDirector": "Alan Taylor",
+       "collectionNumber": 8,
+       "externalUrl": "https://letterboxd.com/film/thor-the-dark-world/"
+      },
+      {
+       "id": "capitan-america-el-soldado-de-invierno",
+       "type": "movieSeries",
+       "title": "Capitán América: El Soldado de Invierno",
+       "coverUrl": "assets/colecciones/portadas/marvel-capitan-america-el-soldado-de-invierno.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Steve Rogers descubre que Hydra se ha infiltrado en S.H.I.E.L.D. y se enfrenta a un asesino salido de su pasado.",
+       "mediaType": "movie",
+       "duration": "2h 16m",
+       "creatorOrDirector": "Joe Russo, Anthony Russo",
+       "collectionNumber": 9,
+       "externalUrl": "https://letterboxd.com/film/captain-america-the-winter-soldier/"
+      },
+      {
+       "id": "guardianes-de-la-galaxia",
+       "type": "movieSeries",
+       "title": "Guardianes de la galaxia",
+       "coverUrl": "assets/colecciones/portadas/marvel-guardianes-de-la-galaxia.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "Star-Lord y un grupo de inadaptados espaciales se unen para proteger un orbe que puede destruir planetas.",
+       "mediaType": "movie",
+       "duration": "2h 1m",
+       "creatorOrDirector": "James Gunn",
+       "collectionNumber": 10,
+       "externalUrl": "https://letterboxd.com/film/guardians-of-the-galaxy/"
+      },
+      {
+       "id": "vengadores-la-era-de-ultron",
+       "type": "movieSeries",
+       "title": "Vengadores: La era de Ultrón",
+       "coverUrl": "assets/colecciones/portadas/marvel-vengadores-la-era-de-ultron.jpg",
+       "releaseYear": 2015,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Stark crea una inteligencia artificial para proteger el mundo, pero Ultrón decide que la única paz posible es acabar con la humanidad.",
+       "mediaType": "movie",
+       "duration": "2h 21m",
+       "creatorOrDirector": "Joss Whedon",
+       "collectionNumber": 11,
+       "externalUrl": "https://letterboxd.com/film/avengers-age-of-ultron/"
+      },
+      {
+       "id": "ant-man",
+       "type": "movieSeries",
+       "title": "Ant-Man",
+       "coverUrl": "assets/colecciones/portadas/marvel-ant-man.jpg",
+       "releaseYear": 2015,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "El ladrón Scott Lang recibe un traje capaz de encogerlo y debe dar un golpe para proteger el invento de Hank Pym.",
+       "mediaType": "movie",
+       "duration": "1h 57m",
+       "creatorOrDirector": "Peyton Reed",
+       "collectionNumber": 12,
+       "externalUrl": "https://letterboxd.com/film/ant-man/"
+      },
+      {
+       "id": "capitan-america-civil-war",
+       "type": "movieSeries",
+       "title": "Capitán América: Civil War",
+       "coverUrl": "assets/colecciones/portadas/marvel-capitan-america-civil-war.jpg",
+       "releaseYear": 2016,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "Un acuerdo para regular a los superhéroes divide a los Vengadores en dos bandos, liderados por Iron Man y el Capitán América.",
+       "mediaType": "movie",
+       "duration": "2h 27m",
+       "creatorOrDirector": "Joe Russo, Anthony Russo",
+       "collectionNumber": 13,
+       "externalUrl": "https://letterboxd.com/film/captain-america-civil-war/"
+      },
+      {
+       "id": "doctor-strange",
+       "type": "movieSeries",
+       "title": "Doctor Strange",
+       "coverUrl": "assets/colecciones/portadas/marvel-doctor-strange.jpg",
+       "releaseYear": 2016,
+       "genre": "Fantasía, aventura, acción",
+       "note": "Un brillante neurocirujano pierde el uso de las manos y busca una cura en Katmandú, donde descubre las artes místicas.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Scott Derrickson",
+       "collectionNumber": 14,
+       "externalUrl": "https://letterboxd.com/film/doctor-strange-2016/"
+      },
+      {
+       "id": "guardianes-de-la-galaxia-vol-2",
+       "type": "movieSeries",
+       "title": "Guardianes de la galaxia Vol. 2",
+       "coverUrl": "assets/colecciones/portadas/marvel-guardianes-de-la-galaxia-vol-2.jpg",
+       "releaseYear": 2017,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "Los Guardianes huyen por el espacio mientras Peter Quill conoce a su padre y descubre su verdadero origen.",
+       "mediaType": "movie",
+       "duration": "2h 17m",
+       "creatorOrDirector": "James Gunn",
+       "collectionNumber": 15,
+       "externalUrl": "https://letterboxd.com/film/guardians-of-the-galaxy-vol-2/"
+      },
+      {
+       "id": "spider-man-homecoming",
+       "type": "movieSeries",
+       "title": "Spider-Man: Homecoming",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-homecoming.jpg",
+       "releaseYear": 2017,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Peter Parker compagina el instituto con su papel de Spider-Man, bajo la tutela de Tony Stark, frente al Buitre.",
+       "mediaType": "movie",
+       "duration": "2h 13m",
+       "creatorOrDirector": "Jon Watts",
+       "collectionNumber": 16,
+       "externalUrl": "https://letterboxd.com/film/spider-man-homecoming/"
+      },
+      {
+       "id": "thor-ragnarok",
+       "type": "movieSeries",
+       "title": "Thor: Ragnarok",
+       "coverUrl": "assets/colecciones/portadas/marvel-thor-ragnarok.jpg",
+       "releaseYear": 2017,
+       "genre": "Acción, aventura, comedia",
+       "note": "Thor acaba prisionero en un planeta de gladiadores y debe regresar a Asgard para detener a Hela.",
+       "mediaType": "movie",
+       "duration": "2h 11m",
+       "creatorOrDirector": "Taika Waititi",
+       "collectionNumber": 17,
+       "externalUrl": "https://letterboxd.com/film/thor-ragnarok/"
+      },
+      {
+       "id": "black-panther",
+       "type": "movieSeries",
+       "title": "Black Panther",
+       "coverUrl": "assets/colecciones/portadas/marvel-black-panther.jpg",
+       "releaseYear": 2018,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "T'Challa regresa a Wakanda para ser rey, y un aspirante a su trono pone en peligro al país y al mundo.",
+       "mediaType": "movie",
+       "duration": "2h 14m",
+       "creatorOrDirector": "Ryan Coogler",
+       "collectionNumber": 18,
+       "externalUrl": "https://letterboxd.com/film/black-panther/"
+      },
+      {
+       "id": "vengadores-infinity-war",
+       "type": "movieSeries",
+       "title": "Vengadores: Infinity War",
+       "coverUrl": "assets/colecciones/portadas/marvel-vengadores-infinity-war.jpg",
+       "releaseYear": 2018,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "Thanos busca las seis Gemas del Infinito para eliminar a la mitad del universo, y los héroes intentan detenerlo.",
+       "mediaType": "movie",
+       "duration": "2h 29m",
+       "creatorOrDirector": "Anthony Russo, Joe Russo",
+       "collectionNumber": 19,
+       "externalUrl": "https://letterboxd.com/film/avengers-infinity-war/"
+      },
+      {
+       "id": "ant-man-y-la-avispa",
+       "type": "movieSeries",
+       "title": "Ant-Man y la Avispa",
+       "coverUrl": "assets/colecciones/portadas/marvel-ant-man-y-la-avispa.jpg",
+       "releaseYear": 2018,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Scott Lang y Hope van Dyne buscan a Janet en el reino cuántico mientras una villana capaz de atravesar la materia los persigue.",
+       "mediaType": "movie",
+       "duration": "1h 58m",
+       "creatorOrDirector": "Peyton Reed",
+       "collectionNumber": 20,
+       "externalUrl": "https://letterboxd.com/film/ant-man-and-the-wasp/"
+      },
+      {
+       "id": "capitana-marvel",
+       "type": "movieSeries",
+       "title": "Capitana Marvel",
+       "coverUrl": "assets/colecciones/portadas/marvel-capitana-marvel.jpg",
+       "releaseYear": 2019,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "En los años noventa, Carol Danvers descubre su pasado en la Tierra en plena guerra entre dos razas alienígenas.",
+       "mediaType": "movie",
+       "duration": "2h 5m",
+       "creatorOrDirector": "Ryan Fleck, Anna Boden",
+       "collectionNumber": 21,
+       "externalUrl": "https://letterboxd.com/film/captain-marvel/"
+      },
+      {
+       "id": "vengadores-endgame",
+       "type": "movieSeries",
+       "title": "Vengadores: Endgame",
+       "coverUrl": "assets/colecciones/portadas/marvel-vengadores-endgame.jpg",
+       "releaseYear": 2019,
+       "genre": "Aventura, ciencia ficción, acción",
+       "note": "Los Vengadores supervivientes planean una última misión para revertir lo que hizo Thanos, cierre de la saga del Infinito.",
+       "mediaType": "movie",
+       "duration": "3h 1m",
+       "creatorOrDirector": "Anthony Russo, Joe Russo",
+       "collectionNumber": 22,
+       "externalUrl": "https://letterboxd.com/film/avengers-endgame/"
+      },
+      {
+       "id": "spider-man-lejos-de-casa",
+       "type": "movieSeries",
+       "title": "Spider-Man: Lejos de casa",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-lejos-de-casa.jpg",
+       "releaseYear": 2019,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Un viaje escolar por Europa se complica cuando Nick Fury recluta a Peter Parker para combatir a unas criaturas elementales.",
+       "mediaType": "movie",
+       "duration": "2h 9m",
+       "creatorOrDirector": "Jon Watts",
+       "collectionNumber": 23,
+       "externalUrl": "https://letterboxd.com/film/spider-man-far-from-home/"
+      },
+      {
+       "id": "viuda-negra",
+       "type": "movieSeries",
+       "title": "Viuda Negra",
+       "coverUrl": "assets/colecciones/portadas/marvel-viuda-negra.jpg",
+       "releaseYear": 2021,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Natasha Romanoff se enfrenta a su pasado como espía y a la familia que dejó atrás.",
+       "mediaType": "movie",
+       "duration": "2h 14m",
+       "creatorOrDirector": "Cate Shortland",
+       "collectionNumber": 24,
+       "externalUrl": "https://letterboxd.com/film/black-widow-2021/"
+      },
+      {
+       "id": "shang-chi-y-la-leyenda-de-los-diez-anillos",
+       "type": "movieSeries",
+       "title": "Shang-Chi y la leyenda de los Diez Anillos",
+       "coverUrl": "assets/colecciones/portadas/marvel-shang-chi-y-la-leyenda-de-los-diez-anillos.jpg",
+       "releaseYear": 2021,
+       "genre": "Acción, aventura, fantasía",
+       "note": "Shang-Chi debe enfrentarse a su padre, líder de la organización de los Diez Anillos, y a la vida que abandonó.",
+       "mediaType": "movie",
+       "duration": "2h 12m",
+       "creatorOrDirector": "Destin Daniel Cretton",
+       "collectionNumber": 25,
+       "externalUrl": "https://letterboxd.com/film/shang-chi-and-the-legend-of-the-ten-rings/"
+      },
+      {
+       "id": "eternals",
+       "type": "movieSeries",
+       "title": "Eternals",
+       "coverUrl": "assets/colecciones/portadas/marvel-eternals.jpg",
+       "releaseYear": 2021,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Unos seres inmortales que llevan milenios en la Tierra se reúnen para enfrentarse a los Desviantes y a una amenaza mayor.",
+       "mediaType": "movie",
+       "duration": "2h 36m",
+       "creatorOrDirector": "Chloé Zhao",
+       "collectionNumber": 26,
+       "externalUrl": "https://letterboxd.com/film/eternals/"
+      },
+      {
+       "id": "spider-man-no-way-home",
+       "type": "movieSeries",
+       "title": "Spider-Man: No Way Home",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-no-way-home.jpg",
+       "releaseYear": 2021,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Con su identidad al descubierto, Peter pide ayuda al Doctor Strange, y el hechizo abre la puerta a villanos de otros universos.",
+       "mediaType": "movie",
+       "duration": "2h 28m",
+       "creatorOrDirector": "Jon Watts",
+       "collectionNumber": 27,
+       "externalUrl": "https://letterboxd.com/film/spider-man-no-way-home/"
+      },
+      {
+       "id": "doctor-strange-en-el-multiverso-de-la-locura",
+       "type": "movieSeries",
+       "title": "Doctor Strange en el multiverso de la locura",
+       "coverUrl": "assets/colecciones/portadas/marvel-doctor-strange-en-el-multiverso-de-la-locura.jpg",
+       "releaseYear": 2022,
+       "genre": "Fantasía, acción, aventura",
+       "note": "Strange protege a una joven capaz de viajar entre universos de una amenaza inesperada.",
+       "mediaType": "movie",
+       "duration": "2h 6m",
+       "creatorOrDirector": "Sam Raimi",
+       "collectionNumber": 28,
+       "externalUrl": "https://letterboxd.com/film/doctor-strange-in-the-multiverse-of-madness/"
+      },
+      {
+       "id": "thor-love-and-thunder",
+       "type": "movieSeries",
+       "title": "Thor: Love and Thunder",
+       "coverUrl": "assets/colecciones/portadas/marvel-thor-love-and-thunder.jpg",
+       "releaseYear": 2022,
+       "genre": "Fantasía, acción, comedia",
+       "note": "Thor se reencuentra con Jane Foster, convertida en la Poderosa Thor, frente a un asesino de dioses.",
+       "mediaType": "movie",
+       "duration": "1h 59m",
+       "creatorOrDirector": "Taika Waititi",
+       "collectionNumber": 29,
+       "externalUrl": "https://letterboxd.com/film/thor-love-and-thunder/"
+      },
+      {
+       "id": "black-panther-wakanda-forever",
+       "type": "movieSeries",
+       "title": "Black Panther: Wakanda Forever",
+       "coverUrl": "assets/colecciones/portadas/marvel-black-panther-wakanda-forever.jpg",
+       "releaseYear": 2022,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Wakanda llora a su rey y debe defenderse de Talokan, una civilización submarina liderada por Namor.",
+       "mediaType": "movie",
+       "duration": "2h 42m",
+       "creatorOrDirector": "Ryan Coogler",
+       "collectionNumber": 30,
+       "externalUrl": "https://letterboxd.com/film/black-panther-wakanda-forever/"
+      },
+      {
+       "id": "ant-man-y-la-avispa-quantumania",
+       "type": "movieSeries",
+       "title": "Ant-Man y la Avispa: Quantumanía",
+       "coverUrl": "assets/colecciones/portadas/marvel-ant-man-y-la-avispa-quantumania.jpg",
+       "releaseYear": 2023,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "La familia Lang queda atrapada en el reino cuántico y se enfrenta a Kang el Conquistador.",
+       "mediaType": "movie",
+       "duration": "2h 5m",
+       "creatorOrDirector": "Peyton Reed",
+       "collectionNumber": 31,
+       "externalUrl": "https://letterboxd.com/film/ant-man-and-the-wasp-quantumania/"
+      },
+      {
+       "id": "guardianes-de-la-galaxia-volumen-3",
+       "type": "movieSeries",
+       "title": "Guardianes de la Galaxia: Volumen 3",
+       "coverUrl": "assets/colecciones/portadas/marvel-guardianes-de-la-galaxia-volumen-3.jpg",
+       "releaseYear": 2023,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "Los Guardianes emprenden una misión para salvar a Rocket, y su pasado sale a la luz.",
+       "mediaType": "movie",
+       "duration": "2h 30m",
+       "creatorOrDirector": "James Gunn",
+       "collectionNumber": 32,
+       "externalUrl": "https://letterboxd.com/film/guardians-of-the-galaxy-vol-3/"
+      },
+      {
+       "id": "the-marvels",
+       "type": "movieSeries",
+       "title": "The Marvels",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-marvels.jpg",
+       "releaseYear": 2023,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "Capitana Marvel, Monica Rambeau y Ms. Marvel intercambian posiciones cada vez que usan sus poderes.",
+       "mediaType": "movie",
+       "duration": "1h 45m",
+       "creatorOrDirector": "Nia DaCosta",
+       "collectionNumber": 33,
+       "externalUrl": "https://letterboxd.com/film/the-marvels/"
+      },
+      {
+       "id": "deadpool-y-lobezno",
+       "type": "movieSeries",
+       "title": "Deadpool y Lobezno",
+       "coverUrl": "assets/colecciones/portadas/marvel-deadpool-y-lobezno.jpg",
+       "releaseYear": 2024,
+       "genre": "Acción, comedia, ciencia ficción",
+       "note": "La AVT saca a Deadpool de su retiro y lo obliga a aliarse con un Lobezno de otro universo.",
+       "mediaType": "movie",
+       "duration": "2h 8m",
+       "creatorOrDirector": "Shawn Levy",
+       "collectionNumber": 34,
+       "externalUrl": "https://letterboxd.com/film/deadpool-wolverine/"
+      },
+      {
+       "id": "capitan-america-brave-new-world",
+       "type": "movieSeries",
+       "title": "Capitán América: Brave New World",
+       "coverUrl": "assets/colecciones/portadas/marvel-capitan-america-brave-new-world.jpg",
+       "releaseYear": 2025,
+       "genre": "Acción, suspense, ciencia ficción",
+       "note": "Sam Wilson asume el escudo y destapa un complot internacional mientras el presidente Ross se transforma.",
+       "mediaType": "movie",
+       "duration": "1h 59m",
+       "creatorOrDirector": "Julius Onah",
+       "collectionNumber": 35,
+       "externalUrl": "https://letterboxd.com/film/captain-america-brave-new-world/"
+      },
+      {
+       "id": "thunderbolts",
+       "type": "movieSeries",
+       "title": "Thunderbolts*",
+       "coverUrl": "assets/colecciones/portadas/marvel-thunderbolts.jpg",
+       "releaseYear": 2025,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "Un grupo de antihéroes, entre ellos Yelena Belova y el Soldado de Invierno, cae en una trampa de Valentina de Fontaine y debe trabajar en equipo.",
+       "mediaType": "movie",
+       "duration": "2h 7m",
+       "creatorOrDirector": "Jake Schreier",
+       "collectionNumber": 36,
+       "externalUrl": "https://letterboxd.com/film/thunderbolts/"
+      },
+      {
+       "id": "los-cuatro-fantasticos-primeros-pasos",
+       "type": "movieSeries",
+       "title": "Los Cuatro Fantásticos: Primeros pasos",
+       "coverUrl": "assets/colecciones/portadas/marvel-los-cuatro-fantasticos-primeros-pasos.jpg",
+       "releaseYear": 2025,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "En un mundo retrofuturista de los años sesenta, la primera familia de Marvel se enfrenta a Galactus.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Matt Shakman",
+       "collectionNumber": 37,
+       "externalUrl": "https://letterboxd.com/film/the-fantastic-4-first-steps/"
+      },
+      {
+       "id": "spider-man-brand-new-day",
+       "type": "movieSeries",
+       "title": "Spider-Man: Brand New Day",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-brand-new-day.jpg",
+       "releaseYear": 2026,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Peter Parker intenta empezar de cero como héroe de barrio después de que todos hayan olvidado quién es.",
+       "mediaType": "movie",
+       "duration": "2h 25m",
+       "creatorOrDirector": "Destin Daniel Cretton",
+       "collectionNumber": 38,
+       "externalUrl": "https://letterboxd.com/film/spider-man-brand-new-day/"
+      },
+      {
+       "id": "vengadores-doomsday",
+       "type": "movieSeries",
+       "title": "Vengadores: Doomsday",
+       "coverUrl": "assets/colecciones/portadas/marvel-vengadores-doomsday.jpg",
+       "releaseYear": 2026,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Vengadores, X-Men y Cuatro Fantásticos se reúnen frente al Doctor Doom. Se estrena en diciembre de 2026.",
+       "mediaType": "movie",
+       "duration": "2h 45m",
+       "creatorOrDirector": "Joe Russo, Anthony Russo",
+       "collectionNumber": 39,
+       "externalUrl": "https://letterboxd.com/film/avengers-doomsday/"
+      }
+     ]
+    },
+    {
+     "nombre": "Series de Disney+",
+     "obras": [
+      {
+       "id": "bruja-escarlata-y-vision",
+       "type": "movieSeries",
+       "title": "Bruja Escarlata y Visión",
+       "coverUrl": "assets/colecciones/portadas/marvel-bruja-escarlata-y-vision.jpg",
+       "releaseYear": 2021,
+       "genre": "Ciencia ficción, misterio, drama",
+       "note": "Wanda y Visión viven una idílica vida de comedia televisiva que esconde algo mucho más oscuro.",
+       "mediaType": "series"
+      },
+      {
+       "id": "falcon-y-el-soldado-de-invierno",
+       "type": "movieSeries",
+       "title": "Falcon y el Soldado de Invierno",
+       "coverUrl": "assets/colecciones/portadas/marvel-falcon-y-el-soldado-de-invierno.jpg",
+       "releaseYear": 2021,
+       "genre": "Acción, ciencia ficción, drama",
+       "note": "Sam Wilson y Bucky Barnes se unen tras la marcha del Capitán América y lidian con el peso de su legado.",
+       "mediaType": "series"
+      },
+      {
+       "id": "loki",
+       "type": "movieSeries",
+       "title": "Loki",
+       "coverUrl": "assets/colecciones/portadas/marvel-loki.jpg",
+       "releaseYear": 2021,
+       "genre": "Drama, ciencia ficción",
+       "note": "Loki escapa con el Teseracto y acaba en manos de la AVT, que vigila la línea temporal.",
+       "mediaType": "series"
+      },
+      {
+       "id": "ojo-de-halcon",
+       "type": "movieSeries",
+       "title": "Ojo de Halcón",
+       "coverUrl": "assets/colecciones/portadas/marvel-ojo-de-halcon.jpg",
+       "releaseYear": 2021,
+       "genre": "Drama, comedia, acción",
+       "note": "Clint Barton quiere pasar la Navidad con su familia, pero tiene que resolver el pasado de Ronin junto a Kate Bishop.",
+       "mediaType": "series"
+      },
+      {
+       "id": "caballero-luna",
+       "type": "movieSeries",
+       "title": "Caballero Luna",
+       "coverUrl": "assets/colecciones/portadas/marvel-caballero-luna.jpg",
+       "releaseYear": 2022,
+       "genre": "Ciencia ficción, misterio, acción",
+       "note": "Steven Grant descubre que comparte cuerpo con un mercenario al servicio de un dios egipcio.",
+       "mediaType": "series"
+      },
+      {
+       "id": "ms-marvel",
+       "type": "movieSeries",
+       "title": "Ms. Marvel",
+       "coverUrl": "assets/colecciones/portadas/marvel-ms-marvel.jpg",
+       "releaseYear": 2022,
+       "genre": "Ciencia ficción, acción, comedia",
+       "note": "Kamala Khan, adolescente de Nueva Jersey y fan de los Vengadores, descubre que tiene poderes.",
+       "mediaType": "series"
+      },
+      {
+       "id": "she-hulk-abogada-hulka",
+       "type": "movieSeries",
+       "title": "She-Hulk: Abogada Hulka",
+       "coverUrl": "assets/colecciones/portadas/marvel-she-hulk-abogada-hulka.jpg",
+       "releaseYear": 2022,
+       "genre": "Comedia, ciencia ficción",
+       "note": "La abogada Jennifer Walters adquiere los poderes de Hulk y sigue con su trabajo en un bufete especializado en superhumanos.",
+       "mediaType": "series"
+      },
+      {
+       "id": "invasion-secreta",
+       "type": "movieSeries",
+       "title": "Invasión secreta",
+       "coverUrl": "assets/colecciones/portadas/marvel-invasion-secreta.jpg",
+       "releaseYear": 2023,
+       "genre": "Drama, ciencia ficción, acción",
+       "note": "Nick Fury descubre que unos skrulls renegados se han infiltrado en la Tierra.",
+       "mediaType": "series"
+      },
+      {
+       "id": "echo",
+       "type": "movieSeries",
+       "title": "Echo",
+       "coverUrl": "assets/colecciones/portadas/marvel-echo.jpg",
+       "releaseYear": 2024,
+       "genre": "Acción, crimen, drama",
+       "note": "Maya Lopez vuelve a su hogar en Oklahoma, perseguida por el imperio criminal de Kingpin.",
+       "mediaType": "series"
+      },
+      {
+       "id": "agatha-quien-si-no",
+       "type": "movieSeries",
+       "title": "Agatha, ¿quién si no?",
+       "coverUrl": "assets/colecciones/portadas/marvel-agatha-quien-si-no.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, misterio",
+       "note": "Agatha Harkness recupera sus poderes y reúne a un aquelarre para recorrer el Camino de las Brujas.",
+       "mediaType": "series"
+      },
+      {
+       "id": "daredevil-born-again",
+       "type": "movieSeries",
+       "title": "Daredevil: Born Again",
+       "coverUrl": "assets/colecciones/portadas/marvel-daredevil-born-again.jpg",
+       "releaseYear": 2025,
+       "genre": "Drama, acción, crimen",
+       "note": "Matt Murdock vuelve a ponerse el traje cuando Wilson Fisk se presenta a alcalde de Nueva York.",
+       "mediaType": "series"
+      },
+      {
+       "id": "ironheart",
+       "type": "movieSeries",
+       "title": "Ironheart",
+       "coverUrl": "assets/colecciones/portadas/marvel-ironheart.jpg",
+       "releaseYear": 2025,
+       "genre": "Ciencia ficción, crimen, acción",
+       "note": "Riri Williams, genio de la ingeniería, construye una armadura y se mete con la persona equivocada.",
+       "mediaType": "series"
+      }
+     ]
+    },
+    {
+     "nombre": "Series de Netflix",
+     "obras": [
+      {
+       "id": "daredevil",
+       "type": "movieSeries",
+       "title": "Daredevil",
+       "coverUrl": "assets/colecciones/portadas/marvel-daredevil.jpg",
+       "releaseYear": 2015,
+       "genre": "Crimen, drama, acción",
+       "note": "Matt Murdock, abogado ciego de día y justiciero de noche, protege el barrio de Hell's Kitchen de Wilson Fisk.",
+       "mediaType": "series"
+      },
+      {
+       "id": "jessica-jones",
+       "type": "movieSeries",
+       "title": "Jessica Jones",
+       "coverUrl": "assets/colecciones/portadas/marvel-jessica-jones.jpg",
+       "releaseYear": 2015,
+       "genre": "Ciencia ficción, drama",
+       "note": "Una detective privada con superfuerza intenta rehacer su vida, perseguida por el manipulador Kilgrave.",
+       "mediaType": "series"
+      },
+      {
+       "id": "luke-cage",
+       "type": "movieSeries",
+       "title": "Luke Cage",
+       "coverUrl": "assets/colecciones/portadas/marvel-luke-cage.jpg",
+       "releaseYear": 2016,
+       "genre": "Drama, acción, crimen",
+       "note": "Un expresidiario con la piel impenetrable se ve obligado a defender Harlem.",
+       "mediaType": "series"
+      },
+      {
+       "id": "iron-fist",
+       "type": "movieSeries",
+       "title": "Iron Fist",
+       "coverUrl": "assets/colecciones/portadas/marvel-iron-fist.jpg",
+       "releaseYear": 2017,
+       "genre": "Acción, drama, ciencia ficción",
+       "note": "Danny Rand vuelve a Nueva York tras años desaparecido, dominando las artes marciales y el poder del Puño de Hierro.",
+       "mediaType": "series"
+      },
+      {
+       "id": "the-defenders",
+       "type": "movieSeries",
+       "title": "The Defenders",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-defenders.jpg",
+       "releaseYear": 2017,
+       "genre": "Ciencia ficción, acción, crimen",
+       "note": "Daredevil, Jessica Jones, Luke Cage e Iron Fist se unen contra La Mano.",
+       "mediaType": "series"
+      },
+      {
+       "id": "the-punisher",
+       "type": "movieSeries",
+       "title": "The Punisher",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-punisher.jpg",
+       "releaseYear": 2017,
+       "genre": "Acción, crimen, drama",
+       "note": "Frank Castle, exmarine que perdió a su familia, destapa una conspiración que va más allá de los criminales de Nueva York.",
+       "mediaType": "series"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "orcs-must-die",
+   "nombre": "Orcs Must Die!",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "orcs-must-die",
+       "type": "game",
+       "title": "Orcs Must Die!",
+       "coverUrl": "assets/colecciones/portadas/orcs-must-die-orcs-must-die.jpg",
+       "platform": "PC",
+       "developer": "Robot Entertainment",
+       "releaseYear": 2011,
+       "genre": "Defensa de torres y acción",
+       "note": "Un aprendiz de mago defiende fisuras mágicas con trampas y armas contra hordas de orcos.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "orcs-must-die-2",
+       "type": "game",
+       "title": "Orcs Must Die! 2",
+       "coverUrl": "assets/colecciones/portadas/orcs-must-die-orcs-must-die-2.jpg",
+       "platform": "PC",
+       "developer": "Robot Entertainment",
+       "releaseYear": 2012,
+       "genre": "Defensa de torres y acción",
+       "note": "Continuación con modo cooperativo: la hechicera y el aprendiz se unen contra los orcos.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "orcs-must-die-3",
+       "type": "game",
+       "title": "Orcs Must Die! 3",
+       "coverUrl": "assets/colecciones/portadas/orcs-must-die-orcs-must-die-3.jpg",
+       "platform": "PC",
+       "developer": "Robot Entertainment",
+       "releaseYear": 2020,
+       "genre": "Defensa de torres y acción",
+       "note": "Más trampas y batallas a gran escala, con hordas más numerosas y máquinas de guerra.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "orcs-must-die-deathtrap",
+       "type": "game",
+       "title": "Orcs Must Die! Deathtrap",
+       "coverUrl": "assets/colecciones/portadas/orcs-must-die-orcs-must-die-deathtrap.jpg",
+       "platform": "PC",
+       "developer": "Robot Entertainment",
+       "releaseYear": 2025,
+       "genre": "Defensa de torres y roguelite",
+       "note": "Cooperativo de hasta cuatro jugadores con elementos roguelite y fases que cambian en cada partida.",
+       "collectionNumber": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "persona",
+   "nombre": "Persona",
+   "universo": "Persona",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "persona",
+       "type": "game",
+       "title": "Persona",
+       "coverUrl": "assets/colecciones/portadas/persona.jpg",
+       "platform": "PSP",
+       "developer": "Atlus",
+       "releaseYear": 1996,
+       "genre": "JRPG y mazmorras",
+       "collectionNumber": 1,
+       "note": "El origen de la saga, publicado en Occidente como Revelations: Persona. Un grupo de estudiantes del instituto St. Hermelin despierta sus Personas tras un juego de adivinación y se enfrenta a los demonios que invaden la ciudad de Mikage-cho. La versión más accesible es la de PSP, de 2009."
+      },
+      {
+       "id": "persona-2-innocent-sin",
+       "type": "game",
+       "title": "Persona 2: Innocent Sin",
+       "coverUrl": "assets/colecciones/portadas/persona-2-innocent-sin.jpg",
+       "platform": "PSP",
+       "developer": "Atlus",
+       "releaseYear": 1999,
+       "genre": "JRPG y mazmorras",
+       "collectionNumber": 2,
+       "note": "En la ciudad de Sumaru, los rumores se hacen realidad. Tatsuya Suou y sus amigos se enfrentan al Joker, una figura que concede deseos a cambio de los sueños de la gente, y a un pasado que habían olvidado. La versión de PlayStation no salió de Japón; en Occidente llegó con la de PSP, en 2011."
+      },
+      {
+       "id": "persona-2-eternal-punishment",
+       "type": "game",
+       "title": "Persona 2: Eternal Punishment",
+       "coverUrl": "assets/colecciones/portadas/persona-2-eternal-punishment.jpg",
+       "platform": "PlayStation",
+       "developer": "Atlus",
+       "releaseYear": 2000,
+       "genre": "JRPG y mazmorras",
+       "collectionNumber": 2,
+       "note": "Continuación directa de Innocent Sin. La periodista Maya Amano investiga una oleada de rumores en Sumaru que vuelven a hacerse realidad, y descubre que lo ocurrido en el juego anterior sigue teniendo consecuencias."
+      },
+      {
+       "id": "persona-3",
+       "type": "game",
+       "title": "Persona 3",
+       "coverUrl": "assets/colecciones/portadas/persona-3.jpg",
+       "platform": "PS2",
+       "developer": "Atlus",
+       "releaseYear": 2006,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 3,
+       "note": "Un estudiante recién llegado al instituto Gekkoukan descubre la Hora Oscura, un momento oculto entre un día y el siguiente en el que aparece la torre Tártaro. Con el grupo SEES combate a las Sombras mientras vive su día a día. Es la entrega que introdujo los vínculos y el calendario."
+      },
+      {
+       "id": "persona-3-fes",
+       "type": "game",
+       "title": "Persona 3 FES",
+       "coverUrl": "assets/colecciones/portadas/persona-3-fes.jpg",
+       "platform": "PS2",
+       "developer": "Atlus",
+       "releaseYear": 2007,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 3,
+       "note": "Versión ampliada de Persona 3 con mejoras jugables y The Answer, un epílogo protagonizado por Aigis que continúa la historia tras el final original."
+      },
+      {
+       "id": "persona-3-portable",
+       "type": "game",
+       "title": "Persona 3 Portable",
+       "coverUrl": "assets/colecciones/portadas/persona-3-portable.jpg",
+       "platform": "PC",
+       "developer": "Atlus",
+       "releaseYear": 2009,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 3,
+       "note": "Reedición de Persona 3 que añade una protagonista femenina con vínculos propios y permite controlar directamente a todo el grupo en combate. Nació en PSP en 2009 y llegó a PC y consolas actuales en 2023."
+      },
+      {
+       "id": "persona-3-reload",
+       "type": "game",
+       "title": "Persona 3 Reload",
+       "coverUrl": "assets/colecciones/portadas/persona-3-reload.jpg",
+       "platform": "PC",
+       "developer": "P-Studio / Atlus",
+       "releaseYear": 2024,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 3,
+       "note": "Remake completo de Persona 3 con gráficos, voces y combate renovados. El pase de expansión añade Episode Aigis: The Answer."
+      },
+      {
+       "id": "persona-4",
+       "type": "game",
+       "title": "Persona 4",
+       "coverUrl": "assets/colecciones/portadas/persona-4.jpg",
+       "platform": "PS2",
+       "developer": "Atlus",
+       "releaseYear": 2008,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 4,
+       "note": "Yu Narukami pasa un año en el pueblo rural de Inaba, donde una serie de asesinatos se relaciona con el Canal de Medianoche, un programa que solo aparece en las noches de lluvia. Con sus amigos entra en el mundo dentro de la televisión para salvar a las víctimas y dar con el culpable."
+      },
+      {
+       "id": "persona-4-golden",
+       "type": "game",
+       "title": "Persona 4 Golden",
+       "coverUrl": "assets/colecciones/portadas/persona-4-golden.jpg",
+       "platform": "PC",
+       "developer": "Atlus",
+       "releaseYear": 2012,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 4,
+       "note": "Versión definitiva de Persona 4, con un personaje nuevo, Marie, más vínculos y eventos, y contenido adicional para el tramo final. Nació en PS Vita en 2012 y llegó a PC en 2020."
+      },
+      {
+       "id": "persona-4-revival",
+       "type": "game",
+       "title": "Persona 4 Revival",
+       "coverUrl": "assets/colecciones/portadas/persona-4-revival.jpg",
+       "platform": "PC",
+       "developer": "P-Studio / Atlus",
+       "releaseYear": 2027,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 4,
+       "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series."
+      },
+      {
+       "id": "persona-5",
+       "type": "game",
+       "title": "Persona 5",
+       "coverUrl": "assets/colecciones/portadas/persona-5.jpg",
+       "platform": "PS4",
+       "developer": "P-Studio / Atlus",
+       "releaseYear": 2016,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 5,
+       "note": "Un estudiante en libertad condicional llega a Tokio y funda los Ladrones Fantasma de Corazones, que se infiltran en los palacios mentales de adultos corruptos para robarles sus deseos distorsionados y obligarlos a confesar."
+      },
+      {
+       "id": "persona-5-royal",
+       "type": "game",
+       "title": "Persona 5 Royal",
+       "coverUrl": "assets/colecciones/portadas/persona-5-royal.jpg",
+       "platform": "PC",
+       "developer": "P-Studio",
+       "releaseYear": 2019,
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 5,
+       "note": "Versión definitiva de Persona 5, con Kasumi Yoshizawa, un semestre adicional y un palacio nuevo. Nació en PS4 en 2019 y llegó a PC y al resto de consolas en 2022."
+      },
+      {
+       "id": "persona-6",
+       "type": "game",
+       "title": "Persona 6",
+       "coverUrl": "assets/colecciones/portadas/persona-6.jpg",
+       "platform": "PC",
+       "developer": "Atlus",
+       "genre": "JRPG, simulación social y mazmorras",
+       "collectionNumber": 6,
+       "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival."
+      }
+     ]
+    },
+    {
+     "nombre": "Spin-offs",
+     "obras": [
+      {
+       "id": "persona-4-arena",
+       "type": "game",
+       "title": "Persona 4 Arena",
+       "coverUrl": "assets/colecciones/portadas/persona-4-arena.jpg",
+       "platform": "PS3",
+       "developer": "Arc System Works / Atlus",
+       "releaseYear": 2012,
+       "genre": "Lucha",
+       "note": "Juego de lucha que continúa la historia de Persona 4. El P-1 Grand Prix, un torneo en el Canal de Medianoche, enfrenta al grupo de Inaba con personajes de Persona 3."
+      },
+      {
+       "id": "persona-4-arena-ultimax",
+       "type": "game",
+       "title": "Persona 4 Arena Ultimax",
+       "coverUrl": "assets/colecciones/portadas/persona-4-arena-ultimax.jpg",
+       "platform": "PC",
+       "developer": "Arc System Works / Atlus",
+       "releaseYear": 2013,
+       "genre": "Lucha",
+       "note": "Secuela directa de Persona 4 Arena, con una niebla roja sobre Inaba, más luchadores de Persona 3 y el cierre de la historia iniciada en el primer juego. La versión de PC llegó en 2022."
+      },
+      {
+       "id": "persona-q",
+       "type": "game",
+       "title": "Persona Q: Shadow of the Labyrinth",
+       "coverUrl": "assets/colecciones/portadas/persona-q.jpg",
+       "platform": "Nintendo 3DS",
+       "developer": "P-Studio",
+       "releaseYear": 2014,
+       "genre": "JRPG y mazmorras en primera persona",
+       "note": "Cruce entre Persona 3 y Persona 4 con mazmorras en primera persona y mapas dibujados a mano. Ambos grupos quedan atrapados en una versión extraña del festival cultural del instituto Yasogami."
+      },
+      {
+       "id": "persona-4-dancing-all-night",
+       "type": "game",
+       "title": "Persona 4: Dancing All Night",
+       "coverUrl": "assets/colecciones/portadas/persona-4-dancing-all-night.jpg",
+       "platform": "PS Vita",
+       "developer": "P-Studio",
+       "releaseYear": 2015,
+       "genre": "Ritmo",
+       "note": "Juego de ritmo con el reparto de Persona 4 y música de la saga. Rise y sus amigos se ven arrastrados a un escenario misterioso donde bailar es la única forma de rescatar a un grupo de ídolos."
+      },
+      {
+       "id": "persona-q2",
+       "type": "game",
+       "title": "Persona Q2: New Cinema Labyrinth",
+       "coverUrl": "assets/colecciones/portadas/persona-q2.jpg",
+       "platform": "Nintendo 3DS",
+       "developer": "P-Studio",
+       "releaseYear": 2018,
+       "genre": "JRPG y mazmorras en primera persona",
+       "note": "Reúne a los protagonistas de Persona 3, 4 y 5 en un cine misterioso cuyas películas son laberintos de los que tienen que escapar."
+      },
+      {
+       "id": "persona-3-dancing-in-moonlight",
+       "type": "game",
+       "title": "Persona 3: Dancing in Moonlight",
+       "coverUrl": "assets/colecciones/portadas/persona-3-dancing-in-moonlight.jpg",
+       "platform": "PS4",
+       "developer": "P-Studio",
+       "releaseYear": 2018,
+       "genre": "Ritmo",
+       "note": "Juego de ritmo con el reparto de Persona 3. Los residentes de la Sala de Terciopelo los retan a un concurso de baile dentro de un sueño, con remezclas de la música del juego."
+      },
+      {
+       "id": "persona-5-dancing-in-starlight",
+       "type": "game",
+       "title": "Persona 5: Dancing in Starlight",
+       "coverUrl": "assets/colecciones/portadas/persona-5-dancing-in-starlight.jpg",
+       "platform": "PS4",
+       "developer": "P-Studio",
+       "releaseYear": 2018,
+       "genre": "Ritmo",
+       "note": "Juego de ritmo con el reparto de Persona 5. Los residentes de la Sala de Terciopelo proponen a los Ladrones Fantasma un concurso de baile en un sueño, con remezclas de la música del juego."
+      },
+      {
+       "id": "persona-5-strikers",
+       "type": "game",
+       "title": "Persona 5 Strikers",
+       "coverUrl": "assets/colecciones/portadas/persona-5-strikers.jpg",
+       "platform": "PC",
+       "developer": "Omega Force / P-Studio",
+       "releaseYear": 2020,
+       "genre": "Acción y rol",
+       "note": "Secuela de acción de Persona 5 ambientada medio año después. Durante un viaje de verano por Japón, los Ladrones Fantasma se enfrentan a realidades distorsionadas en varias ciudades, con combates contra hordas de enemigos."
+      },
+      {
+       "id": "persona-5-tactica",
+       "type": "game",
+       "title": "Persona 5 Tactica",
+       "coverUrl": "assets/colecciones/portadas/persona-5-tactica.jpg",
+       "platform": "PC",
+       "developer": "P-Studio",
+       "releaseYear": 2023,
+       "genre": "Rol táctico por turnos",
+       "note": "Rol táctico con los Ladrones Fantasma, que quedan atrapados en un reino extraño y se unen a Erina, una joven revolucionaria que lidera una revuelta contra sus tiranos."
+      },
+      {
+       "id": "persona-5-the-phantom-x",
+       "type": "game",
+       "title": "Persona 5: The Phantom X",
+       "coverUrl": "assets/colecciones/portadas/persona-5-the-phantom-x.jpg",
+       "platform": "PC",
+       "developer": "Black Wings Game Studio",
+       "releaseYear": 2025,
+       "genre": "JRPG por turnos, gratuito",
+       "note": "Juego gratuito ambientado en el universo de Persona 5, con protagonista y grupo de Ladrones Fantasma nuevos. Lo desarrolla un estudio de Perfect World con licencia de Atlus."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "practical-magic",
+   "nombre": "Practical Magic",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "practical-magic",
+       "type": "movieSeries",
+       "title": "Practical Magic",
+       "coverUrl": "assets/colecciones/portadas/practical-magic-practical-magic.jpg",
+       "releaseYear": 1998,
+       "genre": "Romance, fantasía, comedia",
+       "note": "Dos hermanas brujas cargan con una maldición familiar: cualquier hombre que las ame morirá. Un error desesperado pondrá a prueba a toda la familia.",
+       "mediaType": "movie",
+       "duration": "1h 43m",
+       "creatorOrDirector": "Griffin Dunne",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/practical-magic/"
+      },
+      {
+       "id": "practical-magic-2",
+       "type": "movieSeries",
+       "title": "Practical Magic 2",
+       "coverUrl": "assets/colecciones/portadas/practical-magic-practical-magic-2.jpg",
+       "releaseYear": 2026,
+       "genre": "Romance, fantasía, comedia",
+       "note": "Las hermanas Owens vuelven décadas después, con las nuevas generaciones de la familia heredando la magia y sus problemas.",
+       "mediaType": "movie",
+       "duration": "2h 10m",
+       "creatorOrDirector": "Susanne Bier",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/practical-magic-2/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "resident-evil",
+   "nombre": "Resident Evil",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "resident-evil",
+       "type": "movieSeries",
+       "title": "Resident Evil",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil.jpg",
+       "releaseYear": 2002,
+       "genre": "Terror, acción, ciencia ficción",
+       "note": "Alice despierta sin memoria en una mansión que oculta un laboratorio de Umbrella, donde un virus ha convertido al personal en muertos vivientes.",
+       "mediaType": "movie",
+       "duration": "1h 36m",
+       "creatorOrDirector": "Paul W. S. Anderson",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/resident-evil/"
+      },
+      {
+       "id": "resident-evil-2-apocalipsis",
+       "type": "movieSeries",
+       "title": "Resident Evil 2: Apocalipsis",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-2-apocalipsis.jpg",
+       "releaseYear": 2004,
+       "genre": "Terror, acción, ciencia ficción",
+       "note": "El virus T se extiende por Raccoon City y Alice debe escapar de la ciudad en cuarentena mientras Umbrella prueba su arma Némesis.",
+       "mediaType": "movie",
+       "duration": "1h 34m",
+       "creatorOrDirector": "Alexander Witt",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/resident-evil-apocalypse/"
+      },
+      {
+       "id": "resident-evil-3-extincion",
+       "type": "movieSeries",
+       "title": "Resident Evil 3: Extinción",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-3-extincion.jpg",
+       "releaseYear": 2007,
+       "genre": "Terror, acción, ciencia ficción",
+       "note": "El mundo se ha convertido en un desierto infectado y Alice recorre Estados Unidos junto a un convoy de supervivientes.",
+       "mediaType": "movie",
+       "duration": "1h 35m",
+       "creatorOrDirector": "Russell Mulcahy",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/resident-evil-extinction/"
+      },
+      {
+       "id": "resident-evil-4-ultratumba",
+       "type": "movieSeries",
+       "title": "Resident Evil 4: Ultratumba",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-4-ultratumba.jpg",
+       "releaseYear": 2010,
+       "genre": "Acción, aventura, terror",
+       "note": "Alice busca el refugio de Arcadia y encuentra a un grupo de supervivientes atrapados en una prisión de Los Ángeles.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Paul W. S. Anderson",
+       "collectionNumber": 4,
+       "externalUrl": "https://letterboxd.com/film/resident-evil-afterlife/"
+      },
+      {
+       "id": "resident-evil-5-venganza",
+       "type": "movieSeries",
+       "title": "Resident Evil 5: Venganza",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-5-venganza.jpg",
+       "releaseYear": 2012,
+       "genre": "Acción, terror, ciencia ficción",
+       "note": "Capturada por Umbrella, Alice debe escapar de unas instalaciones submarinas que recrean ciudades enteras para probar armas biológicas.",
+       "mediaType": "movie",
+       "duration": "1h 36m",
+       "creatorOrDirector": "Paul W. S. Anderson",
+       "collectionNumber": 5,
+       "externalUrl": "https://letterboxd.com/film/resident-evil-retribution/"
+      },
+      {
+       "id": "resident-evil-el-capitulo-final",
+       "type": "movieSeries",
+       "title": "Resident Evil: El capítulo final",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-el-capitulo-final.jpg",
+       "releaseYear": 2016,
+       "genre": "Acción, terror, ciencia ficción",
+       "note": "Alice vuelve a la Colmena de Raccoon City, donde empezó todo, para acabar con Umbrella.",
+       "mediaType": "movie",
+       "duration": "1h 47m",
+       "creatorOrDirector": "Paul W. S. Anderson",
+       "collectionNumber": 6,
+       "externalUrl": "https://letterboxd.com/film/resident-evil-the-final-chapter/"
+      },
+      {
+       "id": "resident-evil-bienvenidos-a-raccoon-city",
+       "type": "movieSeries",
+       "title": "Resident Evil: Bienvenidos a Raccoon City",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-bienvenidos-a-raccoon-city.jpg",
+       "releaseYear": 2021,
+       "genre": "Acción, terror, ciencia ficción",
+       "note": "Reinicio fiel a los dos primeros juegos: Claire y Chris Redfield, Jill y Leon sobreviven a una noche en Raccoon City.",
+       "mediaType": "movie",
+       "duration": "1h 47m",
+       "creatorOrDirector": "Johannes Roberts",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-welcome-to-raccoon-city/"
+      },
+      {
+       "id": "resident-evil-2026",
+       "type": "movieSeries",
+       "title": "Resident Evil (2026)",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-2026.jpg",
+       "releaseYear": 2026,
+       "genre": "Terror, ciencia ficción, aventura",
+       "note": "Nuevo reinicio dirigido por Zach Cregger, con una historia original dentro del universo de los juegos.",
+       "mediaType": "movie",
+       "duration": "1h 35m",
+       "creatorOrDirector": "Zach Cregger",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-2026/"
+      }
+     ]
+    },
+    {
+     "nombre": "Juegos",
+     "obras": [
+      {
+       "id": "resident-evil-0",
+       "type": "game",
+       "title": "Resident Evil 0",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-0.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2002,
+       "genre": "Terror de supervivencia",
+       "note": "Precuela de la saga: Rebecca Chambers y el fugitivo Billy Coen se enfrentan a la infección en un tren y una instalación de Umbrella.",
+       "collectionNumber": 0
+      },
+      {
+       "id": "resident-evil-hd-remaster",
+       "type": "game",
+       "title": "Resident Evil (HD Remaster)",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-hd-remaster.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 1996,
+       "genre": "Terror de supervivencia",
+       "note": "Chris Redfield y Jill Valentine investigan una mansión llena de horrores en las afueras de Raccoon City. Versión HD del remake de 2002.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "resident-evil-2",
+       "type": "game",
+       "title": "Resident Evil 2",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-2.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2019,
+       "genre": "Terror de supervivencia",
+       "note": "Remake del clásico de 1998: Leon Kennedy y Claire Redfield intentan sobrevivir a Raccoon City.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "resident-evil-3",
+       "type": "game",
+       "title": "Resident Evil 3",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-3.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2020,
+       "genre": "Terror de supervivencia",
+       "note": "Remake del juego de 1999: Jill Valentine huye de Raccoon City mientras Némesis la persigue.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "resident-evil-4",
+       "type": "game",
+       "title": "Resident Evil 4",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-4.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2023,
+       "genre": "Terror de supervivencia y acción",
+       "note": "Remake del clásico de 2005: Leon rescata a la hija del presidente en un pueblo rural de Europa dominado por una secta.",
+       "collectionNumber": 4
+      },
+      {
+       "id": "resident-evil-5",
+       "type": "game",
+       "title": "Resident Evil 5",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-5.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2009,
+       "genre": "Acción y terror",
+       "note": "Chris Redfield y Sheva Alomar investigan un brote en África, con cooperativo.",
+       "collectionNumber": 5
+      },
+      {
+       "id": "resident-evil-6",
+       "type": "game",
+       "title": "Resident Evil 6",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-6.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2012,
+       "genre": "Acción y terror",
+       "note": "Cuatro campañas cruzadas protagonizadas por Leon, Chris, Jake y Ada frente a un bioterrorismo global.",
+       "collectionNumber": 6
+      },
+      {
+       "id": "resident-evil-7-biohazard",
+       "type": "game",
+       "title": "Resident Evil 7: Biohazard",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-7-biohazard.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2017,
+       "genre": "Terror de supervivencia",
+       "note": "Ethan Winters busca a su esposa en una granja de Luisiana y se topa con la familia Baker, en primera persona.",
+       "collectionNumber": 7
+      },
+      {
+       "id": "resident-evil-village",
+       "type": "game",
+       "title": "Resident Evil Village",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-village.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2021,
+       "genre": "Terror de supervivencia",
+       "note": "Ethan Winters llega a una aldea europea llena de criaturas para recuperar a su hija.",
+       "collectionNumber": 8
+      },
+      {
+       "id": "resident-evil-requiem",
+       "type": "game",
+       "title": "Resident Evil Requiem",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-requiem.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2026,
+       "genre": "Terror de supervivencia",
+       "note": "Grace Ashcroft, analista del FBI, investiga una serie de muertes vinculadas a Raccoon City.",
+       "collectionNumber": 9
+      },
+      {
+       "id": "resident-evil-revelations",
+       "type": "game",
+       "title": "Resident Evil: Revelations",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-revelations.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2012,
+       "genre": "Terror de supervivencia",
+       "note": "Jill Valentine investiga un crucero a la deriva en el Mediterráneo, entre Resident Evil 4 y 5."
+      },
+      {
+       "id": "resident-evil-revelations-2",
+       "type": "game",
+       "title": "Resident Evil: Revelations 2",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-revelations-2.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2015,
+       "genre": "Terror de supervivencia",
+       "note": "Claire Redfield y Moira Burton despiertan en una isla-prisión, con Barry Burton en su búsqueda."
+      }
+     ]
+    },
+    {
+     "nombre": "Animación y series",
+     "obras": [
+      {
+       "id": "resident-evil-degeneracion",
+       "type": "movieSeries",
+       "title": "Resident Evil: Degeneración",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-degeneracion.jpg",
+       "releaseYear": 2008,
+       "genre": "Animación, terror, acción",
+       "note": "Película de animación con Leon S. Kennedy y Claire Redfield, que se reencuentran en un aeropuerto invadido por infectados.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Makoto Kamiya",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-degeneration/"
+      },
+      {
+       "id": "resident-evil-la-maldicion",
+       "type": "movieSeries",
+       "title": "Resident Evil: La maldición",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-la-maldicion.jpg",
+       "releaseYear": 2012,
+       "genre": "Animación, acción, terror",
+       "note": "Leon se infiltra en una república de Europa del Este en guerra civil donde se usan armas biológicas.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Makoto Kamiya",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-damnation/"
+      },
+      {
+       "id": "resident-evil-vendetta",
+       "type": "movieSeries",
+       "title": "Resident Evil: Vendetta",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-vendetta.jpg",
+       "releaseYear": 2017,
+       "genre": "Animación, acción, terror",
+       "note": "Chris Redfield y Leon investigan a un traficante de armas que quiere desatar un nuevo virus en Nueva York.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Takanori Tsujimoto",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-vendetta/"
+      },
+      {
+       "id": "resident-evil-death-island",
+       "type": "movieSeries",
+       "title": "Resident Evil: Death Island",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-death-island.jpg",
+       "releaseYear": 2023,
+       "genre": "Animación, acción, terror",
+       "note": "Leon, Chris, Jill y Claire coinciden por primera vez en Alcatraz ante un brote de origen misterioso.",
+       "mediaType": "movie",
+       "duration": "1h 27m",
+       "creatorOrDirector": "Eiichiro Hasumi",
+       "externalUrl": "https://letterboxd.com/film/resident-evil-death-island/"
+      },
+      {
+       "id": "resident-evil-oscuridad-infinita",
+       "type": "movieSeries",
+       "title": "Resident Evil: Oscuridad infinita",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-oscuridad-infinita.jpg",
+       "releaseYear": 2021,
+       "genre": "Animación, drama, acción",
+       "note": "Serie de animación en la que Leon y Claire investigan un ataque a la Casa Blanca y un conflicto ocultado por el gobierno.",
+       "mediaType": "series"
+      },
+      {
+       "id": "resident-evil-la-serie",
+       "type": "movieSeries",
+       "title": "Resident Evil: La serie",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-la-serie.jpg",
+       "releaseYear": 2022,
+       "genre": "Drama, ciencia ficción",
+       "note": "Serie de Netflix con dos líneas temporales: las hermanas Wesker en New Raccoon City y un mundo devastado años después.",
+       "mediaType": "series"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sinister",
+   "nombre": "Sinister",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "sinister",
+       "type": "movieSeries",
+       "title": "Sinister",
+       "coverUrl": "assets/colecciones/portadas/sinister-sinister.jpg",
+       "releaseYear": 2012,
+       "genre": "Terror, suspense, misterio",
+       "note": "Un escritor de crímenes reales se muda a la casa donde murió una familia y encuentra unas cintas caseras que lo enfrentan a algo que no es humano.",
+       "mediaType": "movie",
+       "duration": "1h 50m",
+       "creatorOrDirector": "Scott Derrickson",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/sinister/"
+      },
+      {
+       "id": "sinister-2",
+       "type": "movieSeries",
+       "title": "Sinister 2",
+       "coverUrl": "assets/colecciones/portadas/sinister-sinister-2.jpg",
+       "releaseYear": 2015,
+       "genre": "Terror",
+       "note": "Una madre y sus dos hijos se esconden en una casa rural marcada por los mismos crímenes, mientras un exagente intenta romper el ciclo.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Ciarán Foy",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/sinister-2/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "styx",
+   "nombre": "Styx",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "styx-master-of-shadows",
+       "type": "game",
+       "title": "Styx: Master of Shadows",
+       "coverUrl": "assets/colecciones/portadas/styx-styx-master-of-shadows.jpg",
+       "platform": "PC",
+       "developer": "Cyanide Studio",
+       "releaseYear": 2014,
+       "genre": "Sigilo",
+       "note": "El goblin Styx se infiltra en la torre de Akenash para robar el corazón del Árbol Mundial, precuela de Of Orcs and Men.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "styx-shards-of-darkness",
+       "type": "game",
+       "title": "Styx: Shards of Darkness",
+       "coverUrl": "assets/colecciones/portadas/styx-styx-shards-of-darkness.jpg",
+       "platform": "PC",
+       "developer": "Cyanide Studio",
+       "releaseYear": 2017,
+       "genre": "Sigilo",
+       "note": "Styx vuelve a robar, esta vez en la ciudad de Korrangar, en plena intriga entre elfos y enanos.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "styx-blades-of-greed",
+       "type": "game",
+       "title": "Styx: Blades of Greed",
+       "coverUrl": "assets/colecciones/portadas/styx-styx-blades-of-greed.jpg",
+       "platform": "PC",
+       "developer": "Cyanide Studio",
+       "releaseYear": 2026,
+       "genre": "Sigilo",
+       "note": "Tercera aventura del goblin ladrón, con escenarios más abiertos y amplios.",
+       "collectionNumber": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "subnautica",
+   "nombre": "Subnautica",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "subnautica",
+       "type": "game",
+       "title": "Subnautica",
+       "coverUrl": "assets/colecciones/portadas/subnautica-subnautica.jpg",
+       "platform": "PC",
+       "developer": "Unknown Worlds Entertainment",
+       "releaseYear": 2018,
+       "genre": "Supervivencia y exploración submarina",
+       "note": "Tras estrellarte en un planeta oceánico, buscas recursos, construyes bases y bajas al abismo para descubrir qué pasó.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "subnautica-below-zero",
+       "type": "game",
+       "title": "Subnautica: Below Zero",
+       "coverUrl": "assets/colecciones/portadas/subnautica-subnautica-below-zero.jpg",
+       "platform": "PC",
+       "developer": "Unknown Worlds Entertainment",
+       "releaseYear": 2021,
+       "genre": "Supervivencia y exploración submarina",
+       "note": "Robin vuelve al planeta 4546B, a una región helada, para investigar la muerte de su hermana.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "subnautica-2",
+       "type": "game",
+       "title": "Subnautica 2",
+       "coverUrl": "assets/colecciones/portadas/subnautica-subnautica-2.jpg",
+       "platform": "PC",
+       "developer": "Unknown Worlds Entertainment",
+       "releaseYear": 2026,
+       "genre": "Supervivencia y exploración submarina",
+       "note": "Nueva aventura en un planeta oceánico diferente, con cooperativo. Está en acceso anticipado.",
+       "collectionNumber": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "the-binding-of-isaac",
+   "nombre": "The Binding of Isaac",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "the-binding-of-isaac",
+       "type": "game",
+       "title": "The Binding of Isaac",
+       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac.jpg",
+       "platform": "PC",
+       "developer": "Edmund McMillen",
+       "releaseYear": 2011,
+       "genre": "Roguelike de acción",
+       "note": "Isaac huye de su madre, que quiere sacrificarlo, a un sótano lleno de monstruos en un juego de mazmorras aleatorias.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "the-binding-of-isaac-rebirth",
+       "type": "game",
+       "title": "The Binding of Isaac: Rebirth",
+       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac-rebirth.jpg",
+       "platform": "PC",
+       "developer": "Nicalis / Edmund McMillen",
+       "releaseYear": 2014,
+       "genre": "Roguelike de acción",
+       "note": "Versión rehecha y muy ampliada del original, con más de cien horas de contenido.",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
 }
