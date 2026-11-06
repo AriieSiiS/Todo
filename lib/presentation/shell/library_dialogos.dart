@@ -17,6 +17,15 @@ class _LibraryCoverImage extends StatelessWidget {
     if (value == null || value.isEmpty) {
       return _LibraryCoverFallback(type: type, iconSize: iconSize);
     }
+    if (value.startsWith('assets/')) {
+      return Image.asset(
+        value,
+        fit: BoxFit.cover,
+        cacheWidth: 600,
+        errorBuilder: (context, error, stackTrace) =>
+            _LibraryCoverFallback(type: type, iconSize: iconSize),
+      );
+    }
     if (_isLocalCoverPath(value)) {
       return _LocalLibraryCoverImage(
         path: value,

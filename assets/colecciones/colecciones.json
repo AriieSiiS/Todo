@@ -1,0 +1,294 @@
+{
+  "colecciones": [
+    {
+      "id": "persona",
+      "nombre": "Persona",
+      "universo": "Persona",
+      "descripcion": "Rol japonés de Atlus: instituto, vínculos y mazmorras contra las Sombras, con los Persona como manifestación del interior de cada personaje.",
+      "portadas": [
+        "assets/colecciones/persona/persona-3-reload.jpg",
+        "assets/colecciones/persona/persona-4-golden.jpg",
+        "assets/colecciones/persona/persona-5-royal.jpg",
+        "assets/colecciones/persona/persona-q2.jpg",
+        "assets/colecciones/persona/persona-5-strikers.jpg"
+      ],
+      "grupos": [
+        {
+          "nombre": "Saga principal",
+          "obras": [
+            {
+              "id": "persona",
+              "type": "game",
+              "title": "Persona",
+              "coverUrl": "assets/colecciones/persona/persona.jpg",
+              "platform": "PSP",
+              "developer": "Atlus",
+              "releaseYear": 1996,
+              "genre": "JRPG y mazmorras",
+              "collectionNumber": 1,
+              "note": "El origen de la saga, publicado en Occidente como Revelations: Persona. Un grupo de estudiantes del instituto St. Hermelin despierta sus Personas tras un juego de adivinación y se enfrenta a los demonios que invaden la ciudad de Mikage-cho. La versión más accesible es la de PSP, de 2009."
+            },
+            {
+              "id": "persona-2-innocent-sin",
+              "type": "game",
+              "title": "Persona 2: Innocent Sin",
+              "coverUrl": "assets/colecciones/persona/persona-2-innocent-sin.jpg",
+              "platform": "PSP",
+              "developer": "Atlus",
+              "releaseYear": 1999,
+              "genre": "JRPG y mazmorras",
+              "collectionNumber": 2,
+              "note": "En la ciudad de Sumaru, los rumores se hacen realidad. Tatsuya Suou y sus amigos se enfrentan al Joker, una figura que concede deseos a cambio de los sueños de la gente, y a un pasado que habían olvidado. La versión de PlayStation no salió de Japón; en Occidente llegó con la de PSP, en 2011."
+            },
+            {
+              "id": "persona-2-eternal-punishment",
+              "type": "game",
+              "title": "Persona 2: Eternal Punishment",
+              "coverUrl": "assets/colecciones/persona/persona-2-eternal-punishment.jpg",
+              "platform": "PlayStation",
+              "developer": "Atlus",
+              "releaseYear": 2000,
+              "genre": "JRPG y mazmorras",
+              "collectionNumber": 2,
+              "note": "Continuación directa de Innocent Sin. La periodista Maya Amano investiga una oleada de rumores en Sumaru que vuelven a hacerse realidad, y descubre que lo ocurrido en el juego anterior sigue teniendo consecuencias."
+            },
+            {
+              "id": "persona-3",
+              "type": "game",
+              "title": "Persona 3",
+              "coverUrl": "assets/colecciones/persona/persona-3.jpg",
+              "platform": "PS2",
+              "developer": "Atlus",
+              "releaseYear": 2006,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 3,
+              "note": "Un estudiante recién llegado al instituto Gekkoukan descubre la Hora Oscura, un momento oculto entre un día y el siguiente en el que aparece la torre Tártaro. Con el grupo SEES combate a las Sombras mientras vive su día a día. Es la entrega que introdujo los vínculos y el calendario."
+            },
+            {
+              "id": "persona-3-fes",
+              "type": "game",
+              "title": "Persona 3 FES",
+              "coverUrl": "assets/colecciones/persona/persona-3-fes.jpg",
+              "platform": "PS2",
+              "developer": "Atlus",
+              "releaseYear": 2007,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 3,
+              "note": "Versión ampliada de Persona 3 con mejoras jugables y The Answer, un epílogo protagonizado por Aigis que continúa la historia tras el final original."
+            },
+            {
+              "id": "persona-3-portable",
+              "type": "game",
+              "title": "Persona 3 Portable",
+              "coverUrl": "assets/colecciones/persona/persona-3-portable.jpg",
+              "platform": "PC",
+              "developer": "Atlus",
+              "releaseYear": 2009,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 3,
+              "note": "Reedición de Persona 3 que añade una protagonista femenina con vínculos propios y permite controlar directamente a todo el grupo en combate. Nació en PSP en 2009 y llegó a PC y consolas actuales en 2023."
+            },
+            {
+              "id": "persona-3-reload",
+              "type": "game",
+              "title": "Persona 3 Reload",
+              "coverUrl": "assets/colecciones/persona/persona-3-reload.jpg",
+              "platform": "PC",
+              "developer": "P-Studio / Atlus",
+              "releaseYear": 2024,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 3,
+              "note": "Remake completo de Persona 3 con gráficos, voces y combate renovados. El pase de expansión añade Episode Aigis: The Answer."
+            },
+            {
+              "id": "persona-4",
+              "type": "game",
+              "title": "Persona 4",
+              "coverUrl": "assets/colecciones/persona/persona-4.jpg",
+              "platform": "PS2",
+              "developer": "Atlus",
+              "releaseYear": 2008,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 4,
+              "note": "Yu Narukami pasa un año en el pueblo rural de Inaba, donde una serie de asesinatos se relaciona con el Canal de Medianoche, un programa que solo aparece en las noches de lluvia. Con sus amigos entra en el mundo dentro de la televisión para salvar a las víctimas y dar con el culpable."
+            },
+            {
+              "id": "persona-4-golden",
+              "type": "game",
+              "title": "Persona 4 Golden",
+              "coverUrl": "assets/colecciones/persona/persona-4-golden.jpg",
+              "platform": "PC",
+              "developer": "Atlus",
+              "releaseYear": 2012,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 4,
+              "note": "Versión definitiva de Persona 4, con un personaje nuevo, Marie, más vínculos y eventos, y contenido adicional para el tramo final. Nació en PS Vita en 2012 y llegó a PC en 2020."
+            },
+            {
+              "id": "persona-4-revival",
+              "type": "game",
+              "title": "Persona 4 Revival",
+              "coverUrl": "assets/colecciones/persona/persona-4-revival.jpg",
+              "platform": "PC",
+              "developer": "P-Studio / Atlus",
+              "releaseYear": 2027,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 4,
+              "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series."
+            },
+            {
+              "id": "persona-5",
+              "type": "game",
+              "title": "Persona 5",
+              "coverUrl": "assets/colecciones/persona/persona-5.jpg",
+              "platform": "PS4",
+              "developer": "P-Studio / Atlus",
+              "releaseYear": 2016,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 5,
+              "note": "Un estudiante en libertad condicional llega a Tokio y funda los Ladrones Fantasma de Corazones, que se infiltran en los palacios mentales de adultos corruptos para robarles sus deseos distorsionados y obligarlos a confesar."
+            },
+            {
+              "id": "persona-5-royal",
+              "type": "game",
+              "title": "Persona 5 Royal",
+              "coverUrl": "assets/colecciones/persona/persona-5-royal.jpg",
+              "platform": "PC",
+              "developer": "P-Studio",
+              "releaseYear": 2019,
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 5,
+              "note": "Versión definitiva de Persona 5, con Kasumi Yoshizawa, un semestre adicional y un palacio nuevo. Nació en PS4 en 2019 y llegó a PC y al resto de consolas en 2022."
+            },
+            {
+              "id": "persona-6",
+              "type": "game",
+              "title": "Persona 6",
+              "coverUrl": "assets/colecciones/persona/persona-6.jpg",
+              "platform": "PC",
+              "developer": "Atlus",
+              "genre": "JRPG, simulación social y mazmorras",
+              "collectionNumber": 6,
+              "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival."
+            }
+          ]
+        },
+        {
+          "nombre": "Spin-offs",
+          "obras": [
+            {
+              "id": "persona-4-arena",
+              "type": "game",
+              "title": "Persona 4 Arena",
+              "coverUrl": "assets/colecciones/persona/persona-4-arena.jpg",
+              "platform": "PS3",
+              "developer": "Arc System Works / Atlus",
+              "releaseYear": 2012,
+              "genre": "Lucha",
+              "note": "Juego de lucha que continúa la historia de Persona 4. El P-1 Grand Prix, un torneo en el Canal de Medianoche, enfrenta al grupo de Inaba con personajes de Persona 3."
+            },
+            {
+              "id": "persona-4-arena-ultimax",
+              "type": "game",
+              "title": "Persona 4 Arena Ultimax",
+              "coverUrl": "assets/colecciones/persona/persona-4-arena-ultimax.jpg",
+              "platform": "PC",
+              "developer": "Arc System Works / Atlus",
+              "releaseYear": 2013,
+              "genre": "Lucha",
+              "note": "Secuela directa de Persona 4 Arena, con una niebla roja sobre Inaba, más luchadores de Persona 3 y el cierre de la historia iniciada en el primer juego. La versión de PC llegó en 2022."
+            },
+            {
+              "id": "persona-q",
+              "type": "game",
+              "title": "Persona Q: Shadow of the Labyrinth",
+              "coverUrl": "assets/colecciones/persona/persona-q.jpg",
+              "platform": "Nintendo 3DS",
+              "developer": "P-Studio",
+              "releaseYear": 2014,
+              "genre": "JRPG y mazmorras en primera persona",
+              "note": "Cruce entre Persona 3 y Persona 4 con mazmorras en primera persona y mapas dibujados a mano. Ambos grupos quedan atrapados en una versión extraña del festival cultural del instituto Yasogami."
+            },
+            {
+              "id": "persona-4-dancing-all-night",
+              "type": "game",
+              "title": "Persona 4: Dancing All Night",
+              "coverUrl": "assets/colecciones/persona/persona-4-dancing-all-night.jpg",
+              "platform": "PS Vita",
+              "developer": "P-Studio",
+              "releaseYear": 2015,
+              "genre": "Ritmo",
+              "note": "Juego de ritmo con el reparto de Persona 4 y música de la saga. Rise y sus amigos se ven arrastrados a un escenario misterioso donde bailar es la única forma de rescatar a un grupo de ídolos."
+            },
+            {
+              "id": "persona-q2",
+              "type": "game",
+              "title": "Persona Q2: New Cinema Labyrinth",
+              "coverUrl": "assets/colecciones/persona/persona-q2.jpg",
+              "platform": "Nintendo 3DS",
+              "developer": "P-Studio",
+              "releaseYear": 2018,
+              "genre": "JRPG y mazmorras en primera persona",
+              "note": "Reúne a los protagonistas de Persona 3, 4 y 5 en un cine misterioso cuyas películas son laberintos de los que tienen que escapar."
+            },
+            {
+              "id": "persona-3-dancing-in-moonlight",
+              "type": "game",
+              "title": "Persona 3: Dancing in Moonlight",
+              "coverUrl": "assets/colecciones/persona/persona-3-dancing-in-moonlight.jpg",
+              "platform": "PS4",
+              "developer": "P-Studio",
+              "releaseYear": 2018,
+              "genre": "Ritmo",
+              "note": "Juego de ritmo con el reparto de Persona 3. Los residentes de la Sala de Terciopelo los retan a un concurso de baile dentro de un sueño, con remezclas de la música del juego."
+            },
+            {
+              "id": "persona-5-dancing-in-starlight",
+              "type": "game",
+              "title": "Persona 5: Dancing in Starlight",
+              "coverUrl": "assets/colecciones/persona/persona-5-dancing-in-starlight.jpg",
+              "platform": "PS4",
+              "developer": "P-Studio",
+              "releaseYear": 2018,
+              "genre": "Ritmo",
+              "note": "Juego de ritmo con el reparto de Persona 5. Los residentes de la Sala de Terciopelo proponen a los Ladrones Fantasma un concurso de baile en un sueño, con remezclas de la música del juego."
+            },
+            {
+              "id": "persona-5-strikers",
+              "type": "game",
+              "title": "Persona 5 Strikers",
+              "coverUrl": "assets/colecciones/persona/persona-5-strikers.jpg",
+              "platform": "PC",
+              "developer": "Omega Force / P-Studio",
+              "releaseYear": 2020,
+              "genre": "Acción y rol",
+              "note": "Secuela de acción de Persona 5 ambientada medio año después. Durante un viaje de verano por Japón, los Ladrones Fantasma se enfrentan a realidades distorsionadas en varias ciudades, con combates contra hordas de enemigos."
+            },
+            {
+              "id": "persona-5-tactica",
+              "type": "game",
+              "title": "Persona 5 Tactica",
+              "coverUrl": "assets/colecciones/persona/persona-5-tactica.jpg",
+              "platform": "PC",
+              "developer": "P-Studio",
+              "releaseYear": 2023,
+              "genre": "Rol táctico por turnos",
+              "note": "Rol táctico con los Ladrones Fantasma, que quedan atrapados en un reino extraño y se unen a Erina, una joven revolucionaria que lidera una revuelta contra sus tiranos."
+            },
+            {
+              "id": "persona-5-the-phantom-x",
+              "type": "game",
+              "title": "Persona 5: The Phantom X",
+              "coverUrl": "assets/colecciones/persona/persona-5-the-phantom-x.jpg",
+              "platform": "PC",
+              "developer": "Black Wings Game Studio",
+              "releaseYear": 2025,
+              "genre": "JRPG por turnos, gratuito",
+              "note": "Juego gratuito ambientado en el universo de Persona 5, con protagonista y grupo de Ladrones Fantasma nuevos. Lo desarrolla un estudio de Perfect World con licencia de Atlus."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

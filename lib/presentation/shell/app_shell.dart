@@ -44,6 +44,7 @@ part 'categories_page.dart';
 part 'expenses_page.dart';
 part 'calendar_page.dart';
 part 'library_page.dart';
+part 'library_colecciones.dart';
 part 'library_tarjetas.dart';
 part 'library_panel_lateral.dart';
 part 'library_propositos.dart';

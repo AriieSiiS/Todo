@@ -24,7 +24,11 @@ class AppVisibilitySettings {
       'twin': 'Gemelo 3D',
       'qr': 'Códigos QR',
     },
-    AppSection.library: {'library': 'Biblioteca', 'goals': 'Propósitos'},
+    AppSection.library: {
+      'library': 'Biblioteca',
+      'goals': 'Propósitos',
+      'collections': 'Colecciones',
+    },
     AppSection.recipes: {'recipes': 'Recetas', 'menus': 'Menús semanales'},
     AppSection.expenses: {
       'monthly': 'Vista mensual',

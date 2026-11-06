@@ -102,6 +102,10 @@ La app tiene:
   planificación, lavandería, maletas, estadísticas e importaciones de Ropa
 - `lib/presentation/shell/household_page.dart`: inventario visual de Hogar,
   fichas técnicas, manuales, facturas y garantías
+- `lib/presentation/shell/library_colecciones.dart`: pestaña Colecciones de
+  Biblioteca. El catálogo de sagas está en `assets/colecciones/colecciones.json`
+  con sus portadas en `assets/colecciones/<saga>/`; sus obras usan los campos de
+  `LibraryItem` y solo entran en Biblioteca al añadirlas
 - `lib/presentation/shell/plants_page.dart`: catálogo de Plantas, fichas de
   cuidados, seguridad felina y rutinas enlazadas con tareas
 - `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
