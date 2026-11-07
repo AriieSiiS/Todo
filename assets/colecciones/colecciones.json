@@ -242,16 +242,30 @@
       {
        "id": "esta-ruina-inevitable",
        "type": "book",
-       "title": "Esta ruina inevitable",
+       "title": "This Inevitable Ruin",
        "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-esta-ruina-inevitable.jpg",
        "author": "Matt Dinniman",
        "genre": "LitRPG, fantasía y humor negro",
-       "note": "Séptimo libro de la saga de Carl y Princesa Donut, a la espera de su edición en español.",
+       "note": "Séptimo libro de la saga de Carl y Princesa Donut. Todavía sin edición en español.",
        "creatorOrDirector": "Novela",
        "releaseYear": 2024,
        "pages": "870",
        "externalUrl": "https://www.goodreads.com/book/show/232497556-this-inevitable-ruin",
        "collectionNumber": 7
+      },
+      {
+       "id": "a-parade-of-horribles",
+       "type": "book",
+       "title": "A Parade of Horribles",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-a-parade-of-horribles.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Octavo libro de la saga: con el caos extendiéndose fuera de la mazmorra, Carl y Donut llegan al décimo piso, donde tienen que competir en una carrera. Todavía sin edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "704",
+       "externalUrl": "https://www.goodreads.com/book/show/228928465-a-parade-of-horribles",
+       "collectionNumber": 8
       }
      ]
     }
