@@ -331,11 +331,11 @@ String? normalizarEnlaceExterno(String? valor) {
 }
 
 /// Nombre de la ficha externa según el tipo de elemento: Goodreads para
-/// libros y Letterboxd para películas y series.
+/// libros, Letterboxd para películas y series, y Steam para juegos.
 String? nombreFichaExterna(LibraryItemType type) => switch (type) {
       LibraryItemType.book => 'Goodreads',
       LibraryItemType.movieSeries => 'Letterboxd',
-      LibraryItemType.game => null,
+      LibraryItemType.game => 'Steam',
     };
 
 /// ¿Admite el elemento un progreso manual de episodios o capítulos?

@@ -327,6 +327,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                 keyboardType: TextInputType.number),
             const SizedBox(height: 8),
             _dialogField(_genre, 'Género', 'Ej. Inmersivo, RPG...'),
+            const SizedBox(height: 8),
+            _externalUrlField(
+              'Enlace de Steam',
+              'https://store.steampowered.com/app/…',
+            ),
             if (_status == LibraryItemStatus.completed) ...[
               const SizedBox(height: 8),
               _dialogField(
