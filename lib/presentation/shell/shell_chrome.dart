@@ -131,6 +131,10 @@ class _AppShellState extends ConsumerState<AppShell>
                     onCompact: _windowShell.enabled
                         ? () => unawaited(_windowShell.setCompact(true))
                         : null,
+                    fullScreen: _windowShell.fullScreen,
+                    onToggleFullScreen: _windowShell.enabled
+                        ? () => unawaited(_windowShell.toggleFullScreen())
+                        : null,
                   );
                 },
               ),
@@ -194,6 +198,12 @@ class _AppShellState extends ConsumerState<AppShell>
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyN,
             control: true, shift: true): _captureQuickNote,
+        if (_windowShell.enabled && !_windowShell.compact)
+          const SingleActivator(LogicalKeyboardKey.f11): () =>
+              unawaited(_windowShell.toggleFullScreen()),
+        if (_windowShell.fullScreen)
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              unawaited(_windowShell.setFullScreen(false)),
       },
       child: Focus(
           autofocus: true,
@@ -507,12 +517,45 @@ class _ImportantAlarmOverlay extends StatelessWidget {
   }
 }
 
+/// Botón pequeño de la cabecera de la barra lateral para cambiar la ventana.
+class _SidebarWindowButton extends StatelessWidget {
+  const _SidebarWindowButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      color: const Color(0xFFC6CEBD),
+      iconSize: 20,
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: EdgeInsets.zero,
+        minimumSize: const Size.square(30),
+        fixedSize: const Size.square(30),
+      ),
+      icon: Icon(icon),
+    );
+  }
+}
+
 class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.controller,
     required this.compact,
     required this.musicController,
     this.onCompact,
+    this.fullScreen = false,
+    this.onToggleFullScreen,
   });
 
   final TodoWorkspace controller;
@@ -521,6 +564,10 @@ class _Sidebar extends StatelessWidget {
 
   /// Pasa a la vista mini; nulo cuando la plataforma no la admite.
   final VoidCallback? onCompact;
+
+  /// Entra o sale de la pantalla completa; nulo fuera de Windows.
+  final VoidCallback? onToggleFullScreen;
+  final bool fullScreen;
 
   @override
   Widget build(BuildContext context) {
@@ -565,14 +612,23 @@ class _Sidebar extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (onToggleFullScreen != null)
+                            _SidebarWindowButton(
+                              key: const ValueKey('sidebar-fullscreen'),
+                              tooltip: fullScreen
+                                  ? 'Salir de pantalla completa (F11 o Esc)'
+                                  : 'Pantalla completa (F11)',
+                              onPressed: onToggleFullScreen!,
+                              icon: fullScreen
+                                  ? Icons.fullscreen_exit_rounded
+                                  : Icons.fullscreen_rounded,
+                            ),
                           if (onCompact != null)
-                            IconButton(
+                            _SidebarWindowButton(
                               key: const ValueKey('sidebar-compact'),
                               tooltip: 'Modo mini',
-                              onPressed: onCompact,
-                              color: const Color(0xFFC6CEBD),
-                              icon: const Icon(
-                                  Icons.picture_in_picture_alt_rounded),
+                              onPressed: onCompact!,
+                              icon: Icons.picture_in_picture_alt_rounded,
                             ),
                         ],
                       ),

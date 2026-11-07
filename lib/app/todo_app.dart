@@ -7,6 +7,8 @@ import '../application/providers/todo_providers.dart';
 import '../application/state/todo_workspace.dart';
 import 'app_launch_intent.dart';
 import '../presentation/shell/app_shell.dart';
+import '../services/windows_shell_service.dart';
+import 'interfaz_ampliada.dart';
 import 'todo_theme.dart';
 
 class TodoApp extends StatefulWidget {
@@ -128,6 +130,13 @@ class _TodoMaterialApp extends StatelessWidget {
       supportedLocales: const [
         Locale('es', 'ES'),
       ],
+      builder: (context, child) => ValueListenableBuilder<bool>(
+        valueListenable: WindowsShellService.pantallaCompleta,
+        builder: (context, pantallaCompleta, _) => InterfazAmpliada(
+          activa: pantallaCompleta,
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
       home: AppShell(launchIntent: launchIntent),
     );
   }

@@ -11,7 +11,8 @@
 
 // Puente entre la ventana de Windows y Dart para la captura rápida:
 // registra el atajo global, reenvía los argumentos de una segunda instancia
-// y cambia la ventana al modo mini (siempre visible, a un lado de la pantalla).
+// y cambia la ventana al modo mini (siempre visible, a un lado de la pantalla)
+// o a pantalla completa en ventana sin bordes.
 class ShellBridge {
  public:
   // Identificador de WM_COPYDATA para argumentos de arranque reenviados.
@@ -29,6 +30,7 @@ class ShellBridge {
  private:
   void BringToFront();
   bool SetCompactMode(bool enabled);
+  bool SetFullScreen(bool enabled);
   void RequestExit();
 
   HWND window_;
@@ -39,6 +41,9 @@ class ShellBridge {
   bool dart_ready_ = false;
   bool placement_saved_ = false;
   WINDOWPLACEMENT saved_placement_{sizeof(WINDOWPLACEMENT)};
+  bool full_screen_ = false;
+  LONG_PTR saved_style_ = 0;
+  WINDOWPLACEMENT full_screen_placement_{sizeof(WINDOWPLACEMENT)};
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
 };
 

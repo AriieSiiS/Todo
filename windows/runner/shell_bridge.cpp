@@ -33,6 +33,8 @@ ShellBridge::ShellBridge(flutter::BinaryMessenger* messenger, HWND window)
               flutter::EncodableValue(hotkey_registered_);
           status[flutter::EncodableValue("compact")] =
               flutter::EncodableValue(compact_);
+          status[flutter::EncodableValue("fullScreen")] =
+              flutter::EncodableValue(full_screen_);
           result->Success(flutter::EncodableValue(status));
           if (exit_requested_) channel_->InvokeMethod("requestExit", nullptr);
         } else if (call.method_name() == "setCompactMode") {
@@ -42,6 +44,13 @@ ShellBridge::ShellBridge(flutter::BinaryMessenger* messenger, HWND window)
             return;
           }
           result->Success(flutter::EncodableValue(SetCompactMode(*enabled)));
+        } else if (call.method_name() == "setFullScreen") {
+          const bool* enabled = std::get_if<bool>(call.arguments());
+          if (enabled == nullptr) {
+            result->Error("argumento", "Se esperaba un valor lógico.");
+            return;
+          }
+          result->Success(flutter::EncodableValue(SetFullScreen(*enabled)));
         } else if (call.method_name() == "finishExit") {
           exiting_ = true;
           result->Success();
@@ -122,6 +131,9 @@ bool ShellBridge::SetCompactMode(bool enabled) {
   if (enabled == compact_) {
     return true;
   }
+  if (enabled && full_screen_ && !SetFullScreen(false)) {
+    return false;
+  }
   if (enabled) {
     saved_placement_.length = sizeof(WINDOWPLACEMENT);
     placement_saved_ = ::GetWindowPlacement(window_, &saved_placement_) != 0;
@@ -154,5 +166,41 @@ bool ShellBridge::SetCompactMode(bool enabled) {
     }
   }
   compact_ = enabled;
+  return true;
+}
+
+bool ShellBridge::SetFullScreen(bool enabled) {
+  if (enabled == full_screen_) {
+    return true;
+  }
+  if (enabled) {
+    if (compact_ && !SetCompactMode(false)) {
+      return false;
+    }
+    MONITORINFO info{sizeof(MONITORINFO)};
+    const HMONITOR monitor =
+        ::MonitorFromWindow(window_, MONITOR_DEFAULTTONEAREST);
+    if (!::GetMonitorInfoW(monitor, &info)) {
+      return false;
+    }
+    full_screen_placement_.length = sizeof(WINDOWPLACEMENT);
+    ::GetWindowPlacement(window_, &full_screen_placement_);
+    saved_style_ = ::GetWindowLongPtrW(window_, GWL_STYLE);
+    // Ventana sin bordes que cubre el monitor entero, barra de tareas incluida;
+    // no cambia la resolución ni toma la pantalla en exclusiva.
+    ::SetWindowLongPtrW(window_, GWL_STYLE,
+                        (saved_style_ & ~WS_OVERLAPPEDWINDOW) | WS_POPUP);
+    const RECT& area = info.rcMonitor;
+    ::SetWindowPos(window_, HWND_TOP, area.left, area.top,
+                   area.right - area.left, area.bottom - area.top,
+                   SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+  } else {
+    ::SetWindowLongPtrW(window_, GWL_STYLE, saved_style_);
+    ::SetWindowPos(window_, nullptr, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                       SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    ::SetWindowPlacement(window_, &full_screen_placement_);
+  }
+  full_screen_ = enabled;
   return true;
 }

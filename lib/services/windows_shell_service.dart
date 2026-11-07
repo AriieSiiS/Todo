@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Comunicación con la ventana de Windows: atajo global de captura rápida,
-/// argumentos de una segunda instancia y modo mini.
+/// argumentos de una segunda instancia, modo mini y pantalla completa.
 class WindowsShellService extends ChangeNotifier {
   WindowsShellService({this.enabled = true, this.beforeExit});
 
@@ -12,6 +12,10 @@ class WindowsShellService extends ChangeNotifier {
 
   /// Ctrl + Alt + N, registrado por la parte nativa.
   static const String hotkeyLabel = 'Ctrl + Alt + N';
+
+  /// Indica si la ventana está en pantalla completa sin bordes. Lo escucha la
+  /// raíz de la app para ampliar toda la interfaz, diálogos incluidos.
+  static final ValueNotifier<bool> pantallaCompleta = ValueNotifier(false);
 
   final bool enabled;
   final Future<void> Function()? beforeExit;
@@ -25,6 +29,7 @@ class WindowsShellService extends ChangeNotifier {
   Stream<String> get arguments => _arguments.stream;
   bool get hotkeyRegistered => _hotkeyRegistered;
   bool get compact => _compact;
+  bool get fullScreen => pantallaCompleta.value;
 
   Future<void> initialize() async {
     if (!enabled) return;
@@ -52,6 +57,7 @@ class WindowsShellService extends ChangeNotifier {
       );
       _hotkeyRegistered = status?['hotkeyRegistered'] == true;
       _compact = status?['compact'] == true;
+      pantallaCompleta.value = status?['fullScreen'] == true;
       notifyListeners();
     } on MissingPluginException {
       // Una compilación sin el puente nativo sigue funcionando sin atajo.
@@ -65,6 +71,8 @@ class WindowsShellService extends ChangeNotifier {
       final ok = await _channel.invokeMethod<bool>('setCompactMode', value);
       if (ok == true) {
         _compact = value;
+        // El modo mini sale antes de la pantalla completa en la parte nativa.
+        if (value) pantallaCompleta.value = false;
         notifyListeners();
       }
     } on MissingPluginException {
@@ -72,6 +80,25 @@ class WindowsShellService extends ChangeNotifier {
     }
     return _compact;
   }
+
+  /// Entra o sale de la pantalla completa en ventana sin bordes, que tapa
+  /// también la barra de tareas. Devuelve el estado final.
+  Future<bool> setFullScreen(bool value) async {
+    if (!enabled || value == fullScreen) return fullScreen;
+    try {
+      final ok = await _channel.invokeMethod<bool>('setFullScreen', value);
+      if (ok == true) {
+        if (value) _compact = false;
+        pantallaCompleta.value = value;
+        notifyListeners();
+      }
+    } on MissingPluginException {
+      // Sin puente nativo no hay pantalla completa.
+    }
+    return fullScreen;
+  }
+
+  Future<bool> toggleFullScreen() => setFullScreen(!fullScreen);
 
   @override
   void dispose() {
