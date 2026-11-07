@@ -18,7 +18,12 @@ class Coleccion {
     required this.nombre,
     required this.alias,
     required this.grupos,
+    this.fechasPrevistas = const {},
   });
+
+  /// Fecha prevista de salida de las obras que aún no han salido, por su id.
+  /// Una cadena vacía indica que todavía no hay fecha.
+  final Map<String, String> fechasPrevistas;
 
   final String id;
   final String nombre;
@@ -49,10 +54,18 @@ class Coleccion {
           'collectionName': campos['collectionName'] ?? nombre,
           'showCollectionNumber': campos['collectionNumber'] != null,
         });
+    final grupos = (datos['grupos'] as List).cast<Map<String, dynamic>>();
     return Coleccion(
       id: datos['id'] as String,
       nombre: nombre,
       alias: (datos['alias'] as List? ?? const []).cast<String>(),
+      fechasPrevistas: {
+        for (final grupo in grupos)
+          for (final campos
+              in (grupo['obras'] as List).cast<Map<String, dynamic>>())
+            if (campos['fechaPrevista'] is String)
+              campos['id'] as String: campos['fechaPrevista'] as String,
+      },
       grupos: [
         for (final grupo
             in (datos['grupos'] as List).cast<Map<String, dynamic>>())

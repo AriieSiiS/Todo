@@ -21,6 +21,17 @@ Coleccion? _coleccionPorNombre(String nombre) {
   return null;
 }
 
+/// Fecha prevista de salida de una obra que aún no ha salido; vacía si no se
+/// conoce y nula si la obra ya está publicada.
+String? _fechaPrevista(LibraryItem obra) {
+  for (final coleccion in _colecciones ?? const <Coleccion>[]) {
+    if (coleccion.obras.any((otra) => identical(otra, obra))) {
+      return coleccion.fechasPrevistas[obra.id];
+    }
+  }
+  return null;
+}
+
 /// Elemento de la Biblioteca que corresponde a una obra del catálogo, si existe.
 LibraryItem? _obraEnBiblioteca(TodoWorkspace controller, LibraryItem obra) {
   final titulo = obra.title.paraBuscar;
@@ -613,8 +624,11 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
     final obra = widget.obras[_indice];
     final enBiblioteca = _obraEnBiblioteca(widget.controller, obra);
     const sinCampo = {'Estado', 'Notas', 'Progreso'};
-    final campos =
-        _detailFields(obra).where((campo) => !sinCampo.contains(campo.$1));
+    final fecha = _fechaPrevista(obra);
+    final campos = [
+      ..._detailFields(obra).where((campo) => !sinCampo.contains(campo.$1)),
+      if (fecha != null) ('Fecha prevista de salida', fecha),
+    ];
     return _NavegacionConFlechas(
         onAnterior: () => _moverCiclico(-1),
         onSiguiente: () => _moverCiclico(1),

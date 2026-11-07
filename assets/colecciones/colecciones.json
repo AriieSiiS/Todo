@@ -251,7 +251,8 @@
        "releaseYear": 2024,
        "pages": "870",
        "externalUrl": "https://www.goodreads.com/book/show/232497556-this-inevitable-ruin",
-       "collectionNumber": 7
+       "collectionNumber": 7,
+       "fechaPrevista": ""
       },
       {
        "id": "a-parade-of-horribles",
@@ -265,7 +266,8 @@
        "releaseYear": 2026,
        "pages": "704",
        "externalUrl": "https://www.goodreads.com/book/show/228928465-a-parade-of-horribles",
-       "collectionNumber": 8
+       "collectionNumber": 8,
+       "fechaPrevista": ""
       }
      ]
     }
@@ -3099,7 +3101,8 @@
        "releaseYear": 2023,
        "pages": "659",
        "externalUrl": "https://www.goodreads.com/book/show/62609258-the-end-and-the-death",
-       "collectionNumber": 8
+       "collectionNumber": 8,
+       "fechaPrevista": ""
       },
       {
        "id": "the-end-and-the-death-volume-ii",
@@ -3113,7 +3116,8 @@
        "releaseYear": 2023,
        "pages": "752",
        "externalUrl": "https://www.goodreads.com/book/show/172922673-the-end-and-the-death",
-       "collectionNumber": 9
+       "collectionNumber": 9,
+       "fechaPrevista": ""
       },
       {
        "id": "the-end-and-the-death-volume-iii",
@@ -3127,7 +3131,8 @@
        "releaseYear": 2024,
        "pages": "507",
        "externalUrl": "https://www.goodreads.com/book/show/199239938-the-end-and-the-death",
-       "collectionNumber": 10
+       "collectionNumber": 10,
+       "fechaPrevista": ""
       }
      ]
     }
@@ -4037,7 +4042,8 @@
        "duration": "2h 45m",
        "creatorOrDirector": "Joe Russo, Anthony Russo",
        "collectionNumber": 39,
-       "externalUrl": "https://letterboxd.com/film/avengers-doomsday/"
+       "externalUrl": "https://letterboxd.com/film/avengers-doomsday/",
+       "fechaPrevista": "17 de diciembre de 2026 en España"
       }
      ]
     },
@@ -4418,7 +4424,8 @@
        "releaseYear": 2027,
        "genre": "JRPG, simulación social y mazmorras",
        "collectionNumber": 4,
-       "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series."
+       "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series.",
+       "fechaPrevista": "18 de febrero de 2027"
       },
       {
        "id": "persona-5",
@@ -4453,7 +4460,8 @@
        "developer": "Atlus",
        "genre": "JRPG, simulación social y mazmorras",
        "collectionNumber": 6,
-       "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival."
+       "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival.",
+       "fechaPrevista": ""
       }
      ]
     },
@@ -5085,7 +5093,8 @@
        "releaseYear": 2026,
        "genre": "Supervivencia y exploración submarina",
        "note": "Nueva aventura en un planeta oceánico diferente, con cooperativo. Está en acceso anticipado.",
-       "collectionNumber": 3
+       "collectionNumber": 3,
+       "fechaPrevista": ""
       }
      ]
     }
