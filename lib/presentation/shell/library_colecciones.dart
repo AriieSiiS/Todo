@@ -348,7 +348,12 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
   Widget build(BuildContext context) {
     final obra = widget.obra;
     final enBiblioteca = widget.enBiblioteca;
-    final completada = enBiblioteca?.status == LibraryItemStatus.completed;
+    final borde = switch (enBiblioteca?.status) {
+      LibraryItemStatus.completed => const Color(0xFF5F7F49),
+      LibraryItemStatus.inProgress => const Color(0xFFC77721),
+      LibraryItemStatus.pending => const Color(0xFF7D8CA3),
+      null => null,
+    };
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -378,12 +383,12 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
               ),
             ],
           ),
-          foregroundDecoration: completada
-              ? BoxDecoration(
+          foregroundDecoration: borde == null
+              ? null
+              : BoxDecoration(
                   borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: const Color(0xFF5F7F49), width: 4),
-                )
-              : null,
+                  border: Border.all(color: borde, width: 4),
+                ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
             fit: StackFit.expand,
