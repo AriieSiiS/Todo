@@ -115,6 +115,15 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   void _alternar(LibraryItem obra) =>
       controller.setCollectionWorkHidden(_clave(obra), !_quitada(obra));
 
+  /// Los apartados plegados se guardan junto a las obras quitadas, con su
+  /// propia clave, para conservarlos al reiniciar.
+  String _claveGrupo(GrupoColeccion grupo) =>
+      '${widget.coleccion.id}/grupo:${grupo.nombre}';
+
+  bool _plegado(GrupoColeccion grupo) =>
+      controller.visibilitySettings.hiddenCollectionWorks
+          .contains(_claveGrupo(grupo));
+
   Future<void> _anadir(LibraryItem obra) async {
     if (!_anadiendo.add(obra.id)) return;
     try {
@@ -222,49 +231,84 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                 for (final grupo in grupos) ...[
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 10),
-                      child: Text(
-                        '${grupo.nombre} · ${grupo.obras.length}',
-                        style: TextStyle(
-                          color: visuals.textStrong,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                      padding: const EdgeInsets.fromLTRB(0, 0, 6, 6),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Tooltip(
+                          message: _plegado(grupo)
+                              ? 'Desplegar ${grupo.nombre}'
+                              : 'Plegar ${grupo.nombre}',
+                          child: InkWell(
+                            key: ValueKey('coleccion-grupo-${grupo.nombre}'),
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => controller.setCollectionWorkHidden(
+                              _claveGrupo(grupo),
+                              !_plegado(grupo),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _plegado(grupo)
+                                        ? Icons.chevron_right_rounded
+                                        : Icons.expand_more_rounded,
+                                    size: 22,
+                                    color: visuals.textMuted,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${grupo.nombre} · ${grupo.obras.length}',
+                                    style: TextStyle(
+                                      color: visuals.textStrong,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 26),
-                    sliver: SliverGrid.builder(
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: maxExtent,
-                        mainAxisSpacing: 24,
-                        crossAxisSpacing: 20,
-                        childAspectRatio: 0.66,
+                  if (_plegado(grupo))
+                    const SliverToBoxAdapter(child: SizedBox(height: 10))
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(6, 6, 6, 26),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: maxExtent,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 20,
+                          childAspectRatio: 0.66,
+                        ),
+                        itemCount: grupo.obras.length,
+                        itemBuilder: (context, index) {
+                          final obra = grupo.obras[index];
+                          return _ColeccionObraTarjeta(
+                            key: ValueKey(_clave(obra)),
+                            obra: obra,
+                            quitada: verQuitadas,
+                            enBiblioteca: _obraEnBiblioteca(controller, obra),
+                            onTap: () => _mostrarObraColeccion(
+                              context,
+                              controller,
+                              obras,
+                              obra,
+                              verQuitadas,
+                              _anadir,
+                              _alternar,
+                            ),
+                            onAdd: () => _anadir(obra),
+                            onToggle: () => _alternar(obra),
+                          );
+                        },
                       ),
-                      itemCount: grupo.obras.length,
-                      itemBuilder: (context, index) {
-                        final obra = grupo.obras[index];
-                        return _ColeccionObraTarjeta(
-                          key: ValueKey(_clave(obra)),
-                          obra: obra,
-                          quitada: verQuitadas,
-                          enBiblioteca: _obraEnBiblioteca(controller, obra),
-                          onTap: () => _mostrarObraColeccion(
-                            context,
-                            controller,
-                            obras,
-                            obra,
-                            verQuitadas,
-                            _anadir,
-                            _alternar,
-                          ),
-                          onAdd: () => _anadir(obra),
-                          onToggle: () => _alternar(obra),
-                        );
-                      },
                     ),
-                  ),
                 ],
               ],
             );
