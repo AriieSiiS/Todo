@@ -717,6 +717,21 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                         : 'Quitar de la colección'),
                     style: _libraryDetailSecondaryButtonStyle(context),
                   ),
+                  if (_enlaceFicha(obra) != null) ...[
+                    const SizedBox(width: 10),
+                    OutlinedButton.icon(
+                      key: const ValueKey('coleccion-obra-enlace'),
+                      onPressed: () => unawaited(
+                        launchUrl(
+                          _enlaceFicha(obra)!,
+                          mode: LaunchMode.externalApplication,
+                        ),
+                      ),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: Text('Abrir en ${nombreFichaExterna(obra.type)}'),
+                      style: _libraryDetailSecondaryButtonStyle(context),
+                    ),
+                  ],
                   const Spacer(),
                   if (_indice > 0) ...[
                     _LibraryNavigationButton(
