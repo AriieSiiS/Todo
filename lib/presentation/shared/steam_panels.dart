@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/todo_theme.dart';
 import '../../services/steam_service.dart';
+import 'steam_lista_deseados_dialog.dart';
 
 String _steamMessage(Object error) => error is FormatException
     ? error.message
@@ -129,6 +130,16 @@ class _SteamSettingsPanelState extends State<SteamSettingsPanel> {
                           builder: (_) =>
                               SteamGameDialog(service: widget.service)),
                   child: const Text('Ver juegos')),
+              OutlinedButton(
+                  key: const ValueKey('steam-limpiar-deseados'),
+                  onPressed: _busy
+                      ? null
+                      : () => showDialog<void>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => SteamListaDeseadosDialog(
+                              service: widget.service)),
+                  child: const Text('Limpiar lista de deseados')),
               TextButton(
                   onPressed: _busy ? null : _disconnect,
                   child: const Text('Desconectar')),

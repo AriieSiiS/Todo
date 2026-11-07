@@ -48,6 +48,25 @@ Cada consulta guarda los logros en
 desde disco no puede leer el JSON, pero sí cargar ese script para retirar los
 logros obtenidos. Los datos son los de la última actualización de logros en Todo.
 
+## Limpiar la lista de deseados
+
+«Ajustes → Steam → Limpiar lista de deseados» descarga la lista de deseados
+(`IWishlistService/GetWishlist`) y los juegos del plan familiar
+(`IFamilyGroupsService/GetSharedLibraryApps`, sin los propios ni los excluidos),
+los cruza por AppID y quita los coincidentes con
+`IWishlistService/RemoveFromWishlist`, uno a uno con un pequeño retardo y
+siguiendo aunque alguno falle. Muestra los quitados con su enlace de la tienda,
+los fallos aparte y un botón «Copiar lista», y guarda el mismo texto en
+`Documents/Todo/steam/lista_deseados_plan_familiar_<fecha>.txt`.
+
+La clave Web API no sirve aquí: Steam responde 401 al plan familiar y al
+borrado. Hace falta el token de sesión `webapi_token` que muestra
+<https://store.steampowered.com/pointssummary/ajaxgetasyncconfig> con la sesión
+iniciada en el navegador. El diálogo lo pide cuando falta o ha caducado (dura
+unas 24 horas), admite pegar la página completa, comprueba que pertenece al
+perfil conectado y lo guarda cifrado con `flutter_secure_storage`. Un token
+rechazado se avisa como tal; nunca se interpreta como «sin coincidencias».
+
 ## Consulta desde agentes
 
 El adaptador MCP existente expone `get_steam_games` y
