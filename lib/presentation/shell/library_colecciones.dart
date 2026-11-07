@@ -44,15 +44,16 @@ LibraryItem? _obraEnBiblioteca(TodoWorkspace controller, LibraryItem obra) {
 /// Copia la portada del catálogo y crea el elemento como pendiente.
 Future<void> _anadirObraABiblioteca(
   TodoWorkspace controller,
-  LibraryItem obra,
-) async {
+  LibraryItem obra, {
+  LibraryItemStatus status = LibraryItemStatus.pending,
+}) async {
   final portada = await rootBundle.load(obra.coverUrl!);
   final coverUrl = await _copyLibraryCoverBytes(portada.buffer.asUint8List());
   if (_obraEnBiblioteca(controller, obra) != null) return;
   controller.createLibraryItem(
     type: obra.type,
     title: obra.title,
-    status: LibraryItemStatus.pending,
+    status: status,
     coverUrl: coverUrl,
     externalUrl: obra.externalUrl,
     note: obra.note,
@@ -74,6 +75,27 @@ Future<void> _anadirObraABiblioteca(
     seasonCount: obra.seasonCount,
   );
 }
+
+/// Añade una obra del catálogo a la Biblioteca con ese estado, o cambia su
+/// estado si ya estaba.
+Future<void> _ponerEstadoObra(
+  TodoWorkspace controller,
+  LibraryItem obra,
+  LibraryItemStatus estado,
+) async {
+  final existente = _obraEnBiblioteca(controller, obra);
+  if (existente != null) {
+    controller.updateLibraryItemStatus(existente.id, estado);
+  } else {
+    await _anadirObraABiblioteca(controller, obra, status: estado);
+  }
+}
+
+String _estadoEnPlural(LibraryItemStatus estado) => switch (estado) {
+      LibraryItemStatus.pending => 'pendientes',
+      LibraryItemStatus.inProgress => 'en curso',
+      LibraryItemStatus.completed => 'completadas',
+    };
 
 /// Abre la saga sobre la vista actual. Colecciones no tiene entrada propia:
 /// solo se llega pulsando la chapa de una saga.
@@ -114,6 +136,8 @@ class _ColeccionDetalle extends StatefulWidget {
 class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   final _anadiendo = <String>{};
   bool _verQuitadas = false;
+  bool _seleccionando = false;
+  final _seleccion = <String>{};
 
   TodoWorkspace get controller => widget.controller;
 
@@ -135,13 +159,87 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
       controller.visibilitySettings.hiddenCollectionWorks
           .contains(_claveGrupo(grupo));
 
-  Future<void> _anadir(LibraryItem obra) async {
+  Future<void> _estado(LibraryItem obra, LibraryItemStatus estado) async {
     if (!_anadiendo.add(obra.id)) return;
     try {
-      await _anadirObraABiblioteca(controller, obra);
+      await _ponerEstadoObra(controller, obra, estado);
     } finally {
       _anadiendo.remove(obra.id);
     }
+  }
+
+  Future<void> _anadir(LibraryItem obra) =>
+      _estado(obra, LibraryItemStatus.pending);
+
+  void _terminarSeleccion() => setState(() {
+        _seleccionando = false;
+        _seleccion.clear();
+      });
+
+  /// Añade o cambia de estado varias obras, tras confirmarlo.
+  Future<void> _enBloque(
+    List<LibraryItem> obras,
+    LibraryItemStatus estado,
+  ) async {
+    if (obras.isEmpty) return;
+    final nuevas =
+        obras.where((obra) => _obraEnBiblioteca(controller, obra) == null);
+    final cambian = obras.length - nuevas.length;
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Marcar ${obras.length} como ${_estadoEnPlural(estado)}'),
+        content: Text([
+          if (nuevas.isNotEmpty)
+            'Se añadirán ${nuevas.length} a tu Biblioteca.',
+          if (cambian > 0)
+            'Se cambiará el estado de $cambian que ya están en tu Biblioteca.',
+        ].join(' ')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const ValueKey('coleccion-bloque-aceptar'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true) return;
+    for (final obra in obras) {
+      await _estado(obra, estado);
+    }
+    if (mounted) _terminarSeleccion();
+  }
+
+  Widget _menuEstados({
+    required Key key,
+    required String texto,
+    required IconData icono,
+    required bool activo,
+    required void Function(LibraryItemStatus estado) alElegir,
+  }) {
+    return MenuAnchor(
+      menuChildren: [
+        for (final estado in LibraryItemStatus.values)
+          MenuItemButton(
+            key: ValueKey('$key-${estado.name}'),
+            onPressed: () => alElegir(estado),
+            child: Text('Como ${_estadoEnPlural(estado)}'),
+          ),
+      ],
+      builder: (context, menu, _) => OutlinedButton.icon(
+        key: key,
+        onPressed:
+            activo ? () => menu.isOpen ? menu.close() : menu.open() : null,
+        icon: Icon(icono, size: 18),
+        label: Text(texto),
+        style: _libraryDetailSecondaryButtonStyle(context),
+      ),
+    );
   }
 
   String _resumen(List<LibraryItem> obras) {
@@ -211,6 +309,58 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                 ],
               ),
             ),
+            if (!verQuitadas && _seleccionando) ...[
+              Text(
+                '${_seleccion.length} seleccionadas',
+                style: TextStyle(
+                  color: visuals.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 12),
+              _menuEstados(
+                key: const ValueKey('coleccion-seleccion-anadir'),
+                texto: 'Añadir seleccionadas',
+                icono: Icons.library_add_outlined,
+                activo: _seleccion.isNotEmpty,
+                alElegir: (estado) => _enBloque(
+                  obras.where((obra) => _seleccion.contains(obra.id)).toList(),
+                  estado,
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton(
+                key: const ValueKey('coleccion-seleccion-cancelar'),
+                onPressed: _terminarSeleccion,
+                style: _libraryDetailSecondaryButtonStyle(context),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 10),
+            ] else if (!verQuitadas) ...[
+              _menuEstados(
+                key: const ValueKey('coleccion-anadir-todas'),
+                texto: 'Añadir todas',
+                icono: Icons.library_add_outlined,
+                activo: obras
+                    .any((obra) => _obraEnBiblioteca(controller, obra) == null),
+                alElegir: (estado) => _enBloque(
+                  obras
+                      .where(
+                          (obra) => _obraEnBiblioteca(controller, obra) == null)
+                      .toList(),
+                  estado,
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                key: const ValueKey('coleccion-seleccionar'),
+                onPressed: () => setState(() => _seleccionando = true),
+                icon: const Icon(Icons.checklist_rounded, size: 18),
+                label: const Text('Seleccionar'),
+                style: _libraryDetailSecondaryButtonStyle(context),
+              ),
+              const SizedBox(width: 10),
+            ],
             if (quitadas.isNotEmpty)
               OutlinedButton.icon(
                 key: const ValueKey('coleccion-ver-quitadas'),
@@ -305,15 +455,24 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                             obra: obra,
                             quitada: verQuitadas,
                             enBiblioteca: _obraEnBiblioteca(controller, obra),
-                            onTap: () => _mostrarObraColeccion(
-                              context,
-                              controller,
-                              obras,
-                              obra,
-                              verQuitadas,
-                              _anadir,
-                              _alternar,
-                            ),
+                            seleccionando: _seleccionando && !verQuitadas,
+                            seleccionada: _seleccion.contains(obra.id),
+                            onTap: _seleccionando && !verQuitadas
+                                ? () => setState(() {
+                                      if (!_seleccion.add(obra.id)) {
+                                        _seleccion.remove(obra.id);
+                                      }
+                                    })
+                                : () => _mostrarObraColeccion(
+                                      context,
+                                      controller,
+                                      obras,
+                                      obra,
+                                      verQuitadas,
+                                      _anadir,
+                                      _alternar,
+                                      _estado,
+                                    ),
                             onAdd: () => _anadir(obra),
                             onToggle: () => _alternar(obra),
                           );
@@ -336,6 +495,8 @@ class _ColeccionObraTarjeta extends StatefulWidget {
     required this.obra,
     required this.quitada,
     required this.enBiblioteca,
+    required this.seleccionando,
+    required this.seleccionada,
     required this.onTap,
     required this.onAdd,
     required this.onToggle,
@@ -344,6 +505,8 @@ class _ColeccionObraTarjeta extends StatefulWidget {
   final LibraryItem obra;
   final bool quitada;
   final LibraryItem? enBiblioteca;
+  final bool seleccionando;
+  final bool seleccionada;
   final VoidCallback onTap;
   final VoidCallback onAdd;
   final VoidCallback onToggle;
@@ -359,12 +522,14 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
   Widget build(BuildContext context) {
     final obra = widget.obra;
     final enBiblioteca = widget.enBiblioteca;
-    final borde = switch (enBiblioteca?.status) {
-      LibraryItemStatus.completed => const Color(0xFF5F7F49),
-      LibraryItemStatus.inProgress => const Color(0xFFC77721),
-      LibraryItemStatus.pending => const Color(0xFF7D8CA3),
-      null => null,
-    };
+    final borde = widget.seleccionada
+        ? const Color(0xFF9DCB7E)
+        : switch (enBiblioteca?.status) {
+            LibraryItemStatus.completed => const Color(0xFF5F7F49),
+            LibraryItemStatus.inProgress => const Color(0xFFC77721),
+            LibraryItemStatus.pending => const Color(0xFF7D8CA3),
+            null => null,
+          };
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -476,7 +641,28 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                     ),
                   ),
                 ),
-              if (_hovered)
+              if (widget.seleccionando)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    key: ValueKey('coleccion-casilla-${obra.id}'),
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.seleccionada
+                          ? const Color(0xFF607A4D)
+                          : const Color(0xB3202732),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: widget.seleccionada
+                        ? const Icon(Icons.check_rounded,
+                            size: 18, color: Colors.white)
+                        : null,
+                  ),
+                )
+              else if (_hovered)
                 Positioned(
                   top: 6,
                   left: 6,
@@ -498,7 +684,7 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                   right: 8,
                   child: _LibraryStatusBadge(status: enBiblioteca.status),
                 )
-              else if (_hovered && !widget.quitada)
+              else if (_hovered && !widget.quitada && !widget.seleccionando)
                 Positioned(
                   top: 6,
                   right: 6,
@@ -554,6 +740,7 @@ Future<void> _mostrarObraColeccion(
   bool quitada,
   Future<void> Function(LibraryItem obra) onAdd,
   void Function(LibraryItem obra) onToggle,
+  Future<void> Function(LibraryItem obra, LibraryItemStatus estado) onEstado,
 ) {
   return showDialog<void>(
     context: context,
@@ -566,6 +753,7 @@ Future<void> _mostrarObraColeccion(
         quitada: quitada,
         onAdd: onAdd,
         onToggle: onToggle,
+        onEstado: onEstado,
         origen: context,
       ),
     ),
@@ -581,6 +769,7 @@ class _ColeccionObraDialog extends StatefulWidget {
     required this.quitada,
     required this.onAdd,
     required this.onToggle,
+    required this.onEstado,
     required this.origen,
   });
 
@@ -590,6 +779,8 @@ class _ColeccionObraDialog extends StatefulWidget {
   final bool quitada;
   final Future<void> Function(LibraryItem obra) onAdd;
   final void Function(LibraryItem obra) onToggle;
+  final Future<void> Function(LibraryItem obra, LibraryItemStatus estado)
+      onEstado;
 
   /// Contexto de la colección, para abrir la ficha tras cerrar este diálogo.
   final BuildContext origen;
@@ -702,6 +893,16 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                                 ),
                                 const SizedBox(height: 14),
                               ],
+                              _LibraryDetailLine(
+                                label: 'Estado',
+                                value: '',
+                                valueWidget: _ColeccionEstadoSelector(
+                                  estado: enBiblioteca?.status,
+                                  onSelected: (estado) =>
+                                      widget.onEstado(obra, estado),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
                               for (final campo in campos) ...[
                                 _LibraryDetailLine(
                                   label: campo.$1,
@@ -831,6 +1032,96 @@ class _NavegacionConFlechas extends StatelessWidget {
         const SingleActivator(LogicalKeyboardKey.arrowRight): onSiguiente,
       },
       child: Focus(autofocus: true, child: child),
+    );
+  }
+}
+
+/// Estado de una obra de la colección: sin añadir, o su estado en Biblioteca.
+/// Elegir uno añade la obra a la Biblioteca o cambia su estado.
+class _ColeccionEstadoSelector extends StatelessWidget {
+  const _ColeccionEstadoSelector({
+    required this.estado,
+    required this.onSelected,
+  });
+
+  final LibraryItemStatus? estado;
+  final ValueChanged<LibraryItemStatus> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = switch (estado) {
+      LibraryItemStatus.pending => (
+          const Color(0xFFECEFF3),
+          const Color(0xFF687384)
+        ),
+      LibraryItemStatus.inProgress => (
+          const Color(0xFFFFEFD9),
+          const Color(0xFFC77721)
+        ),
+      LibraryItemStatus.completed => (
+          const Color(0xFFDCECCF),
+          const Color(0xFF4E703B)
+        ),
+      null => (context.visuals.panel, context.visuals.textMuted),
+    };
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: MenuAnchor(
+        alignmentOffset: const Offset(0, 2),
+        menuChildren: [
+          for (final opcion in LibraryItemStatus.values)
+            MenuItemButton(
+              key: ValueKey('coleccion-estado-${opcion.name}'),
+              onPressed: () => onSelected(opcion),
+              style: const ButtonStyle(
+                minimumSize: WidgetStatePropertyAll(Size(180, 40)),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 22,
+                    child: opcion == estado
+                        ? const Icon(Icons.check_rounded, size: 16)
+                        : null,
+                  ),
+                  Text(_libraryStatusSingularLabel(opcion)),
+                ],
+              ),
+            ),
+        ],
+        builder: (context, menu, child) => InkWell(
+          key: const ValueKey('coleccion-estado-selector'),
+          borderRadius: BorderRadius.circular(999),
+          onTap: () => menu.isOpen ? menu.close() : menu.open(),
+          child: child,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 5, 8, 5),
+          decoration: BoxDecoration(
+            color: colores.$1,
+            borderRadius: BorderRadius.circular(999),
+            border: estado == null
+                ? Border.all(color: context.visuals.panelBorder)
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                estado == null
+                    ? 'Sin añadir'
+                    : _libraryStatusSingularLabel(estado!),
+                style: TextStyle(
+                  color: colores.$2,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Icon(Icons.arrow_drop_down_rounded, color: colores.$2),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
