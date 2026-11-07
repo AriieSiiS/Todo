@@ -370,7 +370,7 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
               Positioned(
                 left: 12,
                 right: 12,
-                bottom: 44,
+                bottom: enBiblioteca != null ? 44 : 14,
                 child: IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: _hovered ? 1 : 0,
@@ -392,29 +392,30 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                   ),
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 8,
-                child: Center(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xE63B4654),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      obra.releaseYear?.toString() ?? 'Por confirmar',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+              if (enBiblioteca != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 8,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 13, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xE63B4654),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        obra.releaseYear?.toString() ?? 'Por confirmar',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
               if (_hovered)
                 Positioned(
                   top: 6,

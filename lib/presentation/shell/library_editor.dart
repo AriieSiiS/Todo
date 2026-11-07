@@ -1559,12 +1559,18 @@ String _libraryItemStatusMeta(LibraryItem item) {
       .toSet();
   final showInstallment = collectionNumber != null &&
       (distinctNumbers.length >= 2 || item.showCollectionNumber);
+  final saga = collectionName.toLowerCase().startsWith('saga ')
+      ? collectionName.substring(5).trim()
+      : collectionName;
   return (
-    saga: collectionName.toLowerCase().startsWith('saga ')
-        ? collectionName.substring(5).trim()
-        : collectionName,
+    saga: saga,
     installment: showInstallment ? '#$collectionNumber' : null,
-    universe: universe == null || universe.isEmpty ? null : universe,
+    // Si universo y saga se llaman igual, basta con una chapa.
+    universe: universe == null ||
+            universe.isEmpty ||
+            _libraryCollectionKey(universe) == _libraryCollectionKey(saga)
+        ? null
+        : universe,
   );
 }
 

@@ -406,6 +406,19 @@
        "releaseYear": 2022,
        "pages": "496",
        "externalUrl": "https://www.goodreads.com/book/show/60590666-arena-blanca-mnibus"
+      },
+      {
+       "id": "el-alma-del-emperador",
+       "type": "book",
+       "title": "El alma del emperador",
+       "coverUrl": "assets/colecciones/portadas/cosmere-el-alma-del-emperador.jpg",
+       "author": "Brandon Sanderson",
+       "genre": "Fantasía épica",
+       "note": "Novela corta del mundo de Elantris: la falsificadora Shai, condenada a muerte, tiene cien días para reconstruir el alma de un emperador.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/57816890-el-alma-del-emperador",
+       "releaseYear": 2012,
+       "pages": "175"
       }
      ]
     },
@@ -876,6 +889,19 @@
      "nombre": "Inquisidor Eisenhorn",
      "obras": [
       {
+       "id": "eisenhorn-omnibus",
+       "type": "book",
+       "title": "Eisenhorn Omnibus",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-eisenhorn-omnibus.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Reúne en un volumen la trilogía del inquisidor Gregor Eisenhorn: Xenos, Malleus y Hereticus, en el imperio de Warhammer 40.000.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2017,
+       "pages": "1088",
+       "externalUrl": "https://www.goodreads.com/book/show/33871217-eisenhorn"
+      },
+      {
        "id": "xenos",
        "type": "book",
        "title": "Xenos",
@@ -918,17 +944,18 @@
        "collectionNumber": 3
       },
       {
-       "id": "eisenhorn-omnibus",
+       "id": "the-magos",
        "type": "book",
-       "title": "Eisenhorn Omnibus",
-       "coverUrl": "assets/colecciones/portadas/eisenhorn-eisenhorn-omnibus.jpg",
+       "title": "The Magos",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-the-magos.jpg",
        "author": "Dan Abnett",
        "genre": "Ciencia ficción y fantasía oscura",
-       "note": "Reúne en un volumen la trilogía del inquisidor Gregor Eisenhorn: Xenos, Malleus y Hereticus, en el imperio de Warhammer 40.000.",
+       "note": "Cuarto libro de Eisenhorn, con su novela y los relatos del inquisidor. Todavía sin edición en español.",
        "creatorOrDirector": "Novela",
-       "releaseYear": 2017,
-       "pages": "1088",
-       "externalUrl": "https://www.goodreads.com/book/show/33871217-eisenhorn"
+       "externalUrl": "https://www.goodreads.com/book/show/36304173-the-magos",
+       "releaseYear": 2018,
+       "pages": "720",
+       "collectionNumber": 4
       },
       {
        "id": "pariah",
@@ -942,7 +969,7 @@
        "releaseYear": 2012,
        "pages": "320",
        "externalUrl": "https://www.goodreads.com/book/show/13417141-pariah",
-       "collectionNumber": 4
+       "collectionNumber": 5
       },
       {
        "id": "penitent",
@@ -956,7 +983,40 @@
        "releaseYear": 2021,
        "pages": "384",
        "externalUrl": "https://www.goodreads.com/book/show/56269796-penitent",
-       "collectionNumber": 5
+       "collectionNumber": 6
+      }
+     ]
+    },
+    {
+     "nombre": "Ravenor",
+     "obras": [
+      {
+       "id": "ravenor-returned",
+       "type": "book",
+       "title": "Ravenor Returned",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-ravenor-returned.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Segunda novela de Gideon Ravenor, antiguo discípulo de Eisenhorn. Todavía sin edición en español.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/1052308.Ravenor_Returned",
+       "releaseYear": 2005,
+       "pages": "412",
+       "collectionNumber": 2
+      },
+      {
+       "id": "ravenor-rogue",
+       "type": "book",
+       "title": "Ravenor Rogue",
+       "coverUrl": "assets/colecciones/portadas/eisenhorn-ravenor-rogue.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción y fantasía oscura",
+       "note": "Tercera novela de Gideon Ravenor, antiguo discípulo de Eisenhorn. Todavía sin edición en español.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/571522.Ravenor_Rogue",
+       "releaseYear": 2007,
+       "pages": "320",
+       "collectionNumber": 3
       }
      ]
     }
@@ -1952,6 +2012,37 @@
        "pages": "208",
        "externalUrl": "https://www.goodreads.com/book/show/9282927-tel-n",
        "collectionNumber": 33
+      }
+     ]
+    },
+    {
+     "nombre": "Relatos",
+     "obras": [
+      {
+       "id": "poirot-investiga",
+       "type": "book",
+       "title": "Poirot investiga",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-poirot-investiga.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Colección de once casos de Poirot narrados por el capitán Hastings.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/227766394-poirot-investiga-biblioteca-agatha-christie",
+       "releaseYear": 1924,
+       "pages": "215"
+      },
+      {
+       "id": "asesinato-en-bardsley-mews",
+       "type": "book",
+       "title": "Asesinato en Bardsley Mews",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-asesinato-en-bardsley-mews.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Cuatro novelas cortas de Poirot, entre ellas la que da título al libro, sobre una mujer hallada muerta en su piso de Londres.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/8440960-asesinato-en-bardsley-mews",
+       "releaseYear": 1937,
+       "pages": "256"
       },
       {
        "id": "los-trabajos-de-hercules",
@@ -1965,6 +2056,18 @@
        "releaseYear": 1947,
        "pages": "256",
        "externalUrl": "https://www.goodreads.com/book/show/9955035-los-trabajos-de-h-rcules"
+      },
+      {
+       "id": "primeros-casos-de-poirot",
+       "type": "book",
+       "title": "Primeros casos de Poirot",
+       "coverUrl": "assets/colecciones/portadas/hercules-poirot-primeros-casos-de-poirot.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Colección de relatos con casos de la primera etapa del detective en Inglaterra.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/144955361-primeros-casos-de-poirot-by-agatha-christie",
+       "releaseYear": 1974
       }
      ]
     }
@@ -2637,7 +2740,8 @@
        "note": "Los Cicatrices Blancas pelean una guerra de desgaste contra la flota de Horus antes de poner rumbo a Terra.",
        "creatorOrDirector": "Novela",
        "releaseYear": 2019,
-       "collectionNumber": 36
+       "collectionNumber": 36,
+       "externalUrl": "https://www.goodreads.com/book/show/28956049-the-path-of-heaven"
       },
       {
        "id": "la-guerra-silenciosa",
@@ -3231,6 +3335,45 @@
        "releaseYear": 1980,
        "pages": "574",
        "externalUrl": "https://www.goodreads.com/book/show/54719.Cuentos_inconclusos_de_N_menor_y_la_Tierra_Media"
+      },
+      {
+       "id": "beren-y-luthien",
+       "type": "book",
+       "title": "Beren y Lúthien",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-beren-y-luthien.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "La historia de amor entre un hombre mortal y una elfa, reunida por Christopher Tolkien a partir de sus distintas versiones.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/38486079-beren-y-l-thien",
+       "releaseYear": 2017,
+       "pages": "275"
+      },
+      {
+       "id": "la-caida-de-gondolin",
+       "type": "book",
+       "title": "La caída de Gondolin",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-la-caida-de-gondolin.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "La última gran ciudad élfica de la Primera Edad y su destrucción, editada por Christopher Tolkien.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/43492236-la-ca-da-de-gondolin",
+       "releaseYear": 2018,
+       "pages": "304"
+      },
+      {
+       "id": "la-caida-de-numenor",
+       "type": "book",
+       "title": "La caída de Númenor",
+       "coverUrl": "assets/colecciones/portadas/la-tierra-media-la-caida-de-numenor.jpg",
+       "author": "J. R. R. Tolkien",
+       "genre": "Fantasía épica",
+       "note": "Relatos de la Segunda Edad sobre la isla de Númenor y el ascenso de Sauron, reunidos por Brian Sibley.",
+       "creatorOrDirector": "Novela",
+       "externalUrl": "https://www.goodreads.com/book/show/3536468-la-ca-da-de-n-menor",
+       "releaseYear": 2022,
+       "pages": "368"
       }
      ]
     },
