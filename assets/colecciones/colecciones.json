@@ -645,53 +645,6 @@
    ]
   },
   {
-   "id": "dark-souls",
-   "nombre": "Dark Souls",
-   "grupos": [
-    {
-     "nombre": "Saga principal",
-     "obras": [
-      {
-       "id": "dark-souls-remastered",
-       "type": "game",
-       "title": "Dark Souls Remastered",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-remastered.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2011,
-       "genre": "Rol de acción",
-       "note": "Un no muerto maldito viaja a Lordran para decidir el destino de la Era del Fuego. Es la versión mejorada del original, con todo su contenido adicional.",
-       "collectionNumber": 1
-      },
-      {
-       "id": "dark-souls-ii-scholar-of-the-first-sin",
-       "type": "game",
-       "title": "Dark Souls II: Scholar of the First Sin",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-ii-scholar-of-the-first-sin.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2014,
-       "genre": "Rol de acción",
-       "note": "Un maldito llega a Drangleic en busca de la cura a su condición. Esta edición incluye las expansiones y reordena enemigos y encuentros.",
-       "collectionNumber": 2
-      },
-      {
-       "id": "dark-souls-iii",
-       "type": "game",
-       "title": "Dark Souls III",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-iii.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2016,
-       "genre": "Rol de acción",
-       "note": "Un Latente debe devolver a sus tronos a los Señores de la Ceniza en un mundo que agoniza. Es el cierre de la trilogía.",
-       "collectionNumber": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "dead-space",
    "nombre": "Dead Space",
    "grupos": [
@@ -891,6 +844,416 @@
        "genre": "Rol de acción",
        "note": "Rook reúne a un grupo de compañeros para detener a dos dioses antiguos y a Solas, en la entrega que cierra la historia del Velo.",
        "collectionNumber": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dune",
+   "nombre": "Dune",
+   "universo": "Dune",
+   "grupos": [
+    {
+     "nombre": "Las crónicas de Dune",
+     "obras": [
+      {
+       "id": "dune",
+       "type": "book",
+       "title": "Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "En el planeta desierto de Arrakis, única fuente de la especia, el joven Paul Atreides ve cómo su familia es traicionada y encuentra su destino entre los fremen.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1965,
+       "pages": "704",
+       "externalUrl": "https://www.goodreads.com/book/show/53363733-dune",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-mesias-de-dune",
+       "type": "book",
+       "title": "El mesías de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-el-mesias-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Doce años después, Paul es emperador y su yihad ha arrasado la galaxia. Una conspiración busca derribarlo mientras él lucha contra su propio destino.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1969,
+       "pages": "306",
+       "externalUrl": "https://www.goodreads.com/book/show/53728.El_mes_as_de_Dune",
+       "collectionNumber": 2
+      },
+      {
+       "id": "hijos-de-dune",
+       "type": "book",
+       "title": "Hijos de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-hijos-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Los gemelos de Paul, Leto y Ghanima, crecen en un imperio en manos de la regente Alia mientras Arrakis empieza a cambiar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1976,
+       "pages": "546",
+       "externalUrl": "https://www.goodreads.com/book/show/53707.Hijos_de_Dune",
+       "collectionNumber": 3
+      },
+      {
+       "id": "dios-emperador-de-dune",
+       "type": "book",
+       "title": "Dios emperador de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dios-emperador-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Tres mil años después, Leto II, convertido en un ser medio gusano, gobierna como tirano para conducir a la humanidad por su Senda de Oro.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1981,
+       "pages": "568",
+       "externalUrl": "https://www.goodreads.com/book/show/111.Dios_emperador_de_Dune",
+       "collectionNumber": 4
+      },
+      {
+       "id": "herejes-de-dune",
+       "type": "book",
+       "title": "Herejes de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-herejes-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Milenios tras la muerte de Leto II, la Bene Gesserit se enfrenta a las Honoradas Matres, que regresan de la Dispersión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1984,
+       "pages": "565",
+       "externalUrl": "https://www.goodreads.com/book/show/15831109-herejes-de-dune",
+       "collectionNumber": 5
+      },
+      {
+       "id": "casa-capitular-dune",
+       "type": "book",
+       "title": "Casa capitular Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-casa-capitular-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Con Arrakis destruido, la Bene Gesserit intenta convertir su planeta capitular en un nuevo Dune para sobrevivir.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1985,
+       "pages": "640",
+       "externalUrl": "https://www.goodreads.com/book/show/53772.Casa_capitular_Dune",
+       "collectionNumber": 6
+      }
+     ]
+    },
+    {
+     "nombre": "Películas y series",
+     "obras": [
+      {
+       "id": "dune-1984",
+       "type": "movieSeries",
+       "title": "Dune (1984)",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-1984.jpg",
+       "releaseYear": 1984,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "Primera adaptación al cine de la novela, dirigida por David Lynch, con Kyle MacLachlan como Paul Atreides.",
+       "mediaType": "movie",
+       "duration": "2h 16m",
+       "creatorOrDirector": "David Lynch",
+       "externalUrl": "https://letterboxd.com/film/dune/"
+      },
+      {
+       "id": "dune-2021",
+       "type": "movieSeries",
+       "title": "Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-2021.jpg",
+       "releaseYear": 2021,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Paul Atreides llega con su familia a Arrakis, el planeta de la especia, donde una traición lo obliga a refugiarse entre los fremen.",
+       "mediaType": "movie",
+       "duration": "2h 35m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/dune-2021/"
+      },
+      {
+       "id": "dune-parte-dos",
+       "type": "movieSeries",
+       "title": "Dune: Parte dos",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-parte-dos.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Paul se une a Chani y a los fremen para vengarse de quienes destruyeron a su familia, mientras intenta evitar el futuro terrible que ve en sus visiones.",
+       "mediaType": "movie",
+       "duration": "2h 47m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/dune-part-two/"
+      },
+      {
+       "id": "dune-parte-tres",
+       "type": "movieSeries",
+       "title": "Dune: Parte tres",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-parte-tres.jpg",
+       "releaseYear": 2026,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Adaptación de El mesías de Dune, con Paul convertido en emperador años después de Parte dos.",
+       "mediaType": "movie",
+       "duration": "2h 20m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/dune-part-three/",
+       "fechaPrevista": "18 de diciembre de 2026 en España"
+      },
+      {
+       "id": "dune-la-profecia",
+       "type": "movieSeries",
+       "title": "Dune: La profecía",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-la-profecia.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, drama",
+       "note": "Serie ambientada diez mil años antes de Paul Atreides, sobre las hermanas Harkonnen que fundan la orden que será la Bene Gesserit.",
+       "mediaType": "series"
+      }
+     ]
+    },
+    {
+     "nombre": "Preludio a Dune",
+     "obras": [
+      {
+       "id": "la-casa-atreides",
+       "type": "book",
+       "title": "La Casa Atreides",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-atreides.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Precuela ambientada una generación antes de Dune, con el joven Leto Atreides y las intrigas que llevarán a la guerra entre casas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1999,
+       "pages": "784",
+       "externalUrl": "https://www.goodreads.com/book/show/719712.La_Casa_Atreides"
+      },
+      {
+       "id": "la-casa-harkonnen",
+       "type": "book",
+       "title": "La Casa Harkonnen",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-harkonnen.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Segunda parte del Preludio: el ascenso del duque Leto y los planes del barón Harkonnen.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2000,
+       "pages": "688",
+       "externalUrl": "https://www.goodreads.com/book/show/502654.La_casa_Harkonnen"
+      },
+      {
+       "id": "la-casa-corrino",
+       "type": "book",
+       "title": "La Casa Corrino",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-corrino.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Cierre del Preludio, justo antes del nacimiento de Paul, con el emperador Shaddam IV y la especia artificial.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2001,
+       "pages": "640",
+       "externalUrl": "https://www.goodreads.com/book/show/396995.La_Casa_Corrino"
+      }
+     ]
+    },
+    {
+     "nombre": "Leyendas de Dune",
+     "obras": [
+      {
+       "id": "la-yihad-butleriana",
+       "type": "book",
+       "title": "La Yihad Butleriana",
+       "coverUrl": "assets/colecciones/portadas/dune-la-yihad-butleriana.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Diez mil años antes de Dune, la humanidad se rebela contra las máquinas pensantes que la esclavizan.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2002,
+       "pages": "637",
+       "externalUrl": "https://www.goodreads.com/book/show/719690.Dune"
+      },
+      {
+       "id": "la-cruzada-de-las-maquinas",
+       "type": "book",
+       "title": "La cruzada de las máquinas",
+       "coverUrl": "assets/colecciones/portadas/dune-la-cruzada-de-las-maquinas.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "La guerra contra las máquinas se prolonga durante décadas y siembra el origen de las grandes órdenes del universo de Dune.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2003,
+       "pages": "807",
+       "externalUrl": "https://www.goodreads.com/book/show/719718.La_cruzada_de_las_m_quinas"
+      },
+      {
+       "id": "la-batalla-de-corrin",
+       "type": "book",
+       "title": "La batalla de Corrin",
+       "coverUrl": "assets/colecciones/portadas/dune-la-batalla-de-corrin.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "El final de la Yihad Butleriana y la batalla que acaba con las máquinas pensantes.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2004,
+       "pages": "732",
+       "externalUrl": "https://www.goodreads.com/book/show/3139724-la-batalla-de-corrin"
+      }
+     ]
+    },
+    {
+     "nombre": "Continuación",
+     "obras": [
+      {
+       "id": "cazadores-de-dune",
+       "type": "book",
+       "title": "Cazadores de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-cazadores-de-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Continuación de Casa capitular Dune, basada en las notas de Frank Herbert, con la huida de la nave no-nave por el universo.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "524",
+       "externalUrl": "https://www.goodreads.com/book/show/29473423-cazadores-de-dune",
+       "collectionNumber": 7
+      },
+      {
+       "id": "gusanos-de-arena-de-dune",
+       "type": "book",
+       "title": "Gusanos de arena de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-gusanos-de-arena-de-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Desenlace de la saga original: el enfrentamiento final contra el enemigo que acecha desde la Dispersión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "576",
+       "externalUrl": "https://www.goodreads.com/book/show/8734026-gusanos-de-arena-de-dune",
+       "collectionNumber": 8
+      }
+     ]
+    },
+    {
+     "nombre": "Héroes de Dune",
+     "obras": [
+      {
+       "id": "paul-of-dune",
+       "type": "book",
+       "title": "Paul of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-paul-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Entre Dune y El mesías de Dune: la yihad de Paul y episodios de su juventud. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008
+      },
+      {
+       "id": "the-winds-of-dune",
+       "type": "book",
+       "title": "The Winds of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-the-winds-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Tras la desaparición de Paul en el desierto, Jessica y la familia Atreides se enfrentan a sus consecuencias. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "externalUrl": "https://www.goodreads.com/book/show/6072318-the-winds-of-dune"
+      },
+      {
+       "id": "princess-of-dune",
+       "type": "book",
+       "title": "Princess of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-princess-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Las historias de Irulan y Chani antes de que conozcan a Paul. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "externalUrl": "https://www.goodreads.com/book/show/123274967-princess-of-dune"
+      }
+     ]
+    },
+    {
+     "nombre": "Escuelas de Dune",
+     "obras": [
+      {
+       "id": "sisterhood-of-dune",
+       "type": "book",
+       "title": "Sisterhood of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-sisterhood-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Tras la Yihad Butleriana nacen la Bene Gesserit y las otras grandes escuelas. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2012,
+       "externalUrl": "https://www.goodreads.com/book/show/11754793-sisterhood-of-dune"
+      },
+      {
+       "id": "mentats-of-dune",
+       "type": "book",
+       "title": "Mentats of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-mentats-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Los mentats y la Hermandad se disputan el futuro mientras los butlerianos persiguen cualquier tecnología. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2014,
+       "externalUrl": "https://www.goodreads.com/book/show/17910044-mentats-of-dune"
+      },
+      {
+       "id": "navigators-of-dune",
+       "type": "book",
+       "title": "Navigators of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-navigators-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Cierre de la trilogía: el origen de la Cofradía Espacial y sus navegantes. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2016,
+       "externalUrl": "https://www.goodreads.com/book/show/26031829-navigators-of-dune"
+      }
+     ]
+    },
+    {
+     "nombre": "Trilogía de Caladan",
+     "obras": [
+      {
+       "id": "dune-the-duke-of-caladan",
+       "type": "book",
+       "title": "Dune: The Duke of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-duke-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Un año antes de Dune, el duque Leto descubre un complot contra el emperador. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2020,
+       "externalUrl": "https://www.goodreads.com/book/show/49247261-dune"
+      },
+      {
+       "id": "dune-the-lady-of-caladan",
+       "type": "book",
+       "title": "Dune: The Lady of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-lady-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Jessica regresa a la Bene Gesserit mientras crece el enfrentamiento entre Atreides y Harkonnen. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2021,
+       "externalUrl": "https://www.goodreads.com/book/show/56179363-dune"
+      },
+      {
+       "id": "dune-the-heir-of-caladan",
+       "type": "book",
+       "title": "Dune: The Heir of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-heir-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Paul se prepara para su destino justo antes de la llegada a Arrakis. Su edición en español no está verificada.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2022,
+       "externalUrl": "https://www.goodreads.com/book/show/59808129-dune"
       }
      ]
     }
@@ -1402,59 +1765,6 @@
    ]
   },
   {
-   "id": "goool",
-   "nombre": "¡Goool!",
-   "grupos": [
-    {
-     "nombre": "Películas",
-     "obras": [
-      {
-       "id": "goool-la-pelicula",
-       "type": "movieSeries",
-       "title": "¡Goool! La película",
-       "coverUrl": "assets/colecciones/portadas/goool-goool-la-pelicula.jpg",
-       "releaseYear": 2005,
-       "genre": "Drama, familia",
-       "note": "Santiago Muñez, un joven mexicano de Los Ángeles, recibe la oportunidad de hacer una prueba en el Newcastle United y cumplir su sueño.",
-       "mediaType": "movie",
-       "duration": "1h 58m",
-       "creatorOrDirector": "Danny Cannon",
-       "collectionNumber": 1,
-       "externalUrl": "https://letterboxd.com/film/goal-the-dream-begins/"
-      },
-      {
-       "id": "goool-2-viviendo-el-sueno",
-       "type": "movieSeries",
-       "title": "¡Goool 2! Viviendo el sueño",
-       "coverUrl": "assets/colecciones/portadas/goool-goool-2-viviendo-el-sueno.jpg",
-       "releaseYear": 2007,
-       "genre": "Drama",
-       "note": "Santiago ficha por el Real Madrid y descubre que la fama y el dinero complican todo lo que dejó en Newcastle.",
-       "mediaType": "movie",
-       "duration": "1h 55m",
-       "creatorOrDirector": "Jaume Collet-Serra",
-       "collectionNumber": 2,
-       "externalUrl": "https://letterboxd.com/film/goal-ii-living-the-dream/"
-      },
-      {
-       "id": "goal-3",
-       "type": "movieSeries",
-       "title": "Goal 3",
-       "coverUrl": "assets/colecciones/portadas/goool-goal-3.jpg",
-       "releaseYear": 2008,
-       "genre": "Drama",
-       "note": "Tres compañeros de la selección inglesa viven el Mundial de 2006 de Alemania, dentro y fuera del campo.",
-       "mediaType": "movie",
-       "duration": "1h 31m",
-       "creatorOrDirector": "Andrew Morahan",
-       "collectionNumber": 3,
-       "externalUrl": "https://letterboxd.com/film/goal-iii-taking-on-the-world/"
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "half-life",
    "nombre": "Half-Life",
    "grupos": [
@@ -1557,6 +1867,147 @@
        "releaseYear": 2020,
        "genre": "Disparos en primera persona",
        "note": "Remake del primer Half-Life creado por aficionados y publicado con el permiso de Valve, con el tramo de Xen rehecho."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "high-school-musical",
+   "nombre": "High School Musical",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "high-school-musical",
+       "type": "movieSeries",
+       "title": "High School Musical",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical.jpg",
+       "releaseYear": 2006,
+       "genre": "Comedia, familia, música",
+       "note": "Troy, estrella del baloncesto, y Gabriella, una alumna estudiosa, se presentan juntos a las pruebas del musical del instituto y rompen el orden establecido.",
+       "mediaType": "movie",
+       "duration": "1h 38m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical/"
+      },
+      {
+       "id": "high-school-musical-2",
+       "type": "movieSeries",
+       "title": "High School Musical 2",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-2.jpg",
+       "releaseYear": 2007,
+       "genre": "Comedia, familia, música",
+       "note": "Verano en el club de campo: Troy trabaja allí con sus amigos mientras Sharpay intenta separarlo de Gabriella.",
+       "mediaType": "movie",
+       "duration": "1h 51m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical-2/"
+      },
+      {
+       "id": "high-school-musical-3-fin-de-curso",
+       "type": "movieSeries",
+       "title": "High School Musical 3: Fin de curso",
+       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-3-fin-de-curso.jpg",
+       "releaseYear": 2008,
+       "genre": "Comedia, drama, familia",
+       "note": "Último año de instituto. El grupo prepara un musical de despedida mientras decide qué hacer con la universidad y con su futuro juntos.",
+       "mediaType": "movie",
+       "duration": "1h 52m",
+       "creatorOrDirector": "Kenny Ortega",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/high-school-musical-3-senior-year/"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hollow-knight",
+   "nombre": "Hollow Knight",
+   "grupos": [
+    {
+     "nombre": "Saga principal",
+     "obras": [
+      {
+       "id": "hollow-knight",
+       "type": "game",
+       "title": "Hollow Knight",
+       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight.jpg",
+       "platform": "PC",
+       "developer": "Team Cherry",
+       "releaseYear": 2017,
+       "genre": "Metroidvania y acción",
+       "note": "Un caballero sin nombre explora Hallownest, un reino de insectos en ruinas lleno de secretos y jefes.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "hollow-knight-silksong",
+       "type": "game",
+       "title": "Hollow Knight: Silksong",
+       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight-silksong.jpg",
+       "platform": "PC",
+       "developer": "Team Cherry",
+       "releaseYear": 2025,
+       "genre": "Metroidvania y acción",
+       "note": "Hornet, capturada y llevada a Pharloom, asciende hacia la ciudadela de un reino gobernado por la seda.",
+       "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hora-punta",
+   "nombre": "Hora punta",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "hora-punta",
+       "type": "movieSeries",
+       "title": "Hora punta",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta.jpg",
+       "releaseYear": 1998,
+       "genre": "Acción, comedia, crimen",
+       "note": "Un inspector de Hong Kong y un bocazas de la policía de Los Ángeles deben entenderse para rescatar a la hija secuestrada de un diplomático chino.",
+       "mediaType": "movie",
+       "duration": "1h 38m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/rush-hour/"
+      },
+      {
+       "id": "hora-punta-2",
+       "type": "movieSeries",
+       "title": "Hora punta 2",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-2.jpg",
+       "releaseYear": 2001,
+       "genre": "Acción, comedia, crimen",
+       "note": "Lee y Carter pasan de unas vacaciones en Hong Kong a perseguir a una banda de falsificadores tras un atentado en la embajada estadounidense.",
+       "mediaType": "movie",
+       "duration": "1h 30m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/rush-hour-2/"
+      },
+      {
+       "id": "hora-punta-3",
+       "type": "movieSeries",
+       "title": "Hora punta 3",
+       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-3.jpg",
+       "releaseYear": 2007,
+       "genre": "Acción, comedia, crimen",
+       "note": "Tras un atentado contra un embajador chino, la pareja viaja a París para enfrentarse a las tríadas.",
+       "mediaType": "movie",
+       "duration": "1h 31m",
+       "creatorOrDirector": "Brett Ratner",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/rush-hour-3/"
       }
      ]
     }
@@ -2084,147 +2535,6 @@
        "creatorOrDirector": "Novela",
        "externalUrl": "https://www.goodreads.com/book/show/144955361-primeros-casos-de-poirot-by-agatha-christie",
        "releaseYear": 1974
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "high-school-musical",
-   "nombre": "High School Musical",
-   "grupos": [
-    {
-     "nombre": "Películas",
-     "obras": [
-      {
-       "id": "high-school-musical",
-       "type": "movieSeries",
-       "title": "High School Musical",
-       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical.jpg",
-       "releaseYear": 2006,
-       "genre": "Comedia, familia, música",
-       "note": "Troy, estrella del baloncesto, y Gabriella, una alumna estudiosa, se presentan juntos a las pruebas del musical del instituto y rompen el orden establecido.",
-       "mediaType": "movie",
-       "duration": "1h 38m",
-       "creatorOrDirector": "Kenny Ortega",
-       "collectionNumber": 1,
-       "externalUrl": "https://letterboxd.com/film/high-school-musical/"
-      },
-      {
-       "id": "high-school-musical-2",
-       "type": "movieSeries",
-       "title": "High School Musical 2",
-       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-2.jpg",
-       "releaseYear": 2007,
-       "genre": "Comedia, familia, música",
-       "note": "Verano en el club de campo: Troy trabaja allí con sus amigos mientras Sharpay intenta separarlo de Gabriella.",
-       "mediaType": "movie",
-       "duration": "1h 51m",
-       "creatorOrDirector": "Kenny Ortega",
-       "collectionNumber": 2,
-       "externalUrl": "https://letterboxd.com/film/high-school-musical-2/"
-      },
-      {
-       "id": "high-school-musical-3-fin-de-curso",
-       "type": "movieSeries",
-       "title": "High School Musical 3: Fin de curso",
-       "coverUrl": "assets/colecciones/portadas/high-school-musical-high-school-musical-3-fin-de-curso.jpg",
-       "releaseYear": 2008,
-       "genre": "Comedia, drama, familia",
-       "note": "Último año de instituto. El grupo prepara un musical de despedida mientras decide qué hacer con la universidad y con su futuro juntos.",
-       "mediaType": "movie",
-       "duration": "1h 52m",
-       "creatorOrDirector": "Kenny Ortega",
-       "collectionNumber": 3,
-       "externalUrl": "https://letterboxd.com/film/high-school-musical-3-senior-year/"
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "hollow-knight",
-   "nombre": "Hollow Knight",
-   "grupos": [
-    {
-     "nombre": "Saga principal",
-     "obras": [
-      {
-       "id": "hollow-knight",
-       "type": "game",
-       "title": "Hollow Knight",
-       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight.jpg",
-       "platform": "PC",
-       "developer": "Team Cherry",
-       "releaseYear": 2017,
-       "genre": "Metroidvania y acción",
-       "note": "Un caballero sin nombre explora Hallownest, un reino de insectos en ruinas lleno de secretos y jefes.",
-       "collectionNumber": 1
-      },
-      {
-       "id": "hollow-knight-silksong",
-       "type": "game",
-       "title": "Hollow Knight: Silksong",
-       "coverUrl": "assets/colecciones/portadas/hollow-knight-hollow-knight-silksong.jpg",
-       "platform": "PC",
-       "developer": "Team Cherry",
-       "releaseYear": 2025,
-       "genre": "Metroidvania y acción",
-       "note": "Hornet, capturada y llevada a Pharloom, asciende hacia la ciudadela de un reino gobernado por la seda.",
-       "collectionNumber": 2
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "hora-punta",
-   "nombre": "Hora punta",
-   "grupos": [
-    {
-     "nombre": "Películas",
-     "obras": [
-      {
-       "id": "hora-punta",
-       "type": "movieSeries",
-       "title": "Hora punta",
-       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta.jpg",
-       "releaseYear": 1998,
-       "genre": "Acción, comedia, crimen",
-       "note": "Un inspector de Hong Kong y un bocazas de la policía de Los Ángeles deben entenderse para rescatar a la hija secuestrada de un diplomático chino.",
-       "mediaType": "movie",
-       "duration": "1h 38m",
-       "creatorOrDirector": "Brett Ratner",
-       "collectionNumber": 1,
-       "externalUrl": "https://letterboxd.com/film/rush-hour/"
-      },
-      {
-       "id": "hora-punta-2",
-       "type": "movieSeries",
-       "title": "Hora punta 2",
-       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-2.jpg",
-       "releaseYear": 2001,
-       "genre": "Acción, comedia, crimen",
-       "note": "Lee y Carter pasan de unas vacaciones en Hong Kong a perseguir a una banda de falsificadores tras un atentado en la embajada estadounidense.",
-       "mediaType": "movie",
-       "duration": "1h 30m",
-       "creatorOrDirector": "Brett Ratner",
-       "collectionNumber": 2,
-       "externalUrl": "https://letterboxd.com/film/rush-hour-2/"
-      },
-      {
-       "id": "hora-punta-3",
-       "type": "movieSeries",
-       "title": "Hora punta 3",
-       "coverUrl": "assets/colecciones/portadas/hora-punta-hora-punta-3.jpg",
-       "releaseYear": 2007,
-       "genre": "Acción, comedia, crimen",
-       "note": "Tras un atentado contra un embajador chino, la pareja viaja a París para enfrentarse a las tríadas.",
-       "mediaType": "movie",
-       "duration": "1h 31m",
-       "creatorOrDirector": "Brett Ratner",
-       "collectionNumber": 3,
-       "externalUrl": "https://letterboxd.com/film/rush-hour-3/"
       }
      ]
     }
@@ -5006,6 +5316,134 @@
    ]
   },
   {
+   "id": "souls",
+   "nombre": "Souls",
+   "grupos": [
+    {
+     "nombre": "Dark Souls",
+     "obras": [
+      {
+       "id": "dark-souls-remastered",
+       "type": "game",
+       "title": "Dark Souls Remastered",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-remastered.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2011,
+       "genre": "Rol de acción",
+       "note": "Un no muerto maldito viaja a Lordran para decidir el destino de la Era del Fuego. Es la versión mejorada del original, con todo su contenido adicional.",
+       "collectionNumber": 1,
+       "collectionName": "Dark Souls"
+      },
+      {
+       "id": "dark-souls-ii-scholar-of-the-first-sin",
+       "type": "game",
+       "title": "Dark Souls II: Scholar of the First Sin",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-ii-scholar-of-the-first-sin.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2014,
+       "genre": "Rol de acción",
+       "note": "Un maldito llega a Drangleic en busca de la cura a su condición. Esta edición incluye las expansiones y reordena enemigos y encuentros.",
+       "collectionNumber": 2,
+       "collectionName": "Dark Souls"
+      },
+      {
+       "id": "dark-souls-iii",
+       "type": "game",
+       "title": "Dark Souls III",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-iii.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2016,
+       "genre": "Rol de acción",
+       "note": "Un Latente debe devolver a sus tronos a los Señores de la Ceniza en un mundo que agoniza. Es el cierre de la trilogía.",
+       "collectionNumber": 3,
+       "collectionName": "Dark Souls"
+      }
+     ]
+    },
+    {
+     "nombre": "Otros juegos de FromSoftware",
+     "obras": [
+      {
+       "id": "demons-souls",
+       "type": "game",
+       "title": "Demon's Souls",
+       "coverUrl": "assets/colecciones/portadas/souls-demons-souls.jpg",
+       "platform": "PS5",
+       "developer": "Bluepoint Games / FromSoftware",
+       "releaseYear": 2009,
+       "genre": "Rol de acción",
+       "note": "El origen de la fórmula Souls: un guerrero atraviesa el reino de Boletaria, envuelto en una niebla demoníaca. El original salió en PS3 en 2009 y el remake de Bluepoint, en PS5 en 2020."
+      },
+      {
+       "id": "bloodborne",
+       "type": "game",
+       "title": "Bloodborne",
+       "coverUrl": "assets/colecciones/portadas/souls-bloodborne.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2015,
+       "genre": "Rol de acción y terror gótico",
+       "note": "Un cazador llega a Yharnam, una ciudad gótica asolada por una plaga que convierte a sus habitantes en bestias, en busca de la Sangre Pálida."
+      },
+      {
+       "id": "sekiro",
+       "type": "game",
+       "title": "Sekiro: Shadows Die Twice",
+       "coverUrl": "assets/colecciones/portadas/souls-sekiro.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2019,
+       "genre": "Acción y aventura",
+       "note": "En el Japón de la era Sengoku, el shinobi Lobo intenta rescatar a su joven señor y vengarse de quien le cortó el brazo, con un combate basado en desviar golpes.",
+       "externalUrl": "https://store.steampowered.com/app/814380/"
+      },
+      {
+       "id": "elden-ring",
+       "type": "game",
+       "title": "Elden Ring",
+       "coverUrl": "assets/colecciones/portadas/souls-elden-ring.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2022,
+       "genre": "Rol de acción y mundo abierto",
+       "note": "Un Sinluz recorre las Tierras Intermedias, un mundo abierto creado junto a George R. R. Martin, para convertirse en Señor del Círculo. Tiene la expansión Shadow of the Erdtree.",
+       "externalUrl": "https://store.steampowered.com/app/1245620/"
+      },
+      {
+       "id": "elden-ring-nightreign",
+       "type": "game",
+       "title": "Elden Ring Nightreign",
+       "coverUrl": "assets/colecciones/portadas/souls-elden-ring-nightreign.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2025,
+       "genre": "Rol de acción cooperativo y roguelike",
+       "note": "Spin-off cooperativo para tres jugadores ambientado en el mundo de Elden Ring: cada partida dura tres días y termina contra un gran jefe.",
+       "externalUrl": "https://store.steampowered.com/app/2622380/"
+      },
+      {
+       "id": "the-duskbloods",
+       "type": "game",
+       "title": "The Duskbloods",
+       "coverUrl": "assets/colecciones/portadas/souls-the-duskbloods.jpg",
+       "platform": "Nintendo Switch 2",
+       "developer": "FromSoftware",
+       "genre": "Acción multijugador",
+       "fechaPrevista": "2027, sin fecha exacta",
+       "note": "Juego de acción multijugador exclusivo de Nintendo Switch 2, con vampiros que compiten en partidas de hasta ocho jugadores. FromSoftware lo ha retrasado a 2027."
+      }
+     ]
+    }
+   ],
+   "universo": "Souls",
+   "alias": [
+    "Dark Souls"
+   ]
+  },
+  {
    "id": "styx",
    "nombre": "Styx",
    "grupos": [
@@ -5130,6 +5568,207 @@
        "genre": "Roguelike de acción",
        "note": "Versión rehecha y muy ampliada del original, con más de cien horas de contenido.",
        "collectionNumber": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "the-witcher",
+   "nombre": "The Witcher",
+   "alias": [
+    "Geralt de Rivia",
+    "Saga de Geralt de Rivia"
+   ],
+   "grupos": [
+    {
+     "nombre": "Relatos",
+     "obras": [
+      {
+       "id": "el-ultimo-deseo",
+       "type": "book",
+       "title": "El último deseo",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-el-ultimo-deseo.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Relatos que presentan a Geralt de Rivia, un brujo que caza monstruos a sueldo, y a Yennefer y Jaskier.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1993,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/8284655-el-ltimo-deseo",
+       "collectionNumber": 1
+      },
+      {
+       "id": "la-espada-del-destino",
+       "type": "book",
+       "title": "La espada del destino",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-espada-del-destino.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Más relatos de Geralt, incluido su primer encuentro con Ciri, la niña unida a él por el destino.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1992,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/9036325-la-espada-del-destino",
+       "collectionNumber": 2
+      }
+     ]
+    },
+    {
+     "nombre": "Saga de Geralt de Rivia",
+     "obras": [
+      {
+       "id": "la-sangre-de-los-elfos",
+       "type": "book",
+       "title": "La sangre de los elfos",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-sangre-de-los-elfos.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Geralt protege a Ciri en Kaer Morhen mientras los reinos del norte se preparan para una nueva guerra con Nilfgaard.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1994,
+       "pages": "253",
+       "externalUrl": "https://www.goodreads.com/book/show/8776687-la-sangre-de-los-elfos",
+       "collectionNumber": 3
+      },
+      {
+       "id": "tiempo-de-odio",
+       "type": "book",
+       "title": "Tiempo de odio",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-tiempo-de-odio.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Un golpe de Estado de los hechiceros en la isla de Thanedd separa a Geralt, Yennefer y Ciri en plena guerra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1995,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/4943401-tiempo-de-odio",
+       "collectionNumber": 4
+      },
+      {
+       "id": "bautismo-de-fuego",
+       "type": "book",
+       "title": "Bautismo de fuego",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-bautismo-de-fuego.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Herido, Geralt reúne una compañía inesperada para cruzar un continente en guerra en busca de Ciri.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1996,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/8714958-bautismo-de-fuego",
+       "collectionNumber": 5
+      },
+      {
+       "id": "la-torre-de-la-golondrina",
+       "type": "book",
+       "title": "La torre de la golondrina",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-torre-de-la-golondrina.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Ciri, perseguida por todos, se convierte en la bandida Falka mientras Geralt sigue su rastro.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1997,
+       "pages": "334",
+       "externalUrl": "https://www.goodreads.com/book/show/11568412-la-torre-de-la-golondrina",
+       "collectionNumber": 6
+      },
+      {
+       "id": "la-dama-del-lago",
+       "type": "book",
+       "title": "La dama del lago",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-dama-del-lago.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Cierre de la saga: Ciri viaja entre mundos y Geralt llega al final de su búsqueda.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1999,
+       "pages": "464",
+       "externalUrl": "https://www.goodreads.com/book/show/13262017-la-dama-del-lago",
+       "collectionNumber": 7
+      }
+     ]
+    },
+    {
+     "nombre": "Otras novelas",
+     "obras": [
+      {
+       "id": "estacion-de-tormentas",
+       "type": "book",
+       "title": "Estación de tormentas",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-estacion-de-tormentas.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Novela independiente ambientada entre los relatos de El último deseo: Geralt pierde sus espadas y se ve envuelto en una intriga de hechiceros.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2013,
+       "pages": "312",
+       "externalUrl": "https://www.goodreads.com/book/show/23292117-estaci-n-de-tormentas"
+      },
+      {
+       "id": "crossroads-of-ravens",
+       "type": "book",
+       "title": "Crossroads of Ravens",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-crossroads-of-ravens.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2024,
+       "fechaPrevista": "",
+       "note": "Precuela con un Geralt de dieciocho años en sus primeros encargos como brujo. Todavía sin edición en español."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "goool",
+   "nombre": "¡Goool!",
+   "grupos": [
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "goool-la-pelicula",
+       "type": "movieSeries",
+       "title": "¡Goool! La película",
+       "coverUrl": "assets/colecciones/portadas/goool-goool-la-pelicula.jpg",
+       "releaseYear": 2005,
+       "genre": "Drama, familia",
+       "note": "Santiago Muñez, un joven mexicano de Los Ángeles, recibe la oportunidad de hacer una prueba en el Newcastle United y cumplir su sueño.",
+       "mediaType": "movie",
+       "duration": "1h 58m",
+       "creatorOrDirector": "Danny Cannon",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/goal-the-dream-begins/"
+      },
+      {
+       "id": "goool-2-viviendo-el-sueno",
+       "type": "movieSeries",
+       "title": "¡Goool 2! Viviendo el sueño",
+       "coverUrl": "assets/colecciones/portadas/goool-goool-2-viviendo-el-sueno.jpg",
+       "releaseYear": 2007,
+       "genre": "Drama",
+       "note": "Santiago ficha por el Real Madrid y descubre que la fama y el dinero complican todo lo que dejó en Newcastle.",
+       "mediaType": "movie",
+       "duration": "1h 55m",
+       "creatorOrDirector": "Jaume Collet-Serra",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/goal-ii-living-the-dream/"
+      },
+      {
+       "id": "goal-3",
+       "type": "movieSeries",
+       "title": "Goal 3",
+       "coverUrl": "assets/colecciones/portadas/goool-goal-3.jpg",
+       "releaseYear": 2008,
+       "genre": "Drama",
+       "note": "Tres compañeros de la selección inglesa viven el Mundial de 2006 de Alemania, dentro y fuera del campo.",
+       "mediaType": "movie",
+       "duration": "1h 31m",
+       "creatorOrDirector": "Andrew Morahan",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/goal-iii-taking-on-the-world/"
       }
      ]
     }
