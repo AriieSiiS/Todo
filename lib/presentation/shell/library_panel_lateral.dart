@@ -17,13 +17,16 @@ class _LibraryTypeListDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...items]..sort((left, right) => _compareLibraryItems(
+    final sorted = [...items]
+      ..sort(
+        (left, right) => _compareLibraryItems(
           left,
           right,
           status == LibraryItemStatus.completed
               ? LibrarySortOrder.newestFirst
               : LibrarySortOrder.titleAsc,
-        ));
+        ),
+      );
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 44, vertical: 36),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -42,7 +45,9 @@ class _LibraryTypeListDialog extends StatelessWidget {
                     child: Text(
                       _libraryTypePluralLabel(type),
                       style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.w800),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   _miniBadge(
@@ -145,9 +150,12 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final recent = [...items]..sort((left, right) =>
-        (right.completedDate ?? right.updatedAt)
-            .compareTo(left.completedDate ?? left.updatedAt));
+    final recent = [...items]
+      ..sort(
+        (left, right) => (right.completedDate ?? right.updatedAt).compareTo(
+          left.completedDate ?? left.updatedAt,
+        ),
+      );
     final yearCounts = <int, int>{};
     for (final item in items) {
       final itemYear = item.yearGroup;
@@ -165,8 +173,10 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Recientes',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Text(
+                'Recientes',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 12),
               if (recent.isEmpty)
                 Text(
@@ -174,8 +184,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final item
-                    in recent.take(_showAllRecent ? recent.length : 4))
+                for (final item in recent.take(
+                  _showAllRecent ? recent.length : 4,
+                ))
                   GestureDetector(
                     onSecondaryTapDown: (details) => _showLibraryContextMenu(
                       context: context,
@@ -185,8 +196,11 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                       onRating: item.status != LibraryItemStatus.completed
                           ? null
                           : () => _editLibraryRating(context, controller, item),
-                      onProgress:
-                          _libraryMarkProgressAction(context, controller, item),
+                      onProgress: _libraryMarkProgressAction(
+                        context,
+                        controller,
+                        item,
+                      ),
                       progressLabel: _libraryMarkProgressLabel(item),
                       onEdit: () => _editItem(context, item),
                       onDelete: () => _deleteItem(context, item),
@@ -210,16 +224,21 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
+                                  Text(
+                                    item.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   const SizedBox(height: 3),
                                   Row(
                                     children: [
-                                      Text(_libraryTypeSingularLabel(item),
-                                          style: TextStyle(
-                                              color: context.visuals.textMuted,
-                                              fontSize: 12)),
+                                      Text(
+                                        _libraryTypeSingularLabel(item),
+                                        style: TextStyle(
+                                          color: context.visuals.textMuted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                       const SizedBox(width: 8),
                                       Container(
                                         width: 6,
@@ -270,11 +289,15 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Años',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Text(
+                'Años',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 2),
-              Text('Explora tu biblioteca por año',
-                  style: TextStyle(color: context.visuals.textMuted)),
+              Text(
+                'Explora tu biblioteca por año',
+                style: TextStyle(color: context.visuals.textMuted),
+              ),
               const SizedBox(height: 8),
               if (years.isEmpty)
                 Text(
@@ -282,12 +305,15 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                   style: TextStyle(color: context.visuals.textMuted),
                 )
               else
-                for (final value
-                    in years.take(_showAllYears ? years.length : 3))
+                for (final value in years.take(
+                  _showAllYears ? years.length : 3,
+                ))
                   Container(
                     margin: const EdgeInsets.only(bottom: 5),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: value == year
                           ? const Color(0xFFE8F1DD)
@@ -303,8 +329,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                   ),
               if (years.length > 3)
                 _LibrarySideLink(
-                  label:
-                      _showAllYears ? 'Ver menos años' : 'Ver todos los años',
+                  label: _showAllYears
+                      ? 'Ver menos años'
+                      : 'Ver todos los años',
                   onTap: () => setState(() => _showAllYears = !_showAllYears),
                 ),
             ],
@@ -319,10 +346,8 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
   Future<void> _editItem(BuildContext context, LibraryItem item) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => _LibraryItemDialog(
-        controller: controller,
-        item: item,
-      ),
+      builder: (context) =>
+          _LibraryItemDialog(controller: controller, item: item),
     );
   }
 
@@ -351,11 +376,15 @@ class _LibraryTotalsSideCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Totales',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const Text(
+            'Totales',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 2),
-          Text('Resumen de completados en $year',
-              style: TextStyle(color: context.visuals.textMuted)),
+          Text(
+            'Resumen de completados en $year',
+            style: TextStyle(color: context.visuals.textMuted),
+          ),
           const SizedBox(height: 10),
           _LibraryTotalRow(
             icon: Icons.bookmarks_outlined,
@@ -439,8 +468,10 @@ class _LibrarySideLink extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(label,
-                  style: TextStyle(color: context.visuals.textMuted)),
+              child: Text(
+                label,
+                style: TextStyle(color: context.visuals.textMuted),
+              ),
             ),
             const Icon(Icons.chevron_right_rounded),
           ],
@@ -567,7 +598,8 @@ List<PopupMenuEntry<Object>> _libraryAddMenuEntries(
           dense: true,
           leading: Icon(_libraryIcon(type), color: _libraryColor(type)),
           title: Text(
-              'Añadir ${_libraryTypeSingularLabelForType(type).toLowerCase()}'),
+            'Añadir ${_libraryTypeSingularLabelForType(type).toLowerCase()}',
+          ),
         ),
       ),
   ];
@@ -750,10 +782,8 @@ void _completeLibraryItem(
         content: Text('“${item.title}” marcado como completado.'),
         action: SnackBarAction(
           label: 'Deshacer',
-          onPressed: () => controller.updateLibraryItemStatus(
-            item.id,
-            previousStatus,
-          ),
+          onPressed: () =>
+              controller.updateLibraryItemStatus(item.id, previousStatus),
         ),
       ),
     );
@@ -798,12 +828,13 @@ Future<void> _showLibraryItemDetails(
   return showDialog<void>(
     context: context,
     builder: (context) => ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) => _LibraryItemDetailsDialog(
-              controller: controller,
-              items: items,
-              item: item,
-            )),
+      listenable: controller,
+      builder: (context, _) => _LibraryItemDetailsDialog(
+        controller: controller,
+        items: items,
+        item: item,
+      ),
+    ),
   );
 }
 
@@ -848,20 +879,27 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
   }
 
   static int _lastTab(LibraryItemType type) => switch (type) {
-        LibraryItemType.book => 2,
-        LibraryItemType.game => 1,
-        _ => 0,
-      };
+    LibraryItemType.book => 2,
+    LibraryItemType.game => 1,
+    _ => 0,
+  };
 
   bool get _hasPrevious => widget.items.isNotEmpty && _index > 0;
   bool get _hasNext =>
       widget.items.isNotEmpty && _index < widget.items.length - 1;
 
   void _moveItem(int delta) => setState(() {
-        _index += delta;
-        // Conserva la pestaña si el nuevo elemento también la tiene.
-        _tab = min(_tab, _lastTab(item.type));
-      });
+    _index += delta;
+    // Conserva la pestaña si el nuevo elemento también la tiene.
+    _tab = min(_tab, _lastTab(item.type));
+  });
+
+  /// Con las flechas del teclado, al pasar del último se vuelve al primero.
+  void _moveItemCyclic(int delta) {
+    final total = widget.items.length;
+    if (total < 2) return;
+    _moveItem((_index + delta) % total - _index);
+  }
 
   Future<void> _editQuote(LibraryItem item, Map<String, dynamic> quote) async {
     await showDialog<void>(
@@ -890,145 +928,164 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
     final item = this.item;
     final fields = _detailFields(item);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
-    return DefaultTabController(
+    return _NavegacionConFlechas(
+      onAnterior: () => _moveItemCyclic(-1),
+      onSiguiente: () => _moveItemCyclic(1),
+      child: DefaultTabController(
         key: ValueKey(item.type),
         initialIndex: _tab,
         length: item.type == LibraryItemType.book
             ? 3
             : item.type == LibraryItemType.game
-                ? 2
-                : 1,
+            ? 2
+            : 1,
         child: Dialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 36,
+            vertical: 30,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-                maxWidth: 1040,
-                maxHeight: min(800, MediaQuery.sizeOf(context).height - 60)),
+              maxWidth: 1040,
+              maxHeight: min(800, MediaQuery.sizeOf(context).height - 60),
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
               child: Column(
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                  LayoutBuilder(builder: (context, constraints) {
-                    final isBook = item.type == LibraryItemType.book;
-                    final isGame = item.type == LibraryItemType.game;
-                    final hasTabs = isBook || isGame;
-                    final inlineTabs = constraints.maxWidth >= 900;
-                    Widget tabs() => _LibraryBookDetailTabs(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isBook = item.type == LibraryItemType.book;
+                      final isGame = item.type == LibraryItemType.game;
+                      final hasTabs = isBook || isGame;
+                      final inlineTabs = constraints.maxWidth >= 900;
+                      Widget tabs() => _LibraryBookDetailTabs(
                         isGame: isGame,
                         count: item.reading?.quotes.length ?? 0,
-                        onTap: (index) => setState(() => _tab = index));
-                    return SizedBox(
-                      height: inlineTabs ? 96 : 140,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 16, 24, 16),
-                        child: Column(children: [
-                          Expanded(
-                              child: Row(
+                        onTap: (index) => setState(() => _tab = index),
+                      );
+                      return SizedBox(
+                        height: inlineTabs ? 96 : 140,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 16, 24, 16),
+                          child: Column(
                             children: [
-                              Icon(_libraryIcon(item.type),
-                                  color: _libraryColor(item.type), size: 30),
-                              const SizedBox(width: 14),
                               Expanded(
-                                child: _TextoConAyudaSiRecortado(
-                                  texto: item.title,
-                                  maxLines: 2,
-                                  style: const TextStyle(
-                                      fontSize: 23,
-                                      height: 1.2,
-                                      fontWeight: FontWeight.w800),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _libraryIcon(item.type),
+                                      color: _libraryColor(item.type),
+                                      size: 30,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _TextoConAyudaSiRecortado(
+                                        texto: item.title,
+                                        maxLines: 2,
+                                        style: const TextStyle(
+                                          fontSize: 23,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    if (collectionLabels != null) ...[
+                                      const SizedBox(width: 16),
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth:
+                                              constraints.maxWidth *
+                                              (isBook && inlineTabs
+                                                  ? .18
+                                                  : .30),
+                                        ),
+                                        child: Tooltip(
+                                          message: collectionLabels.saga,
+                                          child: _LibraryCollectionChips(
+                                            controller: widget.controller,
+                                            item: item,
+                                            singleLine: true,
+                                            showUniverse: true,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    if (hasTabs && inlineTabs) ...[
+                                      const SizedBox(width: 20),
+                                      tabs(),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              if (collectionLabels != null) ...[
-                                const SizedBox(width: 16),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: constraints.maxWidth *
-                                        (isBook && inlineTabs ? .18 : .30),
-                                  ),
-                                  child: Tooltip(
-                                    message: collectionLabels.saga,
-                                    child: _LibraryCollectionChips(
-                                      controller: widget.controller,
-                                      item: item,
-                                      singleLine: true,
-                                      showUniverse: true,
-                                    ),
-                                  ),
+                              if (!inlineTabs) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 44,
+                                  child: hasTabs
+                                      ? Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: tabs(),
+                                        )
+                                      : null,
                                 ),
                               ],
-                              if (hasTabs && inlineTabs) ...[
-                                const SizedBox(width: 20),
-                                tabs(),
-                              ],
                             ],
-                          )),
-                          if (!inlineTabs) ...[
-                            const SizedBox(height: 8),
-                            SizedBox(
-                                height: 44,
-                                child: hasTabs
-                                    ? Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: tabs())
-                                    : null),
-                          ],
-                        ]),
-                      ),
-                    );
-                  }),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 1),
                   Flexible(
                     fit: FlexFit.tight,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(28, 14, 28, 14),
                       child: LayoutBuilder(
-                        builder: (context, constraints) => item.type ==
-                                    LibraryItemType.book &&
-                                _tab == 1
+                        builder: (context, constraints) =>
+                            item.type == LibraryItemType.book && _tab == 1
                             ? BookQuotesPanel(
                                 key: ValueKey('library-quotes-${item.id}'),
                                 reading: item.reading,
                                 onEdit: (quote) => _editQuote(item, quote),
                               )
                             : item.type == LibraryItemType.game && _tab == 1
-                                ? SteamGamePanel(
-                                    key: ValueKey('library-steam-${item.id}'),
-                                    service: widget.controller.steam,
-                                    itemId: item.id,
-                                    title: item.title,
-                                    allowChangeGame: false,
-                                  )
-                                : item.type == LibraryItemType.book && _tab == 2
-                                    ? BookStatisticsPanel(reading: item.reading)
-                                    : FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.center,
-                                        child: SizedBox(
-                                          width: constraints.maxWidth,
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              _LibraryDetailCover(item: item),
-                                              const SizedBox(width: 24),
-                                              Expanded(
-                                                child:
-                                                    _LibraryDetailFieldsColumn(
-                                                  fields: fields,
-                                                  status: item.status,
-                                                  onStatusSelected: (status) =>
-                                                      _changeStatus(
-                                                          item, status),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                            ? SteamGamePanel(
+                                key: ValueKey('library-steam-${item.id}'),
+                                service: widget.controller.steam,
+                                itemId: item.id,
+                                title: item.title,
+                                allowChangeGame: false,
+                              )
+                            : item.type == LibraryItemType.book && _tab == 2
+                            ? BookStatisticsPanel(reading: item.reading)
+                            : FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: SizedBox(
+                                  width: constraints.maxWidth,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      _LibraryDetailCover(item: item),
+                                      const SizedBox(width: 24),
+                                      Expanded(
+                                        child: _LibraryDetailFieldsColumn(
+                                          fields: fields,
+                                          status: item.status,
+                                          onStatusSelected: (status) =>
+                                              _changeStatus(item, status),
                                         ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -1046,14 +1103,18 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            unawaited(_openKnowledgeWorkspace(
-                              context,
-                              widget.controller,
-                              item,
-                            ));
+                            unawaited(
+                              _openKnowledgeWorkspace(
+                                context,
+                                widget.controller,
+                                item,
+                              ),
+                            );
                           },
-                          icon:
-                              const Icon(Icons.description_outlined, size: 18),
+                          icon: const Icon(
+                            Icons.description_outlined,
+                            size: 18,
+                          ),
                           label: const Text('Abrir páginas'),
                           style: _libraryDetailSecondaryButtonStyle(context),
                         ),
@@ -1067,10 +1128,13 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                                 mode: LaunchMode.externalApplication,
                               ),
                             ),
-                            icon:
-                                const Icon(Icons.open_in_new_rounded, size: 18),
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 18,
+                            ),
                             label: Text(
-                                'Abrir en ${nombreFichaExterna(item.type)}'),
+                              'Abrir en ${nombreFichaExterna(item.type)}',
+                            ),
                             style: _libraryDetailSecondaryButtonStyle(context),
                           ),
                         ],
@@ -1110,7 +1174,8 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
                               backgroundColor: const Color(0xFF607A4D),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                       ],
@@ -1120,7 +1185,9 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
               ),
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 }
 
@@ -1180,17 +1247,17 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = switch (status) {
       LibraryItemStatus.pending => (
-          background: const Color(0xFFECEFF3),
-          foreground: const Color(0xFF687384),
-        ),
+        background: const Color(0xFFECEFF3),
+        foreground: const Color(0xFF687384),
+      ),
       LibraryItemStatus.inProgress => (
-          background: const Color(0xFFE4EFDF),
-          foreground: const Color(0xFF526A45),
-        ),
+        background: const Color(0xFFE4EFDF),
+        foreground: const Color(0xFF526A45),
+      ),
       LibraryItemStatus.completed => (
-          background: const Color(0xFFDCECCF),
-          foreground: const Color(0xFF4E703B),
-        ),
+        background: const Color(0xFFDCECCF),
+        foreground: const Color(0xFF4E703B),
+      ),
     };
     return Align(
       alignment: Alignment.centerLeft,
@@ -1200,7 +1267,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
           alignment: AlignmentDirectional.bottomStart,
           backgroundColor: const WidgetStatePropertyAll(Color(0xFFFFFCF8)),
           shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
           minimumSize: const WidgetStatePropertyAll(Size(180, 0)),
           maximumSize: const WidgetStatePropertyAll(Size(200, 160)),
         ),
@@ -1211,7 +1279,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
               style: const ButtonStyle(
                 minimumSize: WidgetStatePropertyAll(Size(180, 40)),
                 padding: WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(horizontal: 12)),
+                  EdgeInsets.symmetric(horizontal: 12),
+                ),
               ),
               child: Row(
                 children: [
@@ -1221,8 +1290,10 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
                         ? const Icon(Icons.check_rounded, size: 16)
                         : null,
                   ),
-                  Text(_libraryStatusSingularLabel(option),
-                      style: const TextStyle(fontSize: 14)),
+                  Text(
+                    _libraryStatusSingularLabel(option),
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ],
               ),
             ),
@@ -1256,8 +1327,11 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 16, color: colors.foreground),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 16,
+                  color: colors.foreground,
+                ),
               ],
             ),
           ),
@@ -1293,8 +1367,9 @@ class _BookQuoteEditDialogState extends State<_BookQuoteEditDialog> {
     super.initState();
     _text = TextEditingController(text: widget.quote['text'] as String? ?? '');
     _page = TextEditingController(text: widget.quote['page'] as String? ?? '');
-    _chapter =
-        TextEditingController(text: widget.quote['chapter'] as String? ?? '');
+    _chapter = TextEditingController(
+      text: widget.quote['chapter'] as String? ?? '',
+    );
     _note = TextEditingController(text: widget.quote['note'] as String? ?? '');
   }
 
@@ -1318,8 +1393,9 @@ class _BookQuoteEditDialogState extends State<_BookQuoteEditDialog> {
           chapter: _chapter.text,
           note: _note.text,
         )) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('La cita necesita texto para guardarse.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La cita necesita texto para guardarse.')),
+      );
       return;
     }
     Navigator.of(context).pop();
@@ -1327,19 +1403,22 @@ class _BookQuoteEditDialogState extends State<_BookQuoteEditDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Editar cita'),
-        content: SizedBox(
-          width: 560,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-              key: const ValueKey('book-quote-text-editor'),
-              controller: _text,
-              minLines: 3,
-              maxLines: 5,
-              decoration: const InputDecoration(labelText: 'Texto de la cita'),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
+    title: const Text('Editar cita'),
+    content: SizedBox(
+      width: 560,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            key: const ValueKey('book-quote-text-editor'),
+            controller: _text,
+            minLines: 3,
+            maxLines: 5,
+            decoration: const InputDecoration(labelText: 'Texto de la cita'),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
               Expanded(
                 child: TextField(
                   key: const ValueKey('book-quote-page-editor'),
@@ -1354,28 +1433,27 @@ class _BookQuoteEditDialogState extends State<_BookQuoteEditDialog> {
                   decoration: const InputDecoration(labelText: 'Capítulo'),
                 ),
               ),
-            ]),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _note,
-              minLines: 2,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Nota personal'),
-            ),
-          ]),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: _libraryDetailSecondaryButtonStyle(context),
-            child: const Text('Cancelar'),
+            ],
           ),
-          FilledButton(
-            onPressed: _save,
-            child: const Text('Guardar cita'),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _note,
+            minLines: 2,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Nota personal'),
           ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      OutlinedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        style: _libraryDetailSecondaryButtonStyle(context),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(onPressed: _save, child: const Text('Guardar cita')),
+    ],
+  );
 }
 
 class _LibraryDetailCover extends StatelessWidget {
@@ -1409,20 +1487,25 @@ class _LibraryDetailCover extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFFE3D8CB)),
             ),
-            child: Stack(fit: StackFit.expand, children: [
-              _LibraryCoverImage(
-                source: source,
-                type: item.type,
-                iconSize: 34,
-              ),
-              if (item.type == LibraryItemType.book && item.reading != null)
-                Positioned(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _LibraryCoverImage(
+                  source: source,
+                  type: item.type,
+                  iconSize: 34,
+                ),
+                if (item.type == LibraryItemType.book && item.reading != null)
+                  Positioned(
                     top: 12,
                     right: 12,
                     child: BookReadingBadge(
-                        reading: item.reading!,
-                        totalPages: bookPageTotal(item.pages, item.reading))),
-            ]),
+                      reading: item.reading!,
+                      totalPages: bookPageTotal(item.pages, item.reading),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1431,8 +1514,11 @@ class _LibraryDetailCover extends StatelessWidget {
 }
 
 class _LibraryBookDetailTabs extends StatelessWidget {
-  const _LibraryBookDetailTabs(
-      {required this.count, required this.onTap, this.isGame = false});
+  const _LibraryBookDetailTabs({
+    required this.count,
+    required this.onTap,
+    this.isGame = false,
+  });
 
   final bool isGame;
   final int count;
@@ -1442,60 +1528,87 @@ class _LibraryBookDetailTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     return Container(
-        width: isGame ? 290 : 422,
-        height: 44,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-            color: visuals.accent.withValues(alpha: .06),
-            borderRadius: BorderRadius.circular(10)),
-        child: TabBar(
-            onTap: onTap,
-            dividerHeight: 0,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-            labelColor: visuals.accent,
-            unselectedLabelColor: visuals.textMuted,
-            labelStyle:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            indicatorSize: TabBarIndicatorSize.tab,
-            indicator: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(7)),
-            splashBorderRadius: BorderRadius.circular(7),
-            tabs: [
-              const Tab(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+      width: isGame ? 290 : 422,
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: visuals.accent.withValues(alpha: .06),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: TabBar(
+        onTap: onTap,
+        dividerHeight: 0,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+        labelColor: visuals.accent,
+        unselectedLabelColor: visuals.textMuted,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        splashBorderRadius: BorderRadius.circular(7),
+        tabs: [
+          const Tab(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Icon(Icons.info_outline_rounded, size: 16),
                 SizedBox(width: 6),
                 Flexible(
-                    child: Text('Información',
-                        maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ])),
-              if (isGame)
-                const Tab(
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  child: Text(
+                    'Información',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isGame)
+            const Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Icon(Icons.emoji_events_outlined, size: 17),
                   SizedBox(width: 6),
                   Text('Logros'),
-                ]))
-              else
-                Tab(
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                ],
+              ),
+            )
+          else
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   const Icon(Icons.format_quote_rounded, size: 18),
                   const SizedBox(width: 6),
                   const Text('Citas'),
                   const SizedBox(width: 7),
                   Text('$count', style: const TextStyle(fontSize: 11)),
-                ])),
-              if (!isGame)
-                const Tab(
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                ],
+              ),
+            ),
+          if (!isGame)
+            const Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Icon(Icons.insights_outlined, size: 16),
                   SizedBox(width: 6),
                   Flexible(
-                      child: Text('Estadísticas',
-                          maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ])),
-            ]));
+                    child: Text(
+                      'Estadísticas',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1515,10 +1628,7 @@ class _LibraryNavigationButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[
-      if (icon != null) ...[
-        Icon(icon, size: 20),
-        const SizedBox(width: 6),
-      ],
+      if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 6)],
       Text(label),
       if (trailingIcon != null) ...[
         const SizedBox(width: 6),
@@ -1583,7 +1693,8 @@ class _LibraryDetailLine extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             flex: 2,
-            child: valueWidget ??
+            child:
+                valueWidget ??
                 (hasLongNote
                     ? InkWell(
                         onTap: () {
@@ -1601,7 +1712,8 @@ class _LibraryDetailLine extends StatelessWidget {
                                   onPressed: () =>
                                       Navigator.of(dialogContext).pop(),
                                   style: _libraryDetailSecondaryButtonStyle(
-                                      dialogContext),
+                                    dialogContext,
+                                  ),
                                   child: const Text('Cerrar'),
                                 ),
                               ],
@@ -1614,12 +1726,15 @@ class _LibraryDetailLine extends StatelessWidget {
                           children: [
                             Text(
                               value,
-                              key:
-                                  const ValueKey('library-detail-note-preview'),
+                              key: const ValueKey(
+                                'library-detail-note-preview',
+                              ),
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(height: 5),
                             Text(
@@ -1639,7 +1754,9 @@ class _LibraryDetailLine extends StatelessWidget {
                         maxLines: 2,
                         textAlign: TextAlign.left,
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       )),
           ),
         ],
