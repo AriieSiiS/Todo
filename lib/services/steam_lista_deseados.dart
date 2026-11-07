@@ -111,16 +111,27 @@ class SteamListaDeseados {
   final Directory? _carpeta;
   final DateTime Function() _reloj;
 
-  static final _jwt = RegExp(r'eyJ[\w-]+\.[\w-]+\.[\w-]+');
+  // Steam codifica la cabecera con espacios («{ "typ"…»), así que el token
+  // empieza por «eyAi» y no por el habitual «eyJ».
+  static final _jwt = RegExp(r'ey[\w-]+\.ey[\w-]+\.[\w-]+');
 
   /// Acepta el token o el texto completo de la página que lo muestra.
   static String extraerToken(String texto) {
-    final match = _jwt.firstMatch(texto.trim());
-    if (match == null) {
+    final limpio = texto.trim();
+    String? candidato;
+    try {
+      final datos = jsonDecode(limpio);
+      final contenido = datos is Map ? datos['data'] : null;
+      final valor = contenido is Map ? contenido['webapi_token'] : null;
+      if (valor is String) candidato = valor.trim();
+    } catch (_) {}
+    candidato ??= _jwt.firstMatch(limpio)?.group(0);
+    if (candidato == null || !_jwt.hasMatch(candidato)) {
       throw const FormatException(
           'No se encontró ningún token en el texto pegado. Copia la página completa o el valor de «webapi_token».');
     }
-    return match.group(0)!;
+    _carga(candidato);
+    return candidato;
   }
 
   static Map<String, dynamic> _carga(String token) {

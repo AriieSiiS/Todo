@@ -68,6 +68,19 @@ void main() {
         throwsA(isA<SteamTokenException>()));
     expect(() => SteamListaDeseados.extraerToken('sin token'),
         throwsFormatException);
+    // Steam escribe la cabecera con espacios: el token empieza por «eyAi».
+    String b64(String texto) =>
+        base64Url.encode(utf8.encode(texto)).replaceAll('=', '');
+    final exp = ahora.add(const Duration(hours: 24)).millisecondsSinceEpoch ~/ 1000;
+    final real = '${b64('{ "typ": "JWT", "alg": "EdDSA" }')}.'
+        '${b64('{ "iss": "r:x", "sub": "$id", "exp": $exp }')}.Usie-Hj49_pmhO';
+    expect(real, startsWith('eyAi'));
+    final pagina = '{"success":1,"data":{"webapi_token":"$real"}}';
+    expect(SteamListaDeseados.extraerToken(pagina), real);
+    expect(SteamListaDeseados.extraerToken('  $pagina\n'), real);
+    expect(SteamListaDeseados.extraerToken(real), real);
+    await servicio.guardarToken(pagina);
+    expect(tokens.value, real);
   });
 
   test('sin token o con el token caducado lo pide en lugar de cruzar',
