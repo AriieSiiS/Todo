@@ -590,6 +590,13 @@ class _ColeccionObraDialog extends StatefulWidget {
 class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
   late int _indice = widget.inicial;
 
+  /// Con las flechas del teclado, al pasar del último se vuelve al primero.
+  void _moverCiclico(int paso) {
+    final total = widget.obras.length;
+    if (total < 2) return;
+    setState(() => _indice = (_indice + paso) % total);
+  }
+
   void _verEnBiblioteca(LibraryItem item) {
     Navigator.of(context).pop();
     unawaited(_showLibraryItemDetails(
@@ -608,176 +615,208 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
     const sinCampo = {'Estado', 'Notas', 'Progreso'};
     final campos =
         _detailFields(obra).where((campo) => !sinCampo.contains(campo.$1));
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 1040,
-          maxHeight: min(640, MediaQuery.sizeOf(context).height - 60),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 22, 24, 18),
-              child: Row(
-                children: [
-                  Icon(_libraryIcon(obra.type),
-                      color: _libraryColor(obra.type), size: 30),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _TextoConAyudaSiRecortado(
-                      texto: obra.title,
-                      maxLines: 2,
-                      style: const TextStyle(
-                        fontSize: 23,
-                        height: 1.2,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return _NavegacionConFlechas(
+        onAnterior: () => _moverCiclico(-1),
+        onSiguiente: () => _moverCiclico(1),
+        child: Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 1040,
+              maxHeight: min(640, MediaQuery.sizeOf(context).height - 60),
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 18, 28, 18),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 244,
-                      height: 366,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: _LibraryCoverImage(
-                          source: obra.coverUrl,
-                          type: obra.type,
-                          iconSize: 34,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 22, 24, 18),
+                  child: Row(
+                    children: [
+                      Icon(_libraryIcon(obra.type),
+                          color: _libraryColor(obra.type), size: 30),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _TextoConAyudaSiRecortado(
+                          texto: obra.title,
+                          maxLines: 2,
+                          style: const TextStyle(
+                            fontSize: 23,
+                            height: 1.2,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (obra.note?.isNotEmpty == true) ...[
-                            Text(
-                              obra.note!,
-                              key: const ValueKey('coleccion-obra-sinopsis'),
-                              style: TextStyle(
-                                color: visuals.textStrong,
-                                fontSize: 15,
-                                height: 1.45,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                          for (final campo in campos) ...[
-                            _LibraryDetailLine(
-                              label: campo.$1,
-                              value: campo.$2,
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
-              child: Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: _libraryDetailSecondaryButtonStyle(context),
-                    child: const Text('Cerrar'),
-                  ),
-                  const SizedBox(width: 10),
-                  OutlinedButton.icon(
-                    key: const ValueKey('coleccion-obra-quitar'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      widget.onToggle(obra);
-                    },
-                    icon: Icon(
-                      widget.quitada
-                          ? Icons.undo_rounded
-                          : Icons.visibility_off_outlined,
-                      size: 18,
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(28, 18, 28, 18),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 244,
+                          height: 366,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: _LibraryCoverImage(
+                              source: obra.coverUrl,
+                              type: obra.type,
+                              iconSize: 34,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (obra.note?.isNotEmpty == true) ...[
+                                Text(
+                                  obra.note!,
+                                  key:
+                                      const ValueKey('coleccion-obra-sinopsis'),
+                                  style: TextStyle(
+                                    color: visuals.textStrong,
+                                    fontSize: 15,
+                                    height: 1.45,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                              for (final campo in campos) ...[
+                                _LibraryDetailLine(
+                                  label: campo.$1,
+                                  value: campo.$2,
+                                ),
+                                const SizedBox(height: 6),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    label: Text(widget.quitada
-                        ? 'Recuperar'
-                        : 'Quitar de la colección'),
-                    style: _libraryDetailSecondaryButtonStyle(context),
                   ),
-                  if (_enlaceFicha(obra) != null) ...[
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      key: const ValueKey('coleccion-obra-enlace'),
-                      onPressed: () => unawaited(
-                        launchUrl(
-                          _enlaceFicha(obra)!,
-                          mode: LaunchMode.externalApplication,
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
+                  child: Row(
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: _libraryDetailSecondaryButtonStyle(context),
+                        child: const Text('Cerrar'),
+                      ),
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        key: const ValueKey('coleccion-obra-quitar'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.onToggle(obra);
+                        },
+                        icon: Icon(
+                          widget.quitada
+                              ? Icons.undo_rounded
+                              : Icons.visibility_off_outlined,
+                          size: 18,
+                        ),
+                        label: Text(widget.quitada
+                            ? 'Recuperar'
+                            : 'Quitar de la colección'),
+                        style: _libraryDetailSecondaryButtonStyle(context),
+                      ),
+                      if (_enlaceFicha(obra) != null) ...[
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          key: const ValueKey('coleccion-obra-enlace'),
+                          onPressed: () => unawaited(
+                            launchUrl(
+                              _enlaceFicha(obra)!,
+                              mode: LaunchMode.externalApplication,
+                            ),
+                          ),
+                          icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                          label:
+                              Text('Abrir en ${nombreFichaExterna(obra.type)}'),
+                          style: _libraryDetailSecondaryButtonStyle(context),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (_indice > 0) ...[
+                        _LibraryNavigationButton(
+                          label: 'Anterior',
+                          icon: Icons.chevron_left_rounded,
+                          onPressed: () => setState(() => _indice--),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      if (_indice < widget.obras.length - 1) ...[
+                        _LibraryNavigationButton(
+                          label: 'Siguiente',
+                          trailingIcon: Icons.chevron_right_rounded,
+                          onPressed: () => setState(() => _indice++),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      FilledButton.icon(
+                        key: const ValueKey('coleccion-obra-accion'),
+                        onPressed: enBiblioteca != null
+                            ? () => _verEnBiblioteca(enBiblioteca)
+                            : () => widget.onAdd(obra),
+                        icon: Icon(
+                          enBiblioteca != null
+                              ? Icons.local_library_rounded
+                              : Icons.add_rounded,
+                          size: 18,
+                        ),
+                        label: Text(enBiblioteca != null
+                            ? 'Ver en Biblioteca'
+                            : 'Añadir a Biblioteca'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(124, 48),
+                          backgroundColor: const Color(0xFF607A4D),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                      label: Text('Abrir en ${nombreFichaExterna(obra.type)}'),
-                      style: _libraryDetailSecondaryButtonStyle(context),
-                    ),
-                  ],
-                  const Spacer(),
-                  if (_indice > 0) ...[
-                    _LibraryNavigationButton(
-                      label: 'Anterior',
-                      icon: Icons.chevron_left_rounded,
-                      onPressed: () => setState(() => _indice--),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  if (_indice < widget.obras.length - 1) ...[
-                    _LibraryNavigationButton(
-                      label: 'Siguiente',
-                      trailingIcon: Icons.chevron_right_rounded,
-                      onPressed: () => setState(() => _indice++),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  FilledButton.icon(
-                    key: const ValueKey('coleccion-obra-accion'),
-                    onPressed: enBiblioteca != null
-                        ? () => _verEnBiblioteca(enBiblioteca)
-                        : () => widget.onAdd(obra),
-                    icon: Icon(
-                      enBiblioteca != null
-                          ? Icons.local_library_rounded
-                          : Icons.add_rounded,
-                      size: 18,
-                    ),
-                    label: Text(enBiblioteca != null
-                        ? 'Ver en Biblioteca'
-                        : 'Añadir a Biblioteca'),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(124, 48),
-                      backgroundColor: const Color(0xFF607A4D),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        ));
+  }
+}
+
+/// Pasa al elemento anterior o siguiente con las flechas izquierda y derecha.
+/// Los campos de texto conservan las flechas para mover el cursor.
+class _NavegacionConFlechas extends StatelessWidget {
+  const _NavegacionConFlechas({
+    required this.onAnterior,
+    required this.onSiguiente,
+    required this.child,
+  });
+
+  final VoidCallback onAnterior;
+  final VoidCallback onSiguiente;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): onAnterior,
+        const SingleActivator(LogicalKeyboardKey.arrowRight): onSiguiente,
+      },
+      child: Focus(autofocus: true, child: child),
     );
   }
 }
