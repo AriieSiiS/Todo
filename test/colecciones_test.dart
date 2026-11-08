@@ -164,4 +164,26 @@ void main() {
     final horus = warhammer.obras.firstWhere((o) => o.title.startsWith('Horus'));
     expect(horus.catalogKeys.single, startsWith('la-herejia-de-horus/'));
   });
+
+  test('cada universo incluye sus colecciones y estas siguen existiendo', () {
+    Coleccion col(String id) => colecciones.singleWhere((c) => c.id == id);
+    bool contiene(Coleccion c, LibraryItem obra) =>
+        c.obras.any((o) => identical(o, obra));
+    for (final obra in col('hercules-poirot').obras) {
+      expect(contiene(col('agatha-christie'), obra), isTrue, reason: obra.title);
+    }
+    final tarantino = col('quentin-tarantino');
+    for (final obra in col('kill-bill').obras) {
+      expect(tarantino.obras.where((o) => identical(o, obra)), hasLength(1),
+          reason: obra.title);
+    }
+    expect(col('kill-bill').obras, hasLength(3));
+    expect(col('hercules-poirot').obras, isNotEmpty);
+    // Ninguna obra aparece dos veces en una colección.
+    for (final c in colecciones) {
+      expect(Set<LibraryItem>.identity()..addAll(c.obras),
+          hasLength(c.obras.length),
+          reason: c.nombre);
+    }
+  });
 }

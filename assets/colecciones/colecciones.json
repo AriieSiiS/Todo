@@ -3680,7 +3680,8 @@
      ]
     }
    ],
-   "fondo": "assets/colecciones/fondos/kill-bill.jpg"
+   "fondo": "assets/colecciones/fondos/kill-bill.jpg",
+   "universo": "Quentin Tarantino"
   },
   {
    "id": "la-herejia-de-horus",
@@ -6710,32 +6711,10 @@
        "externalUrl": "https://letterboxd.com/film/jackie-brown/"
       },
       {
-       "id": "kill-bill-vol-1",
-       "type": "movieSeries",
-       "title": "Kill Bill: Vol. 1",
-       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-vol-1.jpg",
-       "releaseYear": 2003,
-       "genre": "Acción, crimen",
-       "note": "Una asesina a la que dieron por muerta el día de su boda despierta del coma cuatro años después y empieza a tachar nombres de su lista de venganza.",
-       "mediaType": "movie",
-       "duration": "1h 51m",
-       "creatorOrDirector": "Quentin Tarantino",
-       "collectionNumber": 4,
-       "externalUrl": "https://letterboxd.com/film/kill-bill-vol-1/"
+       "ref": "kill-bill/kill-bill-vol-1"
       },
       {
-       "id": "kill-bill-vol-2",
-       "type": "movieSeries",
-       "title": "Kill Bill: Vol. 2",
-       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-vol-2.jpg",
-       "releaseYear": 2004,
-       "genre": "Acción, crimen, suspense",
-       "note": "La Novia sigue su venganza hasta llegar a Bill, y la película revela qué ocurrió realmente en la capilla.",
-       "mediaType": "movie",
-       "duration": "2h 16m",
-       "creatorOrDirector": "Quentin Tarantino",
-       "collectionNumber": 5,
-       "externalUrl": "https://letterboxd.com/film/kill-bill-vol-2/"
+       "ref": "kill-bill/kill-bill-vol-2"
       },
       {
        "id": "death-proof",
@@ -6808,17 +6787,7 @@
        "externalUrl": "https://letterboxd.com/film/once-upon-a-time-in-hollywood/"
       },
       {
-       "id": "kill-bill-the-whole-bloody-affair",
-       "type": "movieSeries",
-       "title": "Kill Bill: The Whole Bloody Affair",
-       "coverUrl": "assets/colecciones/portadas/kill-bill-kill-bill-the-whole-bloody-affair.jpg",
-       "releaseYear": 2011,
-       "genre": "Acción, crimen",
-       "note": "Las dos partes unidas en una sola película, tal y como Tarantino la concibió, con una secuencia animada ampliada.",
-       "mediaType": "movie",
-       "duration": "4h 35m",
-       "creatorOrDirector": "Quentin Tarantino",
-       "externalUrl": "https://letterboxd.com/film/kill-bill-the-whole-bloody-affair/"
+       "ref": "kill-bill/kill-bill-the-whole-bloody-affair"
       }
      ]
     },
@@ -8093,11 +8062,7 @@
      ]
     }
    ],
-   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg",
-   "incluye": [
-    "la-herejia-de-horus",
-    "eisenhorn"
-   ]
+   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg"
   },
   {
    "id": "witch-hat-atelier",
