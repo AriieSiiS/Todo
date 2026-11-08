@@ -321,6 +321,52 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   String _claveGrupo(GrupoColeccion grupo) =>
       '${widget.coleccion.id}/grupo:${grupo.nombre}';
 
+  String _claveOrden(GrupoColeccion grupo) =>
+      '${widget.coleccion.id}/orden:${grupo.nombre}';
+
+  /// Orden elegido a mano para el apartado, si lo hay.
+  List<String>? _ordenGuardado(GrupoColeccion grupo) {
+    final prefijo = '${_claveOrden(grupo)}=';
+    for (final entrada in controller.visibilitySettings.hiddenCollectionWorks) {
+      if (entrada.startsWith(prefijo)) {
+        return entrada.substring(prefijo.length).split('|');
+      }
+    }
+    return null;
+  }
+
+  /// Obras del apartado en el orden elegido a mano; las que no aparecen en
+  /// él (por ejemplo, obras nuevas del catálogo) siguen al final.
+  List<LibraryItem> _ordenado(GrupoColeccion grupo) {
+    final orden = _ordenGuardado(grupo);
+    if (orden == null) return grupo.obras;
+    final posicion = {for (var i = 0; i < orden.length; i++) orden[i]: i};
+    final indices = {
+      for (var i = 0; i < grupo.obras.length; i++) grupo.obras[i].id: i
+    };
+    return [...grupo.obras]..sort((a, b) {
+        final pa = posicion[a.id] ?? orden.length + indices[a.id]!;
+        final pb = posicion[b.id] ?? orden.length + indices[b.id]!;
+        return pa.compareTo(pb);
+      });
+  }
+
+  /// Coloca [arrastrada] en el sitio de [destino] dentro de su apartado.
+  void _mover(String nombreGrupo, LibraryItem arrastrada, LibraryItem destino) {
+    final grupo = widget.coleccion.grupos
+        .where((g) => g.nombre == nombreGrupo)
+        .firstOrNull;
+    if (grupo == null || arrastrada.id == destino.id) return;
+    final ids = _ordenado(grupo).map((obra) => obra.id).toList();
+    final desde = ids.indexOf(arrastrada.id);
+    final hasta = ids.indexOf(destino.id);
+    if (desde == -1 || hasta == -1) return;
+    ids
+      ..removeAt(desde)
+      ..insert(hasta, arrastrada.id);
+    controller.setCollectionGroupOrder(_claveOrden(grupo), ids);
+  }
+
   bool _plegado(GrupoColeccion grupo) =>
       controller.visibilitySettings.hiddenCollectionWorks
           .contains(_claveGrupo(grupo));
@@ -571,11 +617,15 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
         for (final grupo in coleccion.grupos)
           GrupoColeccion(
             nombre: grupo.nombre,
-            obras: _filtrar(grupo.obras
+            obras: _filtrar(_ordenado(grupo)
                 .where((obra) => _quitada(obra) == verQuitadas)
                 .toList()),
           ),
     ].where((grupo) => grupo.obras.isNotEmpty).toList();
+    // Se arrastra para reordenar solo en la vista normal de la saga.
+    final arrastrable = !_porAnio && !_seleccionando && !verQuitadas;
+    final hayOrdenPropio =
+        coleccion.grupos.any((g) => _ordenGuardado(g) != null);
     final obras = [for (final grupo in grupos) ...grupo.obras];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,6 +694,19 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                       setState(() => _ocultarTengo = valor ?? false),
                   child: const Text('Ocultar las que ya tengo'),
                 ),
+                if (hayOrdenPropio)
+                  MenuItemButton(
+                    key: const ValueKey('coleccion-ver-orden-original'),
+                    leadingIcon:
+                        const Icon(Icons.restart_alt_rounded, size: 18),
+                    onPressed: () {
+                      for (final grupo in coleccion.grupos) {
+                        controller.setCollectionGroupOrder(
+                            _claveOrden(grupo), const []);
+                      }
+                    },
+                    child: const Text('Volver al orden original'),
+                  ),
               ],
               builder: (context, menu, _) => OutlinedButton.icon(
                 key: const ValueKey('coleccion-ver'),
@@ -803,7 +866,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                         itemCount: grupo.obras.length,
                         itemBuilder: (context, index) {
                           final obra = grupo.obras[index];
-                          return _ColeccionObraTarjeta(
+                          final tarjeta = _ColeccionObraTarjeta(
                             key: ValueKey(_clave(obra)),
                             obra: obra,
                             quitada: verQuitadas,
@@ -831,6 +894,14 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                             onMenu: (posicion) =>
                                 _menuObra(context, obra, posicion),
                           );
+                          if (!arrastrable) return tarjeta;
+                          return _ColeccionArrastrable(
+                            obra: obra,
+                            grupo: grupo.nombre,
+                            onSoltar: (arrastrada) =>
+                                _mover(grupo.nombre, arrastrada, obra),
+                            child: tarjeta,
+                          );
                         },
                       ),
                     ),
@@ -840,6 +911,66 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
           }),
         ),
       ],
+    );
+  }
+}
+
+/// Portada que se puede arrastrar sobre otra del mismo apartado para
+/// cambiar el orden de la saga.
+class _ColeccionArrastrable extends StatelessWidget {
+  const _ColeccionArrastrable({
+    required this.obra,
+    required this.grupo,
+    required this.onSoltar,
+    required this.child,
+  });
+
+  final LibraryItem obra;
+  final String grupo;
+  final ValueChanged<LibraryItem> onSoltar;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => DragTarget<(String, LibraryItem)>(
+        onWillAcceptWithDetails: (detalles) =>
+            detalles.data.$1 == grupo && detalles.data.$2.id != obra.id,
+        onAcceptWithDetails: (detalles) => onSoltar(detalles.data.$2),
+        builder: (context, candidatas, _) => Draggable<(String, LibraryItem)>(
+          key: ValueKey('coleccion-arrastrar-${obra.id}'),
+          data: (grupo, obra),
+          feedback: Opacity(
+            opacity: 0.85,
+            child: Material(
+              color: Colors.transparent,
+              elevation: 10,
+              borderRadius: BorderRadius.circular(7),
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child:
+                    _LibraryCoverImage(source: obra.coverUrl, type: obra.type),
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(opacity: 0.3, child: child),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: candidatas.isEmpty
+                    ? Colors.transparent
+                    : const Color(0xFF9DCB7E),
+                width: 3,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

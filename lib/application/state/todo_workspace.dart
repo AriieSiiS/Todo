@@ -404,6 +404,23 @@ class TodoWorkspace extends ChangeNotifier {
     _commit();
   }
 
+  /// Guarda el orden elegido a mano para un apartado de una colección, con
+  /// la clave `coleccion/orden:Apartado`. Una lista vacía vuelve al orden del
+  /// catálogo.
+  void setCollectionGroupOrder(String clave, List<String> ids) {
+    final prefijo = '$clave=';
+    final obras = _visibilitySettings.hiddenCollectionWorks
+        .where((entrada) => !entrada.startsWith(prefijo))
+        .toList();
+    if (ids.isNotEmpty) obras.add('$prefijo${ids.join('|')}');
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: _visibilitySettings.hiddenSections,
+      hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenCollectionWorks: obras,
+    );
+    _commit();
+  }
+
   DateTime? get manualLogicalDate => _activeManualLogicalDate(now);
   bool get hasManualLogicalDate => manualLogicalDate != null;
   DateTime? get lastSavedAt => _lastSavedAt;
