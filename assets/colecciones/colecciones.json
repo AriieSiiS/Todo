@@ -8419,6 +8419,71 @@
        "note": "La serie Total War llega al universo de Warhammer 40.000, con campaña por turnos y batallas en tiempo real.",
        "externalUrl": "https://store.steampowered.com/app/4199910/",
        "fechaPrevista": ""
+      },
+      {
+       "id": "juego-space-marine-3",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine 3",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-3.jpg",
+       "platform": "PC",
+       "developer": "Saber Interactive",
+       "genre": "Acción en tercera persona",
+       "note": "Tercera entrega de Space Marine, anunciada en 2025. Saber Interactive aún no ha dado fecha ni detalles de la historia.",
+       "fechaPrevista": ""
+      }
+     ]
+    },
+    {
+     "nombre": "Otros juegos de Warhammer",
+     "obras": [
+      {
+       "id": "juego-total-war-warhammer",
+       "type": "game",
+       "title": "Total War: WARHAMMER",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2016,
+       "genre": "Estrategia",
+       "note": "Campaña por turnos y batallas en tiempo real en el Viejo Mundo: el Imperio, enanos, orcos y el Caos luchan por el continente.",
+       "externalUrl": "https://store.steampowered.com/app/364360/"
+      },
+      {
+       "id": "juego-total-war-warhammer-ii",
+       "type": "game",
+       "title": "Total War: WARHAMMER II",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer-ii.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2017,
+       "genre": "Estrategia",
+       "note": "Altos elfos, elfos oscuros, hombres lagarto y skaven se disputan el Gran Vórtice en el Nuevo Mundo.",
+       "externalUrl": "https://store.steampowered.com/app/594570/"
+      },
+      {
+       "id": "juego-total-war-warhammer-iii",
+       "type": "game",
+       "title": "Total War: WARHAMMER III",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer-iii.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2022,
+       "genre": "Estrategia",
+       "note": "Cierra la trilogía: Kislev, Catay y los dioses del Caos luchan en el Reino del Caos por el destino del dios oso Ursun.",
+       "externalUrl": "https://store.steampowered.com/app/1142710/"
+      },
+      {
+       "id": "juego-warhammer-survivors",
+       "type": "game",
+       "title": "Warhammer Survivors",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-warhammer-survivors.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2026,
+       "genre": "Acción roguelite",
+       "note": "Supervivencia contra hordas con héroes de Warhammer 40.000, Age of Sigmar y el Viejo Mundo.",
+       "externalUrl": "https://store.steampowered.com/app/3669620/",
+       "fechaPrevista": "10 de noviembre de 2026"
       }
      ]
     }
