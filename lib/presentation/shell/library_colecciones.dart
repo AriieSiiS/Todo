@@ -1741,7 +1741,8 @@ class _ColeccionEstadoSelector extends StatelessWidget {
           child: child,
         ),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 5, 8, 5),
+          // Tan baja como el texto de las demás filas de la ficha.
+          padding: const EdgeInsets.fromLTRB(10, 1, 4, 1),
           decoration: BoxDecoration(
             color: colores.$1,
             borderRadius: BorderRadius.circular(999),
@@ -1760,11 +1761,16 @@ class _ColeccionEstadoSelector extends StatelessWidget {
                         : _libraryStatusSingularLabel(estado!),
                 style: TextStyle(
                   color: colores.$2,
-                  fontSize: 14,
+                  fontSize: 13,
+                  height: 1.2,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Icon(Icons.arrow_drop_down_rounded, color: colores.$2),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                color: colores.$2,
+                size: 18,
+              ),
             ],
           ),
         ),
