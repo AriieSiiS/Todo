@@ -21,6 +21,26 @@ Coleccion? _coleccionPorNombre(String nombre) {
   return null;
 }
 
+/// Una colección deja de existir cuando le quedan menos de dos obras sin
+/// quitar: ya no es una saga.
+bool _coleccionVigente(TodoWorkspace controller, Coleccion coleccion) {
+  final quitadas = controller.visibilitySettings.hiddenCollectionWorks;
+  return coleccion.obras
+          .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
+          .length >=
+      2;
+}
+
+/// Quita la saga o el universo de las fichas de Biblioteca que apuntaban a
+/// colecciones que se han quedado vacías o con una sola obra.
+void _disolverColeccionesSinObras(TodoWorkspace controller) {
+  final nombres = [
+    for (final coleccion in _colecciones ?? const <Coleccion>[])
+      if (!_coleccionVigente(controller, coleccion)) ...coleccion.nombres,
+  ];
+  if (nombres.isNotEmpty) controller.dissolveLibraryCollections(nombres);
+}
+
 /// Fecha prevista de salida de una obra que aún no ha salido; vacía si no se
 /// conoce y nula si la obra ya está publicada.
 String? _fechaPrevista(LibraryItem obra) {
@@ -531,8 +551,14 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
       controller.visibilitySettings.hiddenCollectionWorks
           .contains(_clave(obra));
 
-  void _alternar(LibraryItem obra) =>
-      controller.setCollectionWorkHidden(_clave(obra), !_quitada(obra));
+  void _alternar(LibraryItem obra) {
+    controller.setCollectionWorkHidden(_clave(obra), !_quitada(obra));
+    // Con menos de dos obras la colección desaparece, también de las fichas.
+    if (!_coleccionVigente(controller, widget.coleccion)) {
+      _disolverColeccionesSinObras(controller);
+      Navigator.of(context).maybePop();
+    }
+  }
 
   /// Los apartados plegados se guardan junto a las obras quitadas, con su
   /// propia clave, para conservarlos al reiniciar.
@@ -2031,7 +2057,8 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
         if (buscado.isEmpty ||
             coleccion.nombres.any((n) => n.paraBuscar.contains(buscado)) ||
             coleccion.obras.any((o) => o.title.paraBuscar.contains(buscado)))
-          _coleccionDeTipo(_coleccionEditada(controller, coleccion), tipo),
+          if (_coleccionVigente(controller, coleccion))
+            _coleccionDeTipo(_coleccionEditada(controller, coleccion), tipo),
     ].where((coleccion) => coleccion.obras.isNotEmpty).toList();
     // Con «Todas», cada saga va a la sección de su tipo; las que mezclan
     // tipos van juntas al final.

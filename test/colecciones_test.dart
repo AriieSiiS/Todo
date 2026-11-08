@@ -121,4 +121,33 @@ void main() {
     expect(controller.visibilitySettings.collectionWorkEdits, isNotEmpty,
         reason: 'quitar una obra no debe perder los cambios propios');
   });
+
+  test('al disolver una colección sus fichas pierden la saga', () {
+    final controller = TodoWorkspace.createForTest();
+    controller.createLibraryItem(
+      type: LibraryItemType.movieSeries,
+      title: 'Sinister',
+      status: LibraryItemStatus.completed,
+      collectionName: 'Sinister',
+      collectionNumber: 1,
+      showCollectionNumber: true,
+    );
+    controller.createLibraryItem(
+      type: LibraryItemType.game,
+      title: 'Dark Souls III',
+      collectionName: 'Dark Souls',
+      universeName: 'Souls',
+    );
+    final antes = controller.libraryItems.first.updatedAt;
+    controller.dissolveLibraryCollections(['Sinister']);
+    final sinister =
+        controller.libraryItems.singleWhere((i) => i.title == 'Sinister');
+    expect(sinister.collectionName, isNull);
+    expect(sinister.collectionNumber, isNull);
+    expect(sinister.updatedAt, antes);
+    final souls =
+        controller.libraryItems.singleWhere((i) => i.title == 'Dark Souls III');
+    expect(souls.collectionName, 'Dark Souls');
+    expect(souls.universeName, 'Souls');
+  });
 }

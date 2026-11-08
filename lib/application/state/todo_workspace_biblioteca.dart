@@ -248,6 +248,28 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     if (cambiado) _commit();
   }
 
+  /// Quita de las fichas la saga o el universo con alguno de esos nombres,
+  /// porque su colección ha desaparecido. No cambia la fecha de modificación.
+  void dissolveLibraryCollections(List<String> nombres) {
+    String clave(String? valor) => (valor ?? '').trim().toLowerCase();
+    final buscados = {for (final nombre in nombres) clave(nombre)};
+    var cambiado = false;
+    for (var i = 0; i < _libraryItems.length; i++) {
+      final item = _libraryItems[i];
+      final saga = buscados.contains(clave(item.collectionName));
+      final universo = buscados.contains(clave(item.universeName));
+      if (!saga && !universo) continue;
+      _libraryItems[i] = item.copyWith(
+        clearCollectionName: saga,
+        clearCollectionNumber: saga,
+        showCollectionNumber: saga ? false : item.showCollectionNumber,
+        clearUniverseName: universo,
+      );
+      cambiado = true;
+    }
+    if (cambiado) _commit();
+  }
+
   void updateLibraryItemStatus(
     String itemId,
     LibraryItemStatus status, {

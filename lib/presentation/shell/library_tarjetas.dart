@@ -980,7 +980,11 @@ class _LibraryCollectionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _libraryColor(item.type);
-    final coleccion = _coleccionPorNombre(label);
+    final encontrada = _coleccionPorNombre(label);
+    final coleccion = encontrada != null &&
+            _coleccionVigente(controller, encontrada)
+        ? encontrada
+        : null;
     final chip = Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,
