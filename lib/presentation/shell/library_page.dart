@@ -138,6 +138,8 @@ class _LibraryPageState extends State<LibraryPage> {
                     _typeFilter == LibraryItemType.book,
                 libraryStatus: status,
                 onYearChanged: (year) => setState(() => _year = year),
+                onCollections: () =>
+                    _mostrarBuscadorColecciones(context, controller),
                 onStatistics: () => showDialog<void>(
                     context: context,
                     builder: (_) => ListenableBuilder(
@@ -366,6 +368,7 @@ class _LibraryHeader extends StatelessWidget {
     required this.showStatistics,
     required this.libraryStatus,
     required this.onYearChanged,
+    required this.onCollections,
     required this.onAdd,
     required this.onStatistics,
   });
@@ -377,6 +380,7 @@ class _LibraryHeader extends StatelessWidget {
   final bool showStatistics;
   final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
+  final VoidCallback onCollections;
   final VoidCallback onAdd;
   final VoidCallback onStatistics;
 
@@ -392,6 +396,12 @@ class _LibraryHeader extends StatelessWidget {
         runSpacing: 10,
         alignment: WrapAlignment.end,
         children: [
+          IconButton(
+            key: const ValueKey('library-colecciones'),
+            tooltip: 'Colecciones',
+            onPressed: onCollections,
+            icon: const Icon(Icons.collections_bookmark_outlined),
+          ),
           if (showStatistics)
             IconButton(
                 tooltip: 'Estadísticas de lectura',

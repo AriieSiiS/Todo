@@ -81,12 +81,13 @@ LibraryItemStatus? _estadoObra(TodoWorkspace controller, LibraryItem obra) {
 
 /// Marca un tomo como leído, leyéndose o sin leer (pendiente) y ajusta el
 /// estado de la serie: pendiente sin nada leído, completada si se han leído
-/// todos los tomos de una serie terminada y en curso en los demás casos.
-void _ponerEstadoTomo(
+/// todos los tomos de una serie terminada y en curso en los demás casos. La
+/// portada de la ficha pasa a ser la del tomo por el que se va leyendo.
+Future<void> _ponerEstadoTomo(
   TodoWorkspace controller,
   LibraryItem obra,
   LibraryItemStatus estado,
-) {
+) async {
   final item = _obraEnBiblioteca(controller, obra);
   if (item == null) return;
   final tomo = obra.collectionNumber!;
@@ -103,7 +104,21 @@ void _ponerEstadoTomo(
       leidos.remove(tomo);
       if (actual == tomo) actual = null;
   }
-  final total = _tomosDe(obra).length;
+  final tomos = _tomosDe(obra);
+  final total = tomos.length;
+  // El tomo que se está leyendo; si no hay, el siguiente al último leído, o
+  // el último si ya están todos.
+  final ultimo = leidos.isEmpty ? null : leidos.reduce(max);
+  final porLeer = actual ??
+      (ultimo == null
+          ? null
+          : tomos.any((t) => t.collectionNumber == ultimo + 1)
+              ? ultimo + 1
+              : ultimo);
+  final tomoPortada =
+      tomos.where((t) => t.collectionNumber == porLeer).firstOrNull;
+  final portada =
+      tomoPortada == null ? null : await _portadaDeTomo(tomoPortada);
   final status = leidos.isEmpty && actual == null
       ? LibraryItemStatus.pending
       : leidos.length >= total &&
@@ -111,12 +126,35 @@ void _ponerEstadoTomo(
               item.publicationStatus == LibraryPublicationStatus.finished
           ? LibraryItemStatus.completed
           : LibraryItemStatus.inProgress;
-  controller.updateLibraryItem(item.copyWith(
+  // Se vuelve a leer la ficha: mientras se copiaba la portada pudo cambiar.
+  final vigente = _obraEnBiblioteca(controller, obra) ?? item;
+  controller.updateLibraryItem(vigente.copyWith(
     status: status,
+    coverUrl: portada,
     readVolumes: leidos.toList()..sort(),
     currentVolume: actual,
     clearCurrentVolume: actual == null,
   ));
+}
+
+/// Copia la portada de un tomo a las portadas de la Biblioteca una sola vez y
+/// devuelve su ruta.
+Future<String?> _portadaDeTomo(LibraryItem tomo) async {
+  final origen = tomo.coverUrl;
+  if (origen == null) return null;
+  try {
+    final directorio = await _libraryCoversDirectory();
+    final destino = File('${directorio.path}${Platform.pathSeparator}'
+        'cover_tomo_${tomo.collectionName!.paraBuscar.replaceAll(RegExp(r'[^a-z0-9]+'), '-')}'
+        '_${tomo.collectionNumber}.jpg');
+    if (!await destino.exists()) {
+      final datos = await rootBundle.load(origen);
+      await destino.writeAsBytes(datos.buffer.asUint8List(), flush: true);
+    }
+    return destino.path;
+  } on Exception {
+    return null;
+  }
 }
 
 /// Crea la ficha de la serie de un manga a partir de su primer tomo.
@@ -198,7 +236,7 @@ Future<void> _ponerEstadoObra(
     if (_obraEnBiblioteca(controller, obra) == null) {
       await _anadirSerieABiblioteca(controller, obra);
     }
-    _ponerEstadoTomo(controller, obra, estado);
+    await _ponerEstadoTomo(controller, obra, estado);
     return;
   }
   final existente = _obraEnBiblioteca(controller, obra);
