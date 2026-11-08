@@ -6141,6 +6141,112 @@
    ]
   },
   {
+   "id": "mitologia-griega",
+   "nombre": "Mitología griega",
+   "alias": [
+    "Mitología"
+   ],
+   "universo": "Mitología griega",
+   "grupos": [
+    {
+     "nombre": "Libros",
+     "obras": [
+      {
+       "id": "la-iliada",
+       "type": "book",
+       "title": "La Ilíada",
+       "author": "Homero",
+       "genre": "Poesía épica",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-iliada.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/16147035-la-il-ada",
+       "note": "La cólera de Aquiles durante cincuenta y un días del último año de la guerra de Troya. Es el poema más antiguo de la literatura occidental; se compuso hacia el siglo VIII a. C."
+      },
+      {
+       "id": "la-odisea",
+       "type": "book",
+       "title": "La Odisea",
+       "author": "Homero",
+       "genre": "Poesía épica",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-odisea.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/61431.La_Odisea_de_Homero",
+       "note": "Tras la guerra de Troya, Odiseo tarda diez años en volver a Ítaca, donde Penélope y Telémaco resisten a los pretendientes. Se compuso hacia el siglo VIII a. C."
+      },
+      {
+       "id": "teogonia",
+       "type": "book",
+       "title": "Teogonía",
+       "author": "Hesíodo",
+       "genre": "Poesía épica, mitología",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-teogonia.jpg",
+       "pages": "70",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/75008993-teogon-a",
+       "note": "El origen del mundo y la genealogía de los dioses griegos, desde el Caos hasta el reinado de Zeus. Se compuso hacia el siglo VII a. C."
+      },
+      {
+       "id": "la-cancion-de-aquiles",
+       "type": "book",
+       "title": "La canción de Aquiles",
+       "author": "Madeline Miller",
+       "genre": "Fantasía mitológica, ficción histórica",
+       "releaseYear": 2011,
+       "pages": "497",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-cancion-de-aquiles.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/15709854-la-canci-n-de-aquiles",
+       "note": "Patroclo cuenta su vida junto a Aquiles, desde su infancia hasta la guerra de Troya. Premio Orange de 2012."
+      },
+      {
+       "id": "circe",
+       "type": "book",
+       "title": "Circe",
+       "author": "Madeline Miller",
+       "genre": "Fantasía mitológica, ficción literaria",
+       "releaseYear": 2018,
+       "pages": "393",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-circe.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/43297341-circe",
+       "note": "La hechicera hija de Helios, desterrada a la isla de Eea, cruza su vida con Hermes, Dédalo, el Minotauro y Odiseo."
+      }
+     ]
+    },
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "troya",
+       "type": "movieSeries",
+       "mediaType": "movie",
+       "title": "Troya",
+       "releaseYear": 2004,
+       "duration": "2h 43m",
+       "creatorOrDirector": "Wolfgang Petersen",
+       "genre": "Épica, acción, drama histórico",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-troya.jpg",
+       "externalUrl": "https://letterboxd.com/film/troy/",
+       "note": "Versión libre de la Ilíada: el rapto de Helena desata la guerra entre griegos y troyanos, con Brad Pitt como Aquiles."
+      },
+      {
+       "id": "la-odisea-2026",
+       "type": "movieSeries",
+       "mediaType": "movie",
+       "title": "La Odisea",
+       "releaseYear": 2026,
+       "duration": "2h 52m",
+       "creatorOrDirector": "Christopher Nolan",
+       "genre": "Aventura épica, acción, fantasía",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-odisea-2026.jpg",
+       "externalUrl": "https://letterboxd.com/film/the-odyssey-2026/",
+       "note": "Adaptación de la epopeya de Homero dirigida por Christopher Nolan, con Matt Damon como Odiseo."
+      }
+     ]
+    }
+   ]
+  },
+  {
    "id": "orcs-must-die",
    "nombre": "Orcs Must Die!",
    "grupos": [
@@ -7425,41 +7531,6 @@
        "note": "Nueva aventura en un planeta oceánico diferente, con cooperativo. Está en acceso anticipado.",
        "collectionNumber": 3,
        "fechaPrevista": "Acceso anticipado"
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "the-binding-of-isaac",
-   "nombre": "The Binding of Isaac",
-   "grupos": [
-    {
-     "nombre": "Saga principal",
-     "obras": [
-      {
-       "id": "the-binding-of-isaac",
-       "type": "game",
-       "title": "The Binding of Isaac",
-       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac.jpg",
-       "platform": "PC",
-       "developer": "Edmund McMillen",
-       "releaseYear": 2011,
-       "genre": "Roguelike de acción",
-       "note": "Isaac huye de su madre, que quiere sacrificarlo, a un sótano lleno de monstruos en un juego de mazmorras aleatorias.",
-       "collectionNumber": 1
-      },
-      {
-       "id": "the-binding-of-isaac-rebirth",
-       "type": "game",
-       "title": "The Binding of Isaac: Rebirth",
-       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac-rebirth.jpg",
-       "platform": "PC",
-       "developer": "Nicalis / Edmund McMillen",
-       "releaseYear": 2014,
-       "genre": "Roguelike de acción",
-       "note": "Versión rehecha y muy ampliada del original, con más de cien horas de contenido.",
-       "collectionNumber": 2
       }
      ]
     }
