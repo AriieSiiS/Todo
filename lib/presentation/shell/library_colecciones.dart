@@ -34,11 +34,121 @@ String? _fechaPrevista(LibraryItem obra) {
 
 /// Elemento de la Biblioteca que corresponde a una obra del catálogo, si existe.
 LibraryItem? _obraEnBiblioteca(TodoWorkspace controller, LibraryItem obra) {
+  // Todos los tomos de un manga comparten la ficha de la serie.
+  if (_esTomo(obra)) {
+    final serie = obra.collectionName!.paraBuscar;
+    for (final item in controller.libraryItems) {
+      if (item.type == LibraryItemType.book &&
+          (item.title.paraBuscar == serie ||
+              item.collectionName?.paraBuscar == serie)) {
+        return item;
+      }
+    }
+    return null;
+  }
   final titulo = obra.title.paraBuscar;
   for (final item in controller.libraryItems) {
     if (item.type == obra.type && item.title.paraBuscar == titulo) return item;
   }
   return null;
+}
+
+/// Tomo de un manga del catálogo. Sus tomos no son obras distintas: se
+/// guardan como tomos leídos de una única ficha de la serie.
+bool _esTomo(LibraryItem obra) =>
+    obra.type == LibraryItemType.book &&
+    obra.creatorOrDirector == 'Manga' &&
+    obra.collectionNumber != null &&
+    obra.collectionName != null;
+
+/// Tomos del catálogo de la misma serie que [obra].
+List<LibraryItem> _tomosDe(LibraryItem obra) => [
+      for (final coleccion in _colecciones ?? const <Coleccion>[])
+        for (final otra in coleccion.obras)
+          if (_esTomo(otra) && otra.collectionName == obra.collectionName) otra,
+    ];
+
+/// Estado de una obra en la Biblioteca. En un tomo es el suyo propio:
+/// leído, leyéndose o, si es nulo, sin leer.
+LibraryItemStatus? _estadoObra(TodoWorkspace controller, LibraryItem obra) {
+  final item = _obraEnBiblioteca(controller, obra);
+  if (item == null || !_esTomo(obra)) return item?.status;
+  final tomo = obra.collectionNumber!;
+  if (item.readVolumes.contains(tomo)) return LibraryItemStatus.completed;
+  if (item.currentVolume == tomo) return LibraryItemStatus.inProgress;
+  return null;
+}
+
+/// Marca un tomo como leído, leyéndose o sin leer (pendiente) y ajusta el
+/// estado de la serie: pendiente sin nada leído, completada si se han leído
+/// todos los tomos de una serie terminada y en curso en los demás casos.
+void _ponerEstadoTomo(
+  TodoWorkspace controller,
+  LibraryItem obra,
+  LibraryItemStatus estado,
+) {
+  final item = _obraEnBiblioteca(controller, obra);
+  if (item == null) return;
+  final tomo = obra.collectionNumber!;
+  final leidos = {...item.readVolumes};
+  var actual = item.currentVolume;
+  switch (estado) {
+    case LibraryItemStatus.completed:
+      leidos.add(tomo);
+      if (actual == tomo) actual = null;
+    case LibraryItemStatus.inProgress:
+      leidos.remove(tomo);
+      actual = tomo;
+    case LibraryItemStatus.pending:
+      leidos.remove(tomo);
+      if (actual == tomo) actual = null;
+  }
+  final total = _tomosDe(obra).length;
+  final status = leidos.isEmpty && actual == null
+      ? LibraryItemStatus.pending
+      : leidos.length >= total &&
+              actual == null &&
+              item.publicationStatus == LibraryPublicationStatus.finished
+          ? LibraryItemStatus.completed
+          : LibraryItemStatus.inProgress;
+  controller.updateLibraryItem(item.copyWith(
+    status: status,
+    readVolumes: leidos.toList()..sort(),
+    currentVolume: actual,
+    clearCurrentVolume: actual == null,
+  ));
+}
+
+/// Crea la ficha de la serie de un manga a partir de su primer tomo.
+Future<void> _anadirSerieABiblioteca(
+  TodoWorkspace controller,
+  LibraryItem tomo,
+) async {
+  final tomos = _tomosDe(tomo)
+    ..sort((a, b) => a.collectionNumber!.compareTo(b.collectionNumber!));
+  final primero = tomos.isEmpty ? tomo : tomos.first;
+  final portada = await rootBundle.load(primero.coverUrl!);
+  final coverUrl = await _copyLibraryCoverBytes(portada.buffer.asUint8List());
+  if (_obraEnBiblioteca(controller, tomo) != null) return;
+  // La sinopsis del primer tomo sin la línea que describe la edición.
+  final nota = primero.note
+      ?.replaceAll(RegExp(r'\s*Tomo 1 de la edición[^.]*\.'), '')
+      .trim();
+  controller.createLibraryItem(
+    type: LibraryItemType.book,
+    title: tomo.collectionName!,
+    status: LibraryItemStatus.pending,
+    coverUrl: coverUrl,
+    externalUrl: primero.externalUrl,
+    note: nota,
+    author: primero.author,
+    releaseYear: primero.releaseYear,
+    creatorOrDirector: 'Manga',
+    genre: primero.genre,
+    universeName: primero.universeName,
+    collectionName: tomo.collectionName,
+    publicationStatus: LibraryPublicationStatus.ongoing,
+  );
 }
 
 /// Copia la portada del catálogo y crea el elemento como pendiente.
@@ -47,6 +157,7 @@ Future<void> _anadirObraABiblioteca(
   LibraryItem obra, {
   LibraryItemStatus status = LibraryItemStatus.pending,
 }) async {
+  if (_esTomo(obra)) return _anadirSerieABiblioteca(controller, obra);
   final portada = await rootBundle.load(obra.coverUrl!);
   final coverUrl = await _copyLibraryCoverBytes(portada.buffer.asUint8List());
   if (_obraEnBiblioteca(controller, obra) != null) return;
@@ -83,6 +194,13 @@ Future<void> _ponerEstadoObra(
   LibraryItem obra,
   LibraryItemStatus estado,
 ) async {
+  if (_esTomo(obra)) {
+    if (_obraEnBiblioteca(controller, obra) == null) {
+      await _anadirSerieABiblioteca(controller, obra);
+    }
+    _ponerEstadoTomo(controller, obra, estado);
+    return;
+  }
   final existente = _obraEnBiblioteca(controller, obra);
   if (existente != null) {
     controller.updateLibraryItemStatus(existente.id, estado);
@@ -91,10 +209,18 @@ Future<void> _ponerEstadoObra(
   }
 }
 
-String _estadoEnPlural(LibraryItemStatus estado) => switch (estado) {
-      LibraryItemStatus.pending => 'pendientes',
-      LibraryItemStatus.inProgress => 'en curso',
-      LibraryItemStatus.completed => 'completadas',
+String _estadoEnPlural(LibraryItemStatus estado, {bool tomos = false}) =>
+    switch (estado) {
+      LibraryItemStatus.pending => tomos ? 'sin leer' : 'pendientes',
+      LibraryItemStatus.inProgress => tomos ? 'leyendo' : 'en curso',
+      LibraryItemStatus.completed => tomos ? 'leídos' : 'completadas',
+    };
+
+/// Nombre del estado de un tomo de manga.
+String _estadoTomo(LibraryItemStatus? estado) => switch (estado) {
+      LibraryItemStatus.completed => 'Leído',
+      LibraryItemStatus.inProgress => 'Leyendo',
+      _ => 'Sin leer',
     };
 
 /// Abre la saga sobre la vista actual, desde la pestaña Colecciones o desde la
@@ -173,6 +299,112 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   Future<void> _anadir(LibraryItem obra) =>
       _estado(obra, LibraryItemStatus.pending);
 
+  /// Botón «+» de la portada: añade la obra o, en un tomo, lo marca leído.
+  Future<void> _anadirDesdeTarjeta(LibraryItem obra) => _estado(
+        obra,
+        _esTomo(obra) ? LibraryItemStatus.completed : LibraryItemStatus.pending,
+      );
+
+  /// Menú del clic derecho: el mismo de Biblioteca si la obra ya está en
+  /// ella; si no, las opciones para añadirla. Los tomos de un manga se marcan
+  /// como leídos, leyéndose o sin leer.
+  Future<void> _menuObra(
+    BuildContext context,
+    LibraryItem obra,
+    Offset posicion,
+  ) async {
+    final item = _obraEnBiblioteca(controller, obra);
+    // Las opciones de añadir de la pestaña Biblioteca no aplican aquí.
+    _libraryAddMenuContext = null;
+    if (item != null && !_esTomo(obra)) {
+      await _showLibraryContextMenu(
+        context: context,
+        position: posicion,
+        onPages: () => _openKnowledgeWorkspace(context, controller, item),
+        onStart: _libraryStartAction(controller, item),
+        onComplete: _libraryCompleteAction(context, controller, item),
+        onRating: item.status != LibraryItemStatus.completed
+            ? null
+            : () => _editLibraryRating(context, controller, item),
+        onProgress: _libraryMarkProgressAction(context, controller, item),
+        progressLabel: _libraryMarkProgressLabel(item),
+        onEdit: () => showDialog<void>(
+          context: context,
+          builder: (context) =>
+              _LibraryItemDialog(controller: controller, item: item),
+        ),
+        onDelete: () async {
+          final confirmado = await _confirmLibraryDelete(
+            context,
+            title: 'Borrar de la biblioteca',
+            message: _libraryDeleteMessage(controller, item),
+          );
+          if (confirmado) controller.deleteLibraryItem(item.id);
+        },
+      );
+      return;
+    }
+    final overlay =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final tomo = _esTomo(obra);
+    final actual = _estadoObra(controller, obra);
+    PopupMenuItem<Object> opcion(Object valor, IconData icono, String texto) =>
+        PopupMenuItem<Object>(
+          value: valor,
+          child: ListTile(
+            dense: true,
+            leading: Icon(icono),
+            title: Text(texto),
+          ),
+        );
+    final elegido = await showMenu<Object>(
+      context: context,
+      position: RelativeRect.fromRect(
+        posicion & const Size(1, 1),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        if (tomo) ...[
+          if (actual != LibraryItemStatus.completed)
+            opcion(LibraryItemStatus.completed,
+                Icons.check_circle_outline_rounded, 'Marcar como leído'),
+          if (actual != LibraryItemStatus.inProgress)
+            opcion(LibraryItemStatus.inProgress, Icons.play_arrow_rounded,
+                'Marcar como leyendo'),
+          if (actual != null)
+            opcion(LibraryItemStatus.pending, Icons.bookmark_outline_rounded,
+                'Marcar como sin leer'),
+          if (item != null)
+            opcion('ver', Icons.local_library_rounded,
+                'Ver el manga en Biblioteca'),
+        ] else ...[
+          opcion(LibraryItemStatus.pending, Icons.bookmark_outline_rounded,
+              'Añadir como pendiente'),
+          opcion(LibraryItemStatus.inProgress, Icons.play_arrow_rounded,
+              'Añadir como en curso'),
+          opcion(LibraryItemStatus.completed,
+              Icons.check_circle_outline_rounded, 'Añadir como completado'),
+        ],
+        const PopupMenuDivider(),
+        opcion(
+            'quitar',
+            Icons.close_rounded,
+            _quitada(obra)
+                ? 'Recuperar en la colección'
+                : 'Quitar de la colección'),
+      ],
+    );
+    if (!mounted) return;
+    if (elegido is LibraryItemStatus) {
+      await _estado(obra, elegido);
+    } else if (elegido == 'ver' && item != null && context.mounted) {
+      await _showLibraryItemDetails(context, controller, [item], item);
+    } else if (elegido == 'quitar') {
+      _alternar(obra);
+    }
+  }
+
   void _terminarSeleccion() => setState(() {
         _seleccionando = false;
         _seleccion.clear();
@@ -184,19 +416,23 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
     LibraryItemStatus estado,
   ) async {
     if (obras.isEmpty) return;
+    final tomos = obras.every(_esTomo);
     final nuevas =
         obras.where((obra) => _obraEnBiblioteca(controller, obra) == null);
     final cambian = obras.length - nuevas.length;
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Marcar ${obras.length} como ${_estadoEnPlural(estado)}'),
-        content: Text([
-          if (nuevas.isNotEmpty)
-            'Se añadirán ${nuevas.length} a tu Biblioteca.',
-          if (cambian > 0)
-            'Se cambiará el estado de $cambian que ya están en tu Biblioteca.',
-        ].join(' ')),
+        title: Text('Marcar ${obras.length} como '
+            '${_estadoEnPlural(estado, tomos: tomos)}'),
+        content: Text(tomos
+            ? 'Todos los tomos comparten la ficha del manga en tu Biblioteca.'
+            : [
+                if (nuevas.isNotEmpty)
+                  'Se añadirán ${nuevas.length} a tu Biblioteca.',
+                if (cambian > 0)
+                  'Se cambiará el estado de $cambian que ya están en tu Biblioteca.',
+              ].join(' ')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -223,6 +459,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
     required IconData icono,
     required bool activo,
     required void Function(LibraryItemStatus estado) alElegir,
+    bool tomos = false,
   }) {
     return MenuAnchor(
       menuChildren: [
@@ -230,7 +467,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
           MenuItemButton(
             key: ValueKey('$key-${estado.name}'),
             onPressed: () => alElegir(estado),
-            child: Text('Como ${_estadoEnPlural(estado)}'),
+            child: Text('Como ${_estadoEnPlural(estado, tomos: tomos)}'),
           ),
       ],
       builder: (context, menu, _) => OutlinedButton.icon(
@@ -245,17 +482,22 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   }
 
   String _resumen(List<LibraryItem> obras) {
+    if (obras.isNotEmpty && obras.every(_esTomo)) {
+      final leidos = obras
+          .where((obra) =>
+              _estadoObra(controller, obra) == LibraryItemStatus.completed)
+          .length;
+      return '${obras.length} tomos · $leidos leídos';
+    }
     final tipos = obras.map((obra) => obra.type).toSet();
     final nombre = tipos.length == 1
         ? _libraryTypePluralLabel(tipos.first).toLowerCase()
         : 'obras';
-    final enBiblioteca = obras
-        .where((obra) => _obraEnBiblioteca(controller, obra) != null)
-        .length;
+    final enBiblioteca =
+        obras.where((obra) => _estadoObra(controller, obra) != null).length;
     final completadas = obras
         .where((obra) =>
-            _obraEnBiblioteca(controller, obra)?.status ==
-            LibraryItemStatus.completed)
+            _estadoObra(controller, obra) == LibraryItemStatus.completed)
         .length;
     return '${obras.length} $nombre · $enBiblioteca en tu Biblioteca · '
         '$completadas completadas';
@@ -263,7 +505,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
   List<LibraryItem> _filtrar(List<LibraryItem> obras) {
     final lista = _ocultarTengo
-        ? obras.where((obra) => _obraEnBiblioteca(controller, obra) == null)
+        ? obras.where((obra) => _estadoObra(controller, obra) == null)
         : obras;
     if (!_porAnio) return lista.toList();
     // Las que no tienen año todavía van al final.
@@ -341,7 +583,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                     completadas: coleccion.obras
                         .where((obra) =>
                             !_quitada(obra) &&
-                            _obraEnBiblioteca(controller, obra)?.status ==
+                            _estadoObra(controller, obra) ==
                                 LibraryItemStatus.completed)
                         .length,
                   ),
@@ -409,14 +651,17 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
             ] else if (!verQuitadas) ...[
               _menuEstados(
                 key: const ValueKey('coleccion-anadir-todas'),
-                texto: 'Añadir todas',
+                texto: obras.every(_esTomo) ? 'Marcar todos' : 'Añadir todas',
                 icono: Icons.library_add_outlined,
-                activo: obras
-                    .any((obra) => _obraEnBiblioteca(controller, obra) == null),
+                tomos: obras.every(_esTomo),
+                activo: obras.every(_esTomo) ||
+                    obras.any(
+                        (obra) => _obraEnBiblioteca(controller, obra) == null),
                 alElegir: (estado) => _enBloque(
                   obras
-                      .where(
-                          (obra) => _obraEnBiblioteca(controller, obra) == null)
+                      .where((obra) =>
+                          _esTomo(obra) ||
+                          _obraEnBiblioteca(controller, obra) == null)
                       .toList(),
                   estado,
                 ),
@@ -524,7 +769,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                             key: ValueKey(_clave(obra)),
                             obra: obra,
                             quitada: verQuitadas,
-                            enBiblioteca: _obraEnBiblioteca(controller, obra),
+                            estado: _estadoObra(controller, obra),
                             seleccionando: _seleccionando && !verQuitadas,
                             seleccionada: _seleccion.contains(obra.id),
                             onTap: _seleccionando && !verQuitadas
@@ -543,8 +788,10 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                                       _alternar,
                                       _estado,
                                     ),
-                            onAdd: () => _anadir(obra),
+                            onAdd: () => _anadirDesdeTarjeta(obra),
                             onToggle: () => _alternar(obra),
+                            onMenu: (posicion) =>
+                                _menuObra(context, obra, posicion),
                           );
                         },
                       ),
@@ -564,17 +811,21 @@ class _ColeccionObraTarjeta extends StatefulWidget {
     required super.key,
     required this.obra,
     required this.quitada,
-    required this.enBiblioteca,
+    required this.estado,
     required this.seleccionando,
     required this.seleccionada,
     required this.onTap,
     required this.onAdd,
     required this.onToggle,
+    required this.onMenu,
   });
 
   final LibraryItem obra;
   final bool quitada;
-  final LibraryItem? enBiblioteca;
+  final LibraryItemStatus? estado;
+
+  /// Clic derecho o pulsación larga sobre la portada.
+  final ValueChanged<Offset> onMenu;
   final bool seleccionando;
   final bool seleccionada;
   final VoidCallback onTap;
@@ -591,10 +842,11 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
   @override
   Widget build(BuildContext context) {
     final obra = widget.obra;
-    final enBiblioteca = widget.enBiblioteca;
+    final estado = widget.estado;
+    final tomo = _esTomo(obra);
     final borde = widget.seleccionada
         ? const Color(0xFF9DCB7E)
-        : switch (enBiblioteca?.status) {
+        : switch (estado) {
             LibraryItemStatus.completed => const Color(0xFF5F7F49),
             LibraryItemStatus.inProgress => const Color(0xFFC77721),
             LibraryItemStatus.pending => const Color(0xFF7D8CA3),
@@ -605,6 +857,7 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
       onExit: (_) => setState(() => _hovered = false),
       child: InkWell(
         onTap: widget.onTap,
+        onSecondaryTapDown: (details) => widget.onMenu(details.globalPosition),
         borderRadius: BorderRadius.circular(7),
         child: AnimatedContainer(
           key: ValueKey('coleccion-obra-${obra.id}'),
@@ -665,7 +918,7 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
               Positioned(
                 left: 12,
                 right: 12,
-                bottom: enBiblioteca != null ? 44 : 14,
+                bottom: estado != null && !tomo ? 44 : 14,
                 child: IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: _hovered ? 1 : 0,
@@ -687,7 +940,7 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                   ),
                 ),
               ),
-              if (enBiblioteca != null)
+              if (estado != null && !tomo)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -748,11 +1001,14 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                     onPressed: widget.onToggle,
                   ),
                 ),
-              if (enBiblioteca != null)
+              if (estado != null)
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _LibraryStatusBadge(status: enBiblioteca.status),
+                  child: _LibraryStatusBadge(
+                    status: estado,
+                    label: tomo ? _estadoTomo(estado) : null,
+                  ),
                 )
               else if (_hovered && !widget.quitada && !widget.seleccionando)
                 Positioned(
@@ -760,8 +1016,8 @@ class _ColeccionObraTarjetaState extends State<_ColeccionObraTarjeta> {
                   right: 6,
                   child: _ColeccionBotonCubierta(
                     key: ValueKey('coleccion-anadir-${obra.id}'),
-                    tooltip: 'Añadir a Biblioteca',
-                    icon: Icons.add_rounded,
+                    tooltip: tomo ? 'Marcar como leído' : 'Añadir a Biblioteca',
+                    icon: tomo ? Icons.check_rounded : Icons.add_rounded,
                     color: const Color(0xFF607A4D),
                     onPressed: widget.onAdd,
                   ),
@@ -970,7 +1226,8 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                                 label: 'Estado',
                                 value: '',
                                 valueWidget: _ColeccionEstadoSelector(
-                                  estado: enBiblioteca?.status,
+                                  estado: _estadoObra(widget.controller, obra),
+                                  tomo: _esTomo(obra),
                                   onSelected: (estado) =>
                                       widget.onEstado(obra, estado),
                                 ),
@@ -1167,9 +1424,13 @@ class _ColeccionEstadoSelector extends StatelessWidget {
   const _ColeccionEstadoSelector({
     required this.estado,
     required this.onSelected,
+    this.tomo = false,
   });
 
   final LibraryItemStatus? estado;
+
+  /// Los tomos de un manga solo pueden estar sin leer, leyéndose o leídos.
+  final bool tomo;
   final ValueChanged<LibraryItemStatus> onSelected;
 
   @override
@@ -1209,7 +1470,9 @@ class _ColeccionEstadoSelector extends StatelessWidget {
                         ? const Icon(Icons.check_rounded, size: 16)
                         : null,
                   ),
-                  Text(_libraryStatusSingularLabel(opcion)),
+                  Text(tomo
+                      ? _estadoTomo(opcion)
+                      : _libraryStatusSingularLabel(opcion)),
                 ],
               ),
             ),
@@ -1233,9 +1496,11 @@ class _ColeccionEstadoSelector extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                estado == null
-                    ? 'Sin añadir'
-                    : _libraryStatusSingularLabel(estado!),
+                tomo
+                    ? _estadoTomo(estado)
+                    : estado == null
+                        ? 'Sin añadir'
+                        : _libraryStatusSingularLabel(estado!),
                 style: TextStyle(
                   color: colores.$2,
                   fontSize: 14,
@@ -1483,16 +1748,18 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
     final obras = coleccion.obras
         .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
         .toList();
-    final enBiblioteca = [
-      for (final obra in obras) _obraEnBiblioteca(controller, obra),
-    ].whereType<LibraryItem>().toList();
+    final estados = [for (final obra in obras) _estadoObra(controller, obra)];
+    final enBiblioteca = estados.whereType<LibraryItemStatus>().toList();
     final completadas = enBiblioteca
-        .where((item) => item.status == LibraryItemStatus.completed)
+        .where((estado) => estado == LibraryItemStatus.completed)
         .length;
     final tipos = obras.map((obra) => obra.type).toSet();
-    final unidad = tipos.length == 1
-        ? _libraryTypePluralLabel(tipos.first).toLowerCase()
-        : 'obras';
+    final tomos = obras.isNotEmpty && obras.every(_esTomo);
+    final unidad = tomos
+        ? 'tomos'
+        : tipos.length == 1
+            ? _libraryTypePluralLabel(tipos.first).toLowerCase()
+            : 'obras';
     final portadas = (obras.isEmpty ? coleccion.obras : obras).take(4).toList();
     return MouseRegion(
       onEnter: (_) => setState(() => _encima = true),
@@ -1563,8 +1830,10 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${obras.length} $unidad · ${enBiblioteca.length} en tu '
-                'Biblioteca',
+                tomos
+                    ? '${obras.length} $unidad · $completadas leídos'
+                    : '${obras.length} $unidad · ${enBiblioteca.length} en tu '
+                        'Biblioteca',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: visuals.textMuted, fontSize: 12.5),

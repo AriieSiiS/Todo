@@ -58,4 +58,30 @@ void main() {
     controller.setCollectionWorkHidden('persona/persona-3', false);
     expect(controller.visibilitySettings.hiddenCollectionWorks, isEmpty);
   });
+
+  test('los tomos leídos de un manga se guardan en su ficha', () {
+    final item = LibraryItem.fromJson({
+      'id': 'manga',
+      'type': 'book',
+      'title': 'Dig It',
+      'readVolumes': [1, 2],
+      'currentVolume': 3,
+    });
+    expect(item.readVolumes, [1, 2]);
+    expect(item.currentVolume, 3);
+    final otra = LibraryItem.fromJson(item.toJson());
+    expect(otra.readVolumes, [1, 2]);
+    expect(otra.currentVolume, 3);
+    final sinLeer = item.copyWith(readVolumes: [], clearCurrentVolume: true);
+    expect(sinLeer.toJson().containsKey('readVolumes'), isFalse);
+    expect(sinLeer.currentVolume, isNull);
+  });
+
+  test('los tomos de un manga pertenecen a su serie', () {
+    final gachiakuta = colecciones.singleWhere((c) => c.id == 'gachiakuta');
+    final tomos = gachiakuta.grupos.first.obras;
+    expect(tomos, hasLength(16));
+    expect(tomos.every((t) => t.collectionName == 'Gachiakuta'), isTrue);
+    expect(tomos.map((t) => t.collectionNumber), [for (var i = 1; i <= 16; i++) i]);
+  });
 }

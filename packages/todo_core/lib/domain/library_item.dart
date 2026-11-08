@@ -37,6 +37,8 @@ class LibraryItem {
     this.publicationStatus,
     this.linkedGoalId,
     this.reading,
+    this.readVolumes = const [],
+    this.currentVolume,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -81,6 +83,12 @@ class LibraryItem {
   final LibraryPublicationStatus? publicationStatus;
   final String? linkedGoalId;
   final LibraryReading? reading;
+
+  /// Tomos leídos de un manga, por su número; el resto siguen sin leer.
+  final List<int> readVolumes;
+
+  /// Tomo de un manga que se está leyendo ahora.
+  final int? currentVolume;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -145,6 +153,9 @@ class LibraryItem {
     String? linkedGoalId,
     bool clearLinkedGoalId = false,
     LibraryReading? reading,
+    List<int>? readVolumes,
+    int? currentVolume,
+    bool clearCurrentVolume = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -195,6 +206,9 @@ class LibraryItem {
       linkedGoalId:
           clearLinkedGoalId ? null : linkedGoalId ?? this.linkedGoalId,
       reading: reading ?? this.reading,
+      readVolumes: readVolumes ?? this.readVolumes,
+      currentVolume:
+          clearCurrentVolume ? null : currentVolume ?? this.currentVolume,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -236,6 +250,8 @@ class LibraryItem {
       'publicationStatus': publicationStatus?.name,
       'linkedGoalId': linkedGoalId,
       'reading': reading?.toJson(),
+      if (readVolumes.isNotEmpty) 'readVolumes': readVolumes,
+      if (currentVolume != null) 'currentVolume': currentVolume,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -302,6 +318,11 @@ class LibraryItem {
           ? LibraryReading.fromJson(
               Map<String, dynamic>.from(json['reading'] as Map))
           : null,
+      readVolumes: (json['readVolumes'] as List? ?? const [])
+          .whereType<num>()
+          .map((tomo) => tomo.toInt())
+          .toList(),
+      currentVolume: (json['currentVolume'] as num?)?.toInt(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           completed ??
           DateTime.now(),

@@ -657,9 +657,12 @@ class _LibraryRewatchBadge extends StatelessWidget {
 }
 
 class _LibraryStatusBadge extends StatelessWidget {
-  const _LibraryStatusBadge({required this.status});
+  const _LibraryStatusBadge({required this.status, this.label});
 
   final LibraryItemStatus status;
+
+  /// Texto propio en lugar del nombre del estado, como «Leído» en un tomo.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -695,7 +698,7 @@ class _LibraryStatusBadge extends StatelessWidget {
           Icon(style.icon, size: 12, color: style.foreground),
           const SizedBox(width: 3),
           Text(
-            style.label,
+            label ?? style.label,
             style: TextStyle(
               color: style.foreground,
               fontSize: 10.5,

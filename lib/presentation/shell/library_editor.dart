@@ -1693,6 +1693,22 @@ String _bookProgressLabel(LibraryItem item) {
   return 'Página $page de $total · ${bookReadingPercent(item.reading, total)} %';
 }
 
+/// Tomos como «1–3, 5»: los consecutivos se agrupan en un intervalo.
+String _textoTomos(List<int> tomos) {
+  final orden = [...tomos]..sort();
+  final partes = <String>[];
+  var i = 0;
+  while (i < orden.length) {
+    var j = i;
+    while (j + 1 < orden.length && orden[j + 1] == orden[j] + 1) {
+      j++;
+    }
+    partes.add(j == i ? '${orden[i]}' : '${orden[i]}–${orden[j]}');
+    i = j + 1;
+  }
+  return partes.join(', ');
+}
+
 List<(String, String)> _detailFields(LibraryItem item) {
   final common = <(String, String)>[
     ('Estado', _libraryStatusSingularLabel(item.status)),
@@ -1736,6 +1752,10 @@ List<(String, String)> _detailFields(LibraryItem item) {
                 ? 'En publicación'
                 : 'Finalizado'
           ),
+        if (item.readVolumes.isNotEmpty)
+          ('Tomos leídos', _textoTomos(item.readVolumes)),
+        if (item.currentVolume != null)
+          ('Leyendo', 'Tomo ${item.currentVolume}'),
         if (item.pages?.isNotEmpty == true)
           ('Páginas / volúmenes', item.pages!),
         if (item.rating != null) ('Valoración', item.rating!.toString()),
