@@ -21,13 +21,18 @@ Coleccion? _coleccionPorNombre(String nombre) {
   return null;
 }
 
+/// Clave de una obra para quitarla, ordenarla o editarla: la de su colección
+/// de origen, para que sea la misma aunque se vea dentro de otra colección.
+String _claveObra(Coleccion coleccion, LibraryItem obra) =>
+    obra.catalogKeys.firstOrNull ?? '${coleccion.id}/${obra.id}';
+
 /// Una colección deja de existir cuando le quedan menos de dos obras sin
 /// quitar: ya no es una saga.
 bool _coleccionVigente(TodoWorkspace controller, Coleccion coleccion) {
   final quitadas = controller.visibilitySettings.hiddenCollectionWorks;
   if (quitadas.contains(_claveBorrada(coleccion))) return false;
   return coleccion.obras
-          .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
+          .where((obra) => !quitadas.contains(_claveObra(coleccion, obra)))
           .length >=
       2;
 }
@@ -261,7 +266,7 @@ LibraryItem _obraEditada(
   LibraryItem obra,
 ) {
   final cambios = controller
-      .visibilitySettings.collectionWorkEdits['${coleccion.id}/${obra.id}'];
+      .visibilitySettings.collectionWorkEdits[_claveObra(coleccion, obra)];
   if (cambios == null) return obra;
   return LibraryItem.fromJson({
     ...obra.toJson(),
@@ -274,7 +279,8 @@ LibraryItem _obraEditada(
 /// Colección con los cambios propios aplicados a sus obras.
 Coleccion _coleccionEditada(TodoWorkspace controller, Coleccion coleccion) {
   final ediciones = controller.visibilitySettings.collectionWorkEdits;
-  if (!ediciones.keys.any((clave) => clave.startsWith('${coleccion.id}/'))) {
+  if (!coleccion.obras
+      .any((obra) => ediciones.containsKey(_claveObra(coleccion, obra)))) {
     return coleccion;
   }
   return Coleccion(
@@ -318,7 +324,10 @@ Future<void> _editarObraColeccion(
           ..remove('yearGroup')
           ..remove('createdAt')
           ..remove('updatedAt');
-        controller.setCollectionWorkEdit('$coleccionId/${obra.id}', campos);
+        controller.setCollectionWorkEdit(
+          obra.catalogKeys.firstOrNull ?? '$coleccionId/${obra.id}',
+          campos,
+        );
       },
     ),
   );
@@ -589,7 +598,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
   TodoWorkspace get controller => widget.controller;
 
-  String _clave(LibraryItem obra) => '${widget.coleccion.id}/${obra.id}';
+  String _clave(LibraryItem obra) => _claveObra(widget.coleccion, obra);
 
   bool _quitada(LibraryItem obra) =>
       controller.visibilitySettings.hiddenCollectionWorks
@@ -680,7 +689,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
   bool _editada(LibraryItem obra) =>
       controller.visibilitySettings.collectionWorkEdits
-          .containsKey('${widget.coleccion.id}/${obra.id}');
+          .containsKey(_claveObra(widget.coleccion, obra));
 
   /// Botón «+» de la portada: añade la obra o, en un tomo, lo marca leído.
   Future<void> _anadirDesdeTarjeta(LibraryItem obra) => _estado(
@@ -793,7 +802,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
       await _editar(obra);
     } else if (elegido == 'restaurar') {
       controller.setCollectionWorkEdit(
-          '${widget.coleccion.id}/${obra.id}', null);
+          _claveObra(widget.coleccion, obra), null);
     }
   }
 
@@ -2281,7 +2290,7 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
     final coleccion = widget.coleccion;
     final quitadas = controller.visibilitySettings.hiddenCollectionWorks;
     final obras = coleccion.obras
-        .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
+        .where((obra) => !quitadas.contains(_claveObra(coleccion, obra)))
         .toList();
     final estados = [for (final obra in obras) _estadoObra(controller, obra)];
     final enBiblioteca = estados.whereType<LibraryItemStatus>().toList();

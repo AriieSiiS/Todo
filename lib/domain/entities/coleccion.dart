@@ -43,10 +43,41 @@ class Coleccion {
   /// Lee el contenido de `assets/colecciones/colecciones.json`.
   static List<Coleccion> desdeJson(String texto) {
     final datos = jsonDecode(texto) as Map<String, dynamic>;
-    return (datos['colecciones'] as List)
-        .cast<Map<String, dynamic>>()
-        .map(_coleccion)
-        .toList();
+    final crudas = (datos['colecciones'] as List).cast<Map<String, dynamic>>();
+    final propias = {
+      for (final campos in crudas) campos['id'] as String: _coleccion(campos),
+    };
+    // Una colección puede incluir otras (Warhammer 40.000 incluye La Herejía
+    // de Horus y Eisenhorn). Sus apartados se añaden con las mismas obras,
+    // sin copiarlas, así que cada obra sigue siendo una sola.
+    return [
+      for (final campos in crudas)
+        _conIncluidas(
+          propias[campos['id']]!,
+          [
+            for (final id in (campos['incluye'] as List? ?? const []))
+              if (propias[id] != null) propias[id]!,
+          ],
+        ),
+    ];
+  }
+
+  static Coleccion _conIncluidas(Coleccion coleccion, List<Coleccion> otras) {
+    if (otras.isEmpty) return coleccion;
+    return Coleccion(
+      id: coleccion.id,
+      nombre: coleccion.nombre,
+      alias: coleccion.alias,
+      fondo: coleccion.fondo,
+      fechasPrevistas: {
+        for (final otra in otras) ...otra.fechasPrevistas,
+        ...coleccion.fechasPrevistas,
+      },
+      grupos: [
+        for (final otra in otras) ...otra.grupos,
+        ...coleccion.grupos,
+      ],
+    );
   }
 
   static Coleccion _coleccion(Map<String, dynamic> datos) {

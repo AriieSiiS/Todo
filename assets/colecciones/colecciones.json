@@ -7942,9 +7942,162 @@
        "collectionNumber": 15
       }
      ]
+    },
+    {
+     "nombre": "Juegos",
+     "obras": [
+      {
+       "id": "juego-space-marine-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2011,
+       "genre": "Acción en tercera persona",
+       "note": "El capitán Titus y sus Ultramarines defienden un mundo forja de una invasión orka mientras el Caos acecha.",
+       "externalUrl": "https://store.steampowered.com/app/55150/"
+      },
+      {
+       "id": "juego-space-marine-2",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine 2",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-2.jpg",
+       "platform": "PC",
+       "developer": "Saber Interactive",
+       "releaseYear": 2024,
+       "genre": "Acción en tercera persona",
+       "note": "Un siglo después, Titus vuelve como teniente Primaris para combatir a los tiránidos y a los Mil Hijos.",
+       "externalUrl": "https://store.steampowered.com/app/2183900/"
+      },
+      {
+       "id": "juego-dawn-of-war-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2004,
+       "genre": "Estrategia en tiempo real",
+       "note": "Los Cuervos Sangrientos se enfrentan a orkos, eldar y fuerzas del Caos en el planeta Tartarus. Incluye sus expansiones.",
+       "externalUrl": "https://store.steampowered.com/app/4570/"
+      },
+      {
+       "id": "juego-dawn-of-war-ii-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War II - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-ii-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2009,
+       "genre": "Estrategia en tiempo real",
+       "note": "Estrategia centrada en escuadras y héroes: los Cuervos Sangrientos defienden el subsector Aurelia de los tiránidos.",
+       "externalUrl": "https://store.steampowered.com/app/15620/"
+      },
+      {
+       "id": "juego-dawn-of-war-iii",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War III",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-iii.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2017,
+       "genre": "Estrategia en tiempo real",
+       "note": "Marines espaciales, orkos y eldar luchan por un arma antigua en el planeta Acheron.",
+       "externalUrl": "https://store.steampowered.com/app/285190/"
+      },
+      {
+       "id": "juego-inquisitor-martyr",
+       "type": "game",
+       "title": "Warhammer 40,000: Inquisitor - Martyr",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-inquisitor-martyr.jpg",
+       "platform": "PC",
+       "developer": "NeocoreGames",
+       "releaseYear": 2018,
+       "genre": "Rol de acción",
+       "note": "Un inquisidor investiga la fortaleza-monasterio Martyr, perdida durante siglos en el Sector Caligari.",
+       "externalUrl": "https://store.steampowered.com/app/527430/"
+      },
+      {
+       "id": "juego-mechanicus",
+       "type": "game",
+       "title": "Warhammer 40,000: Mechanicus",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-mechanicus.jpg",
+       "platform": "PC",
+       "developer": "Bulwark Studios",
+       "releaseYear": 2018,
+       "genre": "Táctica por turnos",
+       "note": "El Adeptus Mechanicus explora tumbas necronas en el planeta Silva Tenebris.",
+       "externalUrl": "https://store.steampowered.com/app/673880/"
+      },
+      {
+       "id": "juego-gladius-relics-of-war",
+       "type": "game",
+       "title": "Warhammer 40,000: Gladius - Relics of War",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-gladius-relics-of-war.jpg",
+       "platform": "PC",
+       "developer": "Proxy Studios",
+       "releaseYear": 2018,
+       "genre": "Estrategia por turnos 4X",
+       "note": "Estrategia por turnos en el planeta Gladius Prime, con varias facciones luchando por su control.",
+       "externalUrl": "https://store.steampowered.com/app/489630/"
+      },
+      {
+       "id": "juego-darktide",
+       "type": "game",
+       "title": "Warhammer 40,000: Darktide",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-darktide.jpg",
+       "platform": "PC",
+       "developer": "Fatshark",
+       "releaseYear": 2022,
+       "genre": "Acción cooperativa",
+       "note": "Cuatro reclusos al servicio de la Inquisición combaten la plaga de Nurgle en la ciudad colmena Tertium.",
+       "externalUrl": "https://store.steampowered.com/app/1361210/"
+      },
+      {
+       "id": "juego-chaos-gate-daemonhunters",
+       "type": "game",
+       "title": "Warhammer 40,000: Chaos Gate - Daemonhunters",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-chaos-gate-daemonhunters.jpg",
+       "platform": "PC",
+       "developer": "Complex Games",
+       "releaseYear": 2022,
+       "genre": "Táctica por turnos",
+       "note": "Los Caballeros Grises luchan contra la Plaga de la Floración, una enfermedad del Caos que se extiende por el sector.",
+       "externalUrl": "https://store.steampowered.com/app/1611910/"
+      },
+      {
+       "id": "juego-rogue-trader",
+       "type": "game",
+       "title": "Warhammer 40,000: Rogue Trader",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-rogue-trader.jpg",
+       "platform": "PC",
+       "developer": "Owlcat Games",
+       "releaseYear": 2023,
+       "genre": "Rol por turnos",
+       "note": "Heredas una dinastía de comerciantes independientes y exploras la Expansión Koronus con tu nave.",
+       "externalUrl": "https://store.steampowered.com/app/2186680/"
+      },
+      {
+       "id": "juego-boltgun",
+       "type": "game",
+       "title": "Warhammer 40,000: Boltgun",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-boltgun.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2023,
+       "genre": "Disparos en primera persona",
+       "note": "Disparos con estética de los noventa: un Ultramarine recorre un mundo forja arrasando a las fuerzas del Caos.",
+       "externalUrl": "https://store.steampowered.com/app/2005010/"
+      }
+     ]
     }
    ],
-   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg"
+   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg",
+   "incluye": [
+    "la-herejia-de-horus",
+    "eisenhorn"
+   ]
   },
   {
    "id": "witch-hat-atelier",

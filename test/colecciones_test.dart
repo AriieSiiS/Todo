@@ -150,4 +150,18 @@ void main() {
     expect(souls.collectionName, 'Dark Souls');
     expect(souls.universeName, 'Souls');
   });
+
+  test('Warhammer 40.000 incluye La Herejía de Horus y Eisenhorn sin copiarlas', () {
+    final warhammer = colecciones.singleWhere((c) => c.id == 'warhammer-40000');
+    final herejia = colecciones.singleWhere((c) => c.id == 'la-herejia-de-horus');
+    final eisenhorn = colecciones.singleWhere((c) => c.id == 'eisenhorn');
+    for (final obra in [...herejia.obras, ...eisenhorn.obras]) {
+      expect(warhammer.obras.any((o) => identical(o, obra)), isTrue,
+          reason: obra.title);
+    }
+    expect(warhammer.grupos.map((g) => g.nombre),
+        containsAll(['La Herejía de Horus', 'Inquisidor Eisenhorn', 'Juegos']));
+    final horus = warhammer.obras.firstWhere((o) => o.title.startsWith('Horus'));
+    expect(horus.catalogKeys.single, startsWith('la-herejia-de-horus/'));
+  });
 }
