@@ -148,10 +148,9 @@ Future<Uint8List> _bytesPortada(String ruta) async {
 }
 
 /// Imagen de una portada del catálogo o de un archivo elegido a mano.
-ImageProvider _imagenPortada(String ruta) =>
-    ruta.startsWith('assets/')
-        ? AssetImage(ruta) as ImageProvider
-        : FileImage(File(ruta));
+ImageProvider _imagenPortada(String ruta) => ruta.startsWith('assets/')
+    ? AssetImage(ruta) as ImageProvider
+    : FileImage(File(ruta));
 
 /// Obra del catálogo con los cambios que el usuario le haya hecho.
 LibraryItem _obraEditada(
@@ -1511,13 +1510,13 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final visuals = context.visuals;
     final obra = widget.obras[_indice];
     final enBiblioteca = _obraEnBiblioteca(widget.controller, obra);
-    const sinCampo = {'Estado', 'Notas', 'Progreso'};
+    // Los mismos campos y en el mismo orden que la ficha de Biblioteca; el
+    // progreso de lectura no aplica a una obra del catálogo.
     final fecha = _fechaPrevista(obra);
     final campos = [
-      ..._detailFields(obra).where((campo) => !sinCampo.contains(campo.$1)),
+      ..._detailFields(obra).where((campo) => campo.$1 != 'Progreso'),
     ];
     final dia = fecha == null ? null : _diaDeSalida(fecha);
     final tituloAviso = 'Sale «${obra.title}»';
@@ -1592,34 +1591,19 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (obra.note?.isNotEmpty == true) ...[
-                                Text(
-                                  obra.note!,
-                                  key:
-                                      const ValueKey('coleccion-obra-sinopsis'),
-                                  style: TextStyle(
-                                    color: visuals.textStrong,
-                                    fontSize: 15,
-                                    height: 1.45,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                              ],
-                              _LibraryDetailLine(
-                                label: 'Estado',
-                                value: '',
-                                valueWidget: _ColeccionEstadoSelector(
-                                  estado: _estadoObra(widget.controller, obra),
-                                  tomo: _esTomo(obra),
-                                  onSelected: (estado) =>
-                                      widget.onEstado(obra, estado),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
                               for (final campo in campos) ...[
                                 _LibraryDetailLine(
                                   label: campo.$1,
                                   value: campo.$2,
+                                  valueWidget: campo.$1 == 'Estado'
+                                      ? _ColeccionEstadoSelector(
+                                          estado: _estadoObra(
+                                              widget.controller, obra),
+                                          tomo: _esTomo(obra),
+                                          onSelected: (estado) =>
+                                              widget.onEstado(obra, estado),
+                                        )
+                                      : null,
                                 ),
                                 const SizedBox(height: 6),
                               ],
