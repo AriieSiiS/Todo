@@ -4850,7 +4850,7 @@
       {
        "id": "a-day-of-fallen-night",
        "type": "book",
-       "title": "A Day of Fallen Night",
+       "title": "El día que se abrió el cielo",
        "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-a-day-of-fallen-night.jpg",
        "author": "Samantha Shannon",
        "genre": "Fantasía épica",
@@ -4877,11 +4877,11 @@
       {
        "id": "among-the-burning-flowers",
        "type": "book",
-       "title": "Among the Burning Flowers",
+       "title": "Las flores en llamas",
        "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-among-the-burning-flowers.jpg",
        "author": "Samantha Shannon",
        "genre": "Fantasía épica",
-       "note": "Nueva novela de la saga, ambientada entre las otras dos y centrada en la princesa Sabran. Todavía sin edición confirmada en español.",
+       "note": "Nueva novela de la saga, ambientada entre las otras dos y centrada en la princesa Sabran. Roca la publica en español como «Las flores en llamas».",
        "creatorOrDirector": "Novela",
        "releaseYear": 2025,
        "pages": "288",
