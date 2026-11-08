@@ -1557,9 +1557,17 @@ String _libraryItemStatusMeta(LibraryItem item) {
   final collectionName = item.collectionName?.trim();
   final collectionNumber = item.collectionNumber;
   final universe = item.universeName?.trim();
-  if (collectionName == null || collectionName.isEmpty) {
+  // Una chapa que se llama igual que la propia ficha solo repetiría el título.
+  final titulo = _libraryCollectionKey(item.title);
+  bool repiteTitulo(String? nombre) =>
+      nombre != null && _libraryCollectionKey(nombre) == titulo;
+  if (collectionName == null ||
+      collectionName.isEmpty ||
+      repiteTitulo(collectionName)) {
     // Sin saga propia, el universo hace de chapa para poder abrir su colección.
-    if (universe == null || universe.isEmpty) return null;
+    if (universe == null || universe.isEmpty || repiteTitulo(universe)) {
+      return null;
+    }
     return (saga: universe, installment: null, universe: null);
   }
   final collectionKey = _libraryCollectionKey(collectionName);
