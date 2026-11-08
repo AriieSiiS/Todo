@@ -357,6 +357,7 @@ class TodoWorkspace extends ChangeNotifier {
       hiddenSections: hidden.toList(),
       hiddenTabs: _visibilitySettings.hiddenTabs,
       hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
+      collectionWorkEdits: _visibilitySettings.collectionWorkEdits,
     );
     if (!_visibilitySettings.sectionVisible(_section)) {
       _section = visibleNavOrder.first;
@@ -384,6 +385,7 @@ class TodoWorkspace extends ChangeNotifier {
         section.name: hidden.toList()
       },
       hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
+      collectionWorkEdits: _visibilitySettings.collectionWorkEdits,
     );
     _commit();
   }
@@ -400,6 +402,7 @@ class TodoWorkspace extends ChangeNotifier {
       hiddenSections: _visibilitySettings.hiddenSections,
       hiddenTabs: _visibilitySettings.hiddenTabs,
       hiddenCollectionWorks: obras.toList(),
+      collectionWorkEdits: _visibilitySettings.collectionWorkEdits,
     );
     _commit();
   }
@@ -417,6 +420,25 @@ class TodoWorkspace extends ChangeNotifier {
       hiddenSections: _visibilitySettings.hiddenSections,
       hiddenTabs: _visibilitySettings.hiddenTabs,
       hiddenCollectionWorks: obras,
+      collectionWorkEdits: _visibilitySettings.collectionWorkEdits,
+    );
+    _commit();
+  }
+
+  /// Guarda los cambios propios de una obra del catálogo de Colecciones
+  /// (`clave` es `coleccion/obra`); con `null` vuelve a los datos originales.
+  void setCollectionWorkEdit(String clave, Map<String, dynamic>? campos) {
+    final ediciones = {..._visibilitySettings.collectionWorkEdits};
+    if (campos == null) {
+      ediciones.remove(clave);
+    } else {
+      ediciones[clave] = campos;
+    }
+    _visibilitySettings = AppVisibilitySettings(
+      hiddenSections: _visibilitySettings.hiddenSections,
+      hiddenTabs: _visibilitySettings.hiddenTabs,
+      hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
+      collectionWorkEdits: ediciones,
     );
     _commit();
   }

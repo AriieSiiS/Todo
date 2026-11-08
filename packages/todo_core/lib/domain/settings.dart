@@ -5,6 +5,7 @@ class AppVisibilitySettings {
     this.hiddenSections = const [],
     this.hiddenTabs = const {},
     this.hiddenCollectionWorks = const [],
+    this.collectionWorkEdits = const {},
   });
 
   final List<String> hiddenSections;
@@ -12,6 +13,10 @@ class AppVisibilitySettings {
 
   /// Obras quitadas de una colección, como `coleccion/obra`.
   final List<String> hiddenCollectionWorks;
+
+  /// Cambios propios en obras del catálogo de Colecciones, por
+  /// `coleccion/obra`, con los campos de `LibraryItem` que se sustituyen.
+  final Map<String, Map<String, dynamic>> collectionWorkEdits;
 
   static const tabs = <AppSection, Map<String, String>>{
     AppSection.wardrobe: {
@@ -61,6 +66,8 @@ class AppVisibilitySettings {
         'hiddenSections': hiddenSections,
         'hiddenTabs': hiddenTabs,
         'hiddenCollectionWorks': hiddenCollectionWorks,
+        if (collectionWorkEdits.isNotEmpty)
+          'collectionWorkEdits': collectionWorkEdits,
       };
 
   factory AppVisibilitySettings.fromJson(Map<String, dynamic> json) =>
@@ -75,6 +82,13 @@ class AppVisibilitySettings {
             (json['hiddenCollectionWorks'] as List<dynamic>? ?? const [])
                 .whereType<String>()
                 .toList(),
+        collectionWorkEdits: {
+          for (final entrada
+              in (json['collectionWorkEdits'] as Map? ?? const {}).entries)
+            if (entrada.key is String && entrada.value is Map)
+              entrada.key as String:
+                  Map<String, dynamic>.from(entrada.value as Map),
+        },
       );
 }
 

@@ -7,10 +7,15 @@ class _LibraryItemDialog extends StatefulWidget {
     this.initialType = LibraryItemType.game,
     this.initialStatus = LibraryItemStatus.pending,
     this.focusRating = false,
+    this.onCatalogSave,
   });
 
   final TodoWorkspace controller;
   final LibraryItem? item;
+
+  /// Edita una obra del catálogo de Colecciones: en vez de guardar en la
+  /// Biblioteca, entrega la obra cambiada.
+  final ValueChanged<LibraryItem>? onCatalogSave;
   final LibraryItemType initialType;
   final LibraryItemStatus initialStatus;
 
@@ -428,7 +433,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 8),
             _dialogField(_pages, 'Páginas / Volúmenes',
                 'Ej. 832 páginas / 3 tomos (opcional)'),
-            if (_isEditing) ...[
+            if (_isEditing && widget.onCatalogSave == null) ...[
               const SizedBox(height: 8),
               _dialogField(
                 _currentPage,
@@ -607,6 +612,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   }
 
   Widget _statusField() {
+    if (widget.onCatalogSave != null) return const SizedBox.shrink();
     return _LibraryEditLine(
       label: 'Estado',
       child: DropdownButtonFormField<LibraryItemStatus>(
@@ -830,8 +836,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
           return;
         }
       }
-      widget.controller.updateLibraryItem(
-        item.copyWith(
+      final actualizado = item.copyWith(
           title: _title.text.trim(),
           status: _status,
           completedDate:
@@ -925,8 +930,13 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                   : null,
           clearPublicationStatus:
               _type != LibraryItemType.book || _creator.text != 'Manga',
-        ),
       );
+      if (widget.onCatalogSave != null) {
+        widget.onCatalogSave!(actualizado);
+        Navigator.of(context).pop();
+        return;
+      }
+      widget.controller.updateLibraryItem(actualizado);
       if (pageChanged && pageText.isNotEmpty) {
         widget.controller.updateBookReadingPage(item.id, int.parse(pageText));
       }

@@ -25,7 +25,8 @@ Coleccion? _coleccionPorNombre(String nombre) {
 /// conoce y nula si la obra ya está publicada.
 String? _fechaPrevista(LibraryItem obra) {
   for (final coleccion in _colecciones ?? const <Coleccion>[]) {
-    if (coleccion.obras.any((otra) => identical(otra, obra))) {
+    if (coleccion.fechasPrevistas.containsKey(obra.id) &&
+        coleccion.obras.any((otra) => otra.id == obra.id)) {
       return coleccion.fechasPrevistas[obra.id];
     }
   }
@@ -137,11 +138,97 @@ Future<void> _ponerEstadoTomo(
   ));
 }
 
+/// Bytes de una portada del catálogo, o de un archivo si la portada se cambió
+/// a mano.
+Future<Uint8List> _bytesPortada(String ruta) async {
+  if (ruta.startsWith('assets/')) {
+    return (await rootBundle.load(ruta)).buffer.asUint8List();
+  }
+  return File(ruta).readAsBytes();
+}
+
+/// Imagen de una portada del catálogo o de un archivo elegido a mano.
+ImageProvider _imagenPortada(String ruta) =>
+    ruta.startsWith('assets/')
+        ? AssetImage(ruta) as ImageProvider
+        : FileImage(File(ruta));
+
+/// Obra del catálogo con los cambios que el usuario le haya hecho.
+LibraryItem _obraEditada(
+  TodoWorkspace controller,
+  Coleccion coleccion,
+  LibraryItem obra,
+) {
+  final cambios = controller
+      .visibilitySettings.collectionWorkEdits['${coleccion.id}/${obra.id}'];
+  if (cambios == null) return obra;
+  return LibraryItem.fromJson({
+    ...obra.toJson(),
+    ...cambios,
+    'id': obra.id,
+    'status': obra.status.name,
+  });
+}
+
+/// Colección con los cambios propios aplicados a sus obras.
+Coleccion _coleccionEditada(TodoWorkspace controller, Coleccion coleccion) {
+  final ediciones = controller.visibilitySettings.collectionWorkEdits;
+  if (!ediciones.keys.any((clave) => clave.startsWith('${coleccion.id}/'))) {
+    return coleccion;
+  }
+  return Coleccion(
+    id: coleccion.id,
+    nombre: coleccion.nombre,
+    alias: coleccion.alias,
+    fondo: coleccion.fondo,
+    fechasPrevistas: coleccion.fechasPrevistas,
+    grupos: [
+      for (final grupo in coleccion.grupos)
+        GrupoColeccion(
+          nombre: grupo.nombre,
+          obras: [
+            for (final obra in grupo.obras)
+              _obraEditada(controller, coleccion, obra),
+          ],
+        ),
+    ],
+  );
+}
+
+/// Abre el editor de Biblioteca sobre una obra del catálogo y guarda el
+/// resultado como cambios propios de esa obra.
+Future<void> _editarObraColeccion(
+  BuildContext context,
+  TodoWorkspace controller,
+  String coleccionId,
+  LibraryItem obra,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => _LibraryItemDialog(
+      controller: controller,
+      item: obra,
+      initialType: obra.type,
+      onCatalogSave: (editada) {
+        final campos = editada.toJson()
+          ..remove('id')
+          ..remove('status')
+          ..remove('completedDate')
+          ..remove('yearGroup')
+          ..remove('createdAt')
+          ..remove('updatedAt');
+        controller.setCollectionWorkEdit('$coleccionId/${obra.id}', campos);
+      },
+    ),
+  );
+}
+
 /// Copia la portada de un tomo a las portadas de la Biblioteca una sola vez y
 /// devuelve su ruta.
 Future<String?> _portadaDeTomo(LibraryItem tomo) async {
   final origen = tomo.coverUrl;
   if (origen == null) return null;
+  if (!origen.startsWith('assets/')) return origen;
   try {
     final directorio = await _libraryCoversDirectory();
     final destino = File('${directorio.path}${Platform.pathSeparator}'
@@ -165,8 +252,8 @@ Future<void> _anadirSerieABiblioteca(
   final tomos = _tomosDe(tomo)
     ..sort((a, b) => a.collectionNumber!.compareTo(b.collectionNumber!));
   final primero = tomos.isEmpty ? tomo : tomos.first;
-  final portada = await rootBundle.load(primero.coverUrl!);
-  final coverUrl = await _copyLibraryCoverBytes(portada.buffer.asUint8List());
+  final coverUrl =
+      await _copyLibraryCoverBytes(await _bytesPortada(primero.coverUrl!));
   if (_obraEnBiblioteca(controller, tomo) != null) return;
   // La sinopsis del primer tomo sin la línea que describe la edición.
   final nota = primero.note
@@ -196,8 +283,8 @@ Future<void> _anadirObraABiblioteca(
   LibraryItemStatus status = LibraryItemStatus.pending,
 }) async {
   if (_esTomo(obra)) return _anadirSerieABiblioteca(controller, obra);
-  final portada = await rootBundle.load(obra.coverUrl!);
-  final coverUrl = await _copyLibraryCoverBytes(portada.buffer.asUint8List());
+  final coverUrl =
+      await _copyLibraryCoverBytes(await _bytesPortada(obra.coverUrl!));
   if (_obraEnBiblioteca(controller, obra) != null) return;
   controller.createLibraryItem(
     type: obra.type,
@@ -317,7 +404,10 @@ class _FondoColeccion extends StatelessWidget {
     } else if (portada?.coverUrl != null) {
       imagen = ImageFiltered(
         imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: Image.asset(portada!.coverUrl!, fit: BoxFit.cover),
+        child: Image(
+          image: _imagenPortada(portada!.coverUrl!),
+          fit: BoxFit.cover,
+        ),
       );
     }
     if (imagen == null) return const SizedBox.shrink();
@@ -471,6 +561,17 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   Future<void> _anadir(LibraryItem obra) =>
       _estado(obra, LibraryItemStatus.pending);
 
+  Future<void> _editar(LibraryItem obra) => _editarObraColeccion(
+        context,
+        controller,
+        widget.coleccion.id,
+        obra,
+      );
+
+  bool _editada(LibraryItem obra) =>
+      controller.visibilitySettings.collectionWorkEdits
+          .containsKey('${widget.coleccion.id}/${obra.id}');
+
   /// Botón «+» de la portada: añade la obra o, en un tomo, lo marca leído.
   Future<void> _anadirDesdeTarjeta(LibraryItem obra) => _estado(
         obra,
@@ -559,6 +660,10 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
               Icons.check_circle_outline_rounded, 'Añadir como completado'),
         ],
         const PopupMenuDivider(),
+        opcion('editar', Icons.edit_outlined, 'Editar portada y datos'),
+        if (_editada(obra))
+          opcion('restaurar', Icons.restart_alt_rounded,
+              'Volver a los datos originales'),
         opcion(
             'quitar',
             Icons.close_rounded,
@@ -574,6 +679,11 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
       await _showLibraryItemDetails(context, controller, [item], item);
     } else if (elegido == 'quitar') {
       _alternar(obra);
+    } else if (elegido == 'editar') {
+      await _editar(obra);
+    } else if (elegido == 'restaurar') {
+      controller.setCollectionWorkEdit(
+          '${widget.coleccion.id}/${obra.id}', null);
     }
   }
 
@@ -689,7 +799,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
-    final coleccion = widget.coleccion;
+    final coleccion = _coleccionEditada(controller, widget.coleccion);
     final quitadas = coleccion.obras.where(_quitada).toList();
     final verQuitadas = _verQuitadas && quitadas.isNotEmpty;
     // Por año, la saga entera se ve en un solo bloque cronológico.
@@ -976,6 +1086,7 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                                       _anadir,
                                       _alternar,
                                       _estado,
+                                      _editar,
                                     ),
                             onAdd: () => _anadirDesdeTarjeta(obra),
                             onToggle: () => _alternar(obra),
@@ -1324,6 +1435,7 @@ Future<void> _mostrarObraColeccion(
   Future<void> Function(LibraryItem obra) onAdd,
   void Function(LibraryItem obra) onToggle,
   Future<void> Function(LibraryItem obra, LibraryItemStatus estado) onEstado,
+  void Function(LibraryItem obra) onEditar,
 ) {
   return showDialog<void>(
     context: context,
@@ -1337,6 +1449,7 @@ Future<void> _mostrarObraColeccion(
         onAdd: onAdd,
         onToggle: onToggle,
         onEstado: onEstado,
+        onEditar: onEditar,
         origen: context,
       ),
     ),
@@ -1353,8 +1466,12 @@ class _ColeccionObraDialog extends StatefulWidget {
     required this.onAdd,
     required this.onToggle,
     required this.onEstado,
+    required this.onEditar,
     required this.origen,
   });
+
+  /// Abre el editor de la obra.
+  final void Function(LibraryItem obra) onEditar;
 
   final TodoWorkspace controller;
   final List<LibraryItem> obras;
@@ -1438,6 +1555,15 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+                      ),
+                      IconButton(
+                        key: const ValueKey('coleccion-obra-editar'),
+                        tooltip: 'Editar portada y datos',
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.onEditar(obra);
+                        },
                       ),
                     ],
                   ),
@@ -1880,7 +2006,7 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
         if (buscado.isEmpty ||
             coleccion.nombres.any((n) => n.paraBuscar.contains(buscado)) ||
             coleccion.obras.any((o) => o.title.paraBuscar.contains(buscado)))
-          _coleccionDeTipo(coleccion, tipo),
+          _coleccionDeTipo(_coleccionEditada(controller, coleccion), tipo),
     ].where((coleccion) => coleccion.obras.isNotEmpty).toList();
     // Con «Todas», cada saga va a la sección de su tipo; las que mezclan
     // tipos van juntas al final.
