@@ -25,10 +25,54 @@ Coleccion? _coleccionPorNombre(String nombre) {
 /// quitar: ya no es una saga.
 bool _coleccionVigente(TodoWorkspace controller, Coleccion coleccion) {
   final quitadas = controller.visibilitySettings.hiddenCollectionWorks;
+  if (quitadas.contains(_claveBorrada(coleccion))) return false;
   return coleccion.obras
           .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
           .length >=
       2;
+}
+
+/// Marca de una colección borrada a mano, guardada junto a las obras quitadas.
+String _claveBorrada(Coleccion coleccion) => '${coleccion.id}/borrada';
+
+/// Pide confirmación y borra la colección: desaparece de la pestaña y sus
+/// fichas de Biblioteca pierden esa saga o ese universo.
+Future<void> _borrarColeccion(
+  BuildContext context,
+  TodoWorkspace controller,
+  Coleccion coleccion,
+) async {
+  final nombres = {for (final n in coleccion.nombres) n.toLowerCase()};
+  final fichas = controller.libraryItems
+      .where((item) =>
+          nombres.contains((item.collectionName ?? '').toLowerCase()) ||
+          nombres.contains((item.universeName ?? '').toLowerCase()))
+      .length;
+  final confirmado = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Borrar la colección «${coleccion.nombre}»'),
+      content: Text(fichas == 0
+          ? 'Desaparecerá de la pestaña Colecciones.'
+          : 'Desaparecerá de la pestaña Colecciones y $fichas '
+              '${fichas == 1 ? 'ficha perderá' : 'fichas perderán'} '
+              'esa saga o ese universo.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const ValueKey('coleccion-borrar-aceptar'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Borrar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmado != true) return;
+  controller.setCollectionWorkHidden(_claveBorrada(coleccion), true);
+  _disolverColeccionesSinObras(controller);
 }
 
 /// Quita la saga o el universo de las fichas de Biblioteca que apuntaban a
@@ -2046,6 +2090,48 @@ class _ColeccionesVista extends StatefulWidget {
 class _ColeccionesVistaState extends State<_ColeccionesVista> {
   String _texto = '';
 
+  /// Clic derecho sobre una colección.
+  Future<void> _menuColeccion(
+    BuildContext context,
+    Coleccion coleccion,
+    Offset posicion,
+  ) async {
+    final overlay =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+    final elegido = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        posicion & const Size(1, 1),
+        Offset.zero & overlay.size,
+      ),
+      items: const [
+        PopupMenuItem<String>(
+          value: 'abrir',
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.collections_bookmark_outlined),
+            title: Text('Abrir'),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'borrar',
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.delete_outline_rounded),
+            title: Text('Borrar colección'),
+          ),
+        ),
+      ],
+    );
+    if (!context.mounted) return;
+    if (elegido == 'abrir') {
+      await _abrirColeccion(context, widget.controller, coleccion);
+    } else if (elegido == 'borrar') {
+      await _borrarColeccion(context, widget.controller, coleccion);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
@@ -2149,6 +2235,8 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
                               coleccion: lista[i],
                               onTap: () => _abrirColeccion(
                                   context, controller, lista[i]),
+                              onMenu: (posicion) =>
+                                  _menuColeccion(context, lista[i], posicion),
                             ),
                           ),
                         ),
@@ -2168,11 +2256,15 @@ class _ColeccionTarjeta extends StatefulWidget {
     required this.controller,
     required this.coleccion,
     required this.onTap,
+    required this.onMenu,
   });
 
   final TodoWorkspace controller;
   final Coleccion coleccion;
   final VoidCallback onTap;
+
+  /// Clic derecho sobre la tarjeta.
+  final ValueChanged<Offset> onMenu;
 
   @override
   State<_ColeccionTarjeta> createState() => _ColeccionTarjetaState();
@@ -2210,6 +2302,8 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
       child: GestureDetector(
         key: ValueKey('colecciones-${coleccion.id}'),
         onTap: widget.onTap,
+        onSecondaryTapDown: (details) => widget.onMenu(details.globalPosition),
+        onLongPressStart: (details) => widget.onMenu(details.globalPosition),
         child: AnimatedScale(
           scale: _encima ? 1.03 : 1,
           duration: const Duration(milliseconds: 140),
