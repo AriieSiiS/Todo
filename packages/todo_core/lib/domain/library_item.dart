@@ -39,6 +39,7 @@ class LibraryItem {
     this.reading,
     this.readVolumes = const [],
     this.currentVolume,
+    this.catalogKeys = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -89,6 +90,10 @@ class LibraryItem {
 
   /// Tomo de un manga que se está leyendo ahora.
   final int? currentVolume;
+
+  /// Obras del catálogo de Colecciones que son este elemento, como
+  /// `coleccion/obra`. Enlazan la ficha con su obra aunque cambie el título.
+  final List<String> catalogKeys;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -156,6 +161,7 @@ class LibraryItem {
     List<int>? readVolumes,
     int? currentVolume,
     bool clearCurrentVolume = false,
+    List<String>? catalogKeys,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -209,6 +215,7 @@ class LibraryItem {
       readVolumes: readVolumes ?? this.readVolumes,
       currentVolume:
           clearCurrentVolume ? null : currentVolume ?? this.currentVolume,
+      catalogKeys: catalogKeys ?? this.catalogKeys,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -252,6 +259,7 @@ class LibraryItem {
       'reading': reading?.toJson(),
       if (readVolumes.isNotEmpty) 'readVolumes': readVolumes,
       if (currentVolume != null) 'currentVolume': currentVolume,
+      if (catalogKeys.isNotEmpty) 'catalogKeys': catalogKeys,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -323,6 +331,9 @@ class LibraryItem {
           .map((tomo) => tomo.toInt())
           .toList(),
       currentVolume: (json['currentVolume'] as num?)?.toInt(),
+      catalogKeys: (json['catalogKeys'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           completed ??
           DateTime.now(),

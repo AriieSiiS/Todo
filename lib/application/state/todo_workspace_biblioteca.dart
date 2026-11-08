@@ -232,6 +232,22 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
     return true;
   }
 
+  /// Enlaza fichas de la Biblioteca con sus obras del catálogo de
+  /// Colecciones (`coleccion/obra`). No cambia la fecha de modificación, para
+  /// que el enlace no altere el orden de «Recientes».
+  void linkLibraryItemsToCatalog(Map<String, List<String>> enlaces) {
+    var cambiado = false;
+    for (var i = 0; i < _libraryItems.length; i++) {
+      final claves = enlaces[_libraryItems[i].id];
+      if (claves == null) continue;
+      final todas = {..._libraryItems[i].catalogKeys, ...claves}.toList();
+      if (todas.length == _libraryItems[i].catalogKeys.length) continue;
+      _libraryItems[i] = _libraryItems[i].copyWith(catalogKeys: todas);
+      cambiado = true;
+    }
+    if (cambiado) _commit();
+  }
+
   void updateLibraryItemStatus(
     String itemId,
     LibraryItemStatus status, {

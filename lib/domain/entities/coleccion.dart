@@ -57,6 +57,7 @@ class Coleccion {
           'universeName': datos['universo'],
           'collectionName': campos['collectionName'] ?? nombre,
           'showCollectionNumber': campos['collectionNumber'] != null,
+          'catalogKeys': ['${datos['id']}/${campos['id']}'],
         });
     final grupos = (datos['grupos'] as List).cast<Map<String, dynamic>>();
     return Coleccion(

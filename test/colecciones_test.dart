@@ -84,4 +84,41 @@ void main() {
     expect(tomos.every((t) => t.collectionName == 'Gachiakuta'), isTrue);
     expect(tomos.map((t) => t.collectionNumber), [for (var i = 1; i <= 16; i++) i]);
   });
+
+  test('las fichas se enlazan con su obra del catálogo por identificador', () {
+    final dune = colecciones.singleWhere((c) => c.id == 'dune');
+    final pelicula = dune.obras.singleWhere((o) => o.id == 'dune-2021');
+    expect(pelicula.catalogKeys, ['dune/dune-2021']);
+
+    final controller = TodoWorkspace.createForTest();
+    final item = controller.createLibraryItem(
+      type: LibraryItemType.movieSeries,
+      title: 'Mi Dune',
+      status: LibraryItemStatus.pending,
+    );
+    final antes = controller.libraryItems.single.updatedAt;
+    controller.linkLibraryItemsToCatalog({
+      item.id: ['dune/dune-2021'],
+    });
+    final enlazado = controller.libraryItems.single;
+    expect(enlazado.catalogKeys, ['dune/dune-2021']);
+    expect(enlazado.updatedAt, antes,
+        reason: 'enlazar no debe cambiar el orden de Recientes');
+    expect(
+      LibraryItem.fromJson(enlazado.toJson()).catalogKeys,
+      ['dune/dune-2021'],
+    );
+  });
+
+  test('los cambios propios de una obra del catálogo se guardan', () {
+    final controller = TodoWorkspace.createForTest();
+    controller.setCollectionWorkEdit('souls/demons-souls', {'title': 'Otro'});
+    final copia = AppVisibilitySettings.fromJson(
+      controller.visibilitySettings.toJson(),
+    );
+    expect(copia.collectionWorkEdits['souls/demons-souls'], {'title': 'Otro'});
+    controller.setCollectionWorkHidden('persona/persona-3', true);
+    expect(controller.visibilitySettings.collectionWorkEdits, isNotEmpty,
+        reason: 'quitar una obra no debe perder los cambios propios');
+  });
 }

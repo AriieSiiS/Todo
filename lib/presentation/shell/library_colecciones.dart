@@ -47,11 +47,49 @@ LibraryItem? _obraEnBiblioteca(TodoWorkspace controller, LibraryItem obra) {
     }
     return null;
   }
+  // Las fichas enlazadas se reconocen por el identificador de la obra, así
+  // que da igual que se cambie su título.
+  final clave = obra.catalogKeys.firstOrNull;
+  if (clave != null) {
+    for (final item in controller.libraryItems) {
+      if (item.catalogKeys.contains(clave)) return item;
+    }
+  }
+  // Las fichas sin enlazar, solo por tipo y título.
   final titulo = obra.title.paraBuscar;
   for (final item in controller.libraryItems) {
-    if (item.type == obra.type && item.title.paraBuscar == titulo) return item;
+    if (item.catalogKeys.isEmpty &&
+        item.type == obra.type &&
+        item.title.paraBuscar == titulo) {
+      return item;
+    }
   }
   return null;
+}
+
+/// Identificadores de todas las obras del catálogo con el mismo tipo y título
+/// que [item] (una película puede estar en su saga y en la de su director).
+List<String> _clavesPorTitulo(LibraryItem item) {
+  final titulo = item.title.paraBuscar;
+  return [
+    for (final coleccion in _colecciones ?? const <Coleccion>[])
+      for (final obra in coleccion.obras)
+        if (!_esTomo(obra) &&
+            obra.type == item.type &&
+            obra.title.paraBuscar == titulo)
+          ...obra.catalogKeys,
+  ];
+}
+
+/// Enlaza una sola vez las fichas de la Biblioteca que aún no tienen enlace
+/// con sus obras del catálogo, emparejándolas por tipo y título.
+void _enlazarBibliotecaConCatalogo(TodoWorkspace controller) {
+  if (_colecciones == null) return;
+  final enlaces = <String, List<String>>{
+    for (final item in controller.libraryItems)
+      if (item.catalogKeys.isEmpty) item.id: _clavesPorTitulo(item),
+  }..removeWhere((_, claves) => claves.isEmpty);
+  if (enlaces.isNotEmpty) controller.linkLibraryItemsToCatalog(enlaces);
 }
 
 /// Tomo de un manga del catálogo. Sus tomos no son obras distintas: se
@@ -285,7 +323,7 @@ Future<void> _anadirObraABiblioteca(
   final coverUrl =
       await _copyLibraryCoverBytes(await _bytesPortada(obra.coverUrl!));
   if (_obraEnBiblioteca(controller, obra) != null) return;
-  controller.createLibraryItem(
+  final creado = controller.createLibraryItem(
     type: obra.type,
     title: obra.title,
     status: status,
@@ -309,6 +347,9 @@ Future<void> _anadirObraABiblioteca(
     showCollectionNumber: obra.showCollectionNumber,
     seasonCount: obra.seasonCount,
   );
+  controller.linkLibraryItemsToCatalog({
+    creado.id: {...obra.catalogKeys, ..._clavesPorTitulo(obra)}.toList(),
+  });
 }
 
 /// Añade una obra del catálogo a la Biblioteca con ese estado, o cambia su

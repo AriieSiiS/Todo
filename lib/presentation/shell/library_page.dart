@@ -39,6 +39,7 @@ class _LibraryPageState extends State<LibraryPage> {
   void initState() {
     super.initState();
     unawaited(_cargarColecciones().then((_) {
+      _enlazarBibliotecaConCatalogo(controller);
       if (mounted) setState(() {});
     }));
     _allSearchController = TextEditingController();
