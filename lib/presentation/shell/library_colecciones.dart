@@ -649,19 +649,239 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   }
 
   /// Coloca [arrastrada] en el sitio de [destino] dentro de su apartado.
-  void _mover(String nombreGrupo, LibraryItem arrastrada, LibraryItem destino) {
+  // Arrastre de portadas: mientras se arrastra, el apartado se dibuja ya con
+  // el orden que quedaría, y la portada arrastrada deja un hueco en su sitio.
+  String? _grupoArrastre;
+  LibraryItem? _obraArrastrada;
+  int? _destinoArrastre;
+
+  // Arrastre de apartados, con la misma vista previa.
+  String? _apartadoArrastrado;
+  int? _destinoApartado;
+
+  String get _claveOrdenApartados => '${widget.coleccion.id}/orden-apartados';
+
+  List<String>? get _ordenApartados {
+    final prefijo = '$_claveOrdenApartados=';
+    for (final entrada in controller.visibilitySettings.hiddenCollectionWorks) {
+      if (entrada.startsWith(prefijo)) {
+        return entrada.substring(prefijo.length).split('|');
+      }
+    }
+    return null;
+  }
+
+  /// Apartados en el orden elegido a mano, con la vista previa del arrastre.
+  List<GrupoColeccion> _apartadosOrdenados(List<GrupoColeccion> grupos) {
+    final orden = _ordenApartados;
+    var lista = [...grupos];
+    if (orden != null) {
+      final posicion = {for (var i = 0; i < orden.length; i++) orden[i]: i};
+      final original = {
+        for (var i = 0; i < grupos.length; i++) grupos[i].nombre: i
+      };
+      lista.sort((a, b) {
+        final pa = posicion[a.nombre] ?? orden.length + original[a.nombre]!;
+        final pb = posicion[b.nombre] ?? orden.length + original[b.nombre]!;
+        return pa.compareTo(pb);
+      });
+    }
+    final movido = _apartadoArrastrado;
+    final destino = _destinoApartado;
+    if (movido != null && destino != null) {
+      final grupo = lista.where((g) => g.nombre == movido).firstOrNull;
+      if (grupo != null) {
+        lista = [...lista]..remove(grupo);
+        lista.insert(destino.clamp(0, lista.length), grupo);
+      }
+    }
+    return lista;
+  }
+
+  void _terminarArrastreApartado() {
+    if (_apartadoArrastrado == null) return;
+    setState(() {
+      _apartadoArrastrado = null;
+      _destinoApartado = null;
+    });
+  }
+
+  void _soltarApartado(List<GrupoColeccion> vista) {
+    final visibles = vista.map((g) => g.nombre).toList();
+    _terminarArrastreApartado();
+    final todos = _apartadosOrdenados(widget.coleccion.grupos)
+        .map((g) => g.nombre)
+        .toList();
+    // Los apartados ocultos por los filtros conservan su sitio al final.
+    final resto = todos.where((n) => !visibles.contains(n));
+    controller
+        .setCollectionGroupOrder(_claveOrdenApartados, [...visibles, ...resto]);
+  }
+
+  List<LibraryItem> _vistaPrevia(GrupoColeccion grupo) {
+    final arrastrada = _obraArrastrada;
+    final destino = _destinoArrastre;
+    if (_grupoArrastre != grupo.nombre ||
+        arrastrada == null ||
+        destino == null) {
+      return grupo.obras;
+    }
+    final lista = [...grupo.obras]
+      ..removeWhere((obra) => identical(obra, arrastrada));
+    lista.insert(destino.clamp(0, lista.length), arrastrada);
+    return lista;
+  }
+
+  void _terminarArrastre() {
+    if (_obraArrastrada == null && _grupoArrastre == null) return;
+    setState(() {
+      _grupoArrastre = null;
+      _obraArrastrada = null;
+      _destinoArrastre = null;
+    });
+  }
+
+  /// Guarda el orden que mostraba la vista previa al soltar la portada.
+  void _soltar(String nombreGrupo, List<LibraryItem> vista) {
+    final arrastrada = _obraArrastrada;
+    _terminarArrastre();
     final grupo = widget.coleccion.grupos
         .where((g) => g.nombre == nombreGrupo)
         .firstOrNull;
-    if (grupo == null || arrastrada.id == destino.id) return;
-    final ids = _ordenado(grupo).map((obra) => obra.id).toList();
-    final desde = ids.indexOf(arrastrada.id);
-    final hasta = ids.indexOf(destino.id);
-    if (desde == -1 || hasta == -1) return;
-    ids
-      ..removeAt(desde)
-      ..insert(hasta, arrastrada.id);
+    if (grupo == null || arrastrada == null) return;
+    final i = vista.indexWhere((obra) => identical(obra, arrastrada));
+    final ids = _ordenado(grupo).map((obra) => obra.id).toList()
+      ..remove(arrastrada.id);
+    if (i + 1 < vista.length) {
+      ids.insert(ids.indexOf(vista[i + 1].id), arrastrada.id);
+    } else if (i > 0) {
+      ids.insert(ids.indexOf(vista[i - 1].id) + 1, arrastrada.id);
+    } else {
+      ids.insert(0, arrastrada.id);
+    }
     controller.setCollectionGroupOrder(_claveOrden(grupo), ids);
+  }
+
+  /// Portada que se arrastra dentro de su apartado. Al pasar sobre otra, las
+  /// demás se apartan para mostrar dónde quedará.
+  Widget _portadaArrastrable({
+    required GrupoColeccion grupo,
+    required LibraryItem obra,
+    required int index,
+    required List<LibraryItem> vista,
+    required Widget tarjeta,
+  }) {
+    final esLaArrastrada = identical(obra, _obraArrastrada);
+    return LayoutBuilder(
+      key: ValueKey(_clave(obra)),
+      builder: (context, constraints) => DragTarget<LibraryItem>(
+        onWillAcceptWithDetails: (_) => _grupoArrastre == grupo.nombre,
+        onMove: (_) {
+          if (_grupoArrastre == grupo.nombre && _destinoArrastre != index) {
+            setState(() => _destinoArrastre = index);
+          }
+        },
+        onAcceptWithDetails: (_) => _soltar(grupo.nombre, vista),
+        builder: (context, _, __) => Draggable<LibraryItem>(
+          key: ValueKey('coleccion-arrastrar-${obra.id}'),
+          data: obra,
+          onDragStarted: () => setState(() {
+            _grupoArrastre = grupo.nombre;
+            _obraArrastrada = obra;
+            _destinoArrastre = index;
+          }),
+          onDragEnd: (detalles) {
+            if (!detalles.wasAccepted) _terminarArrastre();
+          },
+          onDraggableCanceled: (_, __) => _terminarArrastre(),
+          feedback: Material(
+            color: Colors.transparent,
+            elevation: 14,
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            child: Transform.scale(
+              scale: 1.04,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child:
+                    _LibraryCoverImage(source: obra.coverUrl, type: obra.type),
+              ),
+            ),
+          ),
+          childWhenDragging: _HuecoPortada(obra: obra),
+          child: esLaArrastrada ? _HuecoPortada(obra: obra) : tarjeta,
+        ),
+      ),
+    );
+  }
+
+  /// Cabecera de un apartado, que se arrastra para cambiar el orden de los
+  /// apartados de la colección.
+  Widget _cabeceraArrastrable({
+    required GrupoColeccion grupo,
+    required int posicion,
+    required List<GrupoColeccion> apartados,
+    required bool activo,
+    required Widget child,
+  }) {
+    final visuals = context.visuals;
+    final cabecera = Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 6, 6),
+      child: Row(
+        children: [
+          if (activo)
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Icon(Icons.drag_indicator_rounded,
+                  size: 18, color: visuals.textMuted),
+            ),
+          Expanded(child: child),
+        ],
+      ),
+    );
+    if (!activo) return cabecera;
+    final arrastrado = _apartadoArrastrado == grupo.nombre;
+    return DragTarget<GrupoColeccion>(
+      onWillAcceptWithDetails: (_) => _apartadoArrastrado != null,
+      onMove: (_) {
+        if (_apartadoArrastrado != null && _destinoApartado != posicion) {
+          setState(() => _destinoApartado = posicion);
+        }
+      },
+      onAcceptWithDetails: (_) => _soltarApartado(apartados),
+      builder: (context, _, __) => Draggable<GrupoColeccion>(
+        key: ValueKey('coleccion-arrastrar-apartado-${grupo.nombre}'),
+        data: grupo,
+        axis: Axis.vertical,
+        onDragStarted: () => setState(() {
+          _apartadoArrastrado = grupo.nombre;
+          _destinoApartado = posicion;
+        }),
+        onDragEnd: (detalles) {
+          if (!detalles.wasAccepted) _terminarArrastreApartado();
+        },
+        onDraggableCanceled: (_, __) => _terminarArrastreApartado(),
+        feedback: Material(
+          elevation: 10,
+          color: visuals.panel,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(
+              '${grupo.nombre} · ${grupo.obras.length}',
+              style: TextStyle(
+                color: visuals.textStrong,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.35, child: cabecera),
+        child: arrastrado ? Opacity(opacity: 0.35, child: cabecera) : cabecera,
+      ),
+    );
   }
 
   bool _plegado(GrupoColeccion grupo) =>
@@ -939,11 +1159,13 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                 .toList()),
           ),
     ].where((grupo) => grupo.obras.isNotEmpty).toList();
+    final apartados = _porAnio ? grupos : _apartadosOrdenados(grupos);
     // Se arrastra para reordenar solo en la vista normal de la saga.
     final arrastrable = !_porAnio && !_seleccionando && !verQuitadas;
     final hayOrdenPropio =
-        coleccion.grupos.any((g) => _ordenGuardado(g) != null);
-    final obras = [for (final grupo in grupos) ...grupo.obras];
+        coleccion.grupos.any((g) => _ordenGuardado(g) != null) ||
+            _ordenApartados != null;
+    final obras = [for (final grupo in apartados) ...grupo.obras];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1021,6 +1243,8 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                         controller.setCollectionGroupOrder(
                             _claveOrden(grupo), const []);
                       }
+                      controller.setCollectionGroupOrder(
+                          _claveOrdenApartados, const []);
                     },
                     child: const Text('Volver al orden original'),
                   ),
@@ -1122,10 +1346,13 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                     : 154.0;
             return CustomScrollView(
               slivers: [
-                for (final grupo in grupos) ...[
+                for (final (posicion, grupo) in apartados.indexed) ...[
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 0, 6, 6),
+                    child: _cabeceraArrastrable(
+                      grupo: grupo,
+                      posicion: posicion,
+                      apartados: apartados,
+                      activo: arrastrable && apartados.length > 1,
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Tooltip(
@@ -1168,7 +1395,9 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                       ),
                     ),
                   ),
-                  if (_plegado(grupo))
+                  // Mientras se arrastra un apartado solo quedan las
+                  // cabeceras, para poder soltarlo sin desplazarse.
+                  if (_plegado(grupo) || _apartadoArrastrado != null)
                     const SliverToBoxAdapter(child: SizedBox(height: 10))
                   else
                     SliverPadding(
@@ -1180,9 +1409,15 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                           crossAxisSpacing: 20,
                           childAspectRatio: 0.66,
                         ),
-                        itemCount: grupo.obras.length,
+                        itemCount: _vistaPrevia(grupo).length,
+                        findChildIndexCallback: (clave) {
+                          final i = _vistaPrevia(grupo).indexWhere(
+                              (obra) => ValueKey(_clave(obra)) == clave);
+                          return i < 0 ? null : i;
+                        },
                         itemBuilder: (context, index) {
-                          final obra = grupo.obras[index];
+                          final vista = _vistaPrevia(grupo);
+                          final obra = vista[index];
                           final tarjeta = _ColeccionObraTarjeta(
                             key: ValueKey(_clave(obra)),
                             obra: obra,
@@ -1213,12 +1448,12 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                                 _menuObra(context, obra, posicion),
                           );
                           if (!arrastrable) return tarjeta;
-                          return _ColeccionArrastrable(
+                          return _portadaArrastrable(
+                            grupo: grupo,
                             obra: obra,
-                            grupo: grupo.nombre,
-                            onSoltar: (arrastrada) =>
-                                _mover(grupo.nombre, arrastrada, obra),
-                            child: tarjeta,
+                            index: index,
+                            vista: vista,
+                            tarjeta: tarjeta,
                           );
                         },
                       ),
@@ -1235,57 +1470,26 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
 /// Portada que se puede arrastrar sobre otra del mismo apartado para
 /// cambiar el orden de la saga.
-class _ColeccionArrastrable extends StatelessWidget {
-  const _ColeccionArrastrable({
-    required this.obra,
-    required this.grupo,
-    required this.onSoltar,
-    required this.child,
-  });
+/// Hueco que deja una portada mientras se arrastra: marca dónde quedará.
+class _HuecoPortada extends StatelessWidget {
+  const _HuecoPortada({required this.obra});
 
   final LibraryItem obra;
-  final String grupo;
-  final ValueChanged<LibraryItem> onSoltar;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => DragTarget<(String, LibraryItem)>(
-        onWillAcceptWithDetails: (detalles) =>
-            detalles.data.$1 == grupo && detalles.data.$2.id != obra.id,
-        onAcceptWithDetails: (detalles) => onSoltar(detalles.data.$2),
-        builder: (context, candidatas, _) => Draggable<(String, LibraryItem)>(
-          key: ValueKey('coleccion-arrastrar-${obra.id}'),
-          data: (grupo, obra),
-          feedback: Opacity(
-            opacity: 0.85,
-            child: Material(
-              color: Colors.transparent,
-              elevation: 10,
-              borderRadius: BorderRadius.circular(7),
-              clipBehavior: Clip.antiAlias,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child:
-                    _LibraryCoverImage(source: obra.coverUrl, type: obra.type),
-              ),
-            ),
-          ),
-          childWhenDragging: Opacity(opacity: 0.3, child: child),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: candidatas.isEmpty
-                    ? Colors.transparent
-                    : const Color(0xFF9DCB7E),
-                width: 3,
-              ),
-            ),
-            child: child,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFF9DCB7E), width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Opacity(
+            opacity: 0.25,
+            child: _LibraryCoverImage(source: obra.coverUrl, type: obra.type),
           ),
         ),
       ),
