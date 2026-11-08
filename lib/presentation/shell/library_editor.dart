@@ -1729,8 +1729,13 @@ List<(String, String)> _detailFields(LibraryItem item) {
     if (item.collectionNumber != null)
       ('Número de entrega', '#${item.collectionNumber}'),
     if (item.rewatchCount > 1) ('Rewatch', 'x${item.rewatchCount}'),
-    if (textoProgresoManual(item) != null)
-      ('Progreso', textoProgresoManual(item)!),
+    // Siempre presente en series y mangas, para que cambiar de estado no
+    // añada ni quite filas y la ficha no cambie de tamaño.
+    if (admiteProgresoManual(item))
+      (
+        item.type == LibraryItemType.book ? 'Capítulos' : 'Progreso',
+        textoProgresoManual(item) ?? 'Sin empezar',
+      ),
     if (item.completedDate != null)
       ('Fecha completado', _libraryDate(item.completedDate!)),
     if (item.releaseYear != null) ('Año', item.releaseYear.toString()),

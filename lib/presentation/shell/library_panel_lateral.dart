@@ -1314,7 +1314,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            // Tan baja como el texto de las demás filas de la ficha.
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1322,7 +1323,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
                   _libraryStatusSingularLabel(status),
                   style: TextStyle(
                     color: colors.foreground,
-                    fontSize: 14,
+                    fontSize: 13,
+                    height: 1.2,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

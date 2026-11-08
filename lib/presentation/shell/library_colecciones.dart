@@ -1627,7 +1627,8 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
     // progreso de lectura no aplica a una obra del catálogo.
     final fecha = _fechaPrevista(obra);
     final campos = [
-      ..._detailFields(obra).where((campo) => campo.$1 != 'Progreso'),
+      ..._detailFields(obra)
+          .where((campo) => campo.$1 != 'Progreso' && campo.$1 != 'Capítulos'),
     ];
     final dia = fecha == null ? null : _diaDeSalida(fecha);
     final tituloAviso = 'Sale «${obra.title}»';
