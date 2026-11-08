@@ -2100,6 +2100,14 @@ class _ColeccionesVista extends StatefulWidget {
 class _ColeccionesVistaState extends State<_ColeccionesVista> {
   String _texto = '';
 
+  /// Las secciones plegadas (Juegos, Libros…) se guardan junto a las obras
+  /// quitadas, con su propia clave, para conservarlas al reiniciar.
+  String _claveSeccion(String nombre) => 'colecciones/seccion:$nombre';
+
+  bool _plegada(String nombre) =>
+      widget.controller.visibilitySettings.hiddenCollectionWorks
+          .contains(_claveSeccion(nombre));
+
   /// Clic derecho sobre una colección.
   Future<void> _menuColeccion(
     BuildContext context,
@@ -2216,40 +2224,76 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
                       for (final (nombre, lista) in secciones) ...[
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(2, 0, 0, 12),
-                            child: Text(
-                              '$nombre · ${lista.length}',
-                              key: ValueKey('colecciones-seccion-$nombre'),
-                              style: TextStyle(
-                                color: visuals.textStrong,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
+                            padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Tooltip(
+                                message: _plegada(nombre)
+                                    ? 'Mostrar $nombre'
+                                    : 'Ocultar $nombre',
+                                child: InkWell(
+                                  key: ValueKey('colecciones-seccion-$nombre'),
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () =>
+                                      controller.setCollectionWorkHidden(
+                                    _claveSeccion(nombre),
+                                    !_plegada(nombre),
+                                  ),
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(2, 4, 10, 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _plegada(nombre)
+                                              ? Icons.chevron_right_rounded
+                                              : Icons.expand_more_rounded,
+                                          size: 24,
+                                          color: visuals.textMuted,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$nombre · ${lista.length}',
+                                          style: TextStyle(
+                                            color: visuals.textStrong,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        SliverPadding(
-                          padding: const EdgeInsets.only(bottom: 28),
-                          sliver: SliverGrid.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent:
-                                  constraints.maxWidth >= 980 ? 210 : 180,
-                              mainAxisSpacing: 22,
-                              crossAxisSpacing: 20,
-                              childAspectRatio: 0.56,
-                            ),
-                            itemCount: lista.length,
-                            itemBuilder: (context, i) => _ColeccionTarjeta(
-                              controller: controller,
-                              coleccion: lista[i],
-                              onTap: () => _abrirColeccion(
-                                  context, controller, lista[i]),
-                              onMenu: (posicion) =>
-                                  _menuColeccion(context, lista[i], posicion),
+                        if (_plegada(nombre))
+                          const SliverToBoxAdapter(child: SizedBox(height: 14))
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.only(bottom: 28),
+                            sliver: SliverGrid.builder(
+                              gridDelegate:
+                                  SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent:
+                                    constraints.maxWidth >= 980 ? 210 : 180,
+                                mainAxisSpacing: 22,
+                                crossAxisSpacing: 20,
+                                childAspectRatio: 0.56,
+                              ),
+                              itemCount: lista.length,
+                              itemBuilder: (context, i) => _ColeccionTarjeta(
+                                controller: controller,
+                                coleccion: lista[i],
+                                onTap: () => _abrirColeccion(
+                                    context, controller, lista[i]),
+                                onMenu: (posicion) =>
+                                    _menuColeccion(context, lista[i], posicion),
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ],
                   ),

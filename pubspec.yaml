@@ -2,7 +2,7 @@ name: todo
 description: AplicaciÃ³n personal de tareas para Windows.
 publish_to: none
 
-version: 0.4.82+106
+version: 0.4.83+107
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
