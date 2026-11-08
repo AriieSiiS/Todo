@@ -772,45 +772,48 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
     required Widget tarjeta,
   }) {
     final esLaArrastrada = identical(obra, _obraArrastrada);
-    return LayoutBuilder(
+    return _Deslizante(
       key: ValueKey(_clave(obra)),
-      builder: (context, constraints) => DragTarget<LibraryItem>(
-        onWillAcceptWithDetails: (_) => _grupoArrastre == grupo.nombre,
-        onMove: (_) {
-          if (_grupoArrastre == grupo.nombre && _destinoArrastre != index) {
-            setState(() => _destinoArrastre = index);
-          }
-        },
-        onAcceptWithDetails: (_) => _soltar(grupo.nombre, vista),
-        builder: (context, _, __) => Draggable<LibraryItem>(
-          key: ValueKey('coleccion-arrastrar-${obra.id}'),
-          data: obra,
-          onDragStarted: () => setState(() {
-            _grupoArrastre = grupo.nombre;
-            _obraArrastrada = obra;
-            _destinoArrastre = index;
-          }),
-          onDragEnd: (detalles) {
-            if (!detalles.wasAccepted) _terminarArrastre();
+      activo: _grupoArrastre == grupo.nombre,
+      child: LayoutBuilder(
+        builder: (context, constraints) => DragTarget<LibraryItem>(
+          onWillAcceptWithDetails: (_) => _grupoArrastre == grupo.nombre,
+          onMove: (_) {
+            if (_grupoArrastre == grupo.nombre && _destinoArrastre != index) {
+              setState(() => _destinoArrastre = index);
+            }
           },
-          onDraggableCanceled: (_, __) => _terminarArrastre(),
-          feedback: Material(
-            color: Colors.transparent,
-            elevation: 14,
-            borderRadius: BorderRadius.circular(8),
-            clipBehavior: Clip.antiAlias,
-            child: Transform.scale(
-              scale: 1.04,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child:
-                    _LibraryCoverImage(source: obra.coverUrl, type: obra.type),
+          onAcceptWithDetails: (_) => _soltar(grupo.nombre, vista),
+          builder: (context, _, __) => Draggable<LibraryItem>(
+            key: ValueKey('coleccion-arrastrar-${obra.id}'),
+            data: obra,
+            onDragStarted: () => setState(() {
+              _grupoArrastre = grupo.nombre;
+              _obraArrastrada = obra;
+              _destinoArrastre = index;
+            }),
+            onDragEnd: (detalles) {
+              if (!detalles.wasAccepted) _terminarArrastre();
+            },
+            onDraggableCanceled: (_, __) => _terminarArrastre(),
+            feedback: Material(
+              color: Colors.transparent,
+              elevation: 14,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: Transform.scale(
+                scale: 1.04,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: _LibraryCoverImage(
+                      source: obra.coverUrl, type: obra.type),
+                ),
               ),
             ),
+            childWhenDragging: _HuecoPortada(obra: obra),
+            child: esLaArrastrada ? _HuecoPortada(obra: obra) : tarjeta,
           ),
-          childWhenDragging: _HuecoPortada(obra: obra),
-          child: esLaArrastrada ? _HuecoPortada(obra: obra) : tarjeta,
         ),
       ),
     );
@@ -1348,46 +1351,50 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
               slivers: [
                 for (final (posicion, grupo) in apartados.indexed) ...[
                   SliverToBoxAdapter(
-                    child: _cabeceraArrastrable(
-                      grupo: grupo,
-                      posicion: posicion,
-                      apartados: apartados,
-                      activo: arrastrable && apartados.length > 1,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Tooltip(
-                          message: _plegado(grupo)
-                              ? 'Desplegar ${grupo.nombre}'
-                              : 'Plegar ${grupo.nombre}',
-                          child: InkWell(
-                            key: ValueKey('coleccion-grupo-${grupo.nombre}'),
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: () => controller.setCollectionWorkHidden(
-                              _claveGrupo(grupo),
-                              !_plegado(grupo),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _plegado(grupo)
-                                        ? Icons.chevron_right_rounded
-                                        : Icons.expand_more_rounded,
-                                    size: 22,
-                                    color: visuals.textMuted,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${grupo.nombre} · ${grupo.obras.length}',
-                                    style: TextStyle(
-                                      color: visuals.textStrong,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
+                    key: ValueKey('coleccion-apartado-${grupo.nombre}'),
+                    child: _Deslizante(
+                      activo: _apartadoArrastrado != null,
+                      child: _cabeceraArrastrable(
+                        grupo: grupo,
+                        posicion: posicion,
+                        apartados: apartados,
+                        activo: arrastrable && apartados.length > 1,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Tooltip(
+                            message: _plegado(grupo)
+                                ? 'Desplegar ${grupo.nombre}'
+                                : 'Plegar ${grupo.nombre}',
+                            child: InkWell(
+                              key: ValueKey('coleccion-grupo-${grupo.nombre}'),
+                              borderRadius: BorderRadius.circular(6),
+                              onTap: () => controller.setCollectionWorkHidden(
+                                _claveGrupo(grupo),
+                                !_plegado(grupo),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _plegado(grupo)
+                                          ? Icons.chevron_right_rounded
+                                          : Icons.expand_more_rounded,
+                                      size: 22,
+                                      color: visuals.textMuted,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${grupo.nombre} · ${grupo.obras.length}',
+                                      style: TextStyle(
+                                        color: visuals.textStrong,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -1470,6 +1477,110 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
 /// Portada que se puede arrastrar sobre otra del mismo apartado para
 /// cambiar el orden de la saga.
+/// Desliza con suavidad su contenido cuando cambia de sitio mientras se
+/// arrastra algo, en lugar de saltar de golpe a la nueva posición.
+class _Deslizante extends StatefulWidget {
+  const _Deslizante({super.key, required this.activo, required this.child});
+
+  /// Solo se anima mientras hay un arrastre; al desplazar la vista no.
+  final bool activo;
+  final Widget child;
+
+  @override
+  State<_Deslizante> createState() => _DeslizanteState();
+}
+
+class _DeslizanteState extends State<_Deslizante>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animacion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  );
+
+  @override
+  void dispose() {
+    _animacion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _DeslizanteCaja(
+        animacion: _animacion,
+        activo: widget.activo,
+        child: widget.child,
+      );
+}
+
+class _DeslizanteCaja extends SingleChildRenderObjectWidget {
+  const _DeslizanteCaja({
+    required this.animacion,
+    required this.activo,
+    required super.child,
+  });
+
+  final AnimationController animacion;
+  final bool activo;
+
+  @override
+  _RenderDeslizante createRenderObject(BuildContext context) =>
+      _RenderDeslizante(animacion, activo);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderDeslizante render) =>
+      render.activo = activo;
+}
+
+/// Compara al pintar su posición con la anterior y, si ha cambiado, pinta el
+/// contenido desde el sitio viejo y lo lleva al nuevo con una curva suave.
+class _RenderDeslizante extends RenderProxyBox {
+  _RenderDeslizante(this._animacion, this.activo);
+
+  final AnimationController _animacion;
+  bool activo;
+  Offset? _anterior;
+  Offset _desde = Offset.zero;
+  bool _pendiente = false;
+
+  Offset get _desplazamiento {
+    if (_pendiente) return _desde;
+    final t = Curves.easeOutCubic.transform(_animacion.value);
+    return _desde * (1 - t);
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _animacion.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _animacion.removeListener(markNeedsPaint);
+    _anterior = null;
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final posicion = localToGlobal(Offset.zero);
+    final anterior = _anterior;
+    if (anterior != null && activo && (posicion - anterior).distance > 0.5) {
+      _desde = anterior + _desplazamiento - posicion;
+      if (!_pendiente) {
+        _pendiente = true;
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _pendiente = false;
+          if (attached) _animacion.forward(from: 0);
+        });
+      }
+    } else if (!activo && !_animacion.isAnimating) {
+      _desde = Offset.zero;
+    }
+    _anterior = posicion;
+    super.paint(context, offset + _desplazamiento);
+  }
+}
+
 /// Hueco que deja una portada mientras se arrastra: marca dónde quedará.
 class _HuecoPortada extends StatelessWidget {
   const _HuecoPortada({required this.obra});
