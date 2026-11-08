@@ -97,8 +97,8 @@ String _estadoEnPlural(LibraryItemStatus estado) => switch (estado) {
       LibraryItemStatus.completed => 'completadas',
     };
 
-/// Abre la saga sobre la vista actual. Colecciones no tiene entrada propia:
-/// solo se llega pulsando la chapa de una saga.
+/// Abre la saga sobre la vista actual, desde la pestaña Colecciones o desde la
+/// chapa de saga o universo de una ficha.
 Future<void> _abrirColeccion(
   BuildContext context,
   TodoWorkspace controller,
@@ -1300,148 +1300,283 @@ class _ColeccionProgreso extends StatelessWidget {
   }
 }
 
-/// Lista de todas las colecciones, también las que no tienen nada en la
-/// Biblioteca y por eso no tienen chapa desde la que abrirlas.
-Future<void> _mostrarBuscadorColecciones(
-  BuildContext context,
-  TodoWorkspace controller,
-) async {
-  await _cargarColecciones();
-  if (!context.mounted) return;
-  final elegida = await showDialog<Coleccion>(
-    context: context,
-    builder: (context) => _BuscadorColecciones(controller: controller),
+/// Colección con solo las obras de un tipo. Reutiliza las mismas obras para
+/// que sus claves, estados y fechas previstas sigan siendo los de la saga.
+Coleccion _coleccionDeTipo(Coleccion coleccion, LibraryItemType? tipo) {
+  if (tipo == null) return coleccion;
+  return Coleccion(
+    id: coleccion.id,
+    nombre: coleccion.nombre,
+    alias: coleccion.alias,
+    fechasPrevistas: coleccion.fechasPrevistas,
+    grupos: [
+      for (final grupo in coleccion.grupos)
+        if (grupo.obras.any((obra) => obra.type == tipo))
+          GrupoColeccion(
+            nombre: grupo.nombre,
+            obras: grupo.obras.where((obra) => obra.type == tipo).toList(),
+          ),
+    ],
   );
-  if (elegida != null && context.mounted) {
-    await _abrirColeccion(context, controller, elegida);
-  }
 }
 
-class _BuscadorColecciones extends StatefulWidget {
-  const _BuscadorColecciones({required this.controller});
+/// Pestaña Colecciones de Biblioteca: las sagas del catálogo agrupadas por
+/// tipo. Con un tipo elegido, cada saga muestra solo sus obras de ese tipo.
+class _ColeccionesVista extends StatefulWidget {
+  const _ColeccionesVista({
+    required this.controller,
+    required this.tipo,
+    required this.onTipo,
+  });
 
   final TodoWorkspace controller;
+  final LibraryItemType? tipo;
+  final ValueChanged<LibraryItemType?> onTipo;
 
   @override
-  State<_BuscadorColecciones> createState() => _BuscadorColeccionesState();
+  State<_ColeccionesVista> createState() => _ColeccionesVistaState();
 }
 
-class _BuscadorColeccionesState extends State<_BuscadorColecciones> {
+class _ColeccionesVistaState extends State<_ColeccionesVista> {
   String _texto = '';
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
+    final controller = widget.controller;
+    final tipo = widget.tipo;
     final buscado = _texto.paraBuscar;
-    final lista = (_colecciones ?? const <Coleccion>[])
-        .where((c) =>
-            buscado.isEmpty ||
-            c.nombres.any((n) => n.paraBuscar.contains(buscado)) ||
-            c.obras.any((o) => o.title.paraBuscar.contains(buscado)))
-        .toList();
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 720,
-          maxHeight: min(760, MediaQuery.sizeOf(context).height - 60),
+    final colecciones = [
+      for (final coleccion in _colecciones ?? const <Coleccion>[])
+        if (buscado.isEmpty ||
+            coleccion.nombres.any((n) => n.paraBuscar.contains(buscado)) ||
+            coleccion.obras.any((o) => o.title.paraBuscar.contains(buscado)))
+          _coleccionDeTipo(coleccion, tipo),
+    ].where((coleccion) => coleccion.obras.isNotEmpty).toList();
+    // Con «Todas», cada saga va a la sección de su tipo; las que mezclan
+    // tipos van juntas al final.
+    final secciones = <(String, List<Coleccion>)>[
+      if (tipo != null)
+        (_libraryTypePluralLabel(tipo), colecciones)
+      else ...[
+        for (final t in LibraryItemType.values)
+          (
+            _libraryTypePluralLabel(t),
+            colecciones
+                .where((c) => c.obras.every((obra) => obra.type == t))
+                .toList(),
+          ),
+        (
+          'De varios tipos',
+          colecciones
+              .where((c) => c.obras.map((obra) => obra.type).toSet().length > 1)
+              .toList(),
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Colecciones',
-                style: TextStyle(
-                  color: visuals.textStrong,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
+      ],
+    ].where((seccion) => seccion.$2.isNotEmpty).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 16,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            _LibraryTypeFilters(selected: tipo, onChanged: widget.onTipo),
+            SizedBox(
+              width: 280,
+              child: TextField(
                 key: const ValueKey('colecciones-buscar'),
-                autofocus: true,
                 onChanged: (valor) => setState(() => _texto = valor),
                 decoration: const InputDecoration(
+                  isDense: true,
                   prefixIcon: Icon(Icons.search_rounded),
                   hintText: 'Buscar saga u obra',
                 ),
               ),
-              const SizedBox(height: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: secciones.isEmpty
+              ? Center(
+                  child: Text(
+                    'No hay ninguna colección con ese nombre.',
+                    style: TextStyle(color: visuals.textMuted),
+                  ),
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) => CustomScrollView(
+                    slivers: [
+                      for (final (nombre, lista) in secciones) ...[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(2, 0, 0, 12),
+                            child: Text(
+                              '$nombre · ${lista.length}',
+                              key: ValueKey('colecciones-seccion-$nombre'),
+                              style: TextStyle(
+                                color: visuals.textStrong,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.only(bottom: 28),
+                          sliver: SliverGrid.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent:
+                                  constraints.maxWidth >= 980 ? 210 : 180,
+                              mainAxisSpacing: 22,
+                              crossAxisSpacing: 20,
+                              childAspectRatio: 0.56,
+                            ),
+                            itemCount: lista.length,
+                            itemBuilder: (context, i) => _ColeccionTarjeta(
+                              controller: controller,
+                              coleccion: lista[i],
+                              onTap: () => _abrirColeccion(
+                                  context, controller, lista[i]),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Tarjeta de una saga con un mosaico de sus portadas y su progreso.
+class _ColeccionTarjeta extends StatefulWidget {
+  const _ColeccionTarjeta({
+    required this.controller,
+    required this.coleccion,
+    required this.onTap,
+  });
+
+  final TodoWorkspace controller;
+  final Coleccion coleccion;
+  final VoidCallback onTap;
+
+  @override
+  State<_ColeccionTarjeta> createState() => _ColeccionTarjetaState();
+}
+
+class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
+  bool _encima = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final controller = widget.controller;
+    final coleccion = widget.coleccion;
+    final quitadas = controller.visibilitySettings.hiddenCollectionWorks;
+    final obras = coleccion.obras
+        .where((obra) => !quitadas.contains('${coleccion.id}/${obra.id}'))
+        .toList();
+    final enBiblioteca = [
+      for (final obra in obras) _obraEnBiblioteca(controller, obra),
+    ].whereType<LibraryItem>().toList();
+    final completadas = enBiblioteca
+        .where((item) => item.status == LibraryItemStatus.completed)
+        .length;
+    final tipos = obras.map((obra) => obra.type).toSet();
+    final unidad = tipos.length == 1
+        ? _libraryTypePluralLabel(tipos.first).toLowerCase()
+        : 'obras';
+    final portadas = (obras.isEmpty ? coleccion.obras : obras).take(4).toList();
+    return MouseRegion(
+      onEnter: (_) => setState(() => _encima = true),
+      onExit: (_) => setState(() => _encima = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        key: ValueKey('colecciones-${coleccion.id}'),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _encima ? 1.03 : 1,
+          duration: const Duration(milliseconds: 140),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Expanded(
-                child: ListView.separated(
-                  itemCount: lista.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final coleccion = lista[i];
-                    final obras = coleccion.obras;
-                    final tengo = obras
-                        .where((o) =>
-                            _obraEnBiblioteca(widget.controller, o) != null)
-                        .length;
-                    return Material(
-                      color: visuals.panel,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: visuals.panelBorder),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        key: ValueKey('colecciones-${coleccion.id}'),
-                        onTap: () => Navigator.of(context).pop(coleccion),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              for (final obra in obras.take(4)) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: SizedBox(
-                                    width: 34,
-                                    height: 50,
-                                    child: _LibraryCoverImage(
-                                      source: obra.coverUrl,
-                                      type: obra.type,
-                                      iconSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              const SizedBox(width: 10),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _encima
+                          ? const Color(0xFF5F7F49)
+                          : visuals.panelBorder,
+                      width: _encima ? 2 : 1,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: portadas.length < 4
+                      ? _LibraryCoverImage(
+                          source: portadas.first.coverUrl,
+                          type: portadas.first.type,
+                        )
+                      : Column(
+                          children: [
+                            for (final fila in [
+                              portadas.sublist(0, 2),
+                              portadas.sublist(2, 4),
+                            ])
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
-                                    Text(
-                                      coleccion.nombre,
-                                      style: TextStyle(
-                                        color: visuals.textStrong,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
+                                    for (final obra in fila)
+                                      Expanded(
+                                        child: _LibraryCoverImage(
+                                          source: obra.coverUrl,
+                                          type: obra.type,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      '${obras.length} obras · $tengo en tu Biblioteca',
-                                      style: TextStyle(
-                                        color: visuals.textMuted,
-                                        fontSize: 13,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
-                              Icon(Icons.chevron_right_rounded,
-                                  color: visuals.textMuted),
-                            ],
-                          ),
+                          ],
                         ),
-                      ),
-                    );
-                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                coleccion.nombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: visuals.textStrong,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${obras.length} $unidad · ${enBiblioteca.length} en tu '
+                'Biblioteca',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: visuals.textMuted, fontSize: 12.5),
+              ),
+              const SizedBox(height: 7),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: obras.isEmpty ? 0 : completadas / obras.length,
+                  minHeight: 5,
+                  backgroundColor: visuals.panelBorder,
+                  color: const Color(0xFF5F7F49),
                 ),
               ),
             ],

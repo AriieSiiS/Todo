@@ -76,7 +76,7 @@ enum LibraryPublicationStatus { ongoing, finished }
 
 enum LibraryItemStatus { pending, inProgress, completed }
 
-enum LibraryAreaView { library, goals }
+enum LibraryAreaView { library, goals, collections }
 
 enum LibraryGoalStatus { pending, completed }
 
