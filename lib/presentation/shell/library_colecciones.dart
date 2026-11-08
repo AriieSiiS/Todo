@@ -138,6 +138,8 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
   bool _verQuitadas = false;
   bool _seleccionando = false;
   final _seleccion = <String>{};
+  bool _porAnio = false;
+  bool _ocultarTengo = false;
 
   TodoWorkspace get controller => widget.controller;
 
@@ -250,7 +252,24 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
     final enBiblioteca = obras
         .where((obra) => _obraEnBiblioteca(controller, obra) != null)
         .length;
-    return '${obras.length} $nombre · $enBiblioteca en tu Biblioteca';
+    final completadas = obras
+        .where((obra) =>
+            _obraEnBiblioteca(controller, obra)?.status ==
+            LibraryItemStatus.completed)
+        .length;
+    return '${obras.length} $nombre · $enBiblioteca en tu Biblioteca · '
+        '$completadas completadas';
+  }
+
+  List<LibraryItem> _filtrar(List<LibraryItem> obras) {
+    final lista = _ocultarTengo
+        ? obras.where((obra) => _obraEnBiblioteca(controller, obra) == null)
+        : obras;
+    if (!_porAnio) return lista.toList();
+    // Las que no tienen año todavía van al final.
+    return lista.toList()
+      ..sort(
+          (a, b) => (a.releaseYear ?? 9999).compareTo(b.releaseYear ?? 9999));
   }
 
   @override
@@ -259,14 +278,23 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
     final coleccion = widget.coleccion;
     final quitadas = coleccion.obras.where(_quitada).toList();
     final verQuitadas = _verQuitadas && quitadas.isNotEmpty;
+    // Por año, la saga entera se ve en un solo bloque cronológico.
     final grupos = [
-      for (final grupo in coleccion.grupos)
+      if (_porAnio)
         GrupoColeccion(
-          nombre: grupo.nombre,
-          obras: grupo.obras
+          nombre: 'Por año de salida',
+          obras: _filtrar(coleccion.obras
               .where((obra) => _quitada(obra) == verQuitadas)
-              .toList(),
-        ),
+              .toList()),
+        )
+      else
+        for (final grupo in coleccion.grupos)
+          GrupoColeccion(
+            nombre: grupo.nombre,
+            obras: _filtrar(grupo.obras
+                .where((obra) => _quitada(obra) == verQuitadas)
+                .toList()),
+          ),
     ].where((grupo) => grupo.obras.isNotEmpty).toList();
     final obras = [for (final grupo in grupos) ...grupo.obras];
     return Column(
@@ -306,9 +334,51 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  _ColeccionProgreso(
+                    total:
+                        coleccion.obras.where((obra) => !_quitada(obra)).length,
+                    completadas: coleccion.obras
+                        .where((obra) =>
+                            !_quitada(obra) &&
+                            _obraEnBiblioteca(controller, obra)?.status ==
+                                LibraryItemStatus.completed)
+                        .length,
+                  ),
                 ],
               ),
             ),
+            MenuAnchor(
+              menuChildren: [
+                CheckboxMenuButton(
+                  key: const ValueKey('coleccion-ver-por-anio'),
+                  value: _porAnio,
+                  onChanged: (valor) =>
+                      setState(() => _porAnio = valor ?? false),
+                  child: const Text('Ordenar por año'),
+                ),
+                CheckboxMenuButton(
+                  key: const ValueKey('coleccion-ver-ocultar-tengo'),
+                  value: _ocultarTengo,
+                  onChanged: (valor) =>
+                      setState(() => _ocultarTengo = valor ?? false),
+                  child: const Text('Ocultar las que ya tengo'),
+                ),
+              ],
+              builder: (context, menu, _) => OutlinedButton.icon(
+                key: const ValueKey('coleccion-ver'),
+                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                icon: Icon(
+                  _porAnio || _ocultarTengo
+                      ? Icons.filter_alt_rounded
+                      : Icons.tune_rounded,
+                  size: 18,
+                ),
+                label: const Text('Ver'),
+                style: _libraryDetailSecondaryButtonStyle(context),
+              ),
+            ),
+            const SizedBox(width: 10),
             if (!verQuitadas && _seleccionando) ...[
               Text(
                 '${_seleccion.length} seleccionadas',
@@ -818,8 +888,11 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
     final fecha = _fechaPrevista(obra);
     final campos = [
       ..._detailFields(obra).where((campo) => !sinCampo.contains(campo.$1)),
-      if (fecha != null) ('Fecha prevista de salida', fecha),
     ];
+    final dia = fecha == null ? null : _diaDeSalida(fecha);
+    final tituloAviso = 'Sale «${obra.title}»';
+    final avisoCreado =
+        widget.controller.tasks.any((tarea) => tarea.title == tituloAviso);
     return _NavegacionConFlechas(
         onAnterior: () => _moverCiclico(-1),
         onSiguiente: () => _moverCiclico(1),
@@ -910,6 +983,58 @@ class _ColeccionObraDialogState extends State<_ColeccionObraDialog> {
                                 ),
                                 const SizedBox(height: 6),
                               ],
+                              if (fecha != null)
+                                _LibraryDetailLine(
+                                  label: 'Fecha prevista de salida',
+                                  value: fecha,
+                                  valueWidget: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          fecha.isEmpty ? '-' : fecha,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      if (dia != null &&
+                                          dia.isAfter(DateTime.now())) ...[
+                                        const SizedBox(width: 8),
+                                        TextButton.icon(
+                                          key: const ValueKey(
+                                              'coleccion-obra-aviso'),
+                                          onPressed: avisoCreado
+                                              ? null
+                                              : () =>
+                                                  widget.controller.createTask(
+                                                    title: tituloAviso,
+                                                    description:
+                                                        'Fecha prevista de salida '
+                                                        'de ${obra.title}.',
+                                                    scheduledAt: DateTime(
+                                                      dia.year,
+                                                      dia.month,
+                                                      dia.day,
+                                                      10,
+                                                    ),
+                                                  ),
+                                          icon: Icon(
+                                            avisoCreado
+                                                ? Icons
+                                                    .notifications_active_rounded
+                                                : Icons
+                                                    .notifications_none_rounded,
+                                            size: 18,
+                                          ),
+                                          label: Text(avisoCreado
+                                              ? 'Aviso creado'
+                                              : 'Avisarme ese día'),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -1118,6 +1243,207 @@ class _ColeccionEstadoSelector extends StatelessWidget {
                 ),
               ),
               Icon(Icons.arrow_drop_down_rounded, color: colores.$2),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _mesesDelAnio = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+/// Día de salida si la fecha prevista es exacta, como «18 de febrero de 2027».
+DateTime? _diaDeSalida(String texto) {
+  final m = RegExp(r'(\d{1,2}) de ([a-záéíóú]+) de (\d{4})')
+      .firstMatch(texto.toLowerCase());
+  if (m == null) return null;
+  final mes = _mesesDelAnio.indexOf(m.group(2)!) + 1;
+  if (mes == 0) return null;
+  return DateTime(int.parse(m.group(3)!), mes, int.parse(m.group(1)!));
+}
+
+class _ColeccionProgreso extends StatelessWidget {
+  const _ColeccionProgreso({required this.total, required this.completadas});
+
+  final int total;
+  final int completadas;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 240,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LinearProgressIndicator(
+          key: const ValueKey('coleccion-progreso'),
+          value: total == 0 ? 0 : completadas / total,
+          minHeight: 6,
+          backgroundColor: context.visuals.panelBorder,
+          color: const Color(0xFF5F7F49),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lista de todas las colecciones, también las que no tienen nada en la
+/// Biblioteca y por eso no tienen chapa desde la que abrirlas.
+Future<void> _mostrarBuscadorColecciones(
+  BuildContext context,
+  TodoWorkspace controller,
+) async {
+  await _cargarColecciones();
+  if (!context.mounted) return;
+  final elegida = await showDialog<Coleccion>(
+    context: context,
+    builder: (context) => _BuscadorColecciones(controller: controller),
+  );
+  if (elegida != null && context.mounted) {
+    await _abrirColeccion(context, controller, elegida);
+  }
+}
+
+class _BuscadorColecciones extends StatefulWidget {
+  const _BuscadorColecciones({required this.controller});
+
+  final TodoWorkspace controller;
+
+  @override
+  State<_BuscadorColecciones> createState() => _BuscadorColeccionesState();
+}
+
+class _BuscadorColeccionesState extends State<_BuscadorColecciones> {
+  String _texto = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.visuals;
+    final buscado = _texto.paraBuscar;
+    final lista = (_colecciones ?? const <Coleccion>[])
+        .where((c) =>
+            buscado.isEmpty ||
+            c.nombres.any((n) => n.paraBuscar.contains(buscado)) ||
+            c.obras.any((o) => o.title.paraBuscar.contains(buscado)))
+        .toList();
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 720,
+          maxHeight: min(760, MediaQuery.sizeOf(context).height - 60),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Colecciones',
+                style: TextStyle(
+                  color: visuals.textStrong,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('colecciones-buscar'),
+                autofocus: true,
+                onChanged: (valor) => setState(() => _texto = valor),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search_rounded),
+                  hintText: 'Buscar saga u obra',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: lista.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final coleccion = lista[i];
+                    final obras = coleccion.obras;
+                    final tengo = obras
+                        .where((o) =>
+                            _obraEnBiblioteca(widget.controller, o) != null)
+                        .length;
+                    return Material(
+                      color: visuals.panel,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: visuals.panelBorder),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        key: ValueKey('colecciones-${coleccion.id}'),
+                        onTap: () => Navigator.of(context).pop(coleccion),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              for (final obra in obras.take(4)) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: SizedBox(
+                                    width: 34,
+                                    height: 50,
+                                    child: _LibraryCoverImage(
+                                      source: obra.coverUrl,
+                                      type: obra.type,
+                                      iconSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      coleccion.nombre,
+                                      style: TextStyle(
+                                        color: visuals.textStrong,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${obras.length} obras · $tengo en tu Biblioteca',
+                                      style: TextStyle(
+                                        color: visuals.textMuted,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded,
+                                  color: visuals.textMuted),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),
