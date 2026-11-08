@@ -254,6 +254,166 @@ Future<Uint8List> _bytesPortada(String ruta) async {
   return File(ruta).readAsBytes();
 }
 
+/// Lista guardada como «clave=a|b|c» entre las obras quitadas.
+List<String>? _ordenGuardadoEn(TodoWorkspace controller, String clave) {
+  final prefijo = '$clave=';
+  for (final entrada in controller.visibilitySettings.hiddenCollectionWorks) {
+    if (entrada.startsWith(prefijo)) {
+      return entrada.substring(prefijo.length).split('|');
+    }
+  }
+  return null;
+}
+
+/// Ordena [elementos] según [orden]; los que no aparecen siguen al final en
+/// su orden original.
+List<T> _segunOrden<T>(
+  List<T> elementos,
+  List<String>? orden,
+  String Function(T) clave,
+) {
+  if (orden == null) return elementos;
+  final posicion = {for (var i = 0; i < orden.length; i++) orden[i]: i};
+  final original = {
+    for (var i = 0; i < elementos.length; i++) clave(elementos[i]): i
+  };
+  return [...elementos]..sort((a, b) {
+      final pa = posicion[clave(a)] ?? orden.length + original[clave(a)]!;
+      final pb = posicion[clave(b)] ?? orden.length + original[clave(b)]!;
+      return pa.compareTo(pb);
+    });
+}
+
+/// Obras de un apartado en el orden elegido a mano.
+List<LibraryItem> _obrasDelApartado(
+  TodoWorkspace controller,
+  Coleccion coleccion,
+  GrupoColeccion grupo,
+) =>
+    _segunOrden(
+      grupo.obras,
+      _ordenGuardadoEn(controller, '${coleccion.id}/orden:${grupo.nombre}'),
+      (obra) => obra.id,
+    );
+
+/// Todas las obras de la colección con el orden de apartados y de portadas
+/// que se haya elegido a mano.
+List<LibraryItem> _obrasEnSuOrden(
+  TodoWorkspace controller,
+  Coleccion coleccion,
+) =>
+    [
+      for (final grupo in _segunOrden(
+        coleccion.grupos,
+        _ordenGuardadoEn(controller, '${coleccion.id}/orden-apartados'),
+        (grupo) => grupo.nombre,
+      ))
+        ..._obrasDelApartado(controller, coleccion, grupo),
+    ];
+
+/// Portada elegida a mano para la tarjeta de una colección.
+String _clavePortadaColeccion(Coleccion coleccion) => '${coleccion.id}/portada';
+
+String? _portadaColeccion(TodoWorkspace controller, Coleccion coleccion) =>
+    controller.visibilitySettings
+            .collectionWorkEdits[_clavePortadaColeccion(coleccion)]?['coverUrl']
+        as String?;
+
+/// Elige la portada de la tarjeta: una de sus obras o una imagen propia.
+Future<void> _elegirPortadaColeccion(
+  BuildContext context,
+  TodoWorkspace controller,
+  Coleccion coleccion,
+) async {
+  final visuals = context.visuals;
+  final actual = _portadaColeccion(controller, coleccion);
+  final vistas = <String>{};
+  final candidatas = [
+    for (final obra in _obrasEnSuOrden(controller, coleccion))
+      if ((obra.coverUrl ?? '').isNotEmpty && vistas.add(obra.coverUrl!)) obra,
+  ];
+  final elegida = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Portada de «${coleccion.nombre}»'),
+      content: SizedBox(
+        width: 720,
+        // Seis portadas por fila de unos 168 px; con muchas, se desplaza.
+        height: min(460, ((candidatas.length + 5) ~/ 6) * 178 - 10),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 120,
+            childAspectRatio: 2 / 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+          ),
+          itemCount: candidatas.length,
+          itemBuilder: (context, i) {
+            final obra = candidatas[i];
+            final marcada = obra.coverUrl == actual;
+            return Tooltip(
+              message: obra.title,
+              child: InkWell(
+                key: ValueKey('coleccion-portada-${obra.id}'),
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => Navigator.of(context).pop(obra.coverUrl),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: marcada
+                          ? const Color(0xFF9DCB7E)
+                          : visuals.panelBorder,
+                      width: marcada ? 3 : 1,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _LibraryCoverImage(
+                      source: obra.coverUrl, type: obra.type),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton.icon(
+          key: const ValueKey('coleccion-portada-archivo'),
+          icon: const Icon(Icons.image_outlined),
+          label: const Text('Elegir una imagen…'),
+          onPressed: () async {
+            const tipos = XTypeGroup(
+              label: 'Imágenes',
+              extensions: <String>['jpg', 'jpeg', 'png', 'webp'],
+            );
+            final archivo = await openFile(acceptedTypeGroups: const [tipos]);
+            if (archivo == null) return;
+            final ruta = await _copyLibraryCover(archivo);
+            if (ruta != null && context.mounted) {
+              Navigator.of(context).pop(ruta);
+            }
+          },
+        ),
+        if (actual != null)
+          TextButton(
+            key: const ValueKey('coleccion-portada-quitar'),
+            onPressed: () => Navigator.of(context).pop(''),
+            child: const Text('Usar las primeras obras'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    ),
+  );
+  if (elegida == null) return;
+  controller.setCollectionWorkEdit(
+    _clavePortadaColeccion(coleccion),
+    elegida.isEmpty ? null : {'coverUrl': elegida},
+  );
+}
+
 /// Imagen de una portada del catálogo o de un archivo elegido a mano.
 ImageProvider _imagenPortada(String ruta) => ruta.startsWith('assets/')
     ? AssetImage(ruta) as ImageProvider
@@ -622,33 +782,14 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
       '${widget.coleccion.id}/orden:${grupo.nombre}';
 
   /// Orden elegido a mano para el apartado, si lo hay.
-  List<String>? _ordenGuardado(GrupoColeccion grupo) {
-    final prefijo = '${_claveOrden(grupo)}=';
-    for (final entrada in controller.visibilitySettings.hiddenCollectionWorks) {
-      if (entrada.startsWith(prefijo)) {
-        return entrada.substring(prefijo.length).split('|');
-      }
-    }
-    return null;
-  }
+  List<String>? _ordenGuardado(GrupoColeccion grupo) =>
+      _ordenGuardadoEn(controller, _claveOrden(grupo));
 
   /// Obras del apartado en el orden elegido a mano; las que no aparecen en
   /// él (por ejemplo, obras nuevas del catálogo) siguen al final.
-  List<LibraryItem> _ordenado(GrupoColeccion grupo) {
-    final orden = _ordenGuardado(grupo);
-    if (orden == null) return grupo.obras;
-    final posicion = {for (var i = 0; i < orden.length; i++) orden[i]: i};
-    final indices = {
-      for (var i = 0; i < grupo.obras.length; i++) grupo.obras[i].id: i
-    };
-    return [...grupo.obras]..sort((a, b) {
-        final pa = posicion[a.id] ?? orden.length + indices[a.id]!;
-        final pb = posicion[b.id] ?? orden.length + indices[b.id]!;
-        return pa.compareTo(pb);
-      });
-  }
+  List<LibraryItem> _ordenado(GrupoColeccion grupo) =>
+      _obrasDelApartado(controller, widget.coleccion, grupo);
 
-  /// Coloca [arrastrada] en el sitio de [destino] dentro de su apartado.
   // Arrastre de portadas: mientras se arrastra, el apartado se dibuja ya con
   // el orden que quedaría, y la portada arrastrada deja un hueco en su sitio.
   String? _grupoArrastre;
@@ -661,31 +802,12 @@ class _ColeccionDetalleState extends State<_ColeccionDetalle> {
 
   String get _claveOrdenApartados => '${widget.coleccion.id}/orden-apartados';
 
-  List<String>? get _ordenApartados {
-    final prefijo = '$_claveOrdenApartados=';
-    for (final entrada in controller.visibilitySettings.hiddenCollectionWorks) {
-      if (entrada.startsWith(prefijo)) {
-        return entrada.substring(prefijo.length).split('|');
-      }
-    }
-    return null;
-  }
+  List<String>? get _ordenApartados =>
+      _ordenGuardadoEn(controller, _claveOrdenApartados);
 
   /// Apartados en el orden elegido a mano, con la vista previa del arrastre.
   List<GrupoColeccion> _apartadosOrdenados(List<GrupoColeccion> grupos) {
-    final orden = _ordenApartados;
-    var lista = [...grupos];
-    if (orden != null) {
-      final posicion = {for (var i = 0; i < orden.length; i++) orden[i]: i};
-      final original = {
-        for (var i = 0; i < grupos.length; i++) grupos[i].nombre: i
-      };
-      lista.sort((a, b) {
-        final pa = posicion[a.nombre] ?? orden.length + original[a.nombre]!;
-        final pb = posicion[b.nombre] ?? orden.length + original[b.nombre]!;
-        return pa.compareTo(pb);
-      });
-    }
+    var lista = _segunOrden(grupos, _ordenApartados, (g) => g.nombre);
     final movido = _apartadoArrastrado;
     final destino = _destinoApartado;
     if (movido != null && destino != null) {
@@ -2448,6 +2570,14 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
           ),
         ),
         PopupMenuItem<String>(
+          value: 'portada',
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.image_outlined),
+            title: Text('Cambiar portada'),
+          ),
+        ),
+        PopupMenuItem<String>(
           value: 'borrar',
           child: ListTile(
             dense: true,
@@ -2460,6 +2590,13 @@ class _ColeccionesVistaState extends State<_ColeccionesVista> {
     if (!context.mounted) return;
     if (elegido == 'abrir') {
       await _abrirColeccion(context, widget.controller, coleccion);
+    } else if (elegido == 'portada') {
+      final completa = (_colecciones ?? const <Coleccion>[])
+              .where((c) => c.id == coleccion.id)
+              .firstOrNull ??
+          coleccion;
+      await _elegirPortadaColeccion(context, widget.controller,
+          _coleccionEditada(widget.controller, completa));
     } else if (elegido == 'borrar') {
       await _borrarColeccion(context, widget.controller, coleccion);
     }
@@ -2663,7 +2800,12 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
         : tipos.length == 1
             ? _libraryTypePluralLabel(tipos.first).toLowerCase()
             : 'obras';
-    final portadas = (obras.isEmpty ? coleccion.obras : obras).take(4).toList();
+    final enOrden = _obrasEnSuOrden(controller, coleccion)
+        .where((obra) => !quitadas.contains(_claveObra(coleccion, obra)))
+        .toList();
+    final portadas =
+        (enOrden.isEmpty ? coleccion.obras : enOrden).take(4).toList();
+    final propia = _portadaColeccion(controller, coleccion);
     return MouseRegion(
       onEnter: (_) => setState(() => _encima = true),
       onExit: (_) => setState(() => _encima = false),
@@ -2692,34 +2834,39 @@ class _ColeccionTarjetaState extends State<_ColeccionTarjeta> {
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: portadas.length < 4
+                  child: propia != null
                       ? _LibraryCoverImage(
-                          source: portadas.first.coverUrl,
+                          source: propia,
                           type: portadas.first.type,
                         )
-                      : Column(
-                          children: [
-                            for (final fila in [
-                              portadas.sublist(0, 2),
-                              portadas.sublist(2, 4),
-                            ])
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    for (final obra in fila)
-                                      Expanded(
-                                        child: _LibraryCoverImage(
-                                          source: obra.coverUrl,
-                                          type: obra.type,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
+                      : portadas.length < 4
+                          ? _LibraryCoverImage(
+                              source: portadas.first.coverUrl,
+                              type: portadas.first.type,
+                            )
+                          : Column(
+                              children: [
+                                for (final fila in [
+                                  portadas.sublist(0, 2),
+                                  portadas.sublist(2, 4),
+                                ])
+                                  Expanded(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        for (final obra in fila)
+                                          Expanded(
+                                            child: _LibraryCoverImage(
+                                              source: obra.coverUrl,
+                                              type: obra.type,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                 ),
               ),
               const SizedBox(height: 10),
