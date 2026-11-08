@@ -273,18 +273,106 @@ Future<void> _abrirColeccion(
     builder: (context) => Dialog(
       insetPadding: const EdgeInsets.all(28),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 18, 22, 8),
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => _ColeccionDetalle(
-            controller: controller,
-            coleccion: coleccion,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(child: _FondoColeccion(coleccion: coleccion)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 8),
+            child: ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) => _ColeccionDetalle(
+                controller: controller,
+                coleccion: coleccion,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     ),
   );
+}
+
+/// Fondo de la vista de una colección: una imagen de la saga a la derecha,
+/// desvaída y fundida con el color del diálogo para no restar protagonismo a
+/// las portadas. Sin imagen propia, se usa la portada de la primera obra
+/// desenfocada.
+class _FondoColeccion extends StatelessWidget {
+  const _FondoColeccion({required this.coleccion});
+
+  final Coleccion coleccion;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final base = tema.dialogTheme.backgroundColor ??
+        tema.colorScheme.surfaceContainerHigh;
+    final oscuro = tema.brightness == Brightness.dark;
+    final fondo = coleccion.fondo;
+    final portada = coleccion.obras.isEmpty ? null : coleccion.obras.first;
+    Widget? imagen;
+    if (fondo != null) {
+      imagen =
+          Image.asset(fondo, fit: BoxFit.cover, alignment: Alignment.center);
+    } else if (portada?.coverUrl != null) {
+      imagen = ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Image.asset(portada!.coverUrl!, fit: BoxFit.cover),
+      );
+    }
+    if (imagen == null) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: FractionallySizedBox(
+              widthFactor: 0.72,
+              heightFactor: 1,
+              child: Opacity(
+                opacity: fondo != null
+                    ? (oscuro ? 0.42 : 0.5)
+                    : (oscuro ? 0.28 : 0.32),
+                child: imagen,
+              ),
+            ),
+          ),
+          // Funde la imagen con el diálogo hacia la izquierda y la aclara u
+          // oscurece para que los textos y las portadas se lean bien.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  base,
+                  base,
+                  base.withValues(alpha: oscuro ? 0.55 : 0.5),
+                  base.withValues(alpha: oscuro ? 0.25 : 0.3),
+                ],
+                stops: const [0, 0.28, 0.62, 1],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  base.withValues(alpha: 0.35),
+                  base.withValues(alpha: 0),
+                  base.withValues(alpha: 0.25),
+                ],
+                stops: const [0, 0.35, 1],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ColeccionDetalle extends StatefulWidget {
@@ -1742,6 +1830,7 @@ Coleccion _coleccionDeTipo(Coleccion coleccion, LibraryItemType? tipo) {
     id: coleccion.id,
     nombre: coleccion.nombre,
     alias: coleccion.alias,
+    fondo: coleccion.fondo,
     fechasPrevistas: coleccion.fechasPrevistas,
     grupos: [
       for (final grupo in coleccion.grupos)

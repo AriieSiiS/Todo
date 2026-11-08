@@ -19,7 +19,11 @@ class Coleccion {
     required this.alias,
     required this.grupos,
     this.fechasPrevistas = const {},
+    this.fondo,
   });
+
+  /// Imagen apaisada de la saga para el fondo de su vista, si la tiene.
+  final String? fondo;
 
   /// Fecha prevista de salida de las obras que aún no han salido, por su id.
   /// Una cadena vacía indica que todavía no hay fecha.
@@ -59,6 +63,7 @@ class Coleccion {
       id: datos['id'] as String,
       nombre: nombre,
       alias: (datos['alias'] as List? ?? const []).cast<String>(),
+      fondo: datos['fondo'] as String?,
       fechasPrevistas: {
         for (final grupo in grupos)
           for (final campos

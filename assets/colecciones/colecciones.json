@@ -65,7 +65,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/28-dias-despues.jpg"
   },
   {
    "id": "agatha-christie",
@@ -743,7 +744,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/agatha-christie.jpg"
   },
   {
    "id": "bioshock",
@@ -790,7 +792,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/bioshock.jpg"
   },
   {
    "id": "blasphemous",
@@ -825,7 +828,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/blasphemous.jpg"
   },
   {
    "id": "carl-el-mazmorrero",
@@ -1000,7 +1004,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/control.jpg"
   },
   {
    "id": "cosmere",
@@ -1379,7 +1384,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/dead-space.jpg"
   },
   {
    "id": "death-stranding",
@@ -1414,7 +1420,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/death-stranding.jpg"
   },
   {
    "id": "dig-it",
@@ -1531,7 +1538,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/distrito-13.jpg"
   },
   {
    "id": "dragon-age",
@@ -1590,7 +1598,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/dragon-age.jpg"
   },
   {
    "id": "dune",
@@ -2000,7 +2009,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/dune.jpg"
   },
   {
    "id": "eisenhorn",
@@ -2142,7 +2152,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/eisenhorn.jpg"
   },
   {
    "id": "el-padrino",
@@ -2195,7 +2206,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/el-padrino.jpg"
   },
   {
    "id": "final-fantasy",
@@ -2541,7 +2553,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/final-fantasy.jpg"
   },
   {
    "id": "gachiakuta",
@@ -2777,7 +2790,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/gachiakuta.jpg"
   },
   {
    "id": "goool",
@@ -2830,7 +2844,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/goool.jpg"
   },
   {
    "id": "half-life",
@@ -2938,7 +2953,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/half-life.jpg"
   },
   {
    "id": "hercules-poirot",
@@ -3466,7 +3482,8 @@
      ]
     }
    ],
-   "universo": "Agatha Christie"
+   "universo": "Agatha Christie",
+   "fondo": "assets/colecciones/fondos/hercules-poirot.jpg"
   },
   {
    "id": "high-school-musical",
@@ -3519,7 +3536,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/high-school-musical.jpg"
   },
   {
    "id": "hollow-knight",
@@ -3554,7 +3572,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/hollow-knight.jpg"
   },
   {
    "id": "hora-punta",
@@ -3607,7 +3626,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/hora-punta.jpg"
   },
   {
    "id": "kill-bill",
@@ -3659,7 +3679,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/kill-bill.jpg"
   },
   {
    "id": "la-herejia-de-horus",
@@ -4515,7 +4536,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/la-herejia-de-horus.jpg"
   },
   {
    "id": "la-tierra-media",
@@ -4815,7 +4837,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/la-tierra-media.jpg"
   },
   {
    "id": "las-raices-del-caos",
@@ -6138,7 +6161,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/marvel.jpg"
   },
   {
    "id": "mitologia-griega",
@@ -6244,7 +6268,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/mitologia-griega.jpg"
   },
   {
    "id": "orcs-must-die",
@@ -6303,7 +6328,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/orcs-must-die.jpg"
   },
   {
    "id": "persona",
@@ -6587,7 +6613,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/persona.jpg"
   },
   {
    "id": "practical-magic",
@@ -6626,7 +6653,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/practical-magic.jpg"
   },
   {
    "id": "quentin-tarantino",
@@ -6851,7 +6879,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/quentin-tarantino.jpg"
   },
   {
    "id": "resident-evil",
@@ -7272,7 +7301,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/resident-evil.jpg"
   },
   {
    "id": "sinister",
@@ -7311,7 +7341,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/sinister.jpg"
   },
   {
    "id": "souls",
@@ -7439,7 +7470,8 @@
    "universo": "Souls",
    "alias": [
     "Dark Souls"
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/souls.jpg"
   },
   {
    "id": "styx",
@@ -7486,7 +7518,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/styx.jpg"
   },
   {
    "id": "subnautica",
@@ -7534,7 +7567,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/subnautica.jpg"
   },
   {
    "id": "the-witcher",
@@ -7682,7 +7716,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/the-witcher.jpg"
   },
   {
    "id": "warhammer-40000",
@@ -7908,7 +7943,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg"
   },
   {
    "id": "witch-hat-atelier",
@@ -8134,7 +8170,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/witch-hat-atelier.jpg"
   }
  ]
 }
