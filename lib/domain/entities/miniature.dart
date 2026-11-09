@@ -171,6 +171,40 @@ class MiniaturePaintStep {
   }
 }
 
+/// Vista de 360° hecha con fotos: [rows] alturas de cámara y [cols] ángulos
+/// por altura, guardadas como `FF-CC.jpg` dentro de [path].
+class MiniatureSpin {
+  const MiniatureSpin({
+    required this.name,
+    required this.path,
+    this.rows = 1,
+    this.cols = 12,
+  });
+
+  final String name;
+  final String path;
+  final int rows;
+  final int cols;
+
+  String frame(int row, int col) =>
+      '$path/${(row + 1).toString().padLeft(2, '0')}-'
+      '${(col + 1).toString().padLeft(2, '0')}.jpg';
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'name': name,
+        'path': path,
+        'rows': rows,
+        'cols': cols,
+      };
+
+  factory MiniatureSpin.fromJson(Map<String, dynamic> json) => MiniatureSpin(
+        name: json['name'] as String? ?? '',
+        path: json['path'] as String? ?? '',
+        rows: ((json['rows'] as num?)?.toInt() ?? 1).clamp(1, 20),
+        cols: ((json['cols'] as num?)?.toInt() ?? 12).clamp(1, 200),
+      );
+}
+
 /// Paso de montaje con su imagen de las instrucciones.
 class MiniatureAssemblyStep {
   const MiniatureAssemblyStep({
@@ -267,6 +301,7 @@ class MiniatureKit {
     this.coverPath = '',
     this.heroPath = '',
     this.gallery = const <String>[],
+    this.spins = const <MiniatureSpin>[],
     this.assembly = const <MiniatureAssemblyStep>[],
     this.models = const <MiniatureModel>[],
     this.paints = const <MiniaturePaint>[],
@@ -295,6 +330,9 @@ class MiniatureKit {
 
   /// Fotos de referencia oficiales.
   final List<String> gallery;
+
+  /// Vistas de 360° oficiales para girar la figura.
+  final List<MiniatureSpin> spins;
   final List<MiniatureAssemblyStep> assembly;
   final List<MiniatureModel> models;
   final List<MiniaturePaint> paints;
@@ -357,6 +395,7 @@ class MiniatureKit {
     String? coverPath,
     String? heroPath,
     List<String>? gallery,
+    List<MiniatureSpin>? spins,
     List<MiniatureAssemblyStep>? assembly,
     List<MiniatureModel>? models,
     List<MiniaturePaint>? paints,
@@ -376,6 +415,7 @@ class MiniatureKit {
         coverPath: coverPath ?? this.coverPath,
         heroPath: heroPath ?? this.heroPath,
         gallery: gallery ?? this.gallery,
+        spins: spins ?? this.spins,
         assembly: assembly ?? this.assembly,
         models: models ?? this.models,
         paints: paints ?? this.paints,
@@ -397,6 +437,7 @@ class MiniatureKit {
         'coverPath': coverPath,
         'heroPath': heroPath,
         'gallery': gallery,
+        'spins': spins.map((item) => item.toJson()).toList(),
         'assembly': assembly.map((item) => item.toJson()).toList(),
         'models': models.map((item) => item.toJson()).toList(),
         'paints': paints.map((item) => item.toJson()).toList(),
@@ -428,6 +469,7 @@ class MiniatureKit {
       gallery: (json['gallery'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<String>()
           .toList(),
+      spins: lista('spins').map(MiniatureSpin.fromJson).toList(),
       assembly: lista('assembly').map(MiniatureAssemblyStep.fromJson).toList(),
       models: lista('models').map(MiniatureModel.fromJson).toList(),
       paints: lista('paints').map(MiniaturePaint.fromJson).toList(),

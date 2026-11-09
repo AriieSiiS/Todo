@@ -313,6 +313,10 @@ extension TodoWorkspaceMiniaturas on TodoWorkspace {
       kit.coverPath,
       kit.heroPath,
       ...kit.gallery,
+      for (final spin in kit.spins)
+        for (var fila = 0; fila < spin.rows; fila++)
+          for (var columna = 0; columna < spin.cols; columna++)
+            spin.frame(fila, columna),
       for (final step in kit.assembly) step.imagePath,
       for (final photo in kit.photos) ...[photo.imagePath, photo.thumbnailPath],
     };

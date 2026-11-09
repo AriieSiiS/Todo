@@ -28,19 +28,6 @@ const Map<String, String> _zonasMiniatura = <String, String>{
   'borde': 'Borde de la peana',
 };
 
-/// Zonas que se rotulan en el diagrama (las demás son detalles pequeños).
-const Set<String> _zonasRotuladas = <String>{
-  'armadura',
-  'capa',
-  'penacho',
-  'traje',
-  'hoja',
-  'cordones',
-  'gemas',
-  'escudo',
-  'peana',
-};
-
 const Color _escenarioClaro = Color(0xFF3A2F25);
 const Color _escenarioOscuro = Color(0xFF121010);
 const Color _oroMiniatura = Color(0xFFE2B85C);
@@ -86,43 +73,6 @@ Map<String, String> _coloresHasta(MiniatureKit kit, int hasta) {
     }
   }
   return colores;
-}
-
-/// Estado que se manda al visor 3D.
-Map<String, Object?> _estado3D(
-  MiniatureKit kit, {
-  int? paso,
-  bool etiquetas = false,
-  bool vexilla = false,
-  bool giro = true,
-}) {
-  final hasta = paso ?? kit.guide.length - 1;
-  final colores = _coloresHasta(kit, hasta);
-  final resaltar = paso == null || paso < 0 || paso >= kit.guide.length
-      ? const <String>[]
-      : kit.guide[paso].zones.keys.where((zona) => zona != 'todo').toList();
-  final rotulos = <Map<String, String>>[];
-  if (etiquetas) {
-    final zonas =
-        paso == null ? _zonasRotuladas.where(colores.containsKey) : resaltar;
-    for (final zona in zonas) {
-      if (zona == 'estandarte' && !vexilla) continue;
-      if (zona == 'escudo' && vexilla) continue;
-      rotulos.add(<String, String>{
-        'zona': zona,
-        'nombre': _zonasMiniatura[zona] ?? zona,
-        'color':
-            '#${(colores[zona] ?? '#8D9198').replaceAll('*', '').replaceAll('#', '')}',
-      });
-    }
-  }
-  return <String, Object?>{
-    'zonas': colores,
-    'resaltar': resaltar,
-    'etiquetas': rotulos,
-    'vexilla': vexilla,
-    'giro': giro,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +328,7 @@ class _MiniImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.alignment = Alignment.center,
     this.escala = 1,
+    this.ajustada = false,
   });
 
   final TodoWorkspace controller;
@@ -385,6 +336,9 @@ class _MiniImage extends StatelessWidget {
   final BoxFit fit;
   final Alignment alignment;
   final double escala;
+
+  /// Ocupa solo lo que mide la imagen, para saber si se pulsa fuera de ella.
+  final bool ajustada;
 
   @override
   Widget build(BuildContext context) {
@@ -394,15 +348,14 @@ class _MiniImage extends StatelessWidget {
       builder: (context, snapshot) {
         final absolute = snapshot.data ?? '';
         if (absolute.isEmpty) return const SizedBox.shrink();
-        return SizedBox.expand(
-          child: ImagenLocal(
-            absolute,
-            fit: fit,
-            alignment: alignment,
-            escala: escala,
-            errorBuilder: (_, __, ___) => const _MiniImagePlaceholder(),
-          ),
+        final imagen = ImagenLocal(
+          absolute,
+          fit: fit,
+          alignment: alignment,
+          escala: escala,
+          errorBuilder: (_, __, ___) => const _MiniImagePlaceholder(),
         );
+        return ajustada ? imagen : SizedBox.expand(child: imagen);
       },
     );
   }
@@ -829,111 +782,219 @@ Future<String?> _pedirTextoMiniatura(
 }
 
 // ---------------------------------------------------------------------------
-// Visor 3D
+// Vista de 360° con las fotos oficiales
 // ---------------------------------------------------------------------------
 
-class _Mini3D extends StatefulWidget {
-  const _Mini3D({required this.estado, this.overlay, super.key});
+/// Gira la figura con las fotos de 360°: arrastrar en horizontal la rota y en
+/// vertical cambia la altura de la cámara.
+class _MiniGiro extends StatefulWidget {
+  const _MiniGiro({
+    required this.controller,
+    required this.spins,
+    this.title = 'Vista 360° oficial',
+    super.key,
+  });
 
-  final Map<String, Object?> estado;
-  final Widget? overlay;
+  final TodoWorkspace controller;
+  final List<MiniatureSpin> spins;
+  final String title;
 
   @override
-  State<_Mini3D> createState() => _Mini3DState();
+  State<_MiniGiro> createState() => _MiniGiroState();
 }
 
-class _Mini3DState extends State<_Mini3D> {
+class _MiniGiroState extends State<_MiniGiro> {
   static final bool _enPrueba =
       Platform.environment.containsKey('FLUTTER_TEST');
 
-  InAppWebViewController? _vista;
-  bool _listo = false;
-  String? _url;
-  String? _error;
+  int _figura = 0;
+  int _fila = 0;
+  int _columna = 0;
+  double _arrastreX = 0;
+  double _arrastreY = 0;
+  bool _girando = true;
+  Timer? _reloj;
+  String _base = '';
+
+  MiniatureSpin get _spin =>
+      widget.spins[_figura.clamp(0, widget.spins.length - 1)];
 
   @override
   void initState() {
     super.initState();
-    if (_enPrueba) return;
-    MiniatureViewerServer.instance.start().then((url) {
-      if (mounted) setState(() => _url = url);
-    }).catchError((Object error) {
-      if (mounted) setState(() => _error = '$error');
-    });
+    _cargarBase();
+    if (!_enPrueba) {
+      _reloj = Timer.periodic(const Duration(milliseconds: 170), (_) {
+        if (_girando && mounted) {
+          setState(() => _columna = (_columna + 1) % _spin.cols);
+        }
+      });
+    }
+  }
+
+  Future<void> _cargarBase() async {
+    final base = await widget.controller.miniatureAssetAbsolutePath('.');
+    if (mounted) {
+      setState(() => _base =
+          base.endsWith('.') ? base.substring(0, base.length - 1) : base);
+    }
   }
 
   @override
-  void didUpdateWidget(covariant _Mini3D oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (jsonEncode(oldWidget.estado) != jsonEncode(widget.estado)) _enviar();
+  void dispose() {
+    _reloj?.cancel();
+    super.dispose();
   }
 
-  void _enviar() {
-    if (!_listo) return;
-    _vista?.evaluateJavascript(
-      source:
-          'window.miniatura && window.miniatura.aplicar(${jsonEncode(widget.estado)});',
-    );
+  void _arrastrar(DragUpdateDetails detalles) {
+    _girando = false;
+    _arrastreX += detalles.delta.dx;
+    _arrastreY += detalles.delta.dy;
+    const pasoX = 16.0;
+    const pasoY = 45.0;
+    var cambio = false;
+    while (_arrastreX.abs() >= pasoX) {
+      final sentido = _arrastreX > 0 ? -1 : 1;
+      _columna = (_columna + sentido) % _spin.cols;
+      if (_columna < 0) _columna += _spin.cols;
+      _arrastreX -= pasoX * _arrastreX.sign;
+      cambio = true;
+    }
+    while (_arrastreY.abs() >= pasoY) {
+      final sentido = _arrastreY > 0 ? 1 : -1;
+      _fila = (_fila + sentido).clamp(0, _spin.rows - 1);
+      _arrastreY -= pasoY * _arrastreY.sign;
+      cambio = true;
+    }
+    if (cambio) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget contenido;
-    if (_enPrueba || _error != null) {
-      contenido = Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.view_in_ar_rounded,
-                size: 54, color: Color(0x99FFFFFF)),
-            const SizedBox(height: 10),
-            Text(
-              _error == null ? 'Modelo 3D' : 'No se pudo abrir el modelo 3D',
-              style: const TextStyle(color: Color(0xCCFFFFFF)),
-            ),
-          ],
-        ),
-      );
-    } else if (_url == null) {
-      contenido = const Center(
-        child: CircularProgressIndicator(color: _oroMiniatura),
-      );
-    } else {
-      contenido = InAppWebView(
-        initialUrlRequest: URLRequest(
-          url:
-              WebUri('$_url#${Uri.encodeComponent(jsonEncode(widget.estado))}'),
-        ),
-        initialSettings: InAppWebViewSettings(
-          supportZoom: false,
-          transparentBackground: true,
-          javaScriptEnabled: true,
-          supportMultipleWindows: false,
-          disableContextMenu: true,
-        ),
-        onWebViewCreated: (vista) => _vista = vista,
-        onLoadStart: (_, __) => _listo = false,
-        onLoadStop: (_, __) {
-          _listo = true;
-          _enviar();
-        },
+    if (widget.spins.isEmpty) {
+      return const ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+        child: _MiniImagePlaceholder(),
       );
     }
+    final ruta = _base.isEmpty
+        ? ''
+        : '$_base${_spin.frame(_fila, _columna).replaceAll('/', Platform.pathSeparator)}';
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.2),
-            radius: 1.1,
-            colors: [_escenarioClaro, _escenarioOscuro],
-          ),
-        ),
+      child: ColoredBox(
+        color: Colors.white,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            contenido,
-            if (widget.overlay != null) widget.overlay!,
+            MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: GestureDetector(
+                key: const ValueKey('miniature-spin'),
+                onPanStart: (_) => setState(() => _girando = false),
+                onPanUpdate: _arrastrar,
+                onDoubleTap: () => setState(() => _girando = !_girando),
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 3,
+                  panEnabled: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 54, 20, 46),
+                    child: ruta.isEmpty
+                        ? const SizedBox.expand()
+                        : ImagenLocal(
+                            ruta,
+                            fit: BoxFit.contain,
+                            gaplessPlayback: true,
+                            escala: 0.8,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 14,
+              left: 16,
+              right: 14,
+              child: Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: const TextStyle(
+                          color: Color(0xFF1C1712),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                        ),
+                      ),
+                      Text(
+                        _spin.name,
+                        style: const TextStyle(
+                            color: Color(0x991C1712), fontSize: 12.5),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  for (var i = 0; i < widget.spins.length; i++) ...[
+                    const SizedBox(width: 6),
+                    _MiniGlassButton(
+                      icon: Icons.person_rounded,
+                      label: 'Figura ${i + 1}',
+                      selected: i == _figura,
+                      onPressed: () => setState(() {
+                        _figura = i;
+                        _fila = _fila.clamp(0, _spin.rows - 1);
+                        _columna = _columna % _spin.cols;
+                      }),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.threesixty_rounded,
+                          size: 16, color: Color(0x991C1712)),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Arrastra para girar · arriba y abajo cambia la altura · rueda para acercar',
+                        style:
+                            TextStyle(color: Color(0x991C1712), fontSize: 12),
+                      ),
+                      const SizedBox(width: 10),
+                      for (var f = 0; f < _spin.rows; f++)
+                        Container(
+                          width: 7,
+                          height: 7,
+                          margin: const EdgeInsets.only(left: 3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: f == _fila
+                                ? const Color(0xFF1C1712)
+                                : const Color(0x331C1712),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1021,7 +1082,6 @@ class _MiniKitDetailState extends State<_MiniKitDetail>
   late int _pasoPintura = _primerPendiente(widget.kit.guide.map((s) => s.done));
   late int _pasoMontaje =
       _primerPendiente(widget.kit.assembly.map((s) => s.done));
-  bool _vexilla = false;
 
   static int _primerPendiente(Iterable<bool> hechos) {
     var indice = 0;
@@ -1113,8 +1173,6 @@ class _MiniKitDetailState extends State<_MiniKitDetail>
                 _MiniResumenTab(
                   controller: controller,
                   kit: kit,
-                  vexilla: _vexilla,
-                  onVexilla: (value) => setState(() => _vexilla = value),
                   onOpenPhase: (indice) {
                     setState(() => _pasoPintura = indice);
                     _tabs.animateTo(2);
@@ -1130,8 +1188,6 @@ class _MiniKitDetailState extends State<_MiniKitDetail>
                   controller: controller,
                   kit: kit,
                   index: pasoPintura,
-                  vexilla: _vexilla,
-                  onVexilla: (value) => setState(() => _vexilla = value),
                   onIndex: (value) => setState(() => _pasoPintura = value),
                 ),
                 _MiniFigurasTab(controller: controller, kit: kit),
@@ -1305,15 +1361,11 @@ class _MiniResumenTab extends StatelessWidget {
   const _MiniResumenTab({
     required this.controller,
     required this.kit,
-    required this.vexilla,
-    required this.onVexilla,
     required this.onOpenPhase,
   });
 
   final TodoWorkspace controller;
   final MiniatureKit kit;
-  final bool vexilla;
-  final ValueChanged<bool> onVexilla;
   final ValueChanged<int> onOpenPhase;
 
   @override
@@ -1323,29 +1375,10 @@ class _MiniResumenTab extends StatelessWidget {
       children: [
         Expanded(
           flex: 11,
-          child: _Mini3D(
-            key: const ValueKey('miniature-3d-resumen'),
-            estado: _estado3D(kit, etiquetas: true, vexilla: vexilla),
-            overlay: Positioned(
-              top: 14,
-              left: 14,
-              right: 14,
-              child: Row(
-                children: [
-                  const _MiniStageTitle(
-                    title: 'Esquema de color',
-                    subtitle: 'Así queda terminada',
-                  ),
-                  const Spacer(),
-                  _MiniGlassButton(
-                    icon: Icons.flag_rounded,
-                    label: vexilla ? 'Vexillarius' : 'Con escudo',
-                    selected: vexilla,
-                    onPressed: () => onVexilla(!vexilla),
-                  ),
-                ],
-              ),
-            ),
+          child: _MiniGiro(
+            key: const ValueKey('miniature-giro-resumen'),
+            controller: controller,
+            spins: kit.spins,
           ),
         ),
         const SizedBox(width: 18),
@@ -1383,38 +1416,6 @@ class _MiniResumenTab extends StatelessWidget {
                 ),
               ],
             ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniStageTitle extends StatelessWidget {
-  const _MiniStageTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 17,
-          ),
-        ),
-        Text(
-          subtitle,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 12.5,
           ),
         ),
       ],
@@ -1851,8 +1852,21 @@ class _MiniMontajeTab extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Rueda para acercar · arrastra para mover',
+                      'Pulsa para ampliar · arrastra para mover',
                       style: TextStyle(color: visuals.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Ver en grande',
+                      onPressed: () => _abrirVisor(
+                        context,
+                        controller,
+                        rutas: [
+                          for (final paso in kit.assembly) paso.imagePath,
+                        ],
+                        inicial: index,
+                      ),
+                      icon: const Icon(Icons.open_in_full_rounded),
                     ),
                   ],
                 ),
@@ -1866,10 +1880,8 @@ class _MiniMontajeTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     child: ColoredBox(
                       color: Colors.white,
-                      child: InteractiveViewer(
+                      child: _MiniZoomable(
                         key: ValueKey('montaje-$index'),
-                        minScale: 1,
-                        maxScale: 5,
                         child: SizedBox.expand(
                           child: _MiniImage(
                             controller: controller,
@@ -2150,16 +2162,12 @@ class _MiniPinturaTab extends StatelessWidget {
     required this.controller,
     required this.kit,
     required this.index,
-    required this.vexilla,
-    required this.onVexilla,
     required this.onIndex,
   });
 
   final TodoWorkspace controller;
   final MiniatureKit kit;
   final int index;
-  final bool vexilla;
-  final ValueChanged<bool> onVexilla;
   final ValueChanged<int> onIndex;
 
   Future<void> _editarPaso(BuildContext context, {int? indice}) async {
@@ -2230,36 +2238,11 @@ class _MiniPinturaTab extends StatelessWidget {
         const SizedBox(width: 18),
         Expanded(
           flex: 10,
-          child: _Mini3D(
-            key: const ValueKey('miniature-3d-pintura'),
-            estado: _estado3D(
-              kit,
-              paso: index,
-              etiquetas: true,
-              vexilla: vexilla,
-            ),
-            overlay: Positioned(
-              top: 14,
-              left: 14,
-              right: 14,
-              child: Row(
-                children: [
-                  _MiniStageTitle(
-                    title: 'Paso ${index + 1}',
-                    subtitle: paso.zones.isEmpty
-                        ? 'Sin cambios de color'
-                        : 'En dorado parpadea lo que pintas ahora',
-                  ),
-                  const Spacer(),
-                  _MiniGlassButton(
-                    icon: Icons.flag_rounded,
-                    label: vexilla ? 'Vexillarius' : 'Con escudo',
-                    selected: vexilla,
-                    onPressed: () => onVexilla(!vexilla),
-                  ),
-                ],
-              ),
-            ),
+          child: _MiniGiro(
+            key: const ValueKey('miniature-giro-pintura'),
+            controller: controller,
+            spins: kit.spins,
+            title: 'Así queda pintada',
           ),
         ),
         const SizedBox(width: 18),
@@ -2959,6 +2942,87 @@ class _MiniMosaico extends StatelessWidget {
   }
 }
 
+/// Imagen con zoom: un clic amplía donde se pulsa y otro vuelve al tamaño
+/// normal; también acerca con la rueda y se mueve arrastrando. Si se indica
+/// [onTapOutside], pulsar fuera de la imagen lo llama.
+class _MiniZoomable extends StatefulWidget {
+  const _MiniZoomable({
+    required this.child,
+    this.onTapOutside,
+    this.padding = EdgeInsets.zero,
+    super.key,
+  });
+
+  final Widget child;
+  final VoidCallback? onTapOutside;
+  final EdgeInsets padding;
+
+  @override
+  State<_MiniZoomable> createState() => _MiniZoomableState();
+}
+
+class _MiniZoomableState extends State<_MiniZoomable> {
+  final TransformationController _transformacion = TransformationController();
+  final GlobalKey _marco = GlobalKey();
+  Offset _punto = Offset.zero;
+  static const double _aumento = 2.6;
+
+  @override
+  void dispose() {
+    _transformacion.dispose();
+    super.dispose();
+  }
+
+  void _anotar(TapDownDetails detalles) {
+    final caja = _marco.currentContext?.findRenderObject() as RenderBox?;
+    _punto = caja?.globalToLocal(detalles.globalPosition) ?? Offset.zero;
+  }
+
+  void _alternar() {
+    if (_transformacion.value.getMaxScaleOnAxis() > 1.01) {
+      _transformacion.value = Matrix4.identity();
+      return;
+    }
+    final escena = _transformacion.toScene(_punto);
+    _transformacion.value = Matrix4.diagonal3Values(_aumento, _aumento, 1)
+      ..setTranslationRaw(
+        _punto.dx - escena.dx * _aumento,
+        _punto.dy - escena.dy * _aumento,
+        0,
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imagen = MouseRegion(
+      cursor: SystemMouseCursors.zoomIn,
+      child: GestureDetector(
+        onTapDown: _anotar,
+        onTap: _alternar,
+        child: widget.child,
+      ),
+    );
+    return KeyedSubtree(
+      key: _marco,
+      child: InteractiveViewer(
+        transformationController: _transformacion,
+        minScale: 1,
+        maxScale: 6,
+        child: widget.onTapOutside == null
+            ? Padding(padding: widget.padding, child: imagen)
+            : GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTapOutside,
+                child: Padding(
+                  padding: widget.padding,
+                  child: Center(child: imagen),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
 Future<void> _abrirVisor(
   BuildContext context,
   TodoWorkspace controller, {
@@ -3038,25 +3102,16 @@ class _MiniVisorFotosState extends State<_MiniVisorFotos> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: const ColoredBox(color: Colors.transparent),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
+            child: _MiniZoomable(
+              key: ValueKey('visor-$_actual'),
+              onTapOutside: () => Navigator.of(context).pop(),
               padding: const EdgeInsets.fromLTRB(90, 70, 90, 70),
-              child: InteractiveViewer(
-                key: ValueKey(_actual),
-                maxScale: 5,
-                child: Center(
-                  child: _MiniImage(
-                    controller: widget.controller,
-                    path: widget.rutas[_actual],
-                    fit: BoxFit.contain,
-                    escala: 2,
-                  ),
-                ),
+              child: _MiniImage(
+                controller: widget.controller,
+                path: widget.rutas[_actual],
+                fit: BoxFit.contain,
+                escala: 2,
+                ajustada: true,
               ),
             ),
           ),
