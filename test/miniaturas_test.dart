@@ -113,4 +113,59 @@ void main() {
     expect(find.text('Cuando las termines, añade aquí tus fotos.'),
         findsOneWidget);
   });
+
+  testWidgets('la vista de 360° gira y cambia de altura al arrastrar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final snapshot = AppStateSnapshot.fromJson(<String, dynamic>{
+      'miniatureKits': [
+        {
+          'id': 'caja',
+          'name': 'Caja de prueba',
+          'models': [
+            {'id': 'f1', 'name': 'Figura'}
+          ],
+          'spins': [
+            {'name': 'Giro', 'path': 'spins/prueba', 'rows': 4, 'cols': 12}
+          ],
+        }
+      ],
+    });
+    final controller = TodoWorkspace.createForTest(snapshot: snapshot);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(
+        body: ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => MiniaturesPage(controller: controller),
+        ),
+      ),
+    ));
+    await tester.tap(find.byKey(const ValueKey('miniature-card-caja')));
+    await tester.pump();
+
+    String fotoActual() {
+      final imagen = tester.widget<Image>(find.descendant(
+        of: find.byKey(const ValueKey('miniature-spin')),
+        matching: find.byType(Image),
+      ));
+      final archivo =
+          ((imagen.image as ResizeImage).imageProvider as FileImage).file.path;
+      return archivo.substring(archivo.length - 9);
+    }
+
+    expect(fotoActual(), '01-01.jpg');
+    await tester.drag(
+        find.byKey(const ValueKey('miniature-spin')), const Offset(-60, 0));
+    await tester.pump();
+    expect(fotoActual(), '01-05.jpg');
+    await tester.drag(
+        find.byKey(const ValueKey('miniature-spin')), const Offset(0, 100));
+    await tester.pump();
+    expect(fotoActual(), '03-05.jpg');
+  });
 }

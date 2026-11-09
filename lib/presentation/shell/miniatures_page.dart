@@ -809,29 +809,41 @@ class _MiniGiroState extends State<_MiniGiro> {
   int _columna = 0;
   double _arrastreX = 0;
   double _arrastreY = 0;
-  String _base = '';
+  bool _arrastrando = false;
 
   MiniatureSpin get _spin =>
       widget.spins[_figura.clamp(0, widget.spins.length - 1)];
 
   @override
-  void initState() {
-    super.initState();
-    _cargarBase();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precargarFila();
   }
 
-  Future<void> _cargarBase() async {
-    final base = await widget.controller.miniatureAssetAbsolutePath('.');
-    if (mounted) {
-      setState(() => _base =
-          base.endsWith('.') ? base.substring(0, base.length - 1) : base);
+  /// Ancho al que se decodifican las fotos: basta para el visor y deja que
+  /// una fila entera quepa en la caché sin disparar la memoria.
+  static const int _anchoDecodificado = 720;
+
+  ImageProvider _foto(int fila, int columna) => ResizeImage(
+        FileImage(File(widget.controller
+            .miniatureAssetPathSync(_spin.frame(fila, columna)))),
+        width: _anchoDecodificado,
+      );
+
+  /// Carga de antemano los ángulos de la altura actual para que el giro no
+  /// se quede esperando a leer cada foto.
+  void _precargarFila() {
+    if (widget.spins.isEmpty) return;
+    for (var columna = 0; columna < _spin.cols; columna++) {
+      precacheImage(_foto(_fila, columna), context, onError: (_, __) {});
     }
   }
 
-  void _arrastrar(DragUpdateDetails detalles) {
-    _arrastreX += detalles.delta.dx;
-    _arrastreY += detalles.delta.dy;
-    const pasoX = 16.0;
+  void _arrastrar(Offset delta) {
+    final filaAnterior = _fila;
+    _arrastreX += delta.dx;
+    _arrastreY += delta.dy;
+    const pasoX = 14.0;
     const pasoY = 45.0;
     var cambio = false;
     while (_arrastreX.abs() >= pasoX) {
@@ -848,6 +860,7 @@ class _MiniGiroState extends State<_MiniGiro> {
       cambio = true;
     }
     if (cambio) setState(() {});
+    if (_fila != filaAnterior) _precargarFila();
   }
 
   @override
@@ -858,9 +871,6 @@ class _MiniGiroState extends State<_MiniGiro> {
         child: _MiniImagePlaceholder(),
       );
     }
-    final ruta = _base.isEmpty
-        ? ''
-        : '$_base${_spin.frame(_fila, _columna).replaceAll('/', Platform.pathSeparator)}';
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: ColoredBox(
@@ -868,25 +878,34 @@ class _MiniGiroState extends State<_MiniGiro> {
         child: Stack(
           fit: StackFit.expand,
           children: [
+            // Listener recibe todos los movimientos del ratón sin competir con
+            // el zoom: con un detector de arrastre, el visor se quedaba a
+            // veces con el gesto y la figura no giraba.
             MouseRegion(
-              cursor: SystemMouseCursors.grab,
-              child: GestureDetector(
+              cursor: _arrastrando
+                  ? SystemMouseCursors.grabbing
+                  : SystemMouseCursors.grab,
+              child: Listener(
                 key: const ValueKey('miniature-spin'),
-                onPanUpdate: _arrastrar,
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) => setState(() => _arrastrando = true),
+                onPointerUp: (_) => setState(() => _arrastrando = false),
+                onPointerCancel: (_) => setState(() => _arrastrando = false),
+                onPointerMove: (evento) {
+                  if (evento.buttons != 0) _arrastrar(evento.delta);
+                },
                 child: InteractiveViewer(
                   minScale: 1,
                   maxScale: 3,
                   panEnabled: false,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 54, 20, 46),
-                    child: ruta.isEmpty
-                        ? const SizedBox.expand()
-                        : ImagenLocal(
-                            ruta,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            escala: 0.8,
-                          ),
+                    child: Image(
+                      image: _foto(_fila, _columna),
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, __, ___) => const SizedBox.expand(),
+                    ),
                   ),
                 ),
               ),
@@ -923,11 +942,14 @@ class _MiniGiroState extends State<_MiniGiro> {
                       icon: Icons.person_rounded,
                       label: 'Figura ${i + 1}',
                       selected: i == _figura,
-                      onPressed: () => setState(() {
-                        _figura = i;
-                        _fila = _fila.clamp(0, _spin.rows - 1);
-                        _columna = _columna % _spin.cols;
-                      }),
+                      onPressed: () {
+                        setState(() {
+                          _figura = i;
+                          _fila = _fila.clamp(0, _spin.rows - 1);
+                          _columna = _columna % _spin.cols;
+                        });
+                        _precargarFila();
+                      },
                     ),
                   ],
                 ],
@@ -937,39 +959,46 @@ class _MiniGiroState extends State<_MiniGiro> {
               left: 0,
               right: 0,
               bottom: 12,
-              child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.threesixty_rounded,
-                          size: 16, color: Color(0x991C1712)),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Arrastra para girar · arriba y abajo cambia la altura · rueda para acercar',
-                        style:
-                            TextStyle(color: Color(0x991C1712), fontSize: 12),
-                      ),
-                      const SizedBox(width: 10),
-                      for (var f = 0; f < _spin.rows; f++)
-                        Container(
-                          width: 7,
-                          height: 7,
-                          margin: const EdgeInsets.only(left: 3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: f == _fila
-                                ? const Color(0xFF1C1712)
-                                : const Color(0x331C1712),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.threesixty_rounded,
+                            size: 16, color: Color(0x991C1712)),
+                        const SizedBox(width: 6),
+                        const Flexible(
+                          child: Text(
+                            'Arrastra para girar · arriba y abajo cambia la altura · rueda para acercar',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Color(0x991C1712), fontSize: 12),
                           ),
                         ),
-                    ],
+                        const SizedBox(width: 10),
+                        for (var f = 0; f < _spin.rows; f++)
+                          Container(
+                            width: 7,
+                            height: 7,
+                            margin: const EdgeInsets.only(left: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: f == _fila
+                                  ? const Color(0xFF1C1712)
+                                  : const Color(0x331C1712),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

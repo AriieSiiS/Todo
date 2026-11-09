@@ -220,6 +220,9 @@ extension TodoWorkspaceMiniaturas on TodoWorkspace {
   Future<String> miniatureAssetAbsolutePath(String relativePath) =>
       _miniatureAssets.absolutePath(relativePath);
 
+  String miniatureAssetPathSync(String relativePath) =>
+      _miniatureAssets.absolutePathSync(relativePath);
+
   Future<void> importMiniatureKitImage(String kitId, String sourcePath) async {
     if (miniatureKitById(kitId) == null) {
       throw StateError('No se encuentra la caja de miniaturas.');
