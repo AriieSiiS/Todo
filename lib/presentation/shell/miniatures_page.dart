@@ -804,16 +804,11 @@ class _MiniGiro extends StatefulWidget {
 }
 
 class _MiniGiroState extends State<_MiniGiro> {
-  static final bool _enPrueba =
-      Platform.environment.containsKey('FLUTTER_TEST');
-
   int _figura = 0;
   int _fila = 0;
   int _columna = 0;
   double _arrastreX = 0;
   double _arrastreY = 0;
-  bool _girando = true;
-  Timer? _reloj;
   String _base = '';
 
   MiniatureSpin get _spin =>
@@ -823,13 +818,6 @@ class _MiniGiroState extends State<_MiniGiro> {
   void initState() {
     super.initState();
     _cargarBase();
-    if (!_enPrueba) {
-      _reloj = Timer.periodic(const Duration(milliseconds: 170), (_) {
-        if (_girando && mounted) {
-          setState(() => _columna = (_columna + 1) % _spin.cols);
-        }
-      });
-    }
   }
 
   Future<void> _cargarBase() async {
@@ -840,14 +828,7 @@ class _MiniGiroState extends State<_MiniGiro> {
     }
   }
 
-  @override
-  void dispose() {
-    _reloj?.cancel();
-    super.dispose();
-  }
-
   void _arrastrar(DragUpdateDetails detalles) {
-    _girando = false;
     _arrastreX += detalles.delta.dx;
     _arrastreY += detalles.delta.dy;
     const pasoX = 16.0;
@@ -891,9 +872,7 @@ class _MiniGiroState extends State<_MiniGiro> {
               cursor: SystemMouseCursors.grab,
               child: GestureDetector(
                 key: const ValueKey('miniature-spin'),
-                onPanStart: (_) => setState(() => _girando = false),
                 onPanUpdate: _arrastrar,
-                onDoubleTap: () => setState(() => _girando = !_girando),
                 child: InteractiveViewer(
                   minScale: 1,
                   maxScale: 3,
