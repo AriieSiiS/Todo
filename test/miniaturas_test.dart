@@ -153,8 +153,7 @@ void main() {
         of: find.byKey(const ValueKey('miniature-spin')),
         matching: find.byType(Image),
       ));
-      final archivo =
-          ((imagen.image as ResizeImage).imageProvider as FileImage).file.path;
+      final archivo = (imagen.image as FileImage).file.path;
       return archivo.substring(archivo.length - 9);
     }
 

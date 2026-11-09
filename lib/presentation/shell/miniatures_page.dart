@@ -820,10 +820,6 @@ class _MiniGiroState extends State<_MiniGiro> {
     _precargarFila();
   }
 
-  /// Ancho al que se decodifican las fotos: basta para el visor y deja que
-  /// una fila entera quepa en la caché sin disparar la memoria.
-  static const int _anchoDecodificado = 720;
-
   bool get _oscuro => Theme.of(context).brightness == Brightness.dark;
 
   /// En modo oscuro se usan las fotos sin fondo, si existen.
@@ -833,18 +829,30 @@ class _MiniGiroState extends State<_MiniGiro> {
               .miniatureAssetPathSync(_spin.frame(0, 0, extension: 'webp')))
           .existsSync();
 
-  ImageProvider _foto(int fila, int columna) => ResizeImage(
-        FileImage(File(widget.controller.miniatureAssetPathSync(_spin
-            .frame(fila, columna, extension: _sinFondo ? 'webp' : 'jpg')))),
-        width: _anchoDecodificado,
-      );
+  /// Foto a su resolución completa. Solo se cargan al abrir la ficha y se
+  /// liberan al salir de ella.
+  ImageProvider _foto(int fila, int columna) =>
+      FileImage(File(widget.controller.miniatureAssetPathSync(
+          _spin.frame(fila, columna, extension: _sinFondo ? 'webp' : 'jpg'))));
+
+  final Set<ImageProvider> _cargadas = <ImageProvider>{};
+
+  @override
+  void dispose() {
+    for (final foto in _cargadas) {
+      foto.evict();
+    }
+    super.dispose();
+  }
 
   /// Carga de antemano los ángulos de la altura actual para que el giro no
   /// se quede esperando a leer cada foto.
   void _precargarFila() {
     if (widget.spins.isEmpty) return;
     for (var columna = 0; columna < _spin.cols; columna++) {
-      precacheImage(_foto(_fila, columna), context, onError: (_, __) {});
+      final foto = _foto(_fila, columna);
+      _cargadas.add(foto);
+      precacheImage(foto, context, onError: (_, __) {});
     }
   }
 
