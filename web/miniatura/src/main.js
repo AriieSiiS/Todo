@@ -19,7 +19,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.95;
+renderer.toneMappingExposure = 0.82;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -55,7 +55,7 @@ controls.addEventListener('end', () => {
 
 // Luces: clave cálida, contraluz frío y relleno suave.
 scene.add(new THREE.HemisphereLight(0xfff3df, 0x2a2018, 0.55));
-const clave = new THREE.DirectionalLight(0xffe2b8, 2.6);
+const clave = new THREE.DirectionalLight(0xffe2b8, 2.1);
 clave.position.set(2.8, 4.5, 3.2);
 clave.castShadow = true;
 clave.shadow.mapSize.set(1024, 1024);
@@ -397,7 +397,7 @@ function aplicar(estado = {}) {
     const { color, metal, plastico } = colorZona(colores[nombre]);
     z.material.color.set(color);
     z.material.metalness = metal ? 0.92 : 0.02;
-    z.material.roughness = plastico ? 0.82 : metal ? 0.3 : nombre === 'gemas' || nombre === 'ojos' ? 0.18 : 0.62;
+    z.material.roughness = plastico ? 0.82 : metal ? 0.3 : nombre === 'gemas' || nombre === 'ojos' ? 0.18 : 0.78;
     const brilla = !plastico && (nombre === 'gemas' || nombre === 'energia' || nombre === 'ojos');
     z.material.userData.brillo = brilla ? new THREE.Color(color).multiplyScalar(nombre === 'energia' ? 0.9 : 0.35) : null;
     z.material.emissive.set(0x000000);
@@ -539,6 +539,10 @@ function animar() {
 }
 
 window.miniatura = { aplicar };
+// Fondo oscuro solo para vistas previas fuera de la app.
+if (location.search.includes('fondo')) {
+  document.body.style.background = 'radial-gradient(circle at 50% 40%, #3a2f25, #121010)';
+}
 try {
   const inicial = decodeURIComponent(location.hash.slice(1));
   aplicar(inicial ? JSON.parse(inicial) : {});
