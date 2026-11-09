@@ -60,6 +60,7 @@ part 'home_twin_page.dart';
 part 'home_twin_echo_controls.dart';
 part 'home_assistant_settings.dart';
 part 'plants_page.dart';
+part 'miniatures_page.dart';
 part 'recipes_page.dart';
 part 'fechas_es.dart';
 part 'journal_page.dart';

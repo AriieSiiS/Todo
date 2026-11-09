@@ -6,6 +6,7 @@ export 'entities/enums.dart';
 export 'entities/financial.dart';
 export 'entities/focus.dart';
 export 'entities/journal.dart';
+export 'entities/miniature.dart';
 export 'entities/travel.dart';
 export 'entities/household.dart';
 export 'entities/shopping.dart';

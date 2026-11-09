@@ -108,6 +108,10 @@ La app tiene:
   portadas en `assets/colecciones/portadas/`; sus obras usan los campos de
   `LibraryItem` y solo entran en Biblioteca al añadirlas. Las obras quitadas se
   guardan en `visibilitySettings.hiddenCollectionWorks`
+- `lib/presentation/shell/miniatures_page.dart`: Miniaturas (cajas de
+  Warhammer y similares con el estado de cada figura, guía de pintura editable
+  con lista de pinturas y fotos propias). Datos en `miniatureKits`; imágenes en
+  `Documents\Todo\miniatures`
 - `lib/presentation/shell/plants_page.dart`: catálogo de Plantas, fichas de
   cuidados, seguridad felina y rutinas enlazadas con tareas
 - `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
@@ -142,6 +146,7 @@ Secciones:
 - `--section=settings`
 - `--section=wardrobe`
 - `--section=household`
+- `--section=miniatures`
 - `--section=plants`
 - `--section=recipes`
 - `--section=journal`

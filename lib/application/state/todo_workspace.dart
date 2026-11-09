@@ -48,6 +48,7 @@ part 'todo_workspace_hogar.dart';
 part 'todo_workspace_notificaciones.dart';
 part 'todo_workspace_nube.dart';
 part 'todo_workspace_plantas.dart';
+part 'todo_workspace_miniaturas.dart';
 part 'todo_workspace_recetas.dart';
 part 'todo_workspace_resumen.dart';
 part 'todo_workspace_ropa.dart';
@@ -122,6 +123,7 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.expenses,
     AppSection.calendar,
     AppSection.library,
+    AppSection.miniatures,
     AppSection.wardrobe,
     AppSection.household,
     AppSection.plants,
@@ -206,6 +208,7 @@ class TodoWorkspace extends ChangeNotifier {
   final List<Recipe> _recipes = <Recipe>[];
   final List<WeeklyMenu> _weeklyMenus = <WeeklyMenu>[];
   final List<JournalEntry> _journalEntries = <JournalEntry>[];
+  final List<MiniatureKit> _miniatureKits = <MiniatureKit>[];
   final List<Trip> _trips = <Trip>[];
   final List<FocusSession> _focusSessions = <FocusSession>[];
   ActiveFocus? _activeFocus;
@@ -214,6 +217,8 @@ class TodoWorkspace extends ChangeNotifier {
   final HouseholdAssetService _householdAssets = HouseholdAssetService();
   final HouseholdAssetService _journalAssets =
       HouseholdAssetService(directoryName: 'journal');
+  final HouseholdAssetService _miniatureAssets =
+      HouseholdAssetService(directoryName: 'miniatures');
   final HouseholdAssetService _tripAssets =
       HouseholdAssetService(directoryName: 'trips');
   final HouseholdAssetService _shoppingAssets =
@@ -317,6 +322,8 @@ class TodoWorkspace extends ChangeNotifier {
       List<WeeklyMenu>.unmodifiable(_weeklyMenus);
   List<JournalEntry> get journalEntries =>
       List<JournalEntry>.unmodifiable(_journalEntries);
+  List<MiniatureKit> get miniatureKits =>
+      List<MiniatureKit>.unmodifiable(_miniatureKits);
   List<Trip> get trips => List<Trip>.unmodifiable(_trips);
   List<FocusSession> get focusSessions =>
       List<FocusSession>.unmodifiable(_focusSessions);
@@ -813,6 +820,9 @@ class TodoWorkspace extends ChangeNotifier {
     _journalEntries
       ..clear()
       ..addAll(snapshot.journalEntries);
+    _miniatureKits
+      ..clear()
+      ..addAll(snapshot.miniatureKits);
     _trips
       ..clear()
       ..addAll(snapshot.trips);
@@ -1422,6 +1432,7 @@ class TodoWorkspace extends ChangeNotifier {
     _recipes.clear();
     _weeklyMenus.clear();
     _journalEntries.clear();
+    _miniatureKits.clear();
     _trips.clear();
     _focusSessions.clear();
     _activeFocus = null;
@@ -1452,10 +1463,20 @@ class TodoWorkspace extends ChangeNotifier {
         next.add(section);
       }
     }
-    for (final section in defaultNavOrder) {
-      if (!next.contains(section)) {
-        next.add(section);
+    // Una sección nueva aparece detrás de la que la precede en el orden por
+    // defecto, en lugar de al final de la barra.
+    for (var index = 0; index < defaultNavOrder.length; index++) {
+      final section = defaultNavOrder[index];
+      if (next.contains(section)) continue;
+      var position = next.length;
+      for (var previous = index - 1; previous >= 0; previous--) {
+        final found = next.indexOf(defaultNavOrder[previous]);
+        if (found != -1) {
+          position = found + 1;
+          break;
+        }
       }
+      next.insert(position, section);
     }
     return next;
   }

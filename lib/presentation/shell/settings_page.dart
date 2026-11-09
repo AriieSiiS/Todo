@@ -3,6 +3,7 @@ part of 'app_shell.dart';
 const _seccionesOcultables = [
   AppSection.calendar,
   AppSection.library,
+  AppSection.miniatures,
   AppSection.wardrobe,
   AppSection.household,
   AppSection.recipes,

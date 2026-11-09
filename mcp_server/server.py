@@ -170,6 +170,7 @@ def default_state() -> dict[str, Any]:
         "recipes": [],
         "weeklyMenus": [],
         "journalEntries": [],
+        "miniatureKits": [],
         "trips": [],
         "focusSessions": [],
         "calendarEvents": [],
@@ -204,6 +205,7 @@ def default_state() -> dict[str, Any]:
             "expenses",
             "calendar",
             "library",
+            "miniatures",
             "wardrobe",
             "household",
             "plants",
@@ -511,7 +513,7 @@ VALID_PROJECT_STATUSES = {"active", "paused", "completed", "cancelled"}
 VALID_NOTE_STATUSES = {"inbox", "converted", "archived"}
 VALID_RECURRENCE_TYPES = {"none", "daily", "everyXDays", "weekly", "monthly", "yearly"}
 VALID_TODAY_SORTS = {"manual", "category", "time", "project", "priority"}
-VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "wardrobe", "household", "plants", "recipes", "journal", "trips", "focus", "completed", "settings"}
+VALID_SECTIONS = {"today", "projects", "inbox", "categories", "expenses", "calendar", "library", "miniatures", "wardrobe", "household", "plants", "recipes", "journal", "trips", "focus", "completed", "settings"}
 
 
 def migrate_library_state(state: dict[str, Any]) -> bool:

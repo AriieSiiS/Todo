@@ -6,6 +6,7 @@ import '../entities/enums.dart';
 import '../entities/financial.dart';
 import '../entities/focus.dart';
 import '../entities/journal.dart';
+import '../entities/miniature.dart';
 import '../entities/travel.dart';
 import '../entities/household.dart';
 import '../entities/shopping.dart';
@@ -47,6 +48,7 @@ class AppStateSnapshot {
     this.recipes = const <Recipe>[],
     this.weeklyMenus = const <WeeklyMenu>[],
     this.journalEntries = const <JournalEntry>[],
+    this.miniatureKits = const <MiniatureKit>[],
     this.trips = const <Trip>[],
     this.focusSessions = const <FocusSession>[],
     this.activeFocus,
@@ -92,6 +94,7 @@ class AppStateSnapshot {
   final List<Recipe> recipes;
   final List<WeeklyMenu> weeklyMenus;
   final List<JournalEntry> journalEntries;
+  final List<MiniatureKit> miniatureKits;
   final List<Trip> trips;
   final List<FocusSession> focusSessions;
   final ActiveFocus? activeFocus;
@@ -149,6 +152,7 @@ class AppStateSnapshot {
       'recipes': recipes.map((item) => item.toJson()).toList(),
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'journalEntries': journalEntries.map((item) => item.toJson()).toList(),
+      'miniatureKits': miniatureKits.map((item) => item.toJson()).toList(),
       'trips': trips.map((item) => item.toJson()).toList(),
       'focusSessions': focusSessions.map((item) => item.toJson()).toList(),
       'activeFocus': activeFocus?.toJson(),
@@ -289,6 +293,11 @@ class AppStateSnapshot {
           (json['journalEntries'] as List<dynamic>? ?? const <dynamic>[])
               .whereType<Map<dynamic, dynamic>>()
               .map((item) => JournalEntry.fromJson(item.cast<String, dynamic>()))
+              .toList(),
+      miniatureKits:
+          (json['miniatureKits'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<Map<dynamic, dynamic>>()
+              .map((item) => MiniatureKit.fromJson(item.cast<String, dynamic>()))
               .toList(),
       trips: (json['trips'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<Map<dynamic, dynamic>>()

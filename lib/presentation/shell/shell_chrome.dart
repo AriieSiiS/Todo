@@ -349,6 +349,7 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.household =>
         HouseholdPage(controller: controller, homeAssistant: _homeAssistant),
       AppSection.plants => PlantsPage(controller: controller),
+      AppSection.miniatures => MiniaturesPage(controller: controller),
       AppSection.recipes => RecipesPage(controller: controller),
       AppSection.journal => JournalPage(controller: controller),
       AppSection.trips => TripsPage(controller: controller),
@@ -796,6 +797,11 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         section: AppSection.household,
         icon: Icons.home_work_rounded,
         label: 'Hogar',
+      ),
+    AppSection.miniatures => const _SidebarDestination(
+        section: AppSection.miniatures,
+        icon: Icons.shield_rounded,
+        label: 'Miniaturas',
       ),
     AppSection.plants => const _SidebarDestination(
         section: AppSection.plants,

@@ -5,6 +5,7 @@ enum AppSection {
   expenses,
   calendar,
   library,
+  miniatures,
   wardrobe,
   household,
   plants,
