@@ -186,9 +186,11 @@ class MiniatureSpin {
   final int rows;
   final int cols;
 
-  String frame(int row, int col) =>
+  /// Foto de un ángulo. La versión `webp` es la misma foto sin fondo, para
+  /// el modo oscuro.
+  String frame(int row, int col, {String extension = 'jpg'}) =>
       '$path/${(row + 1).toString().padLeft(2, '0')}-'
-      '${(col + 1).toString().padLeft(2, '0')}.jpg';
+      '${(col + 1).toString().padLeft(2, '0')}.$extension';
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'name': name,
@@ -379,8 +381,7 @@ class MiniatureKit {
   double get progress {
     if (models.isEmpty) return 0;
     final steps = MiniatureStatus.values.length - 1;
-    final total =
-        models.fold<int>(0, (sum, model) => sum + model.status.index);
+    final total = models.fold<int>(0, (sum, model) => sum + model.status.index);
     return total / (steps * models.length);
   }
 
@@ -448,8 +449,8 @@ class MiniatureKit {
       };
 
   factory MiniatureKit.fromJson(Map<String, dynamic> json) {
-    final created = DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-        DateTime.now();
+    final created =
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now();
     List<Map<String, dynamic>> lista(String key) =>
         (json[key] as List<dynamic>? ?? const <dynamic>[])
             .whereType<Map>()

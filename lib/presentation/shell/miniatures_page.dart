@@ -824,9 +824,18 @@ class _MiniGiroState extends State<_MiniGiro> {
   /// una fila entera quepa en la caché sin disparar la memoria.
   static const int _anchoDecodificado = 720;
 
+  bool get _oscuro => Theme.of(context).brightness == Brightness.dark;
+
+  /// En modo oscuro se usan las fotos sin fondo, si existen.
+  bool get _sinFondo =>
+      _oscuro &&
+      File(widget.controller
+              .miniatureAssetPathSync(_spin.frame(0, 0, extension: 'webp')))
+          .existsSync();
+
   ImageProvider _foto(int fila, int columna) => ResizeImage(
-        FileImage(File(widget.controller
-            .miniatureAssetPathSync(_spin.frame(fila, columna)))),
+        FileImage(File(widget.controller.miniatureAssetPathSync(_spin
+            .frame(fila, columna, extension: _sinFondo ? 'webp' : 'jpg')))),
         width: _anchoDecodificado,
       );
 
@@ -871,10 +880,20 @@ class _MiniGiroState extends State<_MiniGiro> {
         child: _MiniImagePlaceholder(),
       );
     }
+    final sinFondo = _sinFondo;
+    final tinta = sinFondo ? Colors.white : const Color(0xFF1C1712);
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
-      child: ColoredBox(
-        color: Colors.white,
+      child: DecoratedBox(
+        decoration: sinFondo
+            ? const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0, -0.1),
+                  radius: 1.05,
+                  colors: [_escenarioClaro, _escenarioOscuro],
+                ),
+              )
+            : const BoxDecoration(color: Colors.white),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -922,16 +941,17 @@ class _MiniGiroState extends State<_MiniGiro> {
                     children: [
                       Text(
                         widget.title,
-                        style: const TextStyle(
-                          color: Color(0xFF1C1712),
+                        style: TextStyle(
+                          color: tinta,
                           fontWeight: FontWeight.w800,
                           fontSize: 17,
                         ),
                       ),
                       Text(
                         _spin.name,
-                        style: const TextStyle(
-                            color: Color(0x991C1712), fontSize: 12.5),
+                        style: TextStyle(
+                            color: tinta.withValues(alpha: 0.6),
+                            fontSize: 12.5),
                       ),
                     ],
                   ),
@@ -966,22 +986,25 @@ class _MiniGiroState extends State<_MiniGiro> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: sinFondo
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.black.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.threesixty_rounded,
-                            size: 16, color: Color(0x991C1712)),
+                        Icon(Icons.threesixty_rounded,
+                            size: 16, color: tinta.withValues(alpha: 0.6)),
                         const SizedBox(width: 6),
-                        const Flexible(
+                        Flexible(
                           child: Text(
                             'Arrastra para girar · arriba y abajo cambia la altura · rueda para acercar',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                color: Color(0x991C1712), fontSize: 12),
+                                color: tinta.withValues(alpha: 0.6),
+                                fontSize: 12),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -993,8 +1016,8 @@ class _MiniGiroState extends State<_MiniGiro> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: f == _fila
-                                  ? const Color(0xFF1C1712)
-                                  : const Color(0x331C1712),
+                                  ? tinta
+                                  : tinta.withValues(alpha: 0.2),
                             ),
                           ),
                       ],
