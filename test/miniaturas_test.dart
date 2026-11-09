@@ -89,9 +89,11 @@ void main() {
         ),
       ),
     ));
-    expect(find.text('0/2 terminadas'), findsOneWidget);
+    expect(find.text('0/2'), findsOneWidget);
 
     await tester.tap(find.byKey(ValueKey('miniature-card-${kit.id}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Figuras 2'));
     await tester.pumpAndSettle();
     expect(find.text('Miniatura 1'), findsOneWidget);
 
@@ -99,11 +101,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.miniatureKitById(kit.id)!.paintedCount, 1);
 
-    await tester.tap(find.text('Guía de pintura'));
+    await tester.tap(find.text('Pintura 0/1'));
     await tester.pumpAndSettle();
-    expect(find.text('Armadura: capa base'), findsOneWidget);
+    expect(find.text('1. Armadura: capa base'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('miniature-step-done')));
+    await tester.pumpAndSettle();
+    expect(controller.miniatureKitById(kit.id)!.guideDone, 1);
 
-    await tester.tap(find.text('Mis fotos'));
+    await tester.tap(find.text('Galería'));
     await tester.pumpAndSettle();
     expect(find.text('Cuando las termines, añade aquí tus fotos.'),
         findsOneWidget);

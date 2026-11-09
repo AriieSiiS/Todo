@@ -65,29 +65,41 @@ class MiniaturePaint {
   const MiniaturePaint({
     required this.name,
     this.kind = '',
+    this.color = '',
     this.owned = false,
   });
 
   final String name;
   final String kind;
+
+  /// Color aproximado del bote, en formato `#RRGGBB`.
+  final String color;
   final bool owned;
 
-  MiniaturePaint copyWith({String? name, String? kind, bool? owned}) =>
+  MiniaturePaint copyWith({
+    String? name,
+    String? kind,
+    String? color,
+    bool? owned,
+  }) =>
       MiniaturePaint(
         name: name ?? this.name,
         kind: kind ?? this.kind,
+        color: color ?? this.color,
         owned: owned ?? this.owned,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'name': name,
         'kind': kind,
+        'color': color,
         'owned': owned,
       };
 
   factory MiniaturePaint.fromJson(Map<String, dynamic> json) => MiniaturePaint(
         name: json['name'] as String? ?? '',
         kind: json['kind'] as String? ?? '',
+        color: json['color'] as String? ?? '',
         owned: json['owned'] as bool? ?? false,
       );
 }
@@ -98,25 +110,101 @@ class MiniaturePaintStep {
     required this.title,
     this.description = '',
     this.paints = const <String>[],
+    this.phase = '',
+    this.zones = const <String, String>{},
+    this.done = false,
   });
 
   final String title;
   final String description;
   final List<String> paints;
 
+  /// Fase del proceso (Montaje, Imprimación, Armadura…), para el diagrama.
+  final String phase;
+
+  /// Color que deja este paso en cada zona del modelo 3D. Un asterisco final
+  /// indica acabado metálico; la zona «todo» colorea la figura entera.
+  final Map<String, String> zones;
+  final bool done;
+
+  MiniaturePaintStep copyWith({
+    String? title,
+    String? description,
+    List<String>? paints,
+    bool? done,
+  }) =>
+      MiniaturePaintStep(
+        title: title ?? this.title,
+        description: description ?? this.description,
+        paints: paints ?? this.paints,
+        phase: phase,
+        zones: zones,
+        done: done ?? this.done,
+      );
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'title': title,
         'description': description,
         'paints': paints,
+        'phase': phase,
+        'zones': zones,
+        'done': done,
       };
 
-  factory MiniaturePaintStep.fromJson(Map<String, dynamic> json) =>
-      MiniaturePaintStep(
+  factory MiniaturePaintStep.fromJson(Map<String, dynamic> json) {
+    final zonas = json['zones'];
+    return MiniaturePaintStep(
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      paints: (json['paints'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(),
+      phase: json['phase'] as String? ?? '',
+      zones: <String, String>{
+        if (zonas is Map)
+          for (final entry in zonas.entries)
+            if (entry.value is String)
+              entry.key.toString(): entry.value as String,
+      },
+      done: json['done'] as bool? ?? false,
+    );
+  }
+}
+
+/// Paso de montaje con su imagen de las instrucciones.
+class MiniatureAssemblyStep {
+  const MiniatureAssemblyStep({
+    required this.title,
+    this.description = '',
+    this.imagePath = '',
+    this.done = false,
+  });
+
+  final String title;
+  final String description;
+  final String imagePath;
+  final bool done;
+
+  MiniatureAssemblyStep copyWith({bool? done}) => MiniatureAssemblyStep(
+        title: title,
+        description: description,
+        imagePath: imagePath,
+        done: done ?? this.done,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'title': title,
+        'description': description,
+        'imagePath': imagePath,
+        'done': done,
+      };
+
+  factory MiniatureAssemblyStep.fromJson(Map<String, dynamic> json) =>
+      MiniatureAssemblyStep(
         title: json['title'] as String? ?? '',
         description: json['description'] as String? ?? '',
-        paints: (json['paints'] as List<dynamic>? ?? const <dynamic>[])
-            .whereType<String>()
-            .toList(),
+        imagePath: json['imagePath'] as String? ?? '',
+        done: json['done'] as bool? ?? false,
       );
 }
 
@@ -176,6 +264,10 @@ class MiniatureKit {
     this.externalUrl = '',
     this.imagePath = '',
     this.thumbnailPath = '',
+    this.coverPath = '',
+    this.heroPath = '',
+    this.gallery = const <String>[],
+    this.assembly = const <MiniatureAssemblyStep>[],
     this.models = const <MiniatureModel>[],
     this.paints = const <MiniaturePaint>[],
     this.guide = const <MiniaturePaintStep>[],
@@ -194,6 +286,16 @@ class MiniatureKit {
   /// Imagen de la caja, relativa a la carpeta de miniaturas.
   final String imagePath;
   final String thumbnailPath;
+
+  /// Foto de la miniatura pintada para la portada.
+  final String coverPath;
+
+  /// Imagen ancha para la cabecera de la ficha.
+  final String heroPath;
+
+  /// Fotos de referencia oficiales.
+  final List<String> gallery;
+  final List<MiniatureAssemblyStep> assembly;
   final List<MiniatureModel> models;
   final List<MiniaturePaint> paints;
   final List<MiniaturePaintStep> guide;
@@ -202,6 +304,22 @@ class MiniatureKit {
   final DateTime updatedAt;
 
   bool get hasImage => imagePath.isNotEmpty;
+
+  /// Imagen para la portada: la miniatura pintada si existe, si no la caja.
+  String get coverImage => coverPath.isNotEmpty
+      ? coverPath
+      : (thumbnailPath.isNotEmpty ? thumbnailPath : imagePath);
+
+  int get assemblyDone => assembly.where((step) => step.done).length;
+
+  int get guideDone => guide.where((step) => step.done).length;
+
+  MiniaturePaint? paintNamed(String name) {
+    for (final paint in paints) {
+      if (paint.name == name) return paint;
+    }
+    return null;
+  }
 
   int countWith(MiniatureStatus status) =>
       models.where((model) => model.status == status).length;
@@ -236,6 +354,10 @@ class MiniatureKit {
     String? externalUrl,
     String? imagePath,
     String? thumbnailPath,
+    String? coverPath,
+    String? heroPath,
+    List<String>? gallery,
+    List<MiniatureAssemblyStep>? assembly,
     List<MiniatureModel>? models,
     List<MiniaturePaint>? paints,
     List<MiniaturePaintStep>? guide,
@@ -251,6 +373,10 @@ class MiniatureKit {
         externalUrl: externalUrl ?? this.externalUrl,
         imagePath: imagePath ?? this.imagePath,
         thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+        coverPath: coverPath ?? this.coverPath,
+        heroPath: heroPath ?? this.heroPath,
+        gallery: gallery ?? this.gallery,
+        assembly: assembly ?? this.assembly,
         models: models ?? this.models,
         paints: paints ?? this.paints,
         guide: guide ?? this.guide,
@@ -268,6 +394,10 @@ class MiniatureKit {
         'externalUrl': externalUrl,
         'imagePath': imagePath,
         'thumbnailPath': thumbnailPath,
+        'coverPath': coverPath,
+        'heroPath': heroPath,
+        'gallery': gallery,
+        'assembly': assembly.map((item) => item.toJson()).toList(),
         'models': models.map((item) => item.toJson()).toList(),
         'paints': paints.map((item) => item.toJson()).toList(),
         'guide': guide.map((item) => item.toJson()).toList(),
@@ -293,6 +423,12 @@ class MiniatureKit {
       externalUrl: json['externalUrl'] as String? ?? '',
       imagePath: json['imagePath'] as String? ?? '',
       thumbnailPath: json['thumbnailPath'] as String? ?? '',
+      coverPath: json['coverPath'] as String? ?? '',
+      heroPath: json['heroPath'] as String? ?? '',
+      gallery: (json['gallery'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(),
+      assembly: lista('assembly').map(MiniatureAssemblyStep.fromJson).toList(),
       models: lista('models').map(MiniatureModel.fromJson).toList(),
       paints: lista('paints').map(MiniaturePaint.fromJson).toList(),
       guide: lista('guide').map(MiniaturePaintStep.fromJson).toList(),

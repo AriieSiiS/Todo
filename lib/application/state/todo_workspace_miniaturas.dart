@@ -176,6 +176,24 @@ extension TodoWorkspaceMiniaturas on TodoWorkspace {
     });
   }
 
+  void toggleMiniatureGuideStepDone(String kitId, int index) {
+    _replaceMiniatureKit(kitId, (kit) {
+      if (index < 0 || index >= kit.guide.length) return kit;
+      final guide = kit.guide.toList();
+      guide[index] = guide[index].copyWith(done: !guide[index].done);
+      return kit.copyWith(guide: guide);
+    });
+  }
+
+  void toggleMiniatureAssemblyStepDone(String kitId, int index) {
+    _replaceMiniatureKit(kitId, (kit) {
+      if (index < 0 || index >= kit.assembly.length) return kit;
+      final assembly = kit.assembly.toList();
+      assembly[index] = assembly[index].copyWith(done: !assembly[index].done);
+      return kit.copyWith(assembly: assembly);
+    });
+  }
+
   void removeMiniatureGuideStep(String kitId, int index) {
     _replaceMiniatureKit(kitId, (kit) {
       if (index < 0 || index >= kit.guide.length) return kit;
@@ -292,6 +310,10 @@ extension TodoWorkspaceMiniaturas on TodoWorkspace {
     final paths = <String>{
       kit.imagePath,
       kit.thumbnailPath,
+      kit.coverPath,
+      kit.heroPath,
+      ...kit.gallery,
+      for (final step in kit.assembly) step.imagePath,
       for (final photo in kit.photos) ...[photo.imagePath, photo.thumbnailPath],
     };
     for (final path in paths) {

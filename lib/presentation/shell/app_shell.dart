@@ -30,6 +30,7 @@ import '../../services/home_twin_web_server.dart';
 import '../../services/home_assistant_controller.dart';
 import '../../services/windows_shell_service.dart';
 import '../../services/lan_sync_desktop_service.dart';
+import '../../services/miniature_viewer_server.dart';
 import '../../domain/models.dart';
 import '../shared/editors.dart';
 import '../shared/imagen_local.dart';

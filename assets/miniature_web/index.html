@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miniatura</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif; user-select: none; }
+  #lienzo { position: absolute; inset: 0; }
+  #lineas { position: absolute; inset: 0; pointer-events: none; }
+  #etiquetas { position: absolute; inset: 0; pointer-events: none; }
+  .etiqueta { position: absolute; display: flex; align-items: center; gap: 8px;
+    padding: 6px 11px 6px 7px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    color: #fff8ec; background: rgba(18, 16, 14, .78); border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(6px); white-space: nowrap; transform: translateY(-50%);
+    transition: opacity .25s, box-shadow .25s; }
+  .etiqueta.activa { box-shadow: 0 0 0 2px #f0c35a, 0 6px 18px rgba(240,195,90,.35); }
+  .etiqueta .muestra { width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.75); box-shadow: inset 0 -3px 5px rgba(0,0,0,.35); }
+  .etiqueta small { font-weight: 500; opacity: .72; margin-left: 2px; }
+  #pista { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+    font-size: 12px; color: rgba(255,255,255,.62); background: rgba(0,0,0,.28);
+    padding: 4px 10px; border-radius: 999px; transition: opacity .6s; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<svg id="lineas" width="100%" height="100%"></svg>
+<div id="etiquetas"></div>
+<div id="pista">Arrastra para girar · rueda para acercar</div>
+<script type="module" src="/visor.js"></script>
+</body>
+</html>
