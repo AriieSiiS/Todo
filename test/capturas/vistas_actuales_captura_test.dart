@@ -284,6 +284,13 @@ void main() {
             if (pestanas.evaluate().length <= indice) break;
             await tester.tap(pestanas.at(indice));
             await capturar(nombre);
+            final imagenMontaje =
+                find.byKey(const ValueKey('montaje-0')).hitTestable();
+            if (nombre == 'montaje' && imagenMontaje.evaluate().isNotEmpty) {
+              await tester.tap(imagenMontaje.first);
+              await capturar('montaje-grande');
+              await cerrarDialogo();
+            }
           }
           await tester.tap(pestanas.at(0));
           await estabilizar();

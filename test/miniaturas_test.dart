@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo/app/todo_theme.dart';
 import 'package:todo/application/state/todo_workspace.dart';
@@ -166,5 +167,67 @@ void main() {
         find.byKey(const ValueKey('miniature-spin')), const Offset(0, 100));
     await tester.pump();
     expect(fotoActual(), '03-05.jpg');
+  });
+
+  testWidgets('la imagen de montaje se abre en grande con el texto del paso',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final snapshot = AppStateSnapshot.fromJson(<String, dynamic>{
+      'miniatureKits': [
+        {
+          'id': 'caja',
+          'name': 'Caja de prueba',
+          'models': [
+            {'id': 'f1', 'name': 'Figura'}
+          ],
+          'assembly': [
+            {
+              'title': 'Piernas y torso',
+              'description': 'Une las piernas al torso.',
+              'imagePath': 'assembly/uno.jpg',
+            },
+            {
+              'title': 'Brazos',
+              'description': 'Pega los brazos.',
+              'imagePath': 'assembly/dos.jpg',
+            },
+          ],
+        }
+      ],
+    });
+    final controller = TodoWorkspace.createForTest(snapshot: snapshot);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTodoTheme(),
+      home: Scaffold(
+        body: ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => MiniaturesPage(controller: controller),
+        ),
+      ),
+    ));
+    await tester.tap(find.byKey(const ValueKey('miniature-card-caja')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Montaje 0/2').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('montaje-0')));
+    await tester.pumpAndSettle();
+    // El paso aparece en la ficha y, encima, en el visor a pantalla completa.
+    expect(find.text('Paso 1 de 2'), findsNWidgets(2));
+    expect(find.text('Une las piernas al torso.'), findsNWidgets(2));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.text('Paso 2 de 2'), findsNWidgets(2));
+
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+    // Al cerrar, la ficha se queda en el paso que se estaba viendo.
+    expect(find.text('Paso 2 de 2'), findsOneWidget);
+    expect(find.text('Pega los brazos.'), findsOneWidget);
   });
 }

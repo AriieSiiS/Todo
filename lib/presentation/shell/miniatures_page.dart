@@ -1891,21 +1891,8 @@ class _MiniMontajeTab extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Pulsa para ampliar · arrastra para mover',
+                      'Pulsa la imagen para verla en grande',
                       style: TextStyle(color: visuals.textMuted, fontSize: 12),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Ver en grande',
-                      onPressed: () => _abrirVisor(
-                        context,
-                        controller,
-                        rutas: [
-                          for (final paso in kit.assembly) paso.imagePath,
-                        ],
-                        inicial: index,
-                      ),
-                      icon: const Icon(Icons.open_in_full_rounded),
                     ),
                   ],
                 ),
@@ -1919,14 +1906,31 @@ class _MiniMontajeTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     child: ColoredBox(
                       color: Colors.white,
-                      child: _MiniZoomable(
-                        key: ValueKey('montaje-$index'),
-                        child: SizedBox.expand(
-                          child: _MiniImage(
-                            controller: controller,
-                            path: paso.imagePath,
-                            fit: BoxFit.contain,
-                            escala: 2,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.zoomIn,
+                        child: GestureDetector(
+                          key: ValueKey('montaje-$index'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _abrirVisor(
+                            context,
+                            controller,
+                            rutas: [
+                              for (final paso in kit.assembly) paso.imagePath,
+                            ],
+                            inicial: index,
+                            textos: [
+                              for (final paso in kit.assembly)
+                                MapEntry(paso.title, paso.description),
+                            ],
+                            onCambio: onIndex,
+                          ),
+                          child: SizedBox.expand(
+                            child: _MiniImage(
+                              controller: controller,
+                              path: paso.imagePath,
+                              fit: BoxFit.contain,
+                              escala: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -3069,6 +3073,8 @@ Future<void> _abrirVisor(
   required int inicial,
   String? kitId,
   List<MiniaturePhoto> fotos = const <MiniaturePhoto>[],
+  List<MapEntry<String, String>>? textos,
+  ValueChanged<int>? onCambio,
 }) {
   return showDialog<void>(
     context: context,
@@ -3079,6 +3085,8 @@ Future<void> _abrirVisor(
       inicial: inicial,
       kitId: kitId,
       fotos: fotos,
+      textos: textos,
+      onCambio: onCambio,
     ),
   );
 }
@@ -3090,6 +3098,8 @@ class _MiniVisorFotos extends StatefulWidget {
     required this.inicial,
     this.kitId,
     this.fotos = const <MiniaturePhoto>[],
+    this.textos,
+    this.onCambio,
   });
 
   final TodoWorkspace controller;
@@ -3097,6 +3107,11 @@ class _MiniVisorFotos extends StatefulWidget {
   final int inicial;
   final String? kitId;
   final List<MiniaturePhoto> fotos;
+
+  /// Título y texto de cada imagen (por ejemplo, los pasos de montaje), que
+  /// se muestran a la derecha.
+  final List<MapEntry<String, String>>? textos;
+  final ValueChanged<int>? onCambio;
 
   @override
   State<_MiniVisorFotos> createState() => _MiniVisorFotosState();
@@ -3133,94 +3148,180 @@ class _MiniVisorFotosState extends State<_MiniVisorFotos> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  void _ir(int indice) {
+    if (indice < 0 || indice >= widget.rutas.length) return;
+    setState(() => _actual = indice);
+    widget.onCambio?.call(indice);
+  }
+
   @override
   Widget build(BuildContext context) {
     final total = widget.rutas.length;
-    return Dialog.fullscreen(
-      backgroundColor: Colors.transparent,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: _MiniZoomable(
-              key: ValueKey('visor-$_actual'),
-              onTapOutside: () => Navigator.of(context).pop(),
-              padding: const EdgeInsets.fromLTRB(90, 70, 90, 70),
-              child: _MiniImage(
-                controller: widget.controller,
-                path: widget.rutas[_actual],
-                fit: BoxFit.contain,
-                escala: 2,
-                ajustada: true,
+    final textos = widget.textos;
+    final conTexto = textos != null && _actual < textos.length;
+    const anchoPanel = 380.0;
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+            _ir(_actual - 1),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+            _ir(_actual + 1),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Dialog.fullscreen(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                right: conTexto ? anchoPanel + 24 : 0,
+                child: _MiniZoomable(
+                  key: ValueKey('visor-$_actual'),
+                  onTapOutside: () => Navigator.of(context).pop(),
+                  padding: const EdgeInsets.fromLTRB(90, 70, 90, 70),
+                  child: _MiniImage(
+                    controller: widget.controller,
+                    path: widget.rutas[_actual],
+                    fit: BoxFit.contain,
+                    escala: 2,
+                    ajustada: true,
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                top: 18,
+                left: 24,
+                right: 24,
+                child: Row(
+                  children: [
+                    Text(
+                      '${_actual + 1} / $total',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 15),
+                    ),
+                    if (_esPropia &&
+                        widget.fotos[_actual].caption.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Text(
+                        widget.fotos[_actual].caption,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (_esPropia) ...[
+                      _MiniGlassButton(
+                        icon: Icons.short_text_rounded,
+                        label: 'Pie de foto',
+                        onPressed: _editarPie,
+                      ),
+                      const SizedBox(width: 8),
+                      _MiniGlassButton(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Eliminar',
+                        onPressed: _borrar,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    _MiniGlassButton(
+                      icon: Icons.close_rounded,
+                      label: 'Cerrar',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              if (conTexto)
+                Positioned(
+                  top: 76,
+                  right: 24,
+                  bottom: 24,
+                  width: anchoPanel,
+                  child: Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: const Color(0xE61A1714),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12)),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Paso ${_actual + 1} de $total',
+                            style: const TextStyle(
+                                color: _oroMiniatura,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            textos[_actual].key,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              height: 1.2,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (textos[_actual].value.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Text(
+                              textos[_actual].value,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 15,
+                                height: 1.55,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 18),
+                          Text(
+                            'Pulsa la imagen para acercar · flechas para cambiar de paso',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (_actual > 0)
+                Positioned(
+                  left: 20,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: IconButton.filledTonal(
+                      iconSize: 30,
+                      onPressed: () => _ir(_actual - 1),
+                      icon: const Icon(Icons.chevron_left_rounded),
+                    ),
+                  ),
+                ),
+              if (_actual < total - 1)
+                Positioned(
+                  right: conTexto ? anchoPanel + 44 : 20,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: IconButton.filledTonal(
+                      iconSize: 30,
+                      onPressed: () => _ir(_actual + 1),
+                      icon: const Icon(Icons.chevron_right_rounded),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          Positioned(
-            top: 18,
-            left: 24,
-            right: 24,
-            child: Row(
-              children: [
-                Text(
-                  '${_actual + 1} / $total',
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-                if (_esPropia && widget.fotos[_actual].caption.isNotEmpty) ...[
-                  const SizedBox(width: 16),
-                  Text(
-                    widget.fotos[_actual].caption,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ],
-                const Spacer(),
-                if (_esPropia) ...[
-                  _MiniGlassButton(
-                    icon: Icons.short_text_rounded,
-                    label: 'Pie de foto',
-                    onPressed: _editarPie,
-                  ),
-                  const SizedBox(width: 8),
-                  _MiniGlassButton(
-                    icon: Icons.delete_outline_rounded,
-                    label: 'Eliminar',
-                    onPressed: _borrar,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                _MiniGlassButton(
-                  icon: Icons.close_rounded,
-                  label: 'Cerrar',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          if (_actual > 0)
-            Positioned(
-              left: 20,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton.filledTonal(
-                  iconSize: 30,
-                  onPressed: () => setState(() => _actual--),
-                  icon: const Icon(Icons.chevron_left_rounded),
-                ),
-              ),
-            ),
-          if (_actual < total - 1)
-            Positioned(
-              right: 20,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton.filledTonal(
-                  iconSize: 30,
-                  onPressed: () => setState(() => _actual++),
-                  icon: const Icon(Icons.chevron_right_rounded),
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
