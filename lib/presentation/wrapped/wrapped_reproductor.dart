@@ -146,7 +146,7 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
     final previo = _audio;
     _audio = null;
     if (previo != null) unawaited(previo.dispose());
-    final fuente = fuenteMusicaWrapped(_valorMusica);
+    final fuente = fuenteMusicaWrapped(_valorMusica, widget.tipo);
     _rutaMusica = null;
     if (fuente == null) {
       if (mounted) setState(() {});
@@ -193,7 +193,9 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       ? null
       : firmaVideoWrapped(
           widget.firmaVideo!,
-          _rutaMusica == null ? null : fuenteMusicaWrapped(_valorMusica),
+          _rutaMusica == null
+              ? null
+              : fuenteMusicaWrapped(_valorMusica, widget.tipo),
           widget.segundosPorDiapositiva,
           _slides);
 
@@ -710,7 +712,7 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
           itemBuilder: (_) {
             final actual = pistaWrapped(_valorMusica)?.id ??
                 ((_valorMusica ?? '').isEmpty
-                    ? pistaWrappedPorDefecto
+                    ? pistaPorDefectoDe(widget.tipo)
                     : (_valorMusica!.toLowerCase() == 'ninguna'
                         ? 'ninguna'
                         : 'propia'));

@@ -516,6 +516,11 @@ class _LibraryHeader extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.sync_rounded),
             ),
+          IconButton(
+              key: const ValueKey('library-year-summary'),
+              tooltip: 'Wrapped: tu año en Biblioteca',
+              onPressed: onYearSummary,
+              icon: const Icon(Icons.auto_awesome_rounded)),
           if (showBookActions) ...[
             if (onReadingClub != null)
               IconButton(
@@ -527,11 +532,6 @@ class _LibraryHeader extends StatelessWidget {
                 tooltip: 'Citas de todos los libros',
                 onPressed: onQuotes,
                 icon: const Icon(Icons.format_quote_rounded)),
-            IconButton(
-                key: const ValueKey('library-year-summary'),
-                tooltip: 'Wrapped: tu año en libros',
-                onPressed: onYearSummary,
-                icon: const Icon(Icons.auto_awesome_rounded)),
             IconButton(
                 tooltip: 'Estadísticas de lectura',
                 onPressed: onStatistics,

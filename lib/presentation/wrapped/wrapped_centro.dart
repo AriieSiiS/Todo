@@ -1,14 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../application/wrapped/resumen_libros.dart';
+import '../../application/wrapped/resumen_general.dart';
 import '../../application/wrapped/wrapped_modelo.dart';
 import '../../domain/models.dart';
-import 'wrapped_libros.dart';
+import 'wrapped_diapositivas.dart';
 import 'wrapped_piezas.dart';
 import 'wrapped_reproductor.dart';
 import 'wrapped_video.dart';
@@ -21,7 +22,8 @@ String firmaBaseWrapped(
     int year,
     List<LibraryItem> biblioteca,
     List<LibraryGoal> propositos,
-    AjustesWrappedTipo ajustes) {
+    AjustesWrappedTipo ajustes,
+    [DatosSteam? steam]) {
   String? ejecutable;
   try {
     ejecutable =
@@ -35,7 +37,7 @@ String firmaBaseWrapped(
     sinMusica,
     [
       for (final l in biblioteca)
-        if (l.type == LibraryItemType.book)
+        if (esDelTipo(tipo, l))
           [
             l.id,
             l.updatedAt.toIso8601String(),
@@ -53,20 +55,77 @@ String firmaBaseWrapped(
       for (final m in propositos)
         if (m.targetYear == year) [m.id, m.status.name, m.linkedLibraryItemId]
     ],
+    if (steam != null &&
+        (tipo == WrappedTipo.juegos || tipo == WrappedTipo.general))
+      [
+        for (final e in steam.logros.entries)
+          [e.key, e.value['queried_at'], e.value['unlocked']]
+      ],
   ]);
+}
+
+/// ¿Entra esta obra en el Wrapped de [tipo]?
+bool esDelTipo(WrappedTipo tipo, LibraryItem l) => switch (tipo) {
+      WrappedTipo.libros => l.type == LibraryItemType.book,
+      WrappedTipo.pantalla => l.type == LibraryItemType.movieSeries,
+      WrappedTipo.juegos => l.type == LibraryItemType.game,
+      WrappedTipo.general => true,
+    };
+
+/// Logros y horas de Steam guardados en disco por la conexión de Steam.
+class DatosSteam {
+  const DatosSteam(this.logros, this.minutos);
+  final Map<int, Map<String, dynamic>> logros;
+  final Map<int, num> minutos;
+
+  static Future<DatosSteam> cargar() async {
+    final inicio = Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        Directory.current.path;
+    final s = Platform.pathSeparator;
+    final base = '$inicio${s}Documents${s}Todo';
+    final logros = <int, Map<String, dynamic>>{};
+    final minutos = <int, num>{};
+    try {
+      final carpeta = Directory('$base${s}steam_icons');
+      if (carpeta.existsSync()) {
+        for (final d in carpeta.listSync().whereType<Directory>()) {
+          final appId =
+              int.tryParse(d.uri.pathSegments.where((x) => x.isNotEmpty).last);
+          final archivo = File('${d.path}${s}logros.json');
+          if (appId == null || !archivo.existsSync()) continue;
+          try {
+            final datos = jsonDecode(await archivo.readAsString());
+            if (datos is Map<String, dynamic>) logros[appId] = datos;
+          } catch (_) {}
+        }
+      }
+      final horas = File('$base${s}steam${s}horas_familia.json');
+      if (horas.existsSync()) {
+        final datos = jsonDecode(await horas.readAsString());
+        if (datos is Map) {
+          for (final e in datos.entries) {
+            final id = int.tryParse('${e.key}');
+            if (id != null && e.value is num) minutos[id] = e.value as num;
+          }
+        }
+      }
+    } catch (_) {}
+    return DatosSteam(logros, minutos);
+  }
 }
 
 /// Datos y diapositivas listos para reproducir o para generar el vídeo.
 class WrappedPreparado {
   WrappedPreparado(
       this.resumen, this.diapositivas, this.ajustes, this.firmaBase);
-  final ResumenLibros resumen;
+  final ResumenObras resumen;
   final List<DiapositivaWrapped> diapositivas;
   final AjustesWrappedTipo ajustes;
   final String firmaBase;
 
   int get segundos => ajustes.segundosPorDiapositiva ?? 7;
-  Iterable<String?> get portadas => portadasDeLibros(resumen);
+  Iterable<String?> get portadas => portadasDe(resumen);
 }
 
 Future<WrappedPreparado> prepararWrapped(
@@ -77,16 +136,42 @@ Future<WrappedPreparado> prepararWrapped(
     required AjustesWrapped ajustes}) async {
   final colecciones = await _cargarColecciones();
   final ajustesTipo = ajustes.para(tipo, year);
-  final resumen = ResumenLibros.calcular(
-    biblioteca: biblioteca,
-    propositos: propositos,
-    colecciones: colecciones,
-    year: year,
-    ajustes: ajustesTipo,
-  );
-  await ColoresPortada.precargar(portadasDeLibros(resumen));
-  return WrappedPreparado(resumen, diapositivasLibros(resumen), ajustesTipo,
-      firmaBaseWrapped(tipo, year, biblioteca, propositos, ajustesTipo));
+  final steam = tipo == WrappedTipo.juegos || tipo == WrappedTipo.general
+      ? await DatosSteam.cargar()
+      : null;
+  final ResumenObras resumen = switch (tipo) {
+    WrappedTipo.libros => ResumenLibros.calcular(
+        biblioteca: biblioteca,
+        propositos: propositos,
+        colecciones: colecciones,
+        year: year,
+        ajustes: ajustesTipo),
+    WrappedTipo.pantalla => ResumenPantalla.calcular(
+        biblioteca: biblioteca,
+        propositos: propositos,
+        colecciones: colecciones,
+        year: year,
+        ajustes: ajustesTipo),
+    WrappedTipo.juegos => ResumenJuegos.calcular(
+        biblioteca: biblioteca,
+        propositos: propositos,
+        colecciones: colecciones,
+        year: year,
+        logros: steam!.logros,
+        minutosSteam: steam.minutos,
+        ajustes: ajustesTipo),
+    WrappedTipo.general => ResumenGeneral.calcular(
+        biblioteca: biblioteca,
+        propositos: propositos,
+        colecciones: colecciones,
+        year: year,
+        logros: steam!.logros,
+        minutosSteam: steam.minutos,
+        todos: ajustes),
+  };
+  await ColoresPortada.precargar(portadasDe(resumen));
+  return WrappedPreparado(resumen, diapositivasDe(resumen), ajustesTipo,
+      firmaBaseWrapped(tipo, year, biblioteca, propositos, ajustesTipo, steam));
 }
 
 /// Genera el vídeo de un Wrapped sin abrirlo, para que esté listo al pedirlo.
@@ -104,7 +189,7 @@ Future<void> prepararVideoEnSegundoPlano(
       biblioteca: biblioteca,
       propositos: propositos,
       ajustes: ajustes);
-  final fuente = fuenteMusicaWrapped(w.ajustes.musica);
+  final fuente = fuenteMusicaWrapped(w.ajustes.musica, tipo);
   final ruta = fuente == null ? null : await rutaDeAudio(fuente);
   VideosWrapped.preparar(
     clave: '${tipo.clave}-$year',
@@ -130,15 +215,15 @@ Future<List<Coleccion>> _cargarColecciones() async {
   }
 }
 
-/// ¿Tiene el año algo que contar? (libros terminados o lectura en el Kindle).
+/// ¿Tiene el año algo que contar? Obras terminadas o lectura en el Kindle.
 bool hayDatosWrapped(WrappedTipo tipo, int year, List<LibraryItem> biblioteca) {
-  if (tipo != WrappedTipo.libros) return false;
   for (final l in biblioteca) {
-    if (l.type != LibraryItemType.book) continue;
+    if (!esDelTipo(tipo, l)) continue;
     if (l.status == LibraryItemStatus.completed &&
         l.completedDate?.year == year) {
       return true;
     }
+    if (l.type != LibraryItemType.book) continue;
     for (final s
         in l.reading?.statistics.values ?? const <BookReadingStatistics>[]) {
       if (s.periods.any((p) => p.seconds > 0 && p.localDate.year == year)) {
@@ -149,14 +234,15 @@ bool hayDatosWrapped(WrappedTipo tipo, int year, List<LibraryItem> biblioteca) {
   return false;
 }
 
-/// Años con datos de libros, del más reciente al más antiguo.
-List<int> anosConLibros(List<LibraryItem> biblioteca) {
+/// Años con datos de un tipo, del más reciente al más antiguo.
+List<int> anosConDatos(WrappedTipo tipo, List<LibraryItem> biblioteca) {
   final anos = <int>{};
   for (final l in biblioteca) {
-    if (l.type != LibraryItemType.book) continue;
+    if (!esDelTipo(tipo, l)) continue;
     if (l.status == LibraryItemStatus.completed && l.completedDate != null) {
       anos.add(l.completedDate!.year);
     }
+    if (l.type != LibraryItemType.book) continue;
     for (final s
         in l.reading?.statistics.values ?? const <BookReadingStatistics>[]) {
       for (final p in s.periods) {
@@ -219,7 +305,7 @@ class _PantallaWrapped extends StatefulWidget {
 
 class _PantallaWrappedState extends State<_PantallaWrapped> {
   late AjustesWrapped _ajustes;
-  ResumenLibros? _resumen;
+  ResumenObras? _resumen;
   WrappedPreparado? _preparado;
   List<DiapositivaWrapped> _slides = const [];
   int _version = 0;
@@ -276,7 +362,7 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
     final resumen = _resumen;
     if (resumen == null) return;
     await Future.wait([
-      for (final fuente in portadasDeLibros(resumen))
+      for (final fuente in portadasDe(resumen))
         if (proveedorPortada(fuente) case final proveedor?)
           precacheImage(proveedor, context).catchError((Object _) {}),
     ]).timeout(const Duration(seconds: 8), onTimeout: () => const []);
@@ -297,6 +383,7 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
     final nuevo = await showDialog<AjustesWrappedTipo>(
       context: context,
       builder: (_) => _PanelPersonalizar(
+        tipo: widget.tipo,
         year: widget.year,
         biblioteca: widget.biblioteca(),
         ajustes: _ajustes
@@ -352,6 +439,7 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
 
 class _PanelPersonalizar extends StatefulWidget {
   const _PanelPersonalizar({
+    required this.tipo,
     required this.year,
     required this.biblioteca,
     required this.ajustes,
@@ -367,7 +455,8 @@ class _PanelPersonalizar extends StatefulWidget {
 
   /// Ajustes que se aplican (año + generales), para mostrar el estado actual.
   final AjustesWrappedTipo efectivos;
-  final ResumenLibros resumen;
+  final ResumenObras resumen;
+  final WrappedTipo tipo;
   final String rutaAjustes;
 
   @override
@@ -384,7 +473,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
 
   List<LibraryItem> get _delAno => [
         for (final l in widget.biblioteca)
-          if (l.type == LibraryItemType.book &&
+          if (esDelTipo(widget.tipo, l) &&
               l.status == LibraryItemStatus.completed &&
               l.completedDate?.year == widget.year)
             l,
@@ -393,10 +482,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
   List<LibraryItem> get _elegibles {
     final ids = <String>{};
     return [
-      for (final l in [
-        ..._delAno,
-        ...widget.resumen.porTiempo.map((e) => e.libro)
-      ])
+      for (final l in [..._delAno, ...obrasDestacables(widget.resumen)])
         if (ids.add(l.id)) l,
     ];
   }
@@ -410,7 +496,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
   Widget _selectorLibro(String titulo, String? valor, String automatico,
       ValueChanged<String?> cambiar) {
     final elegibles = _elegibles;
-    final actual = ResumenLibros.buscar(elegibles, valor);
+    final actual = ResumenObras.buscar(elegibles, valor);
     return Row(children: [
       SizedBox(width: 130, child: Text(titulo)),
       Expanded(
@@ -482,7 +568,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
                         label: Text('${pista.nombre} · ${pista.estilo}'),
                         selected: (pistaWrapped(_musica)?.id ??
                                 (_musica == null
-                                    ? pistaWrappedPorDefecto
+                                    ? pistaPorDefectoDe(widget.tipo)
                                     : null)) ==
                             pista.id,
                         onSelected: (_) => setState(() => _musica = pista.id),
@@ -518,7 +604,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
               Text('Diapositivas',
                   style: Theme.of(context).textTheme.titleSmall),
               Wrap(spacing: 6, runSpacing: 2, children: [
-                for (final e in diapositivasDeLibros.entries)
+                for (final e in nombresDiapositivas(widget.tipo).entries)
                   FilterChip(
                     label: Text(e.value),
                     selected: !_ocultar.contains(e.key),
@@ -527,7 +613,7 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
                   ),
               ]),
               const SizedBox(height: 14),
-              Text('Libros que cuentan',
+              Text('Qué cuenta en este Wrapped',
                   style: Theme.of(context).textTheme.titleSmall),
               for (final l in _delAno)
                 CheckboxListTile(
@@ -588,48 +674,59 @@ Future<void> abrirCentroWrapped(
 }) {
   final almacen = AlmacenWrapped();
   final ajustes = almacen.leerAjustes();
-  final anos = anosConLibros(biblioteca());
   final actual = DateTime.now().year;
-  if (!anos.contains(actual)) anos.insert(0, actual);
+  List<int> anos(WrappedTipo tipo) {
+    final lista = anosConDatos(tipo, biblioteca());
+    if (!lista.contains(actual)) lista.insert(0, actual);
+    return lista;
+  }
+
   return showDialog<void>(
     context: context,
     builder: (dialogo) => AlertDialog(
       title: const Text('Wrapped'),
       content: SizedBox(
         width: 460,
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tu resumen del año se prepara solo el ${fechaLarga(ajustes.publicacion(actual))} '
-                'y te aviso en cuanto esté listo.',
-                style: Theme.of(dialogo).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              for (final tipo in WrappedTipo.values)
-                for (final year in (tipo.disponible ? anos : [actual]))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _FilaWrapped(
-                      tipo: tipo,
-                      year: year,
-                      publicado:
-                          !DateTime.now().isBefore(ajustes.publicacion(year)),
-                      onAbrir: tipo.disponible
-                          ? () {
-                              Navigator.of(dialogo).pop();
-                              unawaited(abrirWrapped(context,
-                                  tipo: tipo,
-                                  year: year,
-                                  biblioteca: biblioteca,
-                                  propositos: propositos,
-                                  almacen: almacen));
-                            }
-                          : null,
+        child: SingleChildScrollView(
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tu resumen del año se prepara solo el ${fechaLarga(ajustes.publicacion(actual))} '
+                  'y te aviso en cuanto esté listo.',
+                  style: Theme.of(dialogo).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                for (final tipo in const [
+                  WrappedTipo.general,
+                  WrappedTipo.libros,
+                  WrappedTipo.pantalla,
+                  WrappedTipo.juegos,
+                ])
+                  for (final year in (tipo.disponible ? anos(tipo) : [actual]))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _FilaWrapped(
+                        tipo: tipo,
+                        year: year,
+                        publicado:
+                            !DateTime.now().isBefore(ajustes.publicacion(year)),
+                        onAbrir: tipo.disponible
+                            ? () {
+                                Navigator.of(dialogo).pop();
+                                unawaited(abrirWrapped(context,
+                                    tipo: tipo,
+                                    year: year,
+                                    biblioteca: biblioteca,
+                                    propositos: propositos,
+                                    almacen: almacen));
+                              }
+                            : null,
+                      ),
                     ),
-                  ),
-            ]),
+              ]),
+        ),
       ),
       actions: [
         TextButton(
@@ -790,11 +887,22 @@ class _AvisoWrappedState extends State<AvisoWrapped> {
                 propositos: widget.propositos(),
                 almacen: _almacen)
             .catchError((Object _) {}));
-        if (estado.avisado(w.tipo, w.year)) continue;
+      }
+      // Una sola notificación de Windows aunque se publiquen varios a la vez.
+      final nuevos = [
+        for (final w in listos)
+          if (!estado.avisado(w.tipo, w.year)) w
+      ];
+      for (final w in nuevos) {
         estado = estado.marcarAvisado(w.tipo, w.year, ahora);
+      }
+      if (nuevos.isNotEmpty) {
+        final anos = {for (final w in nuevos) w.year}.join(' y ');
         unawaited(widget.notificarSistema?.call(
-                '✨ Tu Wrapped ${w.year} ya está listo',
-                '${w.tipo.titulo}: ábrelo en Todo para verlo con música y descargarlo.') ??
+                nuevos.length == 1
+                    ? '✨ Tu Wrapped $anos ya está listo'
+                    : '✨ Tus Wrapped de $anos ya están listos',
+                '${nuevos.map((w) => w.tipo.nombre).join(', ')}: ábrelos en Todo para verlos con música y descargar el vídeo.') ??
             Future<void>.value());
       }
       _almacen.guardarEstado(estado);
@@ -851,7 +959,7 @@ class _TarjetaAviso extends StatelessWidget {
   Widget build(BuildContext context) {
     final portadas = [
       for (final l in biblioteca())
-        if (l.type == LibraryItemType.book &&
+        if (esDelTipo(listo.tipo, l) &&
             l.status == LibraryItemStatus.completed &&
             l.completedDate?.year == listo.year &&
             (l.coverUrl ?? '').isNotEmpty)

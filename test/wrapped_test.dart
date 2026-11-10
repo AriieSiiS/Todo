@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo/application/wrapped/resumen_libros.dart';
+import 'package:todo/application/wrapped/resumen_general.dart';
 import 'package:todo/application/wrapped/wrapped_modelo.dart';
 import 'package:todo/domain/models.dart';
-import 'package:todo/presentation/wrapped/wrapped_libros.dart';
+import 'package:todo/presentation/wrapped/wrapped_diapositivas.dart';
 import 'package:todo/presentation/wrapped/wrapped_piezas.dart';
 import 'package:todo/presentation/wrapped/wrapped_reproductor.dart';
 import 'package:todo/presentation/wrapped/wrapped_video.dart';
@@ -172,7 +172,8 @@ void main() {
 
     test('se avisa desde la fecha de publicación hasta que se ve', () {
       const ajustes = AjustesWrapped();
-      bool conDatos(WrappedTipo t, int y) => y == 2026;
+      bool conDatos(WrappedTipo t, int y) =>
+          y == 2026 && t == WrappedTipo.libros;
       List<WrappedListo> listos(DateTime ahora, EstadoWrapped e) =>
           wrappedsListos(
               ahora: ahora, ajustes: ajustes, estado: e, conDatos: conDatos);
@@ -231,7 +232,7 @@ void main() {
       expect(r.peorValorado?.id, 'c');
       expect(r.notaMedia, closeTo(10 / 3, .001));
       expect(r.autores.first.nombre, 'Autora');
-      expect(r.autores.first.libros, hasLength(2));
+      expect(r.autores.first.obras, hasLength(2));
       expect(r.autores.first.nuevo, isFalse);
       expect(r.generos.first.key, 'Misterio');
       expect(r.sagas.single.nombre, 'Poirot');
@@ -338,5 +339,181 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     expect(wrappedReproduciendo.value, isFalse);
+  });
+
+  group('series, películas, juegos y general', () {
+    LibraryItem pantalla(String id, String titulo,
+            {LibraryMediaType tipo = LibraryMediaType.movie,
+            String? duracion,
+            DateTime? fin,
+            String pais = 'Estados Unidos',
+            String director = 'Directora',
+            int ano = 2020,
+            double? nota}) =>
+        LibraryItem(
+          id: id,
+          type: LibraryItemType.movieSeries,
+          title: titulo,
+          mediaType: tipo,
+          duration: duracion,
+          completedDate: fin ?? DateTime(2026, 5, 2, 21),
+          country: pais,
+          creatorOrDirector: director,
+          releaseYear: ano,
+          genre: 'Terror, suspense',
+          rating: nota,
+          createdAt: DateTime(2026, 1, 2),
+          updatedAt: DateTime(2026, 1, 2),
+        );
+    LibraryItem juego(String id, String titulo, int appId,
+            {LibraryItemStatus estado = LibraryItemStatus.completed}) =>
+        LibraryItem(
+          id: id,
+          type: LibraryItemType.game,
+          title: titulo,
+          status: estado,
+          completedDate: estado == LibraryItemStatus.completed
+              ? DateTime(2026, 3, 4)
+              : null,
+          externalUrl: 'https://store.steampowered.com/app/$appId/',
+          developer: 'Estudio',
+          genre: 'Roguelite, estrategia',
+          platform: 'PC',
+          releaseYear: 2023,
+          createdAt: DateTime(2026, 1, 2),
+          updatedAt: DateTime(2026, 1, 2),
+        );
+    final obras = [
+      ..._biblioteca(),
+      pantalla('p1', 'Larga', duracion: '2 h 52 min', ano: 2026, nota: 5),
+      pantalla('p2', 'Corta',
+          duracion: '90 min', pais: 'Japon, Francia', nota: 3),
+      pantalla('p3', 'Serie',
+          tipo: LibraryMediaType.series,
+          duracion: '24 episodios',
+          pais: 'Japón',
+          fin: DateTime(2026, 8, 1),
+          nota: 4),
+      juego('j1', 'Juego uno', 100),
+      juego('j2', 'Juego dos', 200, estado: LibraryItemStatus.inProgress),
+    ];
+    int seg(DateTime d) => d.millisecondsSinceEpoch ~/ 1000;
+    final logros = {
+      100: {
+        'playtime_minutes': 600,
+        'achievements': [
+          {
+            'name': 'Raro',
+            'unlocked': true,
+            'unlock_time': seg(DateTime(2026, 2, 1, 23)),
+            'global_percent': 1.5
+          },
+          {
+            'name': 'Fácil',
+            'unlocked': true,
+            'unlock_time': seg(DateTime(2026, 2, 2, 22)),
+            'global_percent': 60.0
+          },
+        ],
+      },
+      200: {
+        'achievements': [
+          {
+            'name': 'Otro',
+            'unlocked': true,
+            'unlock_time': seg(DateTime(2026, 2, 3, 1)),
+            'global_percent': 20.0
+          },
+          {'name': 'Pendiente', 'unlocked': false},
+        ],
+      },
+    };
+
+    test('series y películas suman horas, países y extremos', () {
+      final r = ResumenPantalla.calcular(biblioteca: obras, year: 2026);
+      expect(r.peliculas, hasLength(2));
+      expect(r.series, hasLength(1));
+      expect(r.minutosPeliculas, 172 + 90);
+      expect(r.minutosSeries, 24 * 24);
+      expect(r.masLarga?.id, 'p1');
+      expect(r.masCorta?.id, 'p2');
+      expect(r.paises.first.key, 'Japón');
+      expect(r.paises.map((e) => e.key), contains('Francia'));
+      expect(r.estrenos.single.id, 'p1');
+      expect(r.terminadosDiaRecord, hasLength(2));
+      expect(r.destacado?.id, 'p1');
+      expect(
+          minutosDeObra(pantalla('x', 'x',
+                  duracion: '41-61 min', tipo: LibraryMediaType.series))
+              .minutos,
+          51 * 10);
+    });
+
+    test('los juegos cuentan logros del año, rachas y rarezas', () {
+      final r = ResumenJuegos.calcular(
+          biblioteca: obras,
+          year: 2026,
+          logros: logros,
+          minutosSteam: {200: 120});
+      expect(r.logrosDelAno, hasLength(3));
+      expect(r.porLogros.first.juego.id, 'j1');
+      expect(r.completados.single.juego.id, 'j1');
+      expect(r.logroMasRaro?.nombre, 'Raro');
+      expect(r.rachaLogros, 3);
+      expect(r.porHoras.first.minutos, 600);
+      expect(r.porHoras.map((j) => j.juego.id), contains('j2'));
+      expect(r.destacado?.id, 'j1');
+    });
+
+    test('el general reúne los tres tipos', () {
+      final r = ResumenGeneral.calcular(
+          biblioteca: obras,
+          year: 2026,
+          logros: logros,
+          todos: const AjustesWrapped());
+      expect(r.cuantos(LibraryItemType.book), 3);
+      expect(r.cuantos(LibraryItemType.movieSeries), 3);
+      expect(r.cuantos(LibraryItemType.game), 1);
+      expect(r.libros.terminados, hasLength(3));
+      expect(r.juegos.logrosDelAno, hasLength(3));
+      expect(r.minutosHistorias,
+          r.libros.segundos ~/ 60 + r.pantalla.minutosTotales);
+    });
+
+    testWidgets('sus diapositivas se dibujan sin desbordes', (tester) async {
+      TipografiaWrapped.usarFuentesLocales = true;
+      tester.view.physicalSize = const Size(anchoLienzo, altoLienzo);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final resumenes = <ResumenObras>[
+        ResumenPantalla.calcular(biblioteca: obras, year: 2026),
+        ResumenJuegos.calcular(biblioteca: obras, year: 2026, logros: logros),
+        ResumenGeneral.calcular(
+            biblioteca: obras,
+            year: 2026,
+            logros: logros,
+            todos: const AjustesWrapped()),
+      ];
+      for (final r in resumenes) {
+        final slides = diapositivasDe(r);
+        expect(slides.length, greaterThan(8));
+        for (final slide in slides) {
+          for (final t in [0.0, .3, 1.0]) {
+            await tester.pumpWidget(MaterialApp(
+              home: Material(
+                child: SizedBox(
+                  width: anchoLienzo,
+                  height: altoLienzo,
+                  child: Builder(builder: (c) => slide.construir(c, t)),
+                ),
+              ),
+            ));
+            expect(tester.takeException(), isNull,
+                reason: '${r.runtimeType} ${slide.id} t=$t');
+          }
+        }
+      }
+    });
   });
 }

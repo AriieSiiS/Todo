@@ -39,7 +39,9 @@ class TrabajoVideo {
 /// la firma de lo que contiene (datos, ajustes y música). Si nada ha cambiado,
 /// se reutiliza; si algo cambia, se genera otro.
 class VideosWrapped {
-  static TrabajoVideo? _actual;
+  /// Trabajo de cada Wrapped (`libros-2026`…); se generan de uno en uno.
+  static final Map<String, TrabajoVideo> _trabajos = {};
+  static Future<void> _cola = Future.value();
 
   static Directory carpetaCache() {
     final inicio = Platform.environment['USERPROFILE'] ??
@@ -62,7 +64,8 @@ class VideosWrapped {
   }
 
   /// Devuelve el trabajo de ese vídeo: el que ya existe, el que está en
-  /// marcha o uno nuevo.
+  /// marcha o uno nuevo. Los vídeos sin prisa esperan su turno; uno con prisa
+  /// se adelanta.
   static TrabajoVideo preparar({
     required String clave,
     required String firma,
@@ -73,7 +76,7 @@ class VideosWrapped {
     ui.FlutterView? vista,
     bool prisa = false,
   }) {
-    final actual = _actual;
+    final actual = _trabajos[clave];
     if (actual != null && actual.firma == firma && !actual._cancelado) {
       if (prisa) actual.prisa = true;
       return actual;
@@ -83,24 +86,42 @@ class VideosWrapped {
     final archivo =
         File('${carpeta.path}${Platform.pathSeparator}$clave-$firma.mp4');
     final trabajo = TrabajoVideo._(firma, archivo)..prisa = prisa;
-    _actual = trabajo;
+    _trabajos[clave] = trabajo;
     if (archivo.existsSync() && archivo.lengthSync() > 0) {
       trabajo.progreso.value = 1;
       trabajo.resultado = Future.value(archivo);
       return trabajo;
     }
-    trabajo.resultado = _generar(
-      trabajo,
-      clave: clave,
-      diapositivas: diapositivas,
-      duraciones: duraciones,
-      portadas: portadas,
-      rutaMusica: rutaMusica,
-      vista: vista ??
-          WidgetsBinding.instance.platformDispatcher.implicitView ??
-          WidgetsBinding.instance.platformDispatcher.views.first,
-    ).catchError((Object _) => null).whenComplete(() {
-      if (identical(_actual, trabajo) && !trabajo.terminado) _actual = null;
+    final pantalla = vista ??
+        WidgetsBinding.instance.platformDispatcher.implicitView ??
+        WidgetsBinding.instance.platformDispatcher.views.first;
+    final anterior = _cola;
+    final turno = Completer<void>();
+    _cola = turno.future;
+    Future<File?> enSuTurno() async {
+      var libre = false;
+      unawaited(anterior.whenComplete(() => libre = true));
+      while (!libre && !trabajo.prisa && !trabajo._cancelado) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      if (trabajo._cancelado) return null;
+      return _generar(
+        trabajo,
+        clave: clave,
+        diapositivas: diapositivas,
+        duraciones: duraciones,
+        portadas: portadas,
+        rutaMusica: rutaMusica,
+        vista: pantalla,
+      );
+    }
+
+    trabajo.resultado =
+        enSuTurno().catchError((Object _) => null).whenComplete(() {
+      if (!turno.isCompleted) turno.complete();
+      if (identical(_trabajos[clave], trabajo) && !trabajo.terminado) {
+        _trabajos.remove(clave);
+      }
     });
     return trabajo;
   }

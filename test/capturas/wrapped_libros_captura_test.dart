@@ -12,9 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo/application/wrapped/resumen_libros.dart';
 import 'package:todo/domain/models.dart';
-import 'package:todo/presentation/wrapped/wrapped_libros.dart';
+import 'package:todo/presentation/wrapped/wrapped_centro.dart';
+import 'package:todo/presentation/wrapped/wrapped_diapositivas.dart';
 import 'package:todo/presentation/wrapped/wrapped_piezas.dart';
 import 'package:todo/application/wrapped/wrapped_modelo.dart';
 import 'package:todo/presentation/wrapped/wrapped_reproductor.dart';
@@ -25,6 +25,7 @@ const _fuentes = String.fromEnvironment('FUENTES');
 const _year = int.fromEnvironment('YEAR', defaultValue: 2026);
 const _momentos = String.fromEnvironment('MOMENTOS', defaultValue: '1');
 const _solo = String.fromEnvironment('SOLO');
+const _tipo = String.fromEnvironment('TIPO', defaultValue: 'libros');
 const _video = bool.fromEnvironment('VIDEO');
 
 void main() {
@@ -64,22 +65,19 @@ void main() {
       for (final j in estado['libraryGoals'] as List)
         LibraryGoal.fromJson(Map<String, dynamic>.from(j as Map))
     ];
-    final colecciones = Coleccion.desdeJson(
-        File('assets/colecciones/colecciones.json').readAsStringSync());
-    final r = ResumenLibros.calcular(
+    final w = (await tester.runAsync(() => prepararWrapped(
+        tipo: WrappedTipo.desdeClave(_tipo)!,
+        year: _year,
         biblioteca: biblioteca,
         propositos: metas,
-        colecciones: colecciones,
-        year: _year);
+        ajustes: AlmacenWrapped().leerAjustes())))!;
+    final r = w.resumen;
+    final slides = w.diapositivas;
     // ignore: avoid_print
-    print('datos listos');
-    await tester.runAsync(() => ColoresPortada.precargar(portadasDeLibros(r)));
-    // ignore: avoid_print
-    print('colores listos');
-    final slides = diapositivasLibros(r);
+    print('datos listos: ${slides.length} diapositivas');
     // Las portadas se cargan antes, fuera del reloj falso de las pruebas.
     await tester.runAsync(() async {
-      for (final fuente in portadasDeLibros(r)) {
+      for (final fuente in portadasDe(r)) {
         final proveedor = proveedorPortada(fuente);
         if (proveedor == null) continue;
         final listo = Completer<void>();
@@ -113,7 +111,7 @@ void main() {
           firma: VideosWrapped.firmaDe([DateTime.now().toIso8601String()]),
           diapositivas: slides,
           duraciones: [for (final _ in slides) const Duration(seconds: 1)],
-          portadas: portadasDeLibros(r),
+          portadas: portadasDe(r),
           rutaMusica: musica,
           vista: tester.view,
           prisa: true,

@@ -10,9 +10,10 @@ import 'dart:io';
 /// aparte en `estado.json`. La guía de variables está en `docs/WRAPPED.md`.
 enum WrappedTipo {
   libros('libros', 'Libros', 'Tu año en libros', disponible: true),
-  general('general', 'Biblioteca', 'Tu año en Biblioteca'),
-  pantalla('pantalla', 'Series y películas', 'Tu año en series y películas'),
-  juegos('juegos', 'Videojuegos', 'Tu año en videojuegos');
+  general('general', 'Biblioteca', 'Tu año en Biblioteca', disponible: true),
+  pantalla('pantalla', 'Series y películas', 'Tu año en series y películas',
+      disponible: true),
+  juegos('juegos', 'Videojuegos', 'Tu año en videojuegos', disponible: true);
 
   const WrappedTipo(this.clave, this.nombre, this.titulo,
       {this.disponible = false});
@@ -492,14 +493,22 @@ class PistaWrapped {
 const pistasWrapped = [
   PistaWrapped('aurora', 'Aurora', 'Épica suave', 'aurora.mp3'),
   PistaWrapped('taberna', 'Taberna del bardo', 'Lofi medieval', 'taberna.mp3'),
-  PistaWrapped('bardo', 'Nocturno del bardo', 'Lofi medieval con lluvia',
-      'bardo.mp3'),
+  PistaWrapped(
+      'bardo', 'Nocturno del bardo', 'Lofi medieval con lluvia', 'bardo.mp3'),
   PistaWrapped('cafe', 'Café y papel', 'Lofi jazz', 'cafe.mp3'),
   PistaWrapped('cronica', 'Crónica', 'Épica orquestal', 'cronica.mp3'),
   PistaWrapped('neon', 'Páginas de neón', 'Synthwave', 'neon.mp3'),
 ];
 
 const pistaWrappedPorDefecto = 'aurora';
+
+/// Pista que suena por defecto en cada tipo de Wrapped.
+String pistaPorDefectoDe(WrappedTipo tipo) => switch (tipo) {
+      WrappedTipo.libros => 'aurora',
+      WrappedTipo.pantalla => 'cronica',
+      WrappedTipo.juegos => 'neon',
+      WrappedTipo.general => 'aurora',
+    };
 
 PistaWrapped? pistaWrapped(String? valor) {
   final clave = valor?.trim().toLowerCase();
@@ -511,9 +520,12 @@ PistaWrapped? pistaWrapped(String? valor) {
 
 /// Fuente de audio para un valor de `musica`: una pista del catálogo, un
 /// archivo propio o `null` si es `ninguna`. Sin valor, la pista por defecto.
-String? fuenteMusicaWrapped(String? valor) {
+String? fuenteMusicaWrapped(String? valor,
+    [WrappedTipo tipo = WrappedTipo.libros]) {
   final v = valor?.trim();
-  if (v == null || v.isEmpty) return pistaWrapped(pistaWrappedPorDefecto)!.fuente;
+  if (v == null || v.isEmpty) {
+    return pistaWrapped(pistaPorDefectoDe(tipo))!.fuente;
+  }
   if (v.toLowerCase() == 'ninguna') return null;
   return pistaWrapped(v)?.fuente ?? v;
 }

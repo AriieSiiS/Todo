@@ -5,9 +5,10 @@ tienen banda sonora y cada diapositiva se descarga como imagen vertical de
 1080 × 1920. El vídeo MP4 con música (necesita ffmpeg) se genera solo en
 segundo plano, así que descargarlo es copiar un archivo ya hecho.
 
-De momento existe el de **libros**. El general, el de series y películas y el
-de videojuegos ya tienen su sitio (`WrappedTipo` en
-`lib/application/wrapped/wrapped_modelo.dart`) y aparecen como «Próximamente».
+Hay cuatro: el **general** (toda la Biblioteca), **libros**, **series y
+películas** y **videojuegos** (`WrappedTipo` en
+`lib/application/wrapped/wrapped_modelo.dart`). Todos se publican a la vez y
+llega una sola notificación de Windows para todos.
 
 ## Cómo funciona
 
@@ -17,9 +18,15 @@ de videojuegos ya tienen su sitio (`WrappedTipo` en
   que se abre.
 - **Datos vivos.** Se calcula al abrirlo, así que cuenta todo lo leído hasta ese
   momento, incluido lo del 31 de diciembre.
-- **Vista previa.** Desde el botón ✨ de la cabecera de Biblioteca (vista de
-  libros) se puede abrir cualquier año; antes de la fecha aparece como vista
-  previa.
+- **Vista previa.** Desde el botón ✨ de la cabecera de Biblioteca se puede
+  abrir cualquier tipo y año; antes de la fecha aparece como vista previa.
+- **Datos de cada tipo.** Libros: Kindle (KOReader), páginas, citas. Series y
+  películas: duración de cada ficha (las series se estiman por episodios si
+  falta el dato), países, directores, estrenos y maratones. Videojuegos: los
+  `logros.json` de `Documents\Todo\steam_icons\<appid>` (fecha exacta de cada
+  logro y su rareza) y las horas de `Documents\Todo\steam\horas_familia.json`,
+  que son horas totales en Steam, no solo del año. El general suma los tres y
+  usa los ajustes `excluir` de cada uno más los suyos.
 - **Descargas.** Las imágenes y el vídeo se guardan en
   `Imágenes\Wrapped\<año> · Libros`.
 - **Vídeo automático.** Al publicarse el Wrapped, y también al abrirlo, la app
@@ -45,9 +52,10 @@ de videojuegos ya tienen su sitio (`WrappedTipo` en
 ## Variables
 
 Se pueden cambiar desde el botón «Personalizar» del reproductor o editando
-`ajustes.json`. La clave `libros` vale para todos los años; `libros-2026`, solo
-para ese año y gana sobre la general. Los libros se indican por título (sin
-importar mayúsculas ni tildes) o por id.
+`ajustes.json`. Cada tipo usa su clave (`general`, `libros`, `pantalla`,
+`juegos`): `libros` vale para todos los años y `libros-2026` solo para ese año
+(gana sobre la general). Las obras se indican por título (sin importar
+mayúsculas ni tildes) o por id.
 
 ```json
 {
@@ -101,12 +109,23 @@ para Aurora) y se pasan a mp3 con ffmpeg.
 | `cronica` | Épica orquestal: cuerdas, metales, coro y timbales |
 | `neon` | Synthwave |
 
-## Diapositivas del Wrapped de libros
+## Diapositivas
 
-`inicio`, `terminados`, `paginas`, `kindle`, `calendario`, `dia-record`,
-`reloj`, `meses`, `top`, `autor`, `sagas`, `generos`, `epocas`,
-`curiosidades`, `notas`, `propositos`, `cita`, `libro-del-ano`, `perfil`,
-`lo-que-viene` y `resumen`.
+- **Libros:** `inicio`, `terminados`, `paginas`, `kindle`, `calendario`,
+  `dia-record`, `reloj`, `meses`, `top`, `autor`, `sagas`, `generos`, `epocas`,
+  `curiosidades`, `notas`, `propositos`, `cita`, `libro-del-ano`, `perfil`,
+  `lo-que-viene` y `resumen`.
+- **Series y películas:** `inicio`, `terminados`, `pantalla`, `extremos`,
+  `maraton`, `semana`, `meses`, `creador`, `paises`, `sagas`, `generos`,
+  `estrenos`, `epocas`, `curiosidades`, `notas`, `propositos`, `destacado`,
+  `perfil`, `lo-que-viene` y `resumen`.
+- **Videojuegos:** `inicio`, `terminados`, `logros`, `calendario`,
+  `dia-record`, `reloj`, `raro`, `top-logros`, `cien`, `horas`, `meses`,
+  `creador`, `sagas`, `generos`, `epocas`, `curiosidades`, `notas`,
+  `propositos`, `destacado`, `perfil`, `lo-que-viene` y `resumen`.
+- **General:** `inicio`, `terminados`, `reparto`, `horas`, `mejores`, `meses`,
+  `dias`, `universo`, `generos`, `creador`, `sagas`, `epocas`, `curiosidades`,
+  `notas`, `propositos`, `destacado`, `perfil`, `lo-que-viene` y `resumen`.
 
 Cada una aparece solo si hay datos para ella. `sagas` y `lo-que-viene` buscan la
 siguiente entrega en la Biblioteca y en el catálogo de Colecciones, con su
@@ -115,17 +134,23 @@ fecha prevista si la tiene.
 ## Revisar las diapositivas sin abrir la app
 
 ```text
-flutter test test/capturas/wrapped_libros_captura_test.dart --dart-define=CAPTURAS=<carpeta> --dart-define=FUENTES=<carpeta>
+flutter test test/capturas/wrapped_libros_captura_test.dart --dart-define=CAPTURAS=<carpeta> --dart-define=FUENTES=<carpeta> --dart-define=TIPO=libros
 ```
+
+`TIPO` puede ser `libros`, `pantalla`, `juegos` o `general`.
 
 Lee la Biblioteca real en modo lectura. `FUENTES` debe contener los TTF de
 Bricolage Grotesque (`Titular-*.ttf`), Fraunces (`Serif-*.ttf`) y Plus Jakarta
 Sans (`Texto-*.ttf`).
 
-## Añadir otro tipo
+## Cómo está hecho
 
-1. Calcular sus datos en `lib/application/wrapped/` (como `resumen_libros.dart`).
-2. Construir sus diapositivas como `DiapositivaWrapped` en
-   `lib/presentation/wrapped/` y reutilizar `ReproductorWrapped`.
-3. Marcar el tipo como `disponible: true`, darle datos en `hayDatosWrapped` y
-   enlazarlo en `_PantallaWrapped`.
+- `resumen_obras.dart` calcula lo común (notas, creadores, géneros, sagas,
+  épocas, propósitos, días récord); `resumen_libros.dart`,
+  `resumen_pantalla.dart`, `resumen_juegos.dart` y `resumen_general.dart`
+  añaden lo propio de cada tipo.
+- `wrapped_diapositivas.dart` es una biblioteca con partes: `wrapped_comun.dart`
+  tiene las diapositivas compartidas, que cambian sus textos con los rótulos de
+  cada tipo, y cada tipo tiene su archivo con las suyas.
+- `wrapped_centro.dart` prepara cualquier tipo (`prepararWrapped`), abre el
+  reproductor, el panel «Personalizar» y los avisos.
