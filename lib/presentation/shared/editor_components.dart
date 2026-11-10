@@ -146,7 +146,7 @@ class _AsideCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: _softBorderBox(),
+      decoration: _softBorderBox(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -171,9 +171,9 @@ class _AsideCard extends StatelessWidget {
   }
 }
 
-BoxDecoration _softBorderBox() {
+BoxDecoration _softBorderBox(BuildContext context) {
   return BoxDecoration(
-    border: Border.all(color: const Color(0xFFE2D5C4)),
+    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     borderRadius: BorderRadius.circular(16),
   );
 }
@@ -250,8 +250,8 @@ class _PrioritySegmentedControl extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
                     color: selected == segments[index].value
-                        ? const Color(0xFFD8E2C5)
-                        : Colors.white,
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.horizontal(
                       left:
                           index == 0 ? const Radius.circular(999) : Radius.zero,
@@ -268,8 +268,11 @@ class _PrioritySegmentedControl extends StatelessWidget {
                         child: AnimatedOpacity(
                           opacity: selected == segments[index].value ? 1 : 0,
                           duration: const Duration(milliseconds: 120),
-                          child: const Icon(Icons.check_rounded,
-                              size: 16, color: Color(0xFF5E6F4D)),
+                          child: Icon(Icons.check_rounded,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -277,8 +280,12 @@ class _PrioritySegmentedControl extends StatelessWidget {
                         child: Text(
                           segments[index].label,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF433F39),
+                          style: TextStyle(
+                            color: selected == segments[index].value
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
+                                : Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

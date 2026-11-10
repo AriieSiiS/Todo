@@ -1,3 +1,16 @@
+String readingPageUnit(dynamic value) =>
+    value == 'screen' || value == 'page' || value == 'estimated_page'
+        ? value as String
+        : 'unknown';
+
+String readingPageUnitLabel(String unit, {bool plural = false}) =>
+    switch (unit) {
+      'screen' => plural ? 'pantallas' : 'pantalla',
+      'page' => plural ? 'páginas' : 'página',
+      'estimated_page' => plural ? 'páginas' : 'página',
+      _ => plural ? 'posiciones' : 'posición',
+    };
+
 /// Contadores horarios acumulados del historial de KOReader.
 class ReadingPeriod {
   const ReadingPeriod(
@@ -30,12 +43,16 @@ class ReadingPeriod {
 
 class BookReadingStatistics {
   BookReadingStatistics(
-      {required this.observedAt, required List<ReadingPeriod> periods})
+      {required this.observedAt,
+      required List<ReadingPeriod> periods,
+      this.pageUnit = 'unknown'})
       : periods = List.unmodifiable(periods);
   final int observedAt;
+  final String pageUnit;
   final List<ReadingPeriod> periods;
   Map<String, dynamic> toJson() => {
         'observedAt': observedAt,
+        'pageUnit': pageUnit,
         'periods': periods.map((p) => p.toJson()).toList()
       };
   factory BookReadingStatistics.fromJson(Map<String, dynamic> data) {
@@ -58,7 +75,9 @@ class BookReadingStatistics {
     }
     periods.sort((a, b) => a.start.compareTo(b.start));
     return BookReadingStatistics(
-        observedAt: data['observedAt'] as int, periods: periods);
+        observedAt: data['observedAt'] as int,
+        periods: periods,
+        pageUnit: readingPageUnit(data['pageUnit']));
   }
 }
 

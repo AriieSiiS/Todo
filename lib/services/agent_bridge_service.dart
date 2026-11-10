@@ -127,8 +127,10 @@ class AgentBridgeService {
           }
         }
         final data = jsonDecode(utf8.decode(bytes));
-        if (bytes.length > 65536 && (data is! Map || data['name'] != 'sync_kindle_book')) {
-          throw const FormatException('La petición supera el tamaño permitido.');
+        if (bytes.length > 65536 &&
+            (data is! Map || data['name'] != 'sync_kindle_book')) {
+          throw const FormatException(
+              'La petición supera el tamaño permitido.');
         }
         if (data is! Map<String, dynamic> ||
             data.keys.any((key) => !{'name', 'arguments'}.contains(key)) ||

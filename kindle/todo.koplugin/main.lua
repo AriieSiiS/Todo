@@ -35,6 +35,9 @@ local Footer = dofile(plugin_dir .. 'footer.lua')
 local Arranque = dofile(plugin_dir .. 'arranque.lua')
 local Reading = dofile(plugin_dir .. 'reading.lua')
 local Statistics = dofile(plugin_dir .. 'statistics.lua')
+local Pagination = dofile(plugin_dir .. 'pagination.lua')
+local Cover = dofile(plugin_dir .. 'cover.lua')
+local ReaderDefaults = dofile(plugin_dir .. 'readerdefaults.lua')
 local reading_shared
 local Todo = WidgetContainer:extend{name='todo', is_doc_only=false}
 local startup_handled = false
@@ -100,6 +103,8 @@ function Todo:init()
     self.ui.menu:registerToMainMenu(self)
     self.directory = DataStorage:getSettingsDir() .. '/todo'
     lfs.mkdir(self.directory)
+    local applied,error_message=pcall(ReaderDefaults.applyPending,self.directory,G_reader_settings)
+    if not applied then require('logger').warn('Todo: no se pudieron guardar los ajustes predeterminados',error_message) end
     self.state_path = self.directory .. '/state.json'
     self.reading_path = self.directory .. '/reading.json'
     self.reading_task = function()
@@ -283,6 +288,11 @@ function Todo:onDocSettingsLoad(settings,document)
 end
 function Todo:onReaderReady()
     self:onDocSettingsLoad(self.ui.doc_settings,self.ui.document)
+    local prepared,err=pcall(Pagination.prepare,self.ui)
+    if not prepared then require('logger').warn('Todo: no se pudo preparar la paginación',err) end
+    if Pagination.enable(self.ui) then
+        UIManager:broadcastEvent(require('ui/event'):new('UsePageLabelsUpdated'))
+    end
     self.reader_ready=true; self:captureReading()
     UIManager:scheduleIn(5,self.reading_task)
 end
@@ -358,6 +368,7 @@ function Todo:save()
 end
 
 function Todo:open()
+    self.cover_dismissed=nil
     if self.panel then return end
     local ok, err = pcall(function() self:load() end)
     if not ok then self:message(err); return end
@@ -457,6 +468,11 @@ function Todo:buildSleepPanel()
     local day=clock and clock.logical_date or os.date('%Y-%m-%d')
     local agenda=self.state.weeks[day]
     local tasks=agenda and agenda.days[1].tasks or {}
+    if Cover.empty(agenda) then
+        local image=Cover.create(self.ui,w,h)
+        if image then return FrameContainer:new{width=w,height=h,padding=0,margin=0,bordersize=0,
+            background=Blitbuffer.COLOR_WHITE,image} end
+    end
     local header=self:header(width,day,true)
     local footer_height=screen:scaleBySize(24)
     local budget=h-2*padding-header:getSize().h-footer_height
@@ -510,6 +526,7 @@ end
 function Todo:onResume()
     self:hideSleepPanel()
     self.suspended=false
+    self.cover_dismissed=nil
     if self.panel and self.todo_paused_reading then
         UIManager:nextTick(function()
             if self.panel and self.ui.statistics then self.ui.statistics:onReadingPaused() end
@@ -745,6 +762,16 @@ function Todo:review(item)
     self:showModal(viewer)
 end
 
+function Todo:setPanelContent(elements,padding,w,h)
+    local panel=InputContainer:new{dimen=Geom:new{x=0,y=0,w=w,h=h},covers_fullscreen=true,
+        FrameContainer:new{width=w,height=h,padding=padding,margin=0,bordersize=0,
+            background=Blitbuffer.COLOR_WHITE,elements}}
+    if self.panel then UIManager:close(self.panel) end
+    self.panel=panel
+    UIManager:show(panel)
+    UIManager:setDirty(panel,'ui')
+end
+
 function Todo:render()
     if self.suspended or self.modal then return end
     local screen=Device.screen
@@ -773,6 +800,25 @@ function Todo:render()
     end
     local agenda=self.state.weeks[self.week]
     local tasks=agenda and agenda.days[self.day_index or 1].tasks or {}
+    if self.today_view and not self.cover_dismissed and Cover.empty(agenda,self.day_index) then
+        local controls=ButtonTable:new{width=w,buttons={{
+            button('Todo',function() self.cover_dismissed=true;self:render() end),
+            button('Mis libros',function() self:openLibrary() end),
+            button('Seguir leyendo',function()
+                if self.ui.document then self:close()
+                else
+                    local file=Cover.file(self.ui)
+                    self:close()
+                    if file then require('apps/reader/readerui'):showReader(file) end
+                end
+            end),
+        }}}
+        local image=Cover.create(self.ui,w,h-controls:getSize().h)
+        if image then
+            self:setPanelContent(VerticalGroup:new{align='left',image,controls},0,w,h)
+            return
+        end
+    end
     local action_buttons={
         button('Marcas (' .. #self.queue.items .. ')',function() self:showQueue() end),
         button('Mis libros',function() self:openLibrary() end),
@@ -825,13 +871,7 @@ function Todo:render()
     if pager then elements[#elements+1]=pager end
     elements[#elements+1]=actions
     elements[#elements+1]=footer
-    local panel=InputContainer:new{dimen=Geom:new{x=0,y=0,w=w,h=h},covers_fullscreen=true,
-        FrameContainer:new{width=w,height=h,padding=padding,margin=0,bordersize=0,
-            background=Blitbuffer.COLOR_WHITE,elements}}
-    if self.panel then UIManager:close(self.panel) end
-    self.panel=panel
-    UIManager:show(panel)
-    UIManager:setDirty(panel,'ui')
+    self:setPanelContent(elements,padding,w,h)
 end
 
 return Todo

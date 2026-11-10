@@ -12,21 +12,6 @@ Future<DateTime?> _showTodoDatePicker(
     firstDate: firstDate,
     lastDate: lastDate,
     locale: const Locale('es'),
-    builder: (context, child) {
-      return Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF70835D),
-            onPrimary: Colors.white,
-            surface: Color(0xFFFFFCF8),
-            onSurface: Color(0xFF2D2A25),
-          ),
-          dialogTheme:
-              const DialogThemeData(backgroundColor: Color(0xFFFFFCF8)),
-        ),
-        child: child!,
-      );
-    },
   );
 }
 
@@ -159,7 +144,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
           Container(
             height: height,
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F2EC),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
@@ -190,7 +175,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                               height: itemExtent,
                               margin: const EdgeInsets.symmetric(horizontal: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF70835D),
+                                color: Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(18),
                               ),
                             ),
@@ -219,8 +204,12 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                                     _twoDigits(value),
                                     style: TextStyle(
                                       color: value == selectedValue
-                                          ? Colors.white
-                                          : const Color(0xFF6E6961),
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                       fontSize:
                                           value == selectedValue ? 28 : 22,
                                       fontWeight: value == selectedValue
@@ -265,9 +254,12 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
         icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 19),
         label: Text(label),
         style: FilledButton.styleFrom(
-          backgroundColor:
-              selected ? const Color(0xFFDCE7D0) : const Color(0xFFF3F0E9),
-          foregroundColor: const Color(0xFF3E4934),
+          backgroundColor: selected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          foregroundColor: selected
+              ? Theme.of(context).colorScheme.onPrimaryContainer
+              : Theme.of(context).colorScheme.onSurface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
@@ -297,9 +289,10 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFCF8),
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFFE2D5C4)),
+            border:
+                Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             boxShadow: const [
               BoxShadow(
                 blurRadius: 30,
@@ -334,10 +327,12 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 6),
-                          const Text(
+                          Text(
                             'Elige una hora para esta tarea',
                             style: TextStyle(
-                              color: Color(0xFF7A7369),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                               fontSize: 16,
                             ),
                           ),
@@ -361,7 +356,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEF1E7),
+                      color: Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -369,7 +364,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                           ? 'Sin hora'
                           : '${_twoDigits(_hour)}:${_twoDigits(_minute)}',
                       style: TextStyle(
-                        color: const Color(0xFF263E20),
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                         fontSize: compact ? 44 : 62,
                         height: 1,
                         fontWeight: FontWeight.w800,
@@ -395,7 +390,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                     Container(
                       width: 1,
                       height: wheelHeight - 24,
-                      color: const Color(0xFFE6DED2),
+                      color: Theme.of(context).colorScheme.outlineVariant,
                     ),
                     SizedBox(width: compact ? 10 : 24),
                     _wheel(
@@ -410,7 +405,7 @@ class _TodoTimePickerDialogState extends State<_TodoTimePickerDialog> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Divider(color: Color(0xFFE4DACE)),
+                const Divider(),
                 const SizedBox(height: 16),
                 if (compact)
                   Wrap(
@@ -535,7 +530,7 @@ Future<int?> _showReminderSettingsDialog(
             backgroundColor: Colors.transparent,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFCF8),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: const Color(0xFFE2D5C4)),
               ),
@@ -647,7 +642,9 @@ Future<int?> _showReminderSettingsDialog(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF7F3EA),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE7DDCC)),
                         ),
@@ -787,7 +784,7 @@ Future<int?> _showColorPickerDialog(
             backgroundColor: Colors.transparent,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFCF8),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: const Color(0xFFE2D5C4)),
               ),
@@ -1125,11 +1122,12 @@ Future<IconData?> _showIconPicker(BuildContext context) {
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFE2D5C4)),
                 ),
-                child: Icon(icon, color: const Color(0xFF3B3A35)),
+                child:
+                    Icon(icon, color: Theme.of(context).colorScheme.onSurface),
               ),
             );
           },

@@ -3,6 +3,7 @@ part of 'app_shell.dart';
 const _seccionesOcultables = [
   AppSection.calendar,
   AppSection.library,
+  AppSection.miniatures,
   AppSection.wardrobe,
   AppSection.household,
   AppSection.recipes,
@@ -29,8 +30,8 @@ Future<void> _showVisibilityPreferences(
               const Text(
                   'Las secciones de tareas y Ajustes están siempre disponibles. Cada sección conservará al menos una pestaña.'),
               const SizedBox(height: 12),
-              for (final section in controller.navOrder
-                  .where(_seccionesOcultables.contains))
+              for (final section
+                  in controller.navOrder.where(_seccionesOcultables.contains))
                 CheckboxListTile(
                   key: ValueKey('visible-section-${section.name}'),
                   title: Text(_sidebarDestinationFor(section).label),
@@ -263,7 +264,7 @@ class _SettingsPageState extends State<SettingsPage> {
         builder: (context, _) => Column(
           children: [
             for (final section in controller.navOrder
-                .where(_seccionesOcultables.contains))
+                .where(_seccionesOcultables.contains)) ...[
               SwitchListTile(
                 key: ValueKey('categoria-${section.name}'),
                 contentPadding: EdgeInsets.zero,
@@ -274,6 +275,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (value) =>
                     controller.setSectionVisible(section, value),
               ),
+              // El club de lectura vive dentro de Biblioteca, así que su
+              // interruptor va justo debajo del de esa categoría.
+              if (section == AppSection.library)
+                SwitchListTile(
+                  key: const ValueKey('categoria-club-de-lectura'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  secondary: const Icon(Icons.groups_outlined),
+                  title: const Text('Club de lectura'),
+                  value: controller.visibilitySettings.readingClubVisible,
+                  onChanged: controller.setReadingClubVisible,
+                ),
+            ],
           ],
         ),
       ),
@@ -291,6 +305,12 @@ class _SettingsPageState extends State<SettingsPage> {
           label: const Text('Abrir tareas completadas'),
         ),
       ),
+    );
+
+    final googleCalendar = _SettingsSectionCard(
+      icon: Icons.event_repeat_rounded,
+      title: 'Google Calendar',
+      child: _GoogleCalendarPanel(controller: controller),
     );
 
     final steam = _SettingsSectionCard(
@@ -538,14 +558,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 text:
                     'El código está renovándose. Actualiza dentro de unos segundos.',
               ),
-            if (_lanSyncStatus.devices.any((device) => device.profile == 'android')) ...[
+            if (_lanSyncStatus.devices
+                .any((device) => device.profile == 'android')) ...[
               const Divider(height: 30),
               const Text(
                 'Dispositivos emparejados',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
-              for (final device in _lanSyncStatus.devices.where((device) => device.profile == 'android'))
+              for (final device in _lanSyncStatus.devices
+                  .where((device) => device.profile == 'android'))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.smartphone_rounded),
@@ -581,19 +603,27 @@ class _SettingsPageState extends State<SettingsPage> {
           contentPadding: EdgeInsets.zero,
           title: const Text('Conexión Kindle con Todo cerrado'),
           value: _kindleBackground,
-          onChanged: _lanSyncBusy ? null : (enabled) async {
-            await _lanSyncService.setKindleBackgroundEnabled(enabled);
-            if (mounted) setState(() => _kindleBackground = enabled);
-          },
+          onChanged: _lanSyncBusy
+              ? null
+              : (enabled) async {
+                  await _lanSyncService.setKindleBackgroundEnabled(enabled);
+                  if (mounted) setState(() => _kindleBackground = enabled);
+                },
         ),
-        for (final device in _lanSyncStatus.devices.where((device) => device.profile == 'kindle'))
-          ListTile(contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.menu_book_rounded), title: Text(device.name),
-            trailing: IconButton(tooltip: 'Revocar acceso',
-              onPressed: () => _revokeLanSyncDevice(device), icon: const Icon(Icons.link_off_rounded))),
+        for (final device in _lanSyncStatus.devices
+            .where((device) => device.profile == 'kindle'))
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.menu_book_rounded),
+              title: Text(device.name),
+              trailing: IconButton(
+                  tooltip: 'Revocar acceso',
+                  onPressed: () => _revokeLanSyncDevice(device),
+                  icon: const Icon(Icons.link_off_rounded))),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          icon: const Icon(Icons.usb_rounded), label: const Text('Instalar o actualizar por USB'),
+          icon: const Icon(Icons.usb_rounded),
+          label: const Text('Instalar o actualizar por USB'),
           onPressed: _lanSyncBusy ? null : _installKindle,
         ),
       ]),
@@ -738,6 +768,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       kindleConnection,
                       const SizedBox(height: 16),
+                      googleCalendar,
+                      const SizedBox(height: 16),
                       steam,
                       const SizedBox(height: 16),
                       wardrobe,
@@ -769,6 +801,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           androidConnection,
                           const SizedBox(height: 16),
                           kindleConnection,
+                          const SizedBox(height: 16),
+                          googleCalendar,
                           const SizedBox(height: 16),
                           steam,
                           const SizedBox(height: 16),
@@ -833,17 +867,22 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _installKindle() async {
-    final directory = await getDirectoryPath(confirmButtonText: 'Seleccionar Kindle');
+    final directory =
+        await getDirectoryPath(confirmButtonText: 'Seleccionar Kindle');
     if (directory == null || !mounted) return;
     setState(() => _lanSyncBusy = true);
     try {
       await _lanSyncService.loadStatus();
       await _lanSyncService.installKindle(directory);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:
-          Text('Complemento copiado y verificado. Expulsa el Kindle y abre Todo desde KOReader para comprobar la conexión.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Complemento copiado y verificado. Expulsa el Kindle y abre Todo desde KOReader para comprobar la conexión.')));
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     } finally {
       if (mounted) await _loadLanSyncStatus();
     }
@@ -1157,11 +1196,11 @@ class _SettingsSectionCardState extends State<_SettingsSectionCard> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F0DE),
+                      color: context.visuals.panelAlt,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(widget.icon,
-                        color: const Color(0xFF70835D), size: 20),
+                        color: context.visuals.accent, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1225,11 +1264,11 @@ class _SettingsAsideCardState extends State<_SettingsAsideCard> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F0DE),
+                      color: context.visuals.panelAlt,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(widget.icon,
-                        color: const Color(0xFF70835D), size: 20),
+                        color: context.visuals.accent, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1272,9 +1311,9 @@ class _SettingsPanelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE7D9C8)),
+        border: Border.all(color: context.visuals.panelBorder),
         boxShadow: const [
           BoxShadow(
             blurRadius: 12,
@@ -1310,9 +1349,9 @@ class _SettingsStatusItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF8),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7D9C8)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Row(
         children: [
@@ -1359,9 +1398,9 @@ class _SettingsHintRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF8),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7D9C8)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1553,4 +1592,133 @@ bool _isAllDayRange(DateTime start, DateTime end) {
       end.hour == 0 &&
       end.minute == 0 &&
       end.difference(start).inHours >= 23;
+}
+
+/// Conexión con el calendario principal de Google y sincronización manual.
+class _GoogleCalendarPanel extends StatefulWidget {
+  const _GoogleCalendarPanel({required this.controller});
+
+  final TodoWorkspace controller;
+
+  @override
+  State<_GoogleCalendarPanel> createState() => _GoogleCalendarPanelState();
+}
+
+class _GoogleCalendarPanelState extends State<_GoogleCalendarPanel> {
+  late final TextEditingController _clientId;
+  late final TextEditingController _clientSecret;
+
+  TodoWorkspace get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = controller.calendarSettings;
+    _clientId = TextEditingController(text: settings.desktopClientId);
+    _clientSecret = TextEditingController(text: settings.desktopClientSecret);
+  }
+
+  @override
+  void dispose() {
+    _clientId.dispose();
+    _clientSecret.dispose();
+    super.dispose();
+  }
+
+  Future<void> _connect() async {
+    final id = _clientId.text.trim();
+    if (!id.endsWith('.apps.googleusercontent.com')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'El ID de cliente debe terminar en .apps.googleusercontent.com.')));
+      return;
+    }
+    await controller.updateCalendarSettings(controller.calendarSettings
+        .copyWith(
+            desktopClientId: id,
+            desktopClientSecret: _clientSecret.text.trim()));
+    await controller.connectCalendar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final settings = controller.calendarSettings;
+        final lastSync = settings.lastSyncAt;
+        final busy = controller.calendarBusy || controller.isCalendarSyncing;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (settings.connected) ...[
+              Text('Conectado como ${settings.connectedEmail}',
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(
+                lastSync == null
+                    ? 'Aún no se ha sincronizado.'
+                    : 'Última sincronización: ${lastSync.day}/${lastSync.month}/${lastSync.year} a las ${_timeLabel(lastSync)}. Se repite cada 5 minutos y tras cada cambio.',
+                style: const TextStyle(color: Color(0xFF7E7568), height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  key: const ValueKey('sincronizar-google-calendar'),
+                  onPressed: busy ? null : controller.syncCalendar,
+                  icon: busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.sync_rounded),
+                  label: const Text('Sincronizar ahora'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : controller.disconnectCalendar,
+                  icon: const Icon(Icons.link_off_rounded),
+                  label: const Text('Desconectar'),
+                ),
+              ]),
+            ] else ...[
+              const Text(
+                'Crea en Google Cloud un ID de cliente OAuth de tipo «Aplicación de escritorio», activa la API de Google Calendar y pega aquí el ID y el secreto. Solo se sincroniza tu calendario principal.',
+                style: TextStyle(color: Color(0xFF7E7568), height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('google-client-id'),
+                controller: _clientId,
+                decoration: const InputDecoration(labelText: 'ID de cliente'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                key: const ValueKey('google-client-secret'),
+                controller: _clientSecret,
+                obscureText: true,
+                decoration:
+                    const InputDecoration(labelText: 'Secreto de cliente'),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  key: const ValueKey('conectar-google-calendar'),
+                  onPressed: busy ? null : _connect,
+                  icon: const Icon(Icons.link_rounded),
+                  label: const Text('Conectar con Google'),
+                ),
+              ),
+            ],
+            if (settings.lastError.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(settings.lastError,
+                  style: const TextStyle(color: Color(0xFFB05A2C))),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }

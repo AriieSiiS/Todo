@@ -119,7 +119,12 @@ void main() {
           });
         }));
     await service.connect(id, key);
+    var notifications = 0;
+    service.achievementsRevision.addListener(() => notifications++);
     final result = await service.achievements(42);
+    expect(notifications, 1);
+    await service.achievements(42);
+    expect(notifications, 1, reason: 'Consultar la caché no genera otro cambio.');
     final achievements = result['achievements'] as List;
     expect(result['name'], 'Juego de prueba');
     expect(result['unlocked'], 1);

@@ -19,6 +19,29 @@ Windows es la plataforma prioritaria. La persistencia de escritorio usa archivo 
 El ejecutable nativo de Windows se compila con `/utf-8` para conservar las tildes
 en los textos de la bandeja y los demás controles nativos.
 
+El asa de puntos de cada pestaña de la barra lateral muestra el cursor de mano
+abierta al pasar por encima y de mano cerrada mientras se arrastra para reordenar.
+En Windows se dibujan ambas manos con el canal de cursores del motor de Flutter,
+ya que los cursores de sistema `grab` y `grabbing` no están disponibles allí.
+
+## Modo oscuro
+
+El interruptor «Modo oscuro», al pie de la barra lateral, permite activar y
+desactivar el tema al instante. En ventanas estrechas está en «Más». La elección
+se guarda con los ajustes locales y se recupera al volver a abrir Todo. El modo
+claro sigue siendo el inicial si todavía no se ha elegido otro.
+Los estados seleccionados, incluidos el año y su contador en Biblioteca, usan
+colores del tema para conservar el contraste tanto en claro como en oscuro.
+
+## Biblioteca
+
+En Biblioteca → Juegos, el icono de actualizar renueva los logros de los juegos
+de la vista actual, respetando sus filtros. Las portadas y «Recientes» reflejan
+los cambios al recibirlos; «Recientes» solo muestra porcentaje en libros y juegos
+en curso, según su lectura o sus logros.
+Los juegos al 100 % de logros tienen un marco plateado con halo y un reflejo
+diagonal periódico como en Platino, respetando la preferencia de movimiento reducido.
+
 ## Kindle y lectura
 
 La [sincronización de lectura](docs/KINDLE_LECTURA.md) muestra el porcentaje de
@@ -29,8 +52,13 @@ de Calibre con el índice completo y su comprobación con KOReader y Todo.
 
 Las mejoras de KOReader y Todo se conservan en `kindle/`. La
 [guía de funcionamiento](docs/KINDLE.md) describe el Kindle definitivo y su
-mantenimiento. Las fichas incluyen «Información», «Citas» y «Estadísticas», y
-Biblioteca ofrece un resumen anual de lectura. Los paquetes y perfiles preparados
+mantenimiento. Las fichas incluyen «Información», «Citas» y «Estadísticas».
+En «Libros», Biblioteca ofrece un resumen anual de lectura y el acceso «Citas»
+para consultar los pasajes completos de todos los libros, con su título, autor,
+página y nota. La búsqueda incluye esos datos y no depende del estado ni del año
+seleccionados en Biblioteca. Cada cita permite editar, borrar con confirmación
+y copiar, igual que en la ficha; las notas personales se muestran en cursiva.
+Los paquetes y perfiles preparados
 para trasladar la instalación a otro Kindle se han retirado.
 
 ## Valoración al terminar un libro
@@ -40,7 +68,20 @@ si todavía no tiene valoración se abre un diálogo para puntuarlo de 0 a 10.
 Admite decimales con coma o punto. «Ahora no» permite dejarlo completado y
 valorarlo después; los libros que ya tienen nota no vuelven a pedirla.
 
+Los libros completados muestran siempre el 100 % de progreso en Todo. La lectura
+sincronizada se conserva para recuperarla al devolver el libro a «En curso»;
+las citas y estadísticas no se modifican al completarlo.
+
+Los avisos inferiores duran cuatro segundos, también cuando ofrecen «Deshacer»
+o una acción de navegación. Deshacer cierra el aviso al instante. En Biblioteca,
+un aviso nuevo sustituye a los anteriores para no acumular mensajes antiguos.
+
 ## Fichas de Biblioteca
+
+El menú de clic derecho permite pasar los libros, juegos y series pendientes a
+«En curso» directamente, tanto en portadas como en filas y recientes. Una vez
+en curso ofrece «Marcar como completado». Las películas pendientes conservan
+el acceso directo a completarlas.
 
 Las fichas de juegos, libros, películas y series comparten tamaño y distribución:
 portada de tamaño fijo centrada junto a los datos y cabecera de altura uniforme,
@@ -58,6 +99,10 @@ scroll, y solo pagina cuando quedan más. Cada cita tiene su propia acción de
 edición para corregir texto, página, capítulo y nota, sin alterar el vínculo
 técnico con KOReader. Las acciones del pie
 comparten un estilo secundario, salvo «Editar», que es la acción principal.
+
+En la vista de portadas, los juegos con todos los logros conseguidos muestran
+una etiqueta oscura con borde dorado, un trofeo y «100 %» en la esquina superior
+derecha. El marco verde sigue indicando que el juego está completado.
 
 ## Estado actual
 
@@ -82,6 +127,15 @@ Este repositorio contiene:
   recurrentes enlazadas con tareas
 - un recetario visual con tiempos, raciones, ingredientes, pasos, favoritos,
   imágenes e importación desde JSON o páginas con datos schema.org
+
+## Pausar rutinas
+
+Las tareas recurrentes se pueden pausar desde su menú en Hoy o desde la sección
+de rutinas de su categoría. Mientras están en pausa no aparecen en la agenda ni
+generan avisos. Conservan su frecuencia, sus subtareas y su historial. En Hoy,
+el icono de pausa de la cabecera permite encontrarlas y reanudarlas, incluso si no tienen
+categoría; al reanudarlas siguen su calendario habitual. Las tareas únicas no
+ofrecen esta opción.
 
 ## Ropa
 
@@ -197,6 +251,13 @@ convierte en tarea mediante `create_weekly_menu_task`.
 - **Viajes**: fechas, reservas ordenadas por día, documentos (PDF copiados a
   `Documents\Todo\trips` o enlaces) y maleta enlazada con Ropa. Los días del
   viaje aparecen en el Calendario.
+- **Google Calendar**: sincronización en ambos sentidos con el calendario
+  principal (Ajustes > Google Calendar). Usa el token incremental de Google; los
+  eventos creados, editados o borrados en Todo se envían, y los cambios de Google
+  se traen al abrir la app, cada 5 minutos, tras cada cambio y con «Sincronizar
+  ahora». Ante un conflicto gana el cambio más reciente. Los eventos de tareas
+  enlazadas no se duplican. Requiere un ID de cliente OAuth de tipo «Aplicación
+  de escritorio» con la API de Google Calendar activada.
 - **Enfoque**: temporizador de 15, 25, 45 o 60 minutos, opcionalmente ligado a
   una tarea. Sobrevive a un reinicio, avisa al terminar y suma el tiempo por
   día y por tarea.
@@ -301,6 +362,13 @@ sesión y continúa disponible aunque la ventana de Todo esté cerrada. Su
 certificado, tokens y dispositivos emparejados viven en
 `%LOCALAPPDATA%\Todo\lan_sync`, separados de los datos personales recuperables.
 La sincronización requiere que PC y móvil puedan verse en la misma red privada.
+La tarea de Windows también comprueba el arranque cada minuto y recupera el
+agente si termina; el puerto exclusivo impide ejecutar dos servidores a la vez.
+Los fallos temporales al publicar el estado no detienen HTTPS. El último error
+operativo se conserva en `runtime_error.json` junto a la configuración local,
+sin incluir envíos de lectura ni credenciales. Después de cambiar este ciclo,
+`tooling/test_lan_sync_recovery.ps1` comprueba una caída y el reinicio real de la
+instalación, sin abrir Todo ni modificar sus datos.
 
 APK privada:
 

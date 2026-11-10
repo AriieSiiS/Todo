@@ -1,4 +1,15 @@
 local Stats=dofile('kindle/todo.koplugin/statistics.lua')
+local mapped=Stats.mapRows({
+    {page=1,start=3600,duration=30,total_pages=6},
+    {page=2,start=3630,duration=20,total_pages=6},
+    {page=3,start=3650,duration=25,total_pages=6},
+},{{page=1},{page=3},{page=5}},6)
+local mapped_periods=Stats.periods(mapped)
+assert(mapped_periods[1].pages==2 and mapped_periods[1].seconds==75,
+    'Dos pantallas de una página no duplican su recuento ni cambian el tiempo')
+local resized=Stats.mapRows({{page=2,start=3600,duration=60,total_pages=3}},
+    {{page=1},{page=3},{page=4},{page=5}},6)
+assert(Stats.periods(resized)[1].pages==2,'El historial anterior se sitúa en el diseño actual antes de usar su mapa')
 local result=Stats.periods({
     {page=1,start=3590,duration=20,total_pages=100},
     {page=1,start=3620,duration=10,total_pages=100},

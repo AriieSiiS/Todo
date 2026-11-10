@@ -39,6 +39,21 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
   final Color danger;
   final double cut;
 
+  Color foregroundFor(Color background, {Color? preferred}) {
+    final surface = Color.alphaBlend(background, panel);
+    double contraste(Color texto) {
+      final a = Color.alphaBlend(texto, surface).computeLuminance() + 0.05;
+      final b = surface.computeLuminance() + 0.05;
+      return a > b ? a / b : b / a;
+    }
+
+    final initial = preferred ?? textStrong;
+    if (contraste(initial) >= 4.5) return initial;
+    return contraste(Colors.black) >= contraste(Colors.white)
+        ? Colors.black
+        : Colors.white;
+  }
+
   @override
   TodoVisuals copyWith({
     Color? backgroundStart,
@@ -104,20 +119,20 @@ class TodoVisuals extends ThemeExtension<TodoVisuals> {
   }
 }
 
-ThemeData buildTodoTheme() => _buildClassicTheme();
-
-ThemeData _buildClassicTheme() {
-  const bone = Color(0xFFF5EEE3);
-  const paper = Color(0xFFFFFCF8);
-  const ink = Color(0xFF23201B);
-  const moss = Color(0xFF6D815A);
-  const clay = Color(0xFFB46E54);
-  const line = Color(0xFFE0D3C2);
+ThemeData buildTodoTheme({Brightness brightness = Brightness.light}) {
+  final dark = brightness == Brightness.dark;
+  final bone = dark ? const Color(0xFF141916) : const Color(0xFFF5EEE3);
+  final paper = dark ? const Color(0xFF202720) : const Color(0xFFFFFCF8);
+  final ink = dark ? const Color(0xFFF1EDE4) : const Color(0xFF23201B);
+  final moss = dark ? const Color(0xFFA2BA89) : const Color(0xFF6D815A);
+  final clay = dark ? const Color(0xFFD49477) : const Color(0xFFB46E54);
+  final line = dark ? const Color(0xFF3A4338) : const Color(0xFFE0D3C2);
 
   final base = ThemeData(
+    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: moss,
-      brightness: Brightness.light,
+      brightness: brightness,
       surface: paper,
     ),
     useMaterial3: true,
@@ -156,32 +171,33 @@ ThemeData _buildClassicTheme() {
   return base.copyWith(
     scaffoldBackgroundColor: bone,
     textTheme: textTheme,
-    extensions: const <ThemeExtension<dynamic>>[
+    extensions: <ThemeExtension<dynamic>>[
       TodoVisuals(
-        backgroundStart: Color(0xFFF6F1E8),
-        backgroundEnd: Color(0xFFECE3D7),
-        pageSurface: Color(0xC2FFFFFF),
+        backgroundStart:
+            dark ? const Color(0xFF171E19) : const Color(0xFFF6F1E8),
+        backgroundEnd: dark ? const Color(0xFF111613) : const Color(0xFFECE3D7),
+        pageSurface: dark ? const Color(0xFF1B221D) : const Color(0xC2FFFFFF),
         pageBorder: line,
-        sidebar: Color(0xFF1E241F),
-        sidebarAccent: Color(0xFF70835D),
+        sidebar: dark ? const Color(0xFF101612) : const Color(0xFF1E241F),
+        sidebarAccent: const Color(0xFF70835D),
         panel: paper,
-        panelAlt: Color(0xFFF0E7DA),
+        panelAlt: dark ? const Color(0xFF2A332B) : const Color(0xFFF0E7DA),
         panelBorder: line,
         textStrong: ink,
-        textMuted: Color(0xFF6E6A63),
+        textMuted: dark ? const Color(0xFFB4B8AC) : const Color(0xFF6E6A63),
         accent: moss,
         accentAlt: clay,
-        success: Color(0xFF5D8A64),
-        danger: Color(0xFF9D4436),
+        success: dark ? const Color(0xFF9BC69A) : const Color(0xFF5D8A64),
+        danger: dark ? const Color(0xFFFFB4A6) : const Color(0xFF9D4436),
         cut: 18,
       ),
     ],
-    cardTheme: const CardThemeData(
+    cardTheme: CardThemeData(
       color: paper,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(18)),
+        borderRadius: const BorderRadius.all(Radius.circular(18)),
         side: BorderSide(color: line),
       ),
     ),
@@ -191,21 +207,21 @@ ThemeData _buildClassicTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: line),
+        borderSide: BorderSide(color: line),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: line),
+        borderSide: BorderSide(color: line),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: moss, width: 1.4),
+        borderSide: BorderSide(color: moss, width: 1.4),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: moss,
-        foregroundColor: Colors.white,
+        foregroundColor: dark ? base.colorScheme.onPrimary : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       ),
@@ -213,14 +229,14 @@ ThemeData _buildClassicTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: ink,
-        side: const BorderSide(color: line),
+        side: BorderSide(color: line),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: clay,
-      foregroundColor: Colors.white,
+      foregroundColor: dark ? bone : Colors.white,
     ),
   );
 }

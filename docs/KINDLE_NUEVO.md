@@ -66,6 +66,34 @@ copia previa del instalador está en
 La suspensión pasa a `screenSaver`, muestra Todo sin reloj y vuelve a despertar;
 `preventScreenSaver` se mantiene en 0.
 
+## Ajustes de lectura y portada sin tareas
+
+Los ajustes del libro que está leyendo el usuario se pueden guardar como valores
+predeterminados de KOReader: fuente, tamaño, márgenes, interlineado y las demás
+opciones de composición. Se copian las claves de presentación a sus preferencias
+globales nativas; no se copian posiciones, estadísticas, anotaciones, identidad
+ni mapas de páginas. Los documentos con ajustes propios siguen usando esos
+ajustes. La petición puntual se aplica después del guardado normal del lector
+y se retira al confirmar la escritura.
+
+Cuando la agenda de Hoy descargada no tiene tareas, el inicio y el despertar
+muestran en grande la portada del libro abierto o del último leído. Quedan los
+accesos «Todo», «Mis libros» y «Seguir leyendo». «Todo» permite consultar la
+agenda y la semana incluso cuando están vacías. Al suspender se muestra solo
+la portada, sin reloj ni botones. Si aparecen tareas al sincronizar, vuelve la
+agenda. Sin agenda descargada o sin portada disponible se mantiene la vista
+habitual, evitando confundir la falta de conexión con un día sin tareas.
+La portada conserva sus proporciones y los colores de la imagen en modo oscuro.
+
+Verificación del 02/11/2026: guardados los valores de La mascarada del carnicero
+como preferencias globales (Noto Serif, tamaño 22, márgenes 30/30 y 20/20,
+interlineado 100). Se comprobó su igualdad tras reiniciar, la retirada de la
+petición puntual y la conservación de la posición y el porcentaje del libro.
+Las vistas de inicio y reposo se compusieron en el propio Kindle con una agenda
+vacía aislada, usando los widgets y la portada reales, sin guardar esa agenda.
+Las pruebas cubren el regreso a tareas, la consulta de Semana y el despertar.
+La revisión física del refresco de tinta electrónica queda para el usuario.
+
 ## Revisión de libros y sincronización
 
 La revisión de lectura detectó seis AZW3/KF8 sin lector registrado en KOReader.
@@ -137,6 +165,20 @@ huellas de los libros, sus anotaciones y los componentes activos antes y despué
 `version.log` se conserva porque identifica la versión instalada de KOReader.
 
 ## Conexión con Calibre por Wi-Fi
+
+La conexión inalámbrica anuncia los libros de `.metadata.calibre` en la carpeta
+de recepción. No descubre por sí sola los libros copiados previamente por USB
+o durante el mantenimiento. Si solo aparecen los envíos nuevos, conciliar ese
+índice con los archivos existentes y los UUID de sus fichas de Calibre, usando
+las versiones que ofrece «Mis libros». Conservar las entradas de los envíos
+nuevos, excluir los formatos alternativos ocultos y reconstruir con la conexión
+inalámbrica detenida. Reconectar después para renovar el catálogo del dispositivo;
+no volver a enviar los archivos ni modificar su progreso o anotaciones.
+
+Comprobación del 29 de octubre de 2026: conciliados los nueve libros anteriores
+con los tres envíos nuevos; Calibre muestra doce libros en «Dispositivo», todos
+enlazados con su ficha de la biblioteca. Se verificó que los archivos de los
+libros conservan su tamaño y fecha de modificación.
 
 Se utiliza el complemento oficial de Calibre de KOReader y la opción de Calibre
 «Conectar y compartir → Iniciar conexión con dispositivo inalámbrico». Ambos

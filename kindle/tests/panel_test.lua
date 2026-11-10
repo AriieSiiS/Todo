@@ -452,12 +452,12 @@ local book_ui={document={info={has_pages=false}},doc_props={title='Libro de prue
     doc_settings={readSetting=function() return string.rep('a',32) end},
     rolling={getLastPercent=function() return .14 end,getLastProgress=function() return '/p[42]' end},
     view={state={page=42}},annotation={annotations={}}}
-book_ui.view.footer={settings={all_at_once=false},mode_index={[1]='page_progress'},mode=1,
+book_ui.view.footer={settings={all_at_once=false},mode_index={[1]='page_progress'},mode=1,percent_finished=.14,
     genFooterText=function() return '42 / 200' end,
     applyFooterMode=function(value) value.genFooterText=function() return '42 / 200' end end,
     onUpdateFooter=function() end}
 local book_panel=Todo:new{ui=book_ui}
-assert(book_ui.view.footer:genFooterText()=='Libro · 42 / 200',
+assert(book_ui.view.footer:genFooterText()=='14% · 42 / 200',
     'El complemento conecta la barra real de lectura, que pertenece a ReaderView')
 function transport.deadline(seconds) assert(seconds==1); return 100 end
 book_panel:onReaderReady()
@@ -475,3 +475,42 @@ assert(not book_panel.reading:next() and paths[#paths]=='/v1/kindle/reading',
     'Dormir intenta enviar la última lectura y retira solo un envío confirmado')
 assert(book_panel.suspended and not next(UI.jobs),'La lectura respeta la suspensión y cancela sus temporizadores')
 print('Panel: captura de lectura y confirmación limitada al dormir verificadas')
+package.loaded['ui/widget/imagewidget']=Class:extend{_kind='imagewidget'}
+local image={getWidth=function() return 600 end,getHeight=function() return 900 end}
+local files=package.loaded['libs/libkoreader-lfs']
+files.attributes=function(path) return path=='/libros/Actual.epub' and 'file' or nil end
+preferences.todo_screensaver=true
+local cover_ui={document={file='/libros/Actual.epub'},menu={registerToMainMenu=function() end},
+    bookinfo={getCoverImage=function() return image end}}
+local empty_home=Todo:new{ui=cover_ui}
+empty_home:open()
+empty_home.state.weeks[day].days[1].tasks={}
+empty_home:render()
+assert(buttonCallback(empty_home.panel,'Todo') and not visibleText(empty_home.panel):find('No hay tareas'),
+    'Hoy sin tareas muestra la portada con un acceso directo a la agenda')
+buttonCallback(empty_home.panel,'Todo')()
+assert(visibleText(empty_home.panel):find('Semana'),'Se puede consultar la semana desde la portada')
+empty_home:onSuspend()
+assert(not visibleText(empty_home.sleep_panel):find('Actualizado') and
+    not visibleText(empty_home.sleep_panel):find('No hay tareas'),
+    'El reposo sin tareas deja solo la portada, sin reloj ni controles')
+empty_home:onResume()
+assert(buttonCallback(empty_home.panel,'Todo'),'Despertar recupera la portada aunque se hubiera consultado la agenda')
+empty_home.state.weeks[day].days[1].tasks={copy(task)}
+empty_home:render()
+assert(visibleText(empty_home.panel):find('Cuidados') and not buttonCallback(empty_home.panel,'Todo'),
+    'Al llegar tareas vuelve automáticamente la agenda')
+empty_home:close()
+for _,tasks in ipairs({{}, {copy(task)}}) do
+    empty_home.state.weeks[day].days[1].tasks=tasks
+    empty_home.reader_ready=true
+    empty_home:onSuspend()
+    assert(empty_home.sleep_panel and not empty_home.panel,
+        'Leer conserva el salvapantallas sin abrir el panel interactivo')
+    empty_home:onResume()
+    assert(not empty_home.sleep_panel and not empty_home.panel,
+        'Despertar desde lectura vuelve al libro sin pedir Seguir leyendo, con o sin tareas')
+    assert(not empty_home.todo_paused_reading,
+        'El despertar no pausa las estadísticas de la lectura')
+    empty_home:close()
+end

@@ -37,6 +37,9 @@ class LibraryItem {
     this.publicationStatus,
     this.linkedGoalId,
     this.reading,
+    this.readVolumes = const [],
+    this.currentVolume,
+    this.catalogKeys = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -61,6 +64,7 @@ class LibraryItem {
   final String? duration;
   final String? pages;
   final String? country;
+
   /// Universo superior (p. ej. «Warhammer 40.000»); la saga cuelga de él.
   final String? universeName;
   final String? collectionName;
@@ -81,10 +85,24 @@ class LibraryItem {
   final LibraryPublicationStatus? publicationStatus;
   final String? linkedGoalId;
   final LibraryReading? reading;
+
+  /// Tomos leídos de un manga, por su número; el resto siguen sin leer.
+  final List<int> readVolumes;
+
+  /// Tomo de un manga que se está leyendo ahora.
+  final int? currentVolume;
+
+  /// Obras del catálogo de Colecciones que son este elemento, como
+  /// `coleccion/obra`. Enlazan la ficha con su obra aunque cambie el título.
+  final List<String> catalogKeys;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   int? get yearGroup => completedDate?.year;
+
+  /// Completar el libro prevalece sobre el avance recibido del lector.
+  int get readingPercent =>
+      status == LibraryItemStatus.completed ? 100 : bookReadingPercent(reading);
 
   LibraryItem copyWith({
     String? id,
@@ -145,6 +163,10 @@ class LibraryItem {
     String? linkedGoalId,
     bool clearLinkedGoalId = false,
     LibraryReading? reading,
+    List<int>? readVolumes,
+    int? currentVolume,
+    bool clearCurrentVolume = false,
+    List<String>? catalogKeys,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -195,6 +217,10 @@ class LibraryItem {
       linkedGoalId:
           clearLinkedGoalId ? null : linkedGoalId ?? this.linkedGoalId,
       reading: reading ?? this.reading,
+      readVolumes: readVolumes ?? this.readVolumes,
+      currentVolume:
+          clearCurrentVolume ? null : currentVolume ?? this.currentVolume,
+      catalogKeys: catalogKeys ?? this.catalogKeys,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -236,6 +262,9 @@ class LibraryItem {
       'publicationStatus': publicationStatus?.name,
       'linkedGoalId': linkedGoalId,
       'reading': reading?.toJson(),
+      if (readVolumes.isNotEmpty) 'readVolumes': readVolumes,
+      if (currentVolume != null) 'currentVolume': currentVolume,
+      if (catalogKeys.isNotEmpty) 'catalogKeys': catalogKeys,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -302,6 +331,14 @@ class LibraryItem {
           ? LibraryReading.fromJson(
               Map<String, dynamic>.from(json['reading'] as Map))
           : null,
+      readVolumes: (json['readVolumes'] as List? ?? const [])
+          .whereType<num>()
+          .map((tomo) => tomo.toInt())
+          .toList(),
+      currentVolume: (json['currentVolume'] as num?)?.toInt(),
+      catalogKeys: (json['catalogKeys'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           completed ??
           DateTime.now(),
@@ -331,7 +368,8 @@ String? normalizarEnlaceExterno(String? valor) {
 }
 
 /// Nombre de la ficha externa según el tipo de elemento: Goodreads para
-/// libros, Letterboxd para películas y series, y Steam para juegos.
+/// libros, Letterboxd para películas y series, y Steam para los juegos que
+/// están en esa tienda.
 String? nombreFichaExterna(LibraryItemType type) => switch (type) {
       LibraryItemType.book => 'Goodreads',
       LibraryItemType.movieSeries => 'Letterboxd',
@@ -380,8 +418,7 @@ String? textoProgresoManual(LibraryItem item) {
   final temporada = !esManga && item.progressSeason != null
       ? 'T${item.progressSeason} · '
       : '';
-  final cuenta =
-      total != null && total > 0 ? '$actual / $total' : '$actual';
+  final cuenta = total != null && total > 0 ? '$actual / $total' : '$actual';
   return '$temporada$cuenta $unidad';
 }
 

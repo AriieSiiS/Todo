@@ -97,6 +97,18 @@ function Navigation.install(todo)
 end
 
 function Navigation.menuItem(ui,items,callback)
+    if ui.document and ui.bookmark and not items.toggle_bookmark then
+        items.toggle_bookmark={
+            text_func=function()
+                return ui.bookmark:isPageBookmarked()
+                    and 'Quitar marcapáginas de esta página' or 'Marcar esta página'
+            end,
+            callback=function()
+                Navigation.closeMenu(ui)
+                ui.bookmark:onToggleBookmark()
+            end,
+        }
+    end
     local context=ui.document and 'reader' or 'filemanager'
     local order=require('ui/elements/' .. context .. '_menu_order')
     if not order.todo_shortcut then

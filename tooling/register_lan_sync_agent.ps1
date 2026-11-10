@@ -1,6 +1,7 @@
 ﻿param(
   [Parameter(Mandatory = $true)]
-  [string]$InstallDirectory
+  [string]$InstallDirectory,
+  [switch]$SkipFirewall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,10 +13,16 @@ if (-not (Test-Path -LiteralPath $agentPath -PathType Leaf)) {
 
 $taskName = 'Todo - Android local'
 $action = New-ScheduledTaskAction -Execute $agentPath -WorkingDirectory $resolvedDirectory
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$triggers = @(
+  (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME),
+  (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
+    -RepetitionInterval (New-TimeSpan -Minutes 1))
+)
 $settings = New-ScheduledTaskSettingsSet `
   -AllowStartIfOnBatteries `
   -DontStopIfGoingOnBatteries `
+  -StartWhenAvailable `
+  -MultipleInstances IgnoreNew `
   -ExecutionTimeLimit ([TimeSpan]::Zero) `
   -RestartCount 5 `
   -RestartInterval (New-TimeSpan -Minutes 1)
@@ -27,17 +34,19 @@ $principal = New-ScheduledTaskPrincipal `
 Register-ScheduledTask `
   -TaskName $taskName `
   -Action $action `
-  -Trigger $trigger `
+  -Trigger $triggers `
   -Settings $settings `
   -Principal $principal `
-  -Description 'Comparte de forma cifrada y local las tareas de Todo con Android.' `
+  -Description 'Mantiene la conexión local cifrada de Todo con Android y Kindle y recupera el agente si se detiene.' `
   -Force | Out-Null
 
-try {
-  & (Join-Path $resolvedDirectory 'limitar_red_todo.ps1') -InstallDirectory $resolvedDirectory | Out-Null
-}
-catch {
-  Write-Warning 'No se ha limitado el firewall. Ejecuta limitar_red_todo.ps1 una vez desde PowerShell como administrador.'
+if (-not $SkipFirewall) {
+  try {
+    & (Join-Path $resolvedDirectory 'limitar_red_todo.ps1') -InstallDirectory $resolvedDirectory | Out-Null
+  }
+  catch {
+    Write-Warning 'No se ha limitado el firewall. Ejecuta limitar_red_todo.ps1 una vez desde PowerShell como administrador.'
+  }
 }
 
 Start-ScheduledTask -TaskName $taskName

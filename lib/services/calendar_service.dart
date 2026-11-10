@@ -8,11 +8,13 @@ abstract class CalendarService {
   Future<CalendarAccount?> getAccount();
   Future<List<CalendarListItemModel>> listCalendars(
       CalendarIntegrationSettings settings);
-  Future<List<CalendarEventModel>> listEvents({
-    required CalendarIntegrationSettings settings,
+  Future<CalendarRemoteDelta> pullEvents({
+    required String syncToken,
     required DateTime from,
     required DateTime to,
   });
+  Future<CalendarEventModel> pushEvent(CalendarEventModel event);
+  Future<void> deleteEvent(String googleEventId);
   Future<CalendarLink> upsertTaskEvent({
     required CalendarIntegrationSettings settings,
     required TaskModel task,

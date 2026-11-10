@@ -6,6 +6,7 @@ import '../entities/enums.dart';
 import '../entities/financial.dart';
 import '../entities/focus.dart';
 import '../entities/journal.dart';
+import '../entities/miniature.dart';
 import '../entities/travel.dart';
 import '../entities/household.dart';
 import '../entities/shopping.dart';
@@ -42,12 +43,14 @@ class ExportSnapshot {
     this.recipes = const <Recipe>[],
     this.weeklyMenus = const <WeeklyMenu>[],
     this.journalEntries = const <JournalEntry>[],
+    this.miniatureKits = const <MiniatureKit>[],
     this.trips = const <Trip>[],
     this.focusSessions = const <FocusSession>[],
     required this.calendarEvents,
     required this.daySettings,
     this.wardrobeDisplaySettings = const WardrobeDisplaySettings(),
     this.visibilitySettings = const AppVisibilitySettings(),
+    this.darkMode = false,
     required this.notificationSettings,
     required this.calendarSettings,
     this.navOrder = const <AppSection>[],
@@ -74,12 +77,14 @@ class ExportSnapshot {
   final List<Recipe> recipes;
   final List<WeeklyMenu> weeklyMenus;
   final List<JournalEntry> journalEntries;
+  final List<MiniatureKit> miniatureKits;
   final List<Trip> trips;
   final List<FocusSession> focusSessions;
   final List<CalendarEventModel> calendarEvents;
   final DaySettings daySettings;
   final WardrobeDisplaySettings wardrobeDisplaySettings;
   final AppVisibilitySettings visibilitySettings;
+  final bool darkMode;
   final DeviceNotificationSettings notificationSettings;
   final CalendarIntegrationSettings calendarSettings;
   final List<AppSection> navOrder;
@@ -113,12 +118,14 @@ class ExportSnapshot {
       'recipes': recipes.map((item) => item.toJson()).toList(),
       'weeklyMenus': weeklyMenus.map((item) => item.toJson()).toList(),
       'journalEntries': journalEntries.map((item) => item.toJson()).toList(),
+      'miniatureKits': miniatureKits.map((item) => item.toJson()).toList(),
       'trips': trips.map((item) => item.toJson()).toList(),
       'focusSessions': focusSessions.map((item) => item.toJson()).toList(),
       'calendarEvents': calendarEvents.map((event) => event.toJson()).toList(),
       'daySettings': daySettings.toJson(),
       'wardrobeDisplaySettings': wardrobeDisplaySettings.toJson(),
       'visibilitySettings': visibilitySettings.toJson(),
+      'darkMode': darkMode,
       'notificationSettings': notificationSettings.toJson(),
       'calendarSettings': calendarSettings.toJson(),
       'navOrder': navOrder.map((section) => section.name).toList(),

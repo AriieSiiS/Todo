@@ -162,6 +162,25 @@ void main() {
     expect(controller.tasksForDate(DateTime(2027, 2, 28)), isEmpty);
   });
 
+  test('editar una planta conserva la pausa de su rutina', () {
+    final controller = TodoWorkspace.createForTest();
+    addTearDown(controller.dispose);
+    final plant = controller.createPlant(
+      name: 'Calatea',
+      commonName: 'Calatea orbifolia',
+      scientificName: 'Goeppertia orbifolia',
+      routines: <PlantCareRoutine>[wateringRoutine()],
+    );
+    final taskId = controller.tasks.single.id;
+    controller.setRoutinePaused(taskId, true);
+    controller.updatePlant(plant.copyWith(location: 'Dormitorio'));
+
+    expect(controller.taskById(taskId)!.routinePaused, isTrue);
+    expect(controller.taskById(taskId)!.status, TaskStatus.archived);
+    controller.setRoutinePaused(taskId, false);
+    expect(controller.taskById(taskId)!.status, TaskStatus.active);
+  });
+
   test('desactivar, archivar, restaurar y borrar sincroniza las tareas', () {
     final controller = TodoWorkspace.createForTest();
     final plant = controller.createPlant(

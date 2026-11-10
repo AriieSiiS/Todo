@@ -2,6 +2,7 @@ part of 'app_shell.dart';
 
 enum _LibraryContextAction {
   pages,
+  start,
   complete,
   rating,
   progress,
@@ -32,16 +33,20 @@ class _LibraryPageState extends State<LibraryPage> {
   bool _showAllStatuses = false;
   String? _allUniverse;
   String? _allSaga;
+  final _filteredTypeKey = GlobalKey<_LibraryFilteredTypePanelState>();
+  bool _refreshingGames = false;
 
   TodoWorkspace get controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
+    _allSearchController = TextEditingController();
     unawaited(_cargarColecciones().then((_) {
+      _enlazarBibliotecaConCatalogo(controller);
+      _disolverColeccionesSinObras(controller);
       if (mounted) setState(() {});
     }));
-    _allSearchController = TextEditingController();
     _typeFilter = controller.libraryTypeView;
     // Completados era el valor histórico inicial, así que Todo es la nueva
     // vista inicial. Los filtros Pendiente y En curso sí representan una
@@ -84,8 +89,7 @@ class _LibraryPageState extends State<LibraryPage> {
       if (area == LibraryAreaView.goals) ...[
         currentYear + 1,
         for (final goal in controller.libraryGoals) goal.targetYear,
-      ]
-      else
+      ] else
         for (final item in controller.libraryItems)
           if (item.completedDate != null) item.completedDate!.year,
     }.toList()
@@ -134,10 +138,40 @@ class _LibraryPageState extends State<LibraryPage> {
                 currentYear: currentYear,
                 availableYears: availableYears,
                 isGoals: area == LibraryAreaView.goals,
-                showStatistics: area == LibraryAreaView.library &&
+                showBookActions: area == LibraryAreaView.library &&
                     _typeFilter == LibraryItemType.book,
+                showGameActions: area == LibraryAreaView.library &&
+                    _typeFilter == LibraryItemType.game,
+                refreshingGames: _refreshingGames,
+                onRefreshGames: _refreshVisibleGames,
                 libraryStatus: status,
                 onYearChanged: (year) => setState(() => _year = year),
+                onReadingClub: controller.visibilitySettings.readingClubVisible
+                    ? () => _showReadingClubDialog(context, controller)
+                    : null,
+                onQuotes: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => ListenableBuilder(
+                    listenable: controller,
+                    builder: (context, child) => LibraryQuotesDialog(
+                      books: controller.libraryItems,
+                      onEdit: (book, quote) => showDialog<void>(
+                        context: context,
+                        builder: (_) => _BookQuoteEditDialog(
+                          controller: controller,
+                          itemId: book.id,
+                          quote: quote,
+                        ),
+                      ),
+                      onDelete: (book, quote) {
+                        final id = quote['id'];
+                        if (id is String) {
+                          controller.deleteBookQuote(book.id, id);
+                        }
+                      },
+                    ),
+                  ),
+                ),
                 onStatistics: () => showDialog<void>(
                     context: context,
                     builder: (_) => ListenableBuilder(
@@ -147,8 +181,7 @@ class _LibraryPageState extends State<LibraryPage> {
                                 books: controller.libraryItems,
                                 goals: controller.libraryGoals,
                                 coverBuilder: (book) => _LibraryCoverImage(
-                                    source: book.coverUrl,
-                                    type: book.type)))),
+                                    source: book.coverUrl, type: book.type)))),
                 onAdd: area == LibraryAreaView.goals
                     ? _showAddGoalDialog
                     : _showAddDialog,
@@ -186,93 +219,104 @@ class _LibraryPageState extends State<LibraryPage> {
             ],
             const SizedBox(height: 14),
             Expanded(
-              child: area == LibraryAreaView.goals
-                  ? _LibraryGoalsView(
+              child: area == LibraryAreaView.collections
+                  ? _ColeccionesVista(
                       controller: controller,
-                      year: _year,
-                      selectedType: _goalsTypeFilter,
-                      overviewMode: _goalsOverviewMode,
-                      onOverviewModeChanged: (mode) =>
-                          setState(() => _goalsOverviewMode = mode),
-                      onSelectedTypeChanged: (type) =>
-                          setState(() => _goalsTypeFilter = type),
-                      onAdd: _showAddGoalDialog,
+                      tipo: _typeFilter,
+                      onTipo: (type) {
+                        controller.setLibraryTypeView(type);
+                        setState(() => _typeFilter = type);
+                      },
                     )
-                  : wide
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _LibraryMainContent(
-                                controller: controller,
-                                items: items,
-                                yearItems: yearItems,
-                                year: _year,
-                                selectedType: _typeFilter,
-                                onSelectedTypeChanged: (type) {
-                                  controller.setLibraryTypeView(type);
-                                  setState(() => _typeFilter = type);
-                                },
-                                status: status,
-                                showStatus: false,
-                                overviewMode: _overviewMode,
-                                onOverviewModeChanged: (mode) =>
-                                    setState(() => _overviewMode = mode),
-                                allSearchController: _allSearchController,
-                                allFilters: allFilters,
-                                allSortOrder: _allSortOrder,
-                                onAllSearchChanged: () => setState(() {}),
-                                onAllSortChanged: (order) =>
-                                    setState(() => _allSortOrder = order),
-                                fillAvailableHeight: true,
-                              ),
-                            ),
-                            const SizedBox(width: 18),
-                            SizedBox(
-                              width: 330,
-                              child: SingleChildScrollView(
-                                child: _LibrarySidePanel(
+                  : area == LibraryAreaView.goals
+                      ? _LibraryGoalsView(
+                          controller: controller,
+                          year: _year,
+                          selectedType: _goalsTypeFilter,
+                          overviewMode: _goalsOverviewMode,
+                          onOverviewModeChanged: (mode) =>
+                              setState(() => _goalsOverviewMode = mode),
+                          onSelectedTypeChanged: (type) =>
+                              setState(() => _goalsTypeFilter = type),
+                          onAdd: _showAddGoalDialog,
+                        )
+                      : wide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _LibraryMainContent(
+                                    filteredTypeKey: _filteredTypeKey,
+                                    controller: controller,
+                                    items: items,
+                                    yearItems: yearItems,
+                                    year: _year,
+                                    selectedType: _typeFilter,
+                                    onSelectedTypeChanged: (type) {
+                                      controller.setLibraryTypeView(type);
+                                      setState(() => _typeFilter = type);
+                                    },
+                                    status: status,
+                                    showStatus: false,
+                                    overviewMode: _overviewMode,
+                                    onOverviewModeChanged: (mode) =>
+                                        setState(() => _overviewMode = mode),
+                                    allSearchController: _allSearchController,
+                                    allFilters: allFilters,
+                                    allSortOrder: _allSortOrder,
+                                    onAllSearchChanged: () => setState(() {}),
+                                    onAllSortChanged: (order) =>
+                                        setState(() => _allSortOrder = order),
+                                    fillAvailableHeight: true,
+                                  ),
+                                ),
+                                const SizedBox(width: 18),
+                                SizedBox(
+                                  width: 330,
+                                  child: SingleChildScrollView(
+                                    child: _LibrarySidePanel(
+                                      controller: controller,
+                                      items: controller.libraryItems,
+                                      year: _year,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ListView(
+                              children: [
+                                _LibraryMainContent(
+                                  filteredTypeKey: _filteredTypeKey,
+                                  controller: controller,
+                                  items: items,
+                                  yearItems: yearItems,
+                                  year: _year,
+                                  selectedType: _typeFilter,
+                                  onSelectedTypeChanged: (type) {
+                                    controller.setLibraryTypeView(type);
+                                    setState(() => _typeFilter = type);
+                                  },
+                                  status: status,
+                                  showStatus: false,
+                                  overviewMode: _overviewMode,
+                                  onOverviewModeChanged: (mode) =>
+                                      setState(() => _overviewMode = mode),
+                                  allSearchController: _allSearchController,
+                                  allFilters: allFilters,
+                                  allSortOrder: _allSortOrder,
+                                  onAllSearchChanged: () => setState(() {}),
+                                  onAllSortChanged: (order) =>
+                                      setState(() => _allSortOrder = order),
+                                  scrollColumns: false,
+                                ),
+                                const SizedBox(height: 16),
+                                _LibrarySidePanel(
                                   controller: controller,
                                   items: controller.libraryItems,
                                   year: _year,
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        )
-                      : ListView(
-                          children: [
-                            _LibraryMainContent(
-                              controller: controller,
-                              items: items,
-                              yearItems: yearItems,
-                              year: _year,
-                              selectedType: _typeFilter,
-                              onSelectedTypeChanged: (type) {
-                                controller.setLibraryTypeView(type);
-                                setState(() => _typeFilter = type);
-                              },
-                              status: status,
-                              showStatus: false,
-                              overviewMode: _overviewMode,
-                              onOverviewModeChanged: (mode) =>
-                                  setState(() => _overviewMode = mode),
-                              allSearchController: _allSearchController,
-                              allFilters: allFilters,
-                              allSortOrder: _allSortOrder,
-                              onAllSearchChanged: () => setState(() {}),
-                              onAllSortChanged: (order) =>
-                                  setState(() => _allSortOrder = order),
-                              scrollColumns: false,
-                            ),
-                            const SizedBox(height: 16),
-                            _LibrarySidePanel(
-                              controller: controller,
-                              items: controller.libraryItems,
-                              year: _year,
-                            ),
-                          ],
-                        ),
             ),
           ],
         ),
@@ -294,10 +338,7 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   List<LibraryItem> _sortedItems(List<LibraryItem> source) {
-    final sorted = [...source];
-    sorted.sort((left, right) =>
-        _compareLibraryItems(left, right, LibrarySortOrder.newestFirst));
-    return sorted;
+    return _sortLibraryItems(source, LibrarySortOrder.newestFirst);
   }
 
   List<LibraryItem> _filterAndSortAllItems(List<LibraryItem> source) {
@@ -309,15 +350,78 @@ class _LibraryPageState extends State<LibraryPage> {
         .where((item) =>
             query.isEmpty || _searchableText(item).paraBuscar.contains(query))
         .toList();
-    final sorted = [...filtered];
-    sorted.sort(
-      (left, right) => _compareLibraryItems(
-        left,
-        right,
-        _effectiveSortOrderForAll(_allSortOrder),
-      ),
-    );
-    return sorted;
+    return _sortLibraryItems(
+        filtered, _effectiveSortOrderForAll(_allSortOrder));
+  }
+
+  Future<void> _refreshVisibleGames() async {
+    if (_refreshingGames) return;
+    final games = _filteredTypeKey.currentState?.visibleItems
+            .where((item) => item.type == LibraryItemType.game)
+            .toList() ??
+        [];
+    final messenger = ScaffoldMessenger.of(context);
+    void message(String text) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(
+          content: Text(text),
+          persist: false,
+          duration: const Duration(seconds: 4)));
+    }
+
+    if (games.isEmpty) {
+      message('No hay juegos en esta vista.');
+      return;
+    }
+    setState(() => _refreshingGames = true);
+    var updated = 0, skipped = 0, failed = 0;
+    final results = <int, bool>{};
+    try {
+      final catalog = await controller.steam.games(refresh: true);
+      for (final game in games) {
+        try {
+          final appId =
+              await controller.steam.linkedApp(game.id, game.title, catalog);
+          if (appId == null) {
+            skipped++;
+            continue;
+          }
+          final binding = await controller.steam.binding(game.id);
+          if (binding['appid'] != appId) {
+            await controller.steam.link(game.id, appId,
+                title: game.title,
+                expectedVersion: binding['link_version'] as String?);
+          }
+          if (!results.containsKey(appId)) {
+            results[appId] = false;
+            await controller.steam.achievements(appId, refresh: true);
+            results[appId] = true;
+          }
+          if (results[appId] == true) {
+            updated++;
+          } else {
+            failed++;
+          }
+        } catch (_) {
+          failed++;
+        }
+      }
+      if (mounted) {
+        message([
+          'Actualizados: $updated',
+          if (skipped > 0) 'Sin enlace: $skipped',
+          if (failed > 0) 'Con errores: $failed',
+        ].join(' · '));
+      }
+    } catch (error) {
+      if (mounted) {
+        message(error is FormatException
+            ? error.message
+            : 'No se pudieron actualizar los logros de Steam.');
+      }
+    } finally {
+      if (mounted) setState(() => _refreshingGames = false);
+    }
   }
 
   Future<void> _showAddDialog() async {
@@ -354,22 +458,33 @@ class _LibraryHeader extends StatelessWidget {
     required this.currentYear,
     required this.availableYears,
     required this.isGoals,
-    required this.showStatistics,
+    required this.showBookActions,
     required this.libraryStatus,
     required this.onYearChanged,
     required this.onAdd,
     required this.onStatistics,
+    required this.onQuotes,
+    required this.showGameActions,
+    required this.refreshingGames,
+    required this.onRefreshGames,
+    this.onReadingClub,
   });
 
+  /// Abre el club de lectura; nulo si está desactivado en Ajustes.
+  final VoidCallback? onReadingClub;
   final int year;
   final int currentYear;
   final List<int> availableYears;
   final bool isGoals;
-  final bool showStatistics;
+  final bool showBookActions;
   final LibraryItemStatus? libraryStatus;
   final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
   final VoidCallback onStatistics;
+  final VoidCallback onQuotes;
+  final bool showGameActions;
+  final bool refreshingGames;
+  final VoidCallback onRefreshGames;
 
   @override
   Widget build(BuildContext context) {
@@ -383,11 +498,35 @@ class _LibraryHeader extends StatelessWidget {
         runSpacing: 10,
         alignment: WrapAlignment.end,
         children: [
-          if (showStatistics)
+          if (showGameActions)
+            IconButton(
+              key: const ValueKey('library-refresh-games'),
+              tooltip: refreshingGames
+                  ? 'Actualizando logros…'
+                  : 'Actualizar logros de esta vista',
+              onPressed: refreshingGames ? null : onRefreshGames,
+              icon: refreshingGames
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.sync_rounded),
+            ),
+          if (showBookActions) ...[
+            if (onReadingClub != null)
+              IconButton(
+                  key: const ValueKey('library-reading-club'),
+                  tooltip: 'Club de lectura',
+                  onPressed: onReadingClub,
+                  icon: const Icon(Icons.groups_outlined)),
+            IconButton(
+                tooltip: 'Citas de todos los libros',
+                onPressed: onQuotes,
+                icon: const Icon(Icons.format_quote_rounded)),
             IconButton(
                 tooltip: 'Estadísticas de lectura',
                 onPressed: onStatistics,
                 icon: const Icon(Icons.insights_outlined)),
+          ],
           if (isGoals || libraryStatus == LibraryItemStatus.completed)
             _LibraryGoalYearButton(
               year: year,
@@ -431,7 +570,9 @@ class _LibraryGoalYearButton extends StatelessWidget {
         for (final candidate in years)
           _FilterPill(
             key: ValueKey('library-year-$candidate'),
-            label: candidate < currentYear ? 'Histórico · $candidate' : '$candidate',
+            label: candidate < currentYear
+                ? 'Histórico · $candidate'
+                : '$candidate',
             icon: Icons.calendar_today_outlined,
             selected: candidate == year,
             onTap: () => onSelected(candidate),
@@ -525,6 +666,7 @@ class _LibraryMainContent extends StatelessWidget {
     required this.onAllSortChanged,
     this.scrollColumns = true,
     this.fillAvailableHeight = false,
+    this.filteredTypeKey,
   });
 
   final TodoWorkspace controller;
@@ -544,6 +686,7 @@ class _LibraryMainContent extends StatelessWidget {
   final ValueChanged<LibrarySortOrder> onAllSortChanged;
   final bool scrollColumns;
   final bool fillAvailableHeight;
+  final Key? filteredTypeKey;
 
   @override
   Widget build(BuildContext context) {
@@ -563,6 +706,7 @@ class _LibraryMainContent extends StatelessWidget {
       final selectedYearItems =
           yearItems.where((item) => item.type == selectedType).toList();
       final single = _LibraryFilteredTypePanel(
+        key: filteredTypeKey,
         controller: controller,
         type: selectedType!,
         items: selectedItems,
@@ -729,7 +873,8 @@ class _LibraryOverviewToolbar extends StatelessWidget {
           ),
           130,
           70,
-        ),      ],
+        ),
+      ],
       trailing: _LibraryOverviewModeToggle(
         value: mode,
         onChanged: onModeChanged,
@@ -807,8 +952,8 @@ class _LibraryToolbarRow extends StatelessWidget {
             builder: (context, constraints) {
               // Reparte el ancho: cada control conserva su tamaño ideal y,
               // si falta sitio, todos ceden a la vez hasta su mínimo.
-              final fijo = (trailing == null ? 0 : 86) +
-                  10.0 * (controls.length - 1);
+              final fijo =
+                  (trailing == null ? 0 : 86) + 10.0 * (controls.length - 1);
               final anchos = _repartirAnchos(
                 controls,
                 constraints.maxWidth - fijo,
@@ -837,6 +982,7 @@ class _LibraryToolbarRow extends StatelessWidget {
     );
   }
 }
+
 class _LibraryOverviewModeToggle extends StatelessWidget {
   const _LibraryOverviewModeToggle({
     required this.value,
@@ -1176,6 +1322,7 @@ class _LibraryFilteredTypePanel extends StatefulWidget {
     required this.typeFilters,
     required this.sortOrder,
     required this.onSortChanged,
+    super.key,
   });
 
   final LibrarySortOrder sortOrder;
@@ -1197,6 +1344,8 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   late final TextEditingController _searchController;
   String? _universe;
   String? _saga;
+  List<LibraryItem> get visibleItems =>
+      _sortedItems(_filteredItems(widget.items));
 
   LibrarySortOrder get _sortOrder =>
       _effectiveSortOrderForType(widget.sortOrder, widget.type);
@@ -1205,6 +1354,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    widget.controller.steam.achievementsRevision.addListener(_loadAchievements);
     unawaited(_loadAchievements());
   }
 
@@ -1220,26 +1370,15 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
   /// filtrar y ordenar por ellos.
   Future<void> _loadAchievements() async {
     if (widget.type != LibraryItemType.game) return;
-    var changed = false;
-    for (final item in widget.controller.libraryItems) {
-      if (item.type != LibraryItemType.game) continue;
-      final saved = await widget.controller.steam.savedAchievements(item.id);
-      final list = saved?['achievements'];
-      if (list is! List || list.isEmpty) continue;
-      final value = (
-        list.where((e) => e is Map && e['unlocked'] == true).length,
-        list.length,
-      );
-      if (_libraryAchievementCache[item.id] != value) {
-        _libraryAchievementCache[item.id] = value;
-        changed = true;
-      }
-    }
-    if (changed && mounted) setState(() {});
+    await _refreshLibraryAchievementCache(
+        widget.controller, widget.controller.libraryItems);
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    widget.controller.steam.achievementsRevision
+        .removeListener(_loadAchievements);
     _searchController.dispose();
     super.dispose();
   }
@@ -1382,9 +1521,7 @@ class _LibraryFilteredTypePanelState extends State<_LibraryFilteredTypePanel> {
       _libraryDistinctNames(values);
 
   List<LibraryItem> _sortedItems(List<LibraryItem> source) {
-    final sorted = [...source];
-    sorted.sort((left, right) => _compareLibraryItems(left, right, _sortOrder));
-    return sorted;
+    return _sortLibraryItems(source, _sortOrder);
   }
 
   Future<void> _deleteItem(BuildContext context, LibraryItem item) async {
@@ -1477,7 +1614,7 @@ class _LibrarySortButton extends StatelessWidget {
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: context.visuals.panel,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: const Color(0xFFE8DCCB)),
           ),
@@ -1488,18 +1625,18 @@ class _LibrarySortButton extends StatelessWidget {
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF34362F),
+                  style: TextStyle(
+                    color: context.visuals.textStrong,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.expand_more_rounded,
                 size: 18,
-                color: Color(0xFF34362F),
+                color: context.visuals.textStrong,
               ),
             ],
           ),
@@ -1552,7 +1689,7 @@ class _LibraryFilterButton extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 220),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: context.visuals.panel,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: const Color(0xFFE8DCCB)),
           ),
@@ -1563,18 +1700,18 @@ class _LibraryFilterButton extends StatelessWidget {
                 child: Text(
                   selected ?? allLabel,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF34362F),
+                  style: TextStyle(
+                    color: context.visuals.textStrong,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.expand_more_rounded,
                 size: 18,
-                color: Color(0xFF34362F),
+                color: context.visuals.textStrong,
               ),
             ],
           ),

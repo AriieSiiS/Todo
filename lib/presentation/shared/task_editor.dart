@@ -109,10 +109,10 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
           32, 22, 32, MediaQuery.of(context).viewInsets.bottom + 22),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFCF8),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: const Color(0xFFE2D5C4),
+            color: Theme.of(context).colorScheme.outlineVariant,
             width: 1,
           ),
         ),
@@ -169,7 +169,10 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
 
   Widget _buildTaskForm(BuildContext context, List<CategoryModel> categories,
       List<ProjectModel> projects) {
-    const fieldTextStyle = TextStyle(fontWeight: FontWeight.w400, fontSize: 15);
+    final fieldTextStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium!
+        .copyWith(fontWeight: FontWeight.w400, fontSize: 15);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,7 +211,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
               selected: selected,
               label: Text(category.name),
               labelStyle: TextStyle(
-                color: selected ? category.color : const Color(0xFF4F4A43),
+                color: selected
+                    ? category.color
+                    : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w400,
               ),
               selectedColor: category.color.withValues(alpha: 0.16),
@@ -238,9 +243,10 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         const SizedBox(height: 6),
         DropdownButtonFormField<String?>(
           initialValue: _projectId,
-          style: fieldTextStyle.copyWith(color: const Color(0xFF2D2A25)),
+          style: fieldTextStyle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface),
           items: [
-            const DropdownMenuItem<String?>(
+            DropdownMenuItem<String?>(
                 value: null,
                 child: Text('Sin proyecto', style: fieldTextStyle)),
             ...projects.map(
@@ -336,8 +342,8 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   DropdownButtonFormField<int>(
                     isExpanded: true,
                     initialValue: _estimatedDurationMinutes,
-                    style:
-                        fieldTextStyle.copyWith(color: const Color(0xFF2D2A25)),
+                    style: fieldTextStyle.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface),
                     items: const [15, 30, 45, 60, 90]
                         .map((value) => DropdownMenuItem<int>(
                             value: value,
@@ -359,8 +365,9 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         const SizedBox(height: 6),
         DropdownButtonFormField<RecurrenceType>(
           initialValue: _recurrenceType,
-          style: fieldTextStyle.copyWith(color: const Color(0xFF2D2A25)),
-          items: const [
+          style: fieldTextStyle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface),
+          items: [
             DropdownMenuItem(
                 value: RecurrenceType.none,
                 child: Text('Sin repetición', style: fieldTextStyle)),
@@ -456,7 +463,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
         const SizedBox(height: 6),
         if (_subtasks.isNotEmpty)
           Container(
-            decoration: _softBorderBox(),
+            decoration: _softBorderBox(context),
             child: Column(
               children: [
                 for (var index = 0; index < _subtasks.length; index++)
@@ -610,7 +617,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                             key: ValueKey<String>('active-reminder-$minutes'),
                             margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.fromLTRB(12, 7, 5, 7),
-                            decoration: _softBorderBox(),
+                            decoration: _softBorderBox(context),
                             child: Row(
                               children: [
                                 Icon(
@@ -680,7 +687,7 @@ class _TaskEditorDialogState extends State<_TaskEditorDialog> {
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
-                    decoration: _softBorderBox(),
+                    decoration: _softBorderBox(context),
                     child: Row(
                       children: [
                         const Icon(Icons.calendar_month_rounded,

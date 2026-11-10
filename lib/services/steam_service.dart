@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
@@ -32,6 +33,8 @@ class SteamService {
   final http.Client _client;
   static const _ttl = Duration(minutes: 10);
   final _cache = <String, (DateTime, dynamic)>{};
+  final achievementsRevision = ValueNotifier<int>(0);
+  bool _disposed = false;
   int _revision = 0;
 
   Future<Map<String, dynamic>?> _configuration() async {
@@ -189,7 +192,7 @@ class SteamService {
           {
             'appid': game['appid'],
             'name': game['name'],
-            'playtime_minutes': null,
+            'playtime_minutes': _horasFamilia()['${game['appid']}'],
             'recent_minutes': null,
             'last_played': null,
             'from_owned_games': false,
@@ -316,6 +319,7 @@ class SteamService {
       'appid': appId,
       'name': ownedGame?['name'] ?? schema['gameName'],
       'total': achievements.length,
+      'playtime_minutes': ownedGame?['playtime_minutes'],
       'unlocked': unlocked,
       'completion_percent': achievements.isNotEmpty && known
           ? unlocked * 100 / achievements.length
@@ -326,6 +330,7 @@ class SteamService {
     _checkRevision(revision);
     _cache['app:$appId'] = (DateTime.now(), result);
     await _saveResult(appId, result);
+    if (!_disposed) achievementsRevision.value++;
     return result;
   }
 
@@ -355,10 +360,12 @@ class SteamService {
       if (response.statusCode != 200) return const {};
       final page = utf8.decode(response.bodyBytes, allowMalformed: true);
       final text = page.replaceAll(r'\"', '"');
-      final entry = RegExp(r'"api_name":"((?:[^"\\]|\\.)*)","name":"'
+      final entry = RegExp(
+          r'"api_name":"((?:[^"\\]|\\.)*)","name":"'
           r'((?:[^"\\]|\\.)*)","description":"((?:[^"\\]|\\.)*)"'
           r'(?:(?!"api_name").)*?"icon_achieved":"([^"]*)","icon_unachieved":'
-          r'"([^"]*)"', dotAll: true);
+          r'"([^"]*)"',
+          dotAll: true);
       String decode(String value) {
         try {
           return jsonDecode('"$value"') as String;
@@ -410,6 +417,57 @@ class SteamService {
       return data is Map<String, dynamic> && data['achievements'] is List
           ? data
           : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static File _gruposFile(int appId) => File(
+      '${_iconsDirectory(appId).path}${Platform.pathSeparator}grupos.json');
+
+  /// Grupos de logros (expansiones o DLC) asignados a mano a un juego. Steam no
+  /// indica a qué expansión pertenece cada logro, así que se guardan junto a
+  /// los logros: nombre del grupo y lista de identificadores. Los logros sin
+  /// grupo pertenecen al juego base.
+  Future<Map<String, List<String>>> achievementGroups(int appId) async {
+    try {
+      final file = _gruposFile(appId);
+      if (!file.existsSync()) return {};
+      final data = jsonDecode(await file.readAsString());
+      final groups = data is Map ? data['grupos'] : null;
+      if (groups is! Map) return {};
+      return {
+        for (final entry in groups.entries)
+          '${entry.key}': [
+            for (final id in entry.value as List) '$id',
+          ],
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveAchievementGroups(
+      int appId, Map<String, List<String>> groups) async {
+    final file = _gruposFile(appId);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert({'grupos': groups}));
+  }
+
+  /// Minutos jugados guardados junto a los logros del juego enlazado.
+  Future<num?> savedPlaytimeMinutes(String itemId) async {
+    final guardado = await savedAchievements(itemId);
+    final minutos = guardado?['playtime_minutes'];
+    if (minutos is num) return minutos;
+    // Resultados antiguos sin horas: se completan con la lista de juegos.
+    final appId = guardado?['appid'];
+    if (appId is! int) return null;
+    try {
+      final juego =
+          (await games()).where((game) => game['appid'] == appId).firstOrNull;
+      final horas = juego?['playtime_minutes'];
+      return horas is num ? horas : null;
     } catch (_) {
       return null;
     }
@@ -575,6 +633,30 @@ class SteamService {
     _cache.remove('app:$appId');
   }
 
+  /// Archivo local con las horas (en minutos) de los juegos del plan familiar,
+  /// que la API de la clave no devuelve.
+  static File get _archivoHorasFamilia => File(
+      '${_iconsDirectory(0).parent.parent.path}${Platform.pathSeparator}steam'
+      '${Platform.pathSeparator}horas_familia.json');
+
+  static Map<String, dynamic> _horasFamilia() {
+    try {
+      final datos = jsonDecode(_archivoHorasFamilia.readAsStringSync());
+      return datos is Map<String, dynamic> ? datos : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Guarda las horas del plan familiar para seguir mostrándolas sin token.
+  Future<void> guardarHorasFamilia(Map<int, num> minutos) async {
+    final archivo = _archivoHorasFamilia;
+    await archivo.parent.create(recursive: true);
+    await archivo.writeAsString(
+        jsonEncode({for (final e in minutos.entries) '${e.key}': e.value}));
+    _cache.remove('games');
+  }
+
   Future<Map<String, dynamic>> agentQuery(
       String name, Map<String, dynamic> arguments) async {
     final fields = name == 'get_steam_games'
@@ -625,5 +707,10 @@ class SteamService {
     };
   }
 
-  void dispose() => _client.close();
+  void dispose() {
+    _disposed = true;
+    _revision++;
+    achievementsRevision.dispose();
+    _client.close();
+  }
 }

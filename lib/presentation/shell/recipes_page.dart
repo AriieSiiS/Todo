@@ -275,6 +275,7 @@ class _RecipesPageState extends State<RecipesPage> {
     try {
       final task = create();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        persist: false,
         content: Text(shopping
             ? 'Lista creada: ${task.title}. Aparecerá en Compra al sincronizar el móvil.'
             : 'Tarea creada: ${task.title}'),
@@ -713,7 +714,7 @@ class _WeeklyMenuRecipeThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fallback = ColoredBox(
-      color: const Color(0xFFF1E7D9),
+      color: context.visuals.panelAlt,
       child: Center(
         child: Icon(
           Icons.restaurant_menu_rounded,
@@ -759,7 +760,7 @@ class _WeeklyMenuImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-        color: const Color(0xFFF1E7D9),
+        color: context.visuals.panelAlt,
         child: FutureBuilder<String>(
           future: controller.weeklyMenuImageAbsolutePath(
             menu,
@@ -1492,7 +1493,7 @@ class _RecipeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-        color: const Color(0xFFF1E7D9),
+        color: context.visuals.panelAlt,
         child: FutureBuilder<String>(
           future: controller.recipeImageAbsolutePath(
             recipe,
@@ -2263,7 +2264,7 @@ class _RecipeEditorDialog extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: imagePasteFocus.requestFocus,
           child: ColoredBox(
-            color: const Color(0xFFF3EEE5),
+            color: context.visuals.panelAlt,
             child: Padding(
               padding: const EdgeInsets.all(22),
               child: Column(

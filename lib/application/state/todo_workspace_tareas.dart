@@ -34,10 +34,20 @@ extension TodoWorkspaceTareas on TodoWorkspace {
   List<TaskModel> tasksByCategory(String categoryId) {
     return _tasks
         .where((task) => task.categoryIds.contains(categoryId))
-        .where((task) => task.status != TaskStatus.archived)
+        .where(
+            (task) => task.status != TaskStatus.archived || task.routinePaused)
         .toList()
       ..sort((left, right) => left.manualOrder.compareTo(right.manualOrder));
   }
+
+  List<TaskModel> pausedRoutines() => _tasks
+      .where((task) =>
+          !task.isSubtask &&
+          task.recurrence.isRecurring &&
+          task.status == TaskStatus.archived &&
+          task.routinePaused)
+      .toList()
+    ..sort((left, right) => left.manualOrder.compareTo(right.manualOrder));
 
   List<TaskModel> completedTasks() {
     final completed = <TaskModel>[
@@ -175,7 +185,26 @@ extension TodoWorkspaceTareas on TodoWorkspace {
     if (index == -1) {
       return;
     }
-    _tasks[index] = updated;
+    _tasks[index] = updated.routinePaused && !updated.recurrence.isRecurring
+        ? updated.copyWith(status: TaskStatus.active, routinePaused: false)
+        : updated;
+    _commit();
+  }
+
+  void setRoutinePaused(String taskId, bool paused) {
+    final index = _tasks.indexWhere((task) => task.id == taskId);
+    if (index == -1) return;
+    final task = _tasks[index];
+    if (task.isSubtask || !task.recurrence.isRecurring) return;
+    if (paused && task.status != TaskStatus.active) return;
+    if (!paused &&
+        (task.status != TaskStatus.archived || !task.routinePaused)) {
+      return;
+    }
+    _tasks[index] = task.copyWith(
+      status: paused ? TaskStatus.archived : TaskStatus.active,
+      routinePaused: paused,
+    );
     _commit();
   }
 
@@ -959,7 +988,8 @@ extension TodoWorkspaceTareas on TodoWorkspace {
 
   List<TaskModel> _tasksForDay(DateTime day) => _taskAgenda.tasksForDay(day);
 
-  List<TaskModel> _sortTasks(List<TaskModel> list) => _taskAgenda.sortTasks(list);
+  List<TaskModel> _sortTasks(List<TaskModel> list) =>
+      _taskAgenda.sortTasks(list);
 
   DateTime _defaultNoteDate() {
     final day = logicalDate();

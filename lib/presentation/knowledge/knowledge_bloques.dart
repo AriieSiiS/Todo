@@ -38,10 +38,10 @@ class _KnowledgePageBlock extends BlockComponentStatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 7),
       elevation: 0,
-      color: const Color(0xFFF5F8EF),
+      color: context.visuals.panelAlt,
       child: ListTile(
         leading:
-            const Icon(Icons.description_outlined, color: Color(0xFF607A4D)),
+            Icon(Icons.description_outlined, color: context.visuals.accent),
         title: Text(page?.title ?? 'Página no disponible',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         trailing: const Icon(Icons.arrow_forward_rounded),
@@ -150,16 +150,17 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: unlocked
-                    ? const Color(0xFFDDECD3)
-                    : const Color(0xFFEDE9E2),
+                    ? context.visuals.accent.withValues(alpha: .18)
+                    : context.visuals.panelAlt,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 unlocked ? 'Desbloqueado' : 'Bloqueado',
                 style: TextStyle(
                   color: unlocked
-                      ? const Color(0xFF416231)
-                      : const Color(0xFF675F55),
+                      ? context.visuals.foregroundFor(
+                          context.visuals.accent.withValues(alpha: .18))
+                      : context.visuals.textMuted,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
                 ),
@@ -170,7 +171,7 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
         const SizedBox(height: 5),
         Text(
           attributes['knowledgeCharacterUnlock']?.toString() ?? '',
-          style: const TextStyle(color: Color(0xFF6D655C), height: 1.35),
+          style: TextStyle(color: context.visuals.textMuted, height: 1.35),
         ),
         const SizedBox(height: 11),
         Wrap(
@@ -192,8 +193,10 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
         const SizedBox(height: 12),
         Text.rich(
           TextSpan(
-            style: const TextStyle(
-                color: Color(0xFF403B35), fontSize: 14.5, height: 1.38),
+            style: TextStyle(
+                color: context.visuals.textStrong,
+                fontSize: 14.5,
+                height: 1.38),
             children: [
               const TextSpan(
                   text: 'Empieza con: ',
@@ -213,8 +216,8 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
         const SizedBox(height: 7),
         Text(
           attributes['knowledgeCharacterTip']?.toString() ?? '',
-          style: const TextStyle(
-            color: Color(0xFF526943),
+          style: TextStyle(
+            color: context.visuals.accent,
             fontWeight: FontWeight.w700,
             fontSize: 13.5,
           ),
@@ -227,9 +230,9 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F6F1),
+        color: context.visuals.panelAlt,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2DCD2)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -259,9 +262,9 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
       height: 92,
       padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7E0CF),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFC9BFAE)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: path.isNotEmpty && File(path).existsSync()
           ? Image.file(
@@ -284,14 +287,14 @@ class _KnowledgeCharacterBlockState extends State<_KnowledgeCharacterBlock> {
   Widget _characterFactChip(IconData icon, String label) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .78),
+          color: context.visuals.panel,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE3DDD3)),
+          border: Border.all(color: context.visuals.panelBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: const Color(0xFF6B805B)),
+            Icon(icon, size: 14, color: context.visuals.accent),
             const SizedBox(width: 5),
             Text(label,
                 style: const TextStyle(
@@ -397,7 +400,9 @@ class _KnowledgeProgressBlockState extends State<_KnowledgeProgressBlock> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       elevation: 0,
-      color: checked ? const Color(0xFFE8F2E1) : const Color(0xFFF8F6F1),
+      color: checked
+          ? context.visuals.accent.withValues(alpha: .18)
+          : context.visuals.panelAlt,
       child: ListTile(
         leading: Checkbox(
           value: checked,
@@ -447,9 +452,9 @@ class _KnowledgeProgressBlockState extends State<_KnowledgeProgressBlock> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F8EF),
+        color: context.visuals.panelAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7E4CC)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,14 +484,14 @@ class _KnowledgeProgressBlockState extends State<_KnowledgeProgressBlock> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F8EF),
+        color: context.visuals.panelAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7E4CC)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Completion marks',
+          const Text('Marcas de finalización',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
           Wrap(
@@ -515,10 +520,10 @@ class _KnowledgeProgressBlockState extends State<_KnowledgeProgressBlock> {
         difficulty >= 2 ? Icons.workspace_premium : Icons.radio_button_checked,
         size: 17,
         color: difficulty >= 2
-            ? const Color(0xFF9B312D)
+            ? context.visuals.danger
             : difficulty == 1
-                ? const Color(0xFF607A4D)
-                : Colors.grey,
+                ? context.visuals.accent
+                : context.visuals.textMuted,
       ),
       label: Text(mark['label']?.toString() ?? key),
       onPressed: rewardPageId == null || rewardPageId.isEmpty
@@ -605,16 +610,16 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFD7E4CC)),
+        border: Border.all(color: context.visuals.panelBorder),
         borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFFF8FAF5),
+        color: context.visuals.panelAlt,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.view_module_outlined, color: Color(0xFF607A4D)),
+              Icon(Icons.view_module_outlined, color: context.visuals.accent),
               const SizedBox(width: 9),
               Expanded(
                   child: Text(collection?.name ?? 'Colección',
@@ -784,7 +789,7 @@ class _KnowledgeCollectionBlockState extends State<_KnowledgeCollectionBlock> {
                 width: 190,
                 margin: const EdgeInsets.only(right: 10),
                 padding: const EdgeInsets.all(10),
-                color: const Color(0xFFF0F3EC),
+                color: context.visuals.panel,
                 child: Column(
                   children: [
                     Text(entry.key,
@@ -887,6 +892,6 @@ class _EmptyInspectorText extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 9, bottom: 4),
         child: Text(text,
-            style: const TextStyle(color: Color(0xFF7A746D), fontSize: 12.5)),
+            style: TextStyle(color: context.visuals.textMuted, fontSize: 12.5)),
       );
 }

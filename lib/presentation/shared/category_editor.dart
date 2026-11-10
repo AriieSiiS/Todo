@@ -56,7 +56,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
           32, 22, 32, MediaQuery.of(context).viewInsets.bottom + 22),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFCF8),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: const Color(0xFFE2D5C4)),
         ),
@@ -190,7 +190,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                   decoration: BoxDecoration(
                     color: _icon == icon
                         ? Color(_colorValue).withValues(alpha: 0.12)
-                        : Colors.white,
+                        : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: _icon == icon
@@ -198,7 +198,8 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                           : const Color(0xFFE2D5C4),
                     ),
                   ),
-                  child: Icon(icon, color: const Color(0xFF2D2A25)),
+                  child: Icon(icon,
+                      color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
             InkWell(
@@ -213,7 +214,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
                 width: 54,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFE2D5C4)),
                 ),
@@ -254,7 +255,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: _softBorderBox(),
+          decoration: _softBorderBox(context),
           child: Row(
             children: [
               Container(
@@ -308,7 +309,7 @@ class _CategoryEditorDialogState extends State<_CategoryEditorDialog> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
-                decoration: _softBorderBox(),
+                decoration: _softBorderBox(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

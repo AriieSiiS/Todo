@@ -20,3 +20,8 @@ output/
 tmp/
 node_modules/
 .playwright-cli/
+
+# Archivos de herramientas locales
+CLAUDE.md
+.claude/
+flutter_*.log

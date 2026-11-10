@@ -220,6 +220,8 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
   int? _appId;
   bool _busy = true;
   int _filter = 0;
+  final _collapsed = <String>{};
+  Map<String, List<String>> _groups = {};
   String? _error;
 
   @override
@@ -236,6 +238,8 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
       if (!mounted) return;
       if (saved != null && saved['appid'] is int) {
         silent = true;
+        _groups = await widget.service.achievementGroups(saved['appid'] as int);
+        if (!mounted) return;
         setState(() {
           _appId = saved['appid'] as int;
           _result = saved;
@@ -263,6 +267,10 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
           : await widget.service.achievements(_appId!, refresh: refresh);
       if (!mounted) return;
       _result = result;
+      if (_appId != null) {
+        final groups = await widget.service.achievementGroups(_appId!);
+        if (mounted) _groups = groups;
+      }
     } catch (error) {
       if (mounted && !silent) _error = _steamMessage(error);
     } finally {
@@ -357,14 +365,12 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
             })
         .toList()
       ..sort(_compare);
-    final game = _games.where((game) => game['appid'] == _appId).firstOrNull;
     final percent = result['completion_percent'] as num?;
     final unlocked = result['unlocked'] as num;
     final total = result['total'] as num;
     final scheme = Theme.of(context).colorScheme;
     final details = [
       if (percent != null) '${_decimal(percent)} % completado',
-      if (game != null) _hours(game),
     ].join('  ·  ');
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -407,17 +413,147 @@ class _SteamGamePanelState extends State<SteamGamePanel> {
                   child: Text('Este juego no tiene logros en Steam.'))
               : achievements.isEmpty
                   ? const Center(child: Text('No hay logros en esta lista.'))
-                  : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 480,
-                              mainAxisExtent: 112,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10),
-                      itemCount: achievements.length,
-                      itemBuilder: (_, index) =>
-                          _AchievementTile(item: achievements[index]))),
+                  : _achievementList(achievements, all)),
     ]);
+  }
+
+  static const _baseGroup = 'Juego base';
+
+  /// Grupo al que pertenece un logro: el asignado a mano o el juego base.
+  String _groupOf(Map<String, dynamic> item) {
+    for (final entry in _groups.entries) {
+      if (entry.value.contains(item['id'])) return entry.key;
+    }
+    return _baseGroup;
+  }
+
+  Widget _tile(Map<String, dynamic> item) => GestureDetector(
+      onSecondaryTapUp: (details) =>
+          unawaited(_assignMenu(item, details.globalPosition)),
+      child: _AchievementTile(item: item));
+
+  static const _gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: 480,
+      mainAxisExtent: 112,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10);
+
+  Widget _achievementList(
+      List<Map<String, dynamic>> shown, List<Map<String, dynamic>> all) {
+    if (_groups.isEmpty) {
+      return GridView.builder(
+          gridDelegate: _gridDelegate,
+          itemCount: shown.length,
+          itemBuilder: (_, index) => _tile(shown[index]));
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return CustomScrollView(slivers: [
+      for (final name in [_baseGroup, ..._groups.keys])
+        if (shown.any((item) => _groupOf(item) == name)) ...[
+          SliverToBoxAdapter(child: () {
+            final members = all.where((item) => _groupOf(item) == name);
+            final done = members.where((item) => item['unlocked'] == true);
+            final open = !_collapsed.contains(name);
+            return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => setState(() =>
+                    open ? _collapsed.add(name) : _collapsed.remove(name)),
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(children: [
+                      Icon(open ? Icons.expand_more : Icons.chevron_right,
+                          color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(name,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 10),
+                      Text('${done.length} de ${members.length}',
+                          style: TextStyle(
+                              fontSize: 13, color: scheme.onSurfaceVariant)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                  minHeight: 5,
+                                  value: members.isEmpty
+                                      ? 0
+                                      : done.length / members.length))),
+                    ])));
+          }()),
+          if (!_collapsed.contains(name))
+            SliverPadding(
+                padding: const EdgeInsets.only(top: 6),
+                sliver: SliverGrid.builder(
+                    gridDelegate: _gridDelegate,
+                    itemCount:
+                        shown.where((item) => _groupOf(item) == name).length,
+                    itemBuilder: (_, index) => _tile(shown
+                        .where((item) => _groupOf(item) == name)
+                        .elementAt(index)))),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+        ],
+    ]);
+  }
+
+  /// Menú del clic derecho para mover un logro a otro grupo (juego base o
+  /// expansión). La asignación se guarda junto a los datos del juego.
+  Future<void> _assignMenu(Map<String, dynamic> item, Offset position) async {
+    final appId = _appId;
+    if (appId == null) return;
+    final current = _groupOf(item);
+    final choice = await showMenu<String>(
+        context: context,
+        position: RelativeRect.fromLTRB(
+            position.dx, position.dy, position.dx, position.dy),
+        items: [
+          for (final name in [_baseGroup, ..._groups.keys])
+            CheckedPopupMenuItem<String>(
+                value: 'g:$name', checked: name == current, child: Text(name)),
+          const PopupMenuDivider(),
+          const PopupMenuItem<String>(
+              value: 'new', child: Text('Nuevo grupo…')),
+        ]);
+    if (choice == null || !mounted) return;
+    var target = choice.startsWith('g:') ? choice.substring(2) : '';
+    if (choice == 'new') {
+      final controller = TextEditingController();
+      final name = await showDialog<String>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+                  title: const Text('Nuevo grupo de logros'),
+                  content: TextField(
+                      controller: controller,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                          labelText: 'Nombre de la expansión'),
+                      onSubmitted: (value) =>
+                          Navigator.pop(dialogContext, value)),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Cancelar')),
+                    FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(dialogContext, controller.text),
+                        child: const Text('Crear')),
+                  ]));
+      controller.dispose();
+      target = (name ?? '').trim();
+      if (target.isEmpty || !mounted) return;
+    }
+    if (target == current) return;
+    final groups = {
+      for (final entry in _groups.entries)
+        entry.key: entry.value.where((id) => id != item['id']).toList(),
+    };
+    if (target != _baseGroup) {
+      groups.putIfAbsent(target, () => []).add('${item['id']}');
+    }
+    groups.removeWhere((_, ids) => ids.isEmpty);
+    setState(() => _groups = groups);
+    await widget.service.saveAchievementGroups(appId, groups);
   }
 
   /// Primero los desbloqueados, del más reciente al más antiguo; después los

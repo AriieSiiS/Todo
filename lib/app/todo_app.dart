@@ -109,17 +109,21 @@ class _TodoAppState extends State<TodoApp> {
   }
 }
 
-class _TodoMaterialApp extends StatelessWidget {
+class _TodoMaterialApp extends ConsumerWidget {
   const _TodoMaterialApp({required this.launchIntent});
 
   final AppLaunchIntent launchIntent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final darkMode = ref.watch(
+        todoWorkspaceProvider.select((controller) => controller.darkMode));
     return MaterialApp(
       title: 'Todo',
       debugShowCheckedModeBanner: false,
       theme: buildTodoTheme(),
+      darkTheme: buildTodoTheme(brightness: Brightness.dark),
+      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
       locale: const Locale('es', 'ES'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

@@ -165,7 +165,7 @@ class _KnowledgeTreePanelState extends State<_KnowledgeTreePanel> {
     final index = widget.service.treeIndex(widget.rootPageId);
     final rows = searching ? const <_KnowledgeTreeRow>[] : _visibleRows(index);
     return Container(
-      color: const Color(0xFFF8F4EE),
+      color: context.visuals.panelAlt,
       child: Column(
         children: [
           Padding(
@@ -242,7 +242,8 @@ class _KnowledgeTreePanelState extends State<_KnowledgeTreePanel> {
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
                               color: active
-                                  ? const Color(0xFFDDE8D5)
+                                  ? context.visuals.accent
+                                      .withValues(alpha: .18)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(7),
                             ),
@@ -384,7 +385,9 @@ class _PageTreeNodeState extends State<_PageTreeNode> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(4, 7, 4, 7),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFFDDE8D5) : Colors.transparent,
+              color: active
+                  ? context.visuals.accent.withValues(alpha: .18)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(7),
             ),
             child: Row(

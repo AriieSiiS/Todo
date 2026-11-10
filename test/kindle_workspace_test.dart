@@ -140,6 +140,19 @@ void main() {
     expect(workspace.taskById('rutina')!.recurrenceCompletions, isEmpty);
   });
 
+  test('una rutina pausada desaparece del Kindle y rechaza marcas antiguas',
+      () async {
+    final args = await group(['rutina']);
+    workspace.setRoutinePaused('rutina', true);
+    final data = await agenda();
+    expect((data['days'][0]['tasks'] as List).map((task) => task['id']),
+        isNot(contains('rutina')));
+    final result =
+        await workspace.executeAgentCommand('complete_kindle_group', args);
+    expect(result['status'], 'conflict');
+    expect(workspace.taskById('rutina')!.recurrenceCompletions, isEmpty);
+  });
+
   test('rechaza mezclar familias y completar fechas futuras', () async {
     final args = await group(['sub-a', 'vencida']);
     expect(

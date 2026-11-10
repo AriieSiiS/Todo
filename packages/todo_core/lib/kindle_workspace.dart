@@ -57,6 +57,7 @@ class KindleWorkspace {
       'progress',
       'page',
       'total_pages',
+        'page_unit',
       'position',
       'chapter',
       'statistics',

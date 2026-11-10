@@ -1008,8 +1008,11 @@ void main() {
       await tester.pump();
     });
 
-    expect(find.text('Carl el mazmorrero'), findsNWidgets(4));
-    expect(find.text('#1'), findsNWidgets(2));
+    // La ficha del tomo 1 se llama igual que su saga: su chapa solo repetiría
+    // el título y no se pinta (título + chapa del tomo 2 + el resto de la vista).
+    expect(find.text('Carl el mazmorrero'), findsNWidgets(3));
+    // Solo el juego con el número forzado enseña «#1»; el tomo 1 sin chapa no.
+    expect(find.text('#1'), findsOneWidget);
     expect(find.text('#2'), findsOneWidget);
     expect(find.text('Entrega única'), findsNWidgets(2));
     expect(find.text('Otra saga'), findsOneWidget);

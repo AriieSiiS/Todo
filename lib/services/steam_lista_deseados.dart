@@ -137,11 +137,12 @@ class SteamListaDeseados {
   static Map<String, dynamic> _carga(String token) {
     try {
       final parte = token.split('.')[1];
-      final datos = jsonDecode(
-          utf8.decode(base64Url.decode(base64Url.normalize(parte))));
+      final datos =
+          jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parte))));
       if (datos is Map<String, dynamic>) return datos;
     } catch (_) {}
-    throw const FormatException('El token de Steam no tiene un formato válido.');
+    throw const FormatException(
+        'El token de Steam no tiene un formato válido.');
   }
 
   /// Fecha de caducidad del token, si la incluye.
@@ -172,7 +173,52 @@ class SteamListaDeseados {
       throw const FormatException(
           'No se pudo guardar el token en el almacenamiento seguro.');
     }
+    // Con el token vigente se aprovecha para guardar las horas del plan
+    // familiar; un fallo aquí nunca invalida el token.
+    try {
+      await actualizarHorasFamilia(token);
+    } catch (_) {}
     return fin;
+  }
+
+  /// Lee las horas jugadas de los juegos del plan familiar y las guarda en
+  /// local. Devuelve cuántos juegos tienen horas.
+  Future<int> actualizarHorasFamilia(String token) async {
+    final perfil = await steam.profile();
+    if (perfil == null) return 0;
+    final familia = await _llamar(
+        'GET',
+        '/IFamilyGroupsService/GetFamilyGroupForUser/v1/',
+        {'steamid': perfil},
+        token);
+    final grupo = familia['family_groupid'];
+    if (familia['is_not_member_of_any_group'] == true ||
+        grupo == null ||
+        '$grupo' == '0') {
+      return 0;
+    }
+    final compartidos = await _llamar(
+        'GET',
+        '/IFamilyGroupsService/GetSharedLibraryApps/v1/',
+        {
+          'family_groupid': '$grupo',
+          'steamid': perfil,
+          'include_own': 'true',
+          'include_free': 'true',
+        },
+        token);
+    final apps = compartidos['apps'];
+    if (apps is! List) return 0;
+    final minutos = <int, num>{
+      for (final app in apps)
+        if (app is Map &&
+            app['appid'] is num &&
+            app['rt_playtime'] is num &&
+            (app['rt_playtime'] as num) > 0)
+          (app['appid'] as num).toInt(): app['rt_playtime'] as num,
+    };
+    await steam.guardarHorasFamilia(minutos);
+    return minutos.length;
   }
 
   /// Token guardado y vigente; si falta o ha caducado lanza
@@ -188,8 +234,7 @@ class SteamListaDeseados {
           falta: true);
     }
     final fin = caducidad(token);
-    if (fin != null &&
-        !fin.isAfter(_reloj().add(const Duration(minutes: 2)))) {
+    if (fin != null && !fin.isAfter(_reloj().add(const Duration(minutes: 2)))) {
       throw const SteamTokenException(
           'El token de sesión de Steam ha caducado. Pega uno nuevo para continuar.');
     }
@@ -251,8 +296,10 @@ class SteamListaDeseados {
       throw const FormatException(
           'Conecta Steam en Ajustes → Steam antes de limpiar la lista de deseados.');
     }
-    final familia = await _llamar('GET',
-        '/IFamilyGroupsService/GetFamilyGroupForUser/v1/', {'steamid': perfil},
+    final familia = await _llamar(
+        'GET',
+        '/IFamilyGroupsService/GetFamilyGroupForUser/v1/',
+        {'steamid': perfil},
         token);
     final grupo = familia['family_groupid'];
     if (familia['is_not_member_of_any_group'] == true ||
@@ -279,8 +326,8 @@ class SteamListaDeseados {
       throw const FormatException(
           'Steam no devolvió los juegos del plan familiar.');
     }
-    final deseados = await _llamar('GET',
-        '/IWishlistService/GetWishlist/v1/', {'steamid': perfil}, token);
+    final deseados = await _llamar(
+        'GET', '/IWishlistService/GetWishlist/v1/', {'steamid': perfil}, token);
     final items = deseados['items'];
     if (items is! List) {
       throw const FormatException(

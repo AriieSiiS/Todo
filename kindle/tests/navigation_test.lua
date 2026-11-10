@@ -98,4 +98,17 @@ for _,context in ipairs({'reader','filemanager'}) do
     items.todo_shortcut.callback()
 end
 assert(opened==5, 'Los accesos de lectura y explorador abren Todo')
+local marked,toggles=false,0
+reading.bookmark={isPageBookmarked=function() return marked end,
+    onToggleBookmark=function() marked=not marked;toggles=toggles+1 end}
+local bookmarks={callback=function() return 'Lista nativa' end}
+local items={bookmarks=bookmarks}
+Navigation.menuItem(reading,items,function() end)
+assert(items.toggle_bookmark and items.toggle_bookmark.text_func()=='Marcar esta página',
+    'El Kindle táctil tiene una acción visible para marcar la página actual')
+items.toggle_bookmark.callback()
+assert(marked and toggles==1 and items.toggle_bookmark.text_func()=='Quitar marcapáginas de esta página')
+items.toggle_bookmark.callback()
+assert(not marked and toggles==2 and items.bookmarks==bookmarks,
+    'Se quita la marca y se conserva la lista nativa para regresar a las páginas guardadas')
 print('Navegación: casa, acceso a Todo, cabeceras y selección de archivos verificados')

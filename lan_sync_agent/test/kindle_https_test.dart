@@ -83,6 +83,35 @@ void main() {
       expect(await get('/v1/kindle/agenda', 'kindle'), 200);
       expect(await get('/v1/kindle/books', 'android'), 401);
       expect(await get('/v1/kindle/books', 'kindle'), 200);
+      // Un fallo del archivo informativo no debe cerrar el servidor HTTPS.
+      final blockedStatus = Directory('${config.path}/status.json.tmp');
+      await blockedStatus.create();
+      await File('${runtime.path}/todo_state.json').writeAsString(
+          jsonEncode({'tasks': [], 'updatedAt': '2026-11-02T12:00:00Z'}));
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      expect(await get('/v1/kindle/books', 'kindle'), 200);
+      expect(await File('${config.path}/runtime_error.json').exists(), true);
+      await blockedStatus.delete();
+      await File('${runtime.path}/todo_state.json').writeAsString(
+          jsonEncode({'tasks': [], 'updatedAt': '2026-11-02T12:01:00Z'}));
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      final recoveredStatus =
+          jsonDecode(await File('${config.path}/status.json').readAsString())
+              as Map;
+      expect(
+          DateTime.now().toUtc().difference(
+              DateTime.parse(recoveredStatus['updatedAt'] as String)),
+          lessThan(const Duration(seconds: 3)));
+      final duplicate = TodoLanAgent(
+          dataDirectory: config,
+          stateDirectory: runtime,
+          port: agent.listeningPort,
+          advertise: false);
+      try {
+        await expectLater(duplicate.start(), throwsA(isA<SocketException>()));
+      } finally {
+        await duplicate.stop(exitProcess: false);
+      }
       final request =
           await client.postUrl(Uri.parse('$base/v1/kindle/completions'));
       request.headers.set('Authorization', 'Bearer kindle');
@@ -91,22 +120,37 @@ void main() {
       final response = await request.close();
       expect(response.statusCode, 200);
       await response.drain<void>();
-      final reading = await client.postUrl(Uri.parse('$base/v1/kindle/reading'));
+      final reading =
+          await client.postUrl(Uri.parse('$base/v1/kindle/reading'));
       reading.headers.set('Authorization', 'Bearer kindle');
       reading.headers.contentType = ContentType.json;
       reading.write('{}');
-      final readingResponse=await reading.close();
-      expect(readingResponse.statusCode,200);
+      final readingResponse = await reading.close();
+      expect(readingResponse.statusCode, 200);
       await readingResponse.drain<void>();
-      expect(commands, ['get_kindle_agenda', 'get_kindle_books', 'complete_kindle_group', 'sync_kindle_book']);
+      expect(commands, [
+        'get_kindle_agenda',
+        'get_kindle_books',
+        'get_kindle_books',
+        'complete_kindle_group',
+        'sync_kindle_book'
+      ]);
       await bridge.close(force: true);
       await File('${config.path}/kindle_enabled').writeAsString('1');
       await File('${runtime.path}/todo_state.json').writeAsString(jsonEncode({
-        'tasks': [{'id': 'sin-interfaz', 'title': 'Tarea sin interfaz', 'status': 'active'}],
+        'tasks': [
+          {
+            'id': 'sin-interfaz',
+            'title': 'Tarea sin interfaz',
+            'status': 'active'
+          }
+        ],
         'libraryItems': [],
       }));
-      Future<Map<String, dynamic>> kindle(String path, {Map<String, dynamic>? body}) async {
-        final request = await client.openUrl(body == null ? 'GET' : 'POST', Uri.parse('$base$path'));
+      Future<Map<String, dynamic>> kindle(String path,
+          {Map<String, dynamic>? body}) async {
+        final request = await client.openUrl(
+            body == null ? 'GET' : 'POST', Uri.parse('$base$path'));
         request.headers.set('Authorization', 'Bearer kindle');
         if (body != null) {
           request.headers.contentType = ContentType.json;
@@ -114,17 +158,25 @@ void main() {
         }
         final response = await request.close();
         expect(response.statusCode, 200);
-        return jsonDecode(await utf8.decoder.bind(response).join()) as Map<String, dynamic>;
+        return jsonDecode(await utf8.decoder.bind(response).join())
+            as Map<String, dynamic>;
       }
+
       final agenda = await kindle('/v1/kindle/agenda');
       final task = (agenda['days'][0]['tasks'] as List).single;
       final saved = await kindle('/v1/kindle/completions', body: {
-        'request_id': 'https-sin-interfaz-0001', 'root_task_id': task['id'],
-        'occurrence_date': agenda['logical_date'], 'expected_version': task['task_version'],
+        'request_id': 'https-sin-interfaz-0001',
+        'root_task_id': task['id'],
+        'occurrence_date': agenda['logical_date'],
+        'expected_version': task['task_version'],
         'task_ids': [task['id']],
       });
       expect(saved['savedLocally'], true);
-      expect((jsonDecode(await File('${runtime.path}/todo_state.json').readAsString()) as Map)['tasks'][0]['status'], 'completed');
+      expect(
+          (jsonDecode(
+                  await File('${runtime.path}/todo_state.json').readAsString())
+              as Map)['tasks'][0]['status'],
+          'completed');
       await devicesFile.writeAsString(jsonEncode({
         'devices': [devices.last]
       }));

@@ -333,7 +333,7 @@ class _WardrobeItemEditorDialogState extends State<_WardrobeItemEditorDialog> {
           behavior: HitTestBehavior.opaque,
           onTap: _imagePasteFocus.requestFocus,
           child: ColoredBox(
-            color: const Color(0xFFF3EEE5),
+            color: context.visuals.panelAlt,
             child: Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
@@ -977,7 +977,7 @@ class _OutfitItemRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .58),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(children: [

@@ -23,6 +23,7 @@ void main() {
           'id': 'libro',
           'type': 'book',
           'title': 'Libro de prueba',
+          'status': 'pending',
           'author': 'Autora'
         }
       ],
@@ -99,12 +100,17 @@ void main() {
       'author': 'Autora',
       'page': '30',
       'total_pages': 100,
+      'page_unit': 'screen',
       'chapter': 'Capítulo 2',
       'position': '/body/30',
       'progress': 0.3,
       'statistics': {
-        'origin': 'historial-prueba', 'book_id': 1,
-        'periods': [{'start': 3600, 'seconds': 120, 'pages': 2}]
+        'origin': 'historial-prueba',
+        'book_id': 1,
+        'page_unit': 'screen',
+        'periods': [
+          {'start': 3600, 'seconds': 120, 'pages': 2}
+        ]
       },
       'observed_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'quotes': [
@@ -124,8 +130,41 @@ void main() {
         result);
     final saved = jsonDecode(await snapshot.readAsString()) as Map;
     expect(saved['libraryItems'][0]['reading']['progress'], 0.3);
+    expect(saved['libraryItems'][0]['status'], 'inProgress');
+    expect(saved['libraryItems'][0]['reading']['pageUnit'], 'screen');
     expect(saved['libraryItems'][0]['reading']['quotes'], hasLength(1));
-    expect(saved['libraryItems'][0]['reading']['statistics']['historial-prueba:1']['periods'].single['seconds'], 120);
+    expect(
+        saved['libraryItems'][0]['reading']['statistics']['historial-prueba:1']
+                ['periods']
+            .single['seconds'],
+        120);
+    final mapped = await client.call('sync_kindle_book', {
+      ...args,
+      'request_id': 'lectura-agente-mapa-0001',
+      'sequence': 2,
+      'page': '19',
+      'total_pages': 67,
+      'page_unit': 'page',
+    });
+    expect(mapped['savedLocally'], true);
+    final mappedReading = (jsonDecode(await snapshot.readAsString())
+        as Map)['libraryItems'][0]['reading'];
+    expect(mappedReading['pageUnit'], 'page');
+    expect(mappedReading['statistics']['historial-prueba:1']['pageUnit'],
+        'screen');
+    await client.call('sync_kindle_book', {
+      ...args,
+      'request_id': 'lectura-agente-estimada-0001',
+      'sequence': 3,
+      'page': '6',
+      'total_pages': 1088,
+      'page_unit': 'estimated_page',
+    });
+    final estimatedReading = (jsonDecode(await snapshot.readAsString())
+        as Map)['libraryItems'][0]['reading'];
+    expect(estimatedReading['pageUnit'], 'estimated_page');
+    expect(estimatedReading['statistics']['historial-prueba:1']['pageUnit'],
+        'screen');
     expect(saved['datosFuturos'], {'texto': 'Conservar íntegro'});
     await expectLater(
         client.call('sync_kindle_book', {...args, 'progress': 0.4}),

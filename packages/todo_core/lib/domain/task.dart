@@ -15,6 +15,7 @@ class TaskModel {
     this.timeBlockMinutes,
     this.priority = TaskPriority.medium,
     this.status = TaskStatus.active,
+    this.routinePaused = false,
     this.recurrence = const RecurrenceRule(),
     this.subtaskIds = const <String>[],
     this.checklist = const <String>[],
@@ -41,6 +42,7 @@ class TaskModel {
   final int? timeBlockMinutes;
   final TaskPriority priority;
   final TaskStatus status;
+  final bool routinePaused;
   final RecurrenceRule recurrence;
   final List<String> subtaskIds;
   final List<String> checklist;
@@ -74,6 +76,7 @@ class TaskModel {
     bool clearTimeBlock = false,
     TaskPriority? priority,
     TaskStatus? status,
+    bool? routinePaused,
     RecurrenceRule? recurrence,
     List<String>? subtaskIds,
     List<String>? checklist,
@@ -107,6 +110,7 @@ class TaskModel {
           clearTimeBlock ? null : timeBlockMinutes ?? this.timeBlockMinutes,
       priority: priority ?? this.priority,
       status: status ?? this.status,
+      routinePaused: routinePaused ?? this.routinePaused,
       recurrence: recurrence ?? this.recurrence,
       subtaskIds: subtaskIds ?? this.subtaskIds,
       checklist: checklist ?? this.checklist,
@@ -145,6 +149,7 @@ class TaskModel {
       'timeBlockMinutes': timeBlockMinutes,
       'priority': priority.name,
       'status': status.name,
+      'routinePaused': routinePaused,
       'recurrence': recurrence.toJson(),
       'subtaskIds': subtaskIds,
       'checklist': checklist,
@@ -184,6 +189,7 @@ class TaskModel {
           TaskPriority.medium),
       status: enumByName(
           TaskStatus.values, json['status'] as String?, TaskStatus.active),
+      routinePaused: json['routinePaused'] as bool? ?? false,
       recurrence: RecurrenceRule.fromJson(
           (json['recurrence'] as Map<dynamic, dynamic>? ??
                   const <dynamic, dynamic>{})

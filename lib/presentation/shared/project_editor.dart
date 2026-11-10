@@ -86,7 +86,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
           32, 22, 32, MediaQuery.of(context).viewInsets.bottom + 22),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFCF8),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
             color: const Color(0xFFE2D5C4),
@@ -251,7 +251,9 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: _icon == icon
@@ -274,12 +276,14 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFE2D5C4)),
                           ),
-                          child: const Icon(Icons.more_horiz_rounded,
-                              color: Color(0xFF6A665F)),
+                          child: Icon(Icons.more_horiz_rounded,
+                              color: Theme.of(context).colorScheme.onSurface),
                         ),
                       ),
                     ],
@@ -315,7 +319,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 10),
-                      decoration: _softBorderBox(),
+                      decoration: _softBorderBox(context),
                       child: Row(
                         children: [
                           Container(
@@ -398,7 +402,9 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
               selected: selected,
               label: Text(category.name),
               labelStyle: TextStyle(
-                color: selected ? category.color : const Color(0xFF4F4A43),
+                color: selected
+                    ? category.color
+                    : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w400,
               ),
               selectedColor: category.color.withValues(alpha: 0.16),
@@ -445,7 +451,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
         ),
         const SizedBox(height: 8),
         Container(
-          decoration: _softBorderBox(),
+          decoration: _softBorderBox(context),
           child: Column(
             children: [
               if (_draftTasks.isEmpty)
@@ -507,7 +513,9 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFBF7F0),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -613,7 +621,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
-                    decoration: _softBorderBox(),
+                    decoration: _softBorderBox(context),
                     child: Row(
                       children: [
                         const Icon(Icons.calendar_month_rounded,
@@ -659,7 +667,7 @@ class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: _softBorderBox(),
+                decoration: _softBorderBox(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

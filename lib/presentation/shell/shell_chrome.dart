@@ -24,7 +24,7 @@ class _AppShellState extends ConsumerState<AppShell>
   bool _launchIntentHandled = false;
   bool _openingNotificationTask = false;
   bool _quickCaptureOpen = false;
-  final AudioPlayer _alarmPlayer = AudioPlayer();
+  AudioPlayer? _alarmPlayer;
   String? _playingAlarmId;
   bool _musicWasPlaying = false;
 
@@ -59,7 +59,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _windowShell
       ..removeListener(_onWindowShellChanged)
       ..dispose();
-    unawaited(_alarmPlayer.dispose());
+    unawaited(_alarmPlayer?.dispose());
     _musicController.dispose();
     _homeAssistant.dispose();
     super.dispose();
@@ -123,6 +123,7 @@ class _AppShellState extends ConsumerState<AppShell>
                   ref.watch(todoWorkspaceProvider.select((c) => (
                         c.section,
                         c.visibleNavOrder.join(','),
+                        c.darkMode,
                       )));
                   return _Sidebar(
                     controller: controller,
@@ -291,7 +292,7 @@ class _AppShellState extends ConsumerState<AppShell>
     }
     if (alarm == null) {
       _playingAlarmId = null;
-      await _alarmPlayer.stop();
+      await _alarmPlayer?.stop();
       if (_musicWasPlaying) await _musicController.play();
       _musicWasPlaying = false;
       return;
@@ -300,9 +301,10 @@ class _AppShellState extends ConsumerState<AppShell>
     _musicWasPlaying = _musicController.isPlaying;
     if (_musicWasPlaying) await _musicController.pause();
     try {
-      await _alarmPlayer.setAsset('resources/important-alarm.wav');
-      await _alarmPlayer.setLoopMode(LoopMode.one);
-      unawaited(_alarmPlayer.play());
+      final player = _alarmPlayer ??= AudioPlayer();
+      await player.setAsset('resources/important-alarm.wav');
+      await player.setLoopMode(LoopMode.one);
+      unawaited(player.play());
     } catch (error) {
       controller.reportImportantAlarmAudioError(error);
     }
@@ -349,6 +351,7 @@ class _AppShellState extends ConsumerState<AppShell>
       AppSection.household =>
         HouseholdPage(controller: controller, homeAssistant: _homeAssistant),
       AppSection.plants => PlantsPage(controller: controller),
+      AppSection.miniatures => MiniaturesPage(controller: controller),
       AppSection.recipes => RecipesPage(controller: controller),
       AppSection.journal => JournalPage(controller: controller),
       AppSection.trips => TripsPage(controller: controller),
@@ -650,12 +653,17 @@ class _Sidebar extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     itemCount: destinations.length,
                     buildDefaultDragHandles: false,
-                    proxyDecorator: (child, index, animation) => Material(
-                      color: Colors.transparent,
-                      child: ScaleTransition(
-                        scale: Tween<double>(begin: 1, end: 1.02)
-                            .animate(animation),
-                        child: child,
+                    proxyDecorator: (child, index, animation) => MouseRegion(
+                      cursor: DragMouseCursors.grabbing,
+                      child: AbsorbPointer(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 1, end: 1.02)
+                                .animate(animation),
+                            child: child,
+                          ),
+                        ),
                       ),
                     ),
                     onReorder: controller.reorderNavigation,
@@ -700,15 +708,19 @@ class _Sidebar extends StatelessWidget {
                                 ),
                                 ReorderableDragStartListener(
                                   index: index,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Icon(
-                                      Icons.drag_indicator_rounded,
-                                      size: 18,
-                                      color: selected
-                                          ? Colors.white.withValues(alpha: 0.72)
-                                          : const Color(0xFFB9C1B6)
-                                              .withValues(alpha: 0.58),
+                                  child: MouseRegion(
+                                    cursor: DragMouseCursors.grab,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 4),
+                                      child: Icon(
+                                        Icons.drag_indicator_rounded,
+                                        size: 18,
+                                        color: selected
+                                            ? Colors.white
+                                                .withValues(alpha: 0.72)
+                                            : const Color(0xFFB9C1B6)
+                                                .withValues(alpha: 0.58),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -729,6 +741,40 @@ class _Sidebar extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 10),
+                MergeSemantics(
+                  child: InkWell(
+                    key: const ValueKey('sidebar-dark-mode'),
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => controller.setDarkMode(!controller.darkMode),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 8),
+                      child: Row(children: [
+                        const Icon(Icons.dark_mode_outlined,
+                            color: Color(0xFFC6CEBD), size: 18),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                            child: Text('Modo oscuro',
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                    color: Color(0xFFF1EADC), fontSize: 13))),
+                        SizedBox(
+                          width: 42,
+                          height: 36,
+                          child: FittedBox(
+                              child: Switch(
+                            activeTrackColor: visuals.sidebarAccent,
+                            activeThumbColor: Colors.white,
+                            value: controller.darkMode,
+                            onChanged: controller.setDarkMode,
+                          )),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -796,6 +842,11 @@ _SidebarDestination _sidebarDestinationFor(AppSection section) {
         section: AppSection.household,
         icon: Icons.home_work_rounded,
         label: 'Hogar',
+      ),
+    AppSection.miniatures => const _SidebarDestination(
+        section: AppSection.miniatures,
+        icon: Icons.shield_rounded,
+        label: 'Miniaturas',
       ),
     AppSection.plants => const _SidebarDestination(
         section: AppSection.plants,
@@ -940,6 +991,15 @@ class _MobileNav extends StatelessWidget {
                     controller.setSection(section);
                   },
                 ),
+              ListenableBuilder(
+                listenable: controller,
+                builder: (context, _) => SwitchListTile(
+                  title: const Text('Modo oscuro'),
+                  secondary: const Icon(Icons.dark_mode_outlined),
+                  value: controller.darkMode,
+                  onChanged: controller.setDarkMode,
+                ),
+              ),
             ],
           ),
         );

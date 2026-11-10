@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo/domain/entities/library_reading.dart';
+import 'package:todo/domain/models.dart';
 import 'package:todo/presentation/shared/book_reading_panel.dart';
 
 void main() {
+  LibraryItem book(LibraryReading? reading, {String? pages}) => LibraryItem(
+      id: 'libro',
+      type: LibraryItemType.book,
+      title: 'Libro de prueba',
+      status: LibraryItemStatus.inProgress,
+      reading: reading,
+      pages: pages,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026));
+
+  testWidgets('un libro completado sin historial muestra 100 %',
+      (tester) async {
+    final item = LibraryItem.fromJson(
+        book(null).copyWith(status: LibraryItemStatus.completed).toJson());
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: BookReadingBadge(item: item))));
+    expect(find.text('100%'), findsOneWidget);
+    expect(tester.widget<Tooltip>(find.byType(Tooltip)).message, '100% leído');
+    expect(item.reading, isNull);
+  });
   testWidgets(
       'el porcentaje muestra página, total y capítulo al pasar el cursor',
       (tester) async {
@@ -17,11 +37,37 @@ void main() {
       'cursors': <String, int>{},
       'quotes': <Map<String, dynamic>>[]
     });
-    await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: BookReadingBadge(reading: reading))));
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: BookReadingBadge(item: book(reading)))));
     expect(find.text('1%'), findsOneWidget);
     expect(tester.widget<Tooltip>(find.byType(Tooltip)).message,
         '1% leído\nPágina 20 de 1955\nCapítulo 7');
+  });
+
+  testWidgets('el avance y las citas identifican las páginas estimadas',
+      (tester) async {
+    final reading = LibraryReading(
+        progress: .01,
+        observedAt: 100,
+        page: '6',
+        totalPages: 1088,
+        pageUnit: 'estimated_page',
+        position: '/p[5]',
+        documents: [],
+        cursors: {},
+        quotes: [
+          {'text': 'Una cita', 'page': '5', 'page_unit': 'estimated_page'}
+        ]);
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Column(children: [
+      BookReadingBadge(item: book(reading, pages: '1912')),
+      BookQuotesPanel(reading: reading),
+    ]))));
+    expect(tester.widget<Tooltip>(find.byType(Tooltip).first).message,
+        '1% leído\nPágina 6 de 1088');
+    expect(find.text('Página 5'), findsOneWidget);
+    expect(find.textContaining('estimada'), findsNothing);
   });
 
   testWidgets('las citas vacías explican dónde guardar un subrayado',

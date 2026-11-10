@@ -10,11 +10,38 @@ import '../domain/models.dart';
 import 'calendar_service.dart';
 import 'calendar_service_rest.dart';
 
+/// Genera una sola vez la URL de autorización (el cliente OAuth no permite
+/// pedirla dos veces) y le añade los parámetros para obtener el token de
+/// renovación.
+Uri googleAuthorizationUrl(
+    oauth2.AuthorizationCodeGrant grant, Uri redirectUri) {
+  final baseUrl = grant.getAuthorizationUrl(
+    redirectUri,
+    scopes: const <String>[
+      'https://www.googleapis.com/auth/calendar',
+      'openid',
+      'email',
+      'profile',
+    ],
+    state: 'todo-calendar',
+  );
+  return baseUrl.replace(queryParameters: <String, String>{
+    ...baseUrl.queryParameters,
+    'access_type': 'offline',
+    'prompt': 'consent',
+  });
+}
+
 class IoCalendarService implements CalendarService {
   final http.Client _httpClient = http.Client();
-  late final CalendarRestClient _restClient = CalendarRestClient(_httpClient);
 
   oauth2.Client? _oauthClient;
+  String _clientId = '';
+  String _clientSecret = '';
+
+  /// El cliente OAuth renueva solo el token de acceso cuando caduca.
+  CalendarRestClient get _restClient =>
+      CalendarRestClient(_oauthClient ?? _httpClient);
   String? _email;
   String? _lastError;
   List<CalendarListItemModel> _calendars = const <CalendarListItemModel>[];
@@ -30,8 +57,11 @@ class IoCalendarService implements CalendarService {
       _lastError = 'Falta el Desktop Client ID de Google en Ajustes.';
       return false;
     }
+    _clientId = settings.desktopClientId.trim();
+    _clientSecret = settings.desktopClientSecret.trim();
+    HttpServer? server;
     try {
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final redirectUri =
           Uri.parse('http://127.0.0.1:${server.port}/oauth2callback');
       final grant = oauth2.AuthorizationCodeGrant(
@@ -42,33 +72,7 @@ class IoCalendarService implements CalendarService {
             ? null
             : settings.desktopClientSecret,
       );
-      final authorizationUrl = grant
-          .getAuthorizationUrl(
-        redirectUri,
-        scopes: const <String>[
-          'https://www.googleapis.com/auth/calendar',
-          'openid',
-          'email',
-          'profile',
-        ],
-        state: 'todo-calendar',
-      )
-          .replace(queryParameters: <String, String>{
-        ...grant
-            .getAuthorizationUrl(
-              redirectUri,
-              scopes: const <String>[
-                'https://www.googleapis.com/auth/calendar',
-                'openid',
-                'email',
-                'profile',
-              ],
-              state: 'todo-calendar',
-            )
-            .queryParameters,
-        'access_type': 'offline',
-        'prompt': 'consent',
-      });
+      final authorizationUrl = googleAuthorizationUrl(grant, redirectUri);
 
       if (!await launchUrl(authorizationUrl,
           mode: LaunchMode.externalApplication)) {
@@ -106,6 +110,7 @@ class IoCalendarService implements CalendarService {
       _lastError = null;
       return true;
     } catch (error) {
+      await server?.close(force: true);
       _lastError = error.toString();
       return false;
     }
@@ -129,6 +134,8 @@ class IoCalendarService implements CalendarService {
     return jsonEncode(<String, dynamic>{
       'credentials': client.credentials.toJson(),
       'email': email,
+      'clientId': _clientId,
+      'clientSecret': _clientSecret,
       'calendars': _calendars
           .map((calendar) => <String, dynamic>{
                 'id': calendar.id,
@@ -155,7 +162,7 @@ class IoCalendarService implements CalendarService {
   Future<TaskModel> importEventAsTask(
       {required CalendarEventModel event}) async {
     return TaskModel(
-      id: 'calendar-${event.id}',
+      id: 'calendar-${event.googleEventId ?? event.id}',
       title: event.title,
       description: event.description,
       scheduledAt: event.startAt,
@@ -163,7 +170,7 @@ class IoCalendarService implements CalendarService {
       calendarLink: CalendarLink(
         provider: CalendarProvider.google,
         calendarId: event.calendarId,
-        eventId: event.id,
+        eventId: event.googleEventId ?? event.id,
         syncStatus: CalendarSyncStatus.synced,
         lastSyncedAt: DateTime.now(),
       ),
@@ -182,21 +189,31 @@ class IoCalendarService implements CalendarService {
   }
 
   @override
-  Future<List<CalendarEventModel>> listEvents({
-    required CalendarIntegrationSettings settings,
+  Future<CalendarRemoteDelta> pullEvents({
+    required String syncToken,
     required DateTime from,
     required DateTime to,
-  }) async {
-    final token = _oauthClient?.credentials.accessToken;
-    if (token == null) {
-      return const <CalendarEventModel>[];
+  }) {
+    _requireConnection();
+    return _restClient.pullChanges(syncToken: syncToken, from: from, to: to);
+  }
+
+  @override
+  Future<CalendarEventModel> pushEvent(CalendarEventModel event) {
+    _requireConnection();
+    return _restClient.pushEvent(event);
+  }
+
+  @override
+  Future<void> deleteEvent(String googleEventId) {
+    _requireConnection();
+    return _restClient.deleteEvent(googleEventId);
+  }
+
+  void _requireConnection() {
+    if (_oauthClient == null) {
+      throw Exception('Conecta Google Calendar antes de sincronizar.');
     }
-    return _restClient.listEvents(
-      accessToken: token,
-      calendarId: settings.selectedCalendarId,
-      from: from,
-      to: to,
-    );
   }
 
   @override
@@ -209,7 +226,15 @@ class IoCalendarService implements CalendarService {
           .cast<String, dynamic>();
       final credentials =
           oauth2.Credentials.fromJson(data['credentials'] as String);
-      _oauthClient = oauth2.Client(credentials, httpClient: _httpClient);
+      _clientId = data['clientId'] as String? ?? '';
+      _clientSecret = data['clientSecret'] as String? ?? '';
+      _oauthClient = oauth2.Client(
+        credentials,
+        identifier: _clientId.isEmpty ? null : _clientId,
+        secret: _clientSecret.isEmpty ? null : _clientSecret,
+        basicAuth: false,
+        httpClient: _httpClient,
+      );
       _email = data['email'] as String?;
       final calendars =
           data['calendars'] as List<dynamic>? ?? const <dynamic>[];

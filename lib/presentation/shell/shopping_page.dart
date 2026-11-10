@@ -442,7 +442,7 @@ class _ShoppingImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-        color: const Color(0xFFF3EEE5),
+        color: context.visuals.panelAlt,
         child: FutureBuilder<String>(
           future:
               controller.shoppingImageAbsolutePath(item, thumbnail: thumbnail),

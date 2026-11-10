@@ -48,6 +48,7 @@ part 'todo_workspace_hogar.dart';
 part 'todo_workspace_notificaciones.dart';
 part 'todo_workspace_nube.dart';
 part 'todo_workspace_plantas.dart';
+part 'todo_workspace_miniaturas.dart';
 part 'todo_workspace_recetas.dart';
 part 'todo_workspace_resumen.dart';
 part 'todo_workspace_ropa.dart';
@@ -88,7 +89,8 @@ class TodoWorkspace extends ChangeNotifier {
       KnowledgeService(),
     );
     try {
-      controller._writerLock = await RuntimeWriterLock.acquire(RuntimeWriterLock.defaultDirectory());
+      controller._writerLock =
+          await RuntimeWriterLock.acquire(RuntimeWriterLock.defaultDirectory());
       await controller._load();
       controller.resumeFocusAfterStartup();
       await controller._importantAlarmService.initialize(
@@ -122,6 +124,7 @@ class TodoWorkspace extends ChangeNotifier {
     AppSection.expenses,
     AppSection.calendar,
     AppSection.library,
+    AppSection.miniatures,
     AppSection.wardrobe,
     AppSection.household,
     AppSection.plants,
@@ -140,11 +143,12 @@ class TodoWorkspace extends ChangeNotifier {
     TodoStateRepository? stateRepository,
     ShoppingPriceService? priceService,
     SteamService? steamService,
+    CalendarRepository? calendarService,
   }) {
     final controller = TodoWorkspace._(
       stateRepository ?? _InMemoryTodoStateRepository(snapshot),
       SupabaseCloudSyncRepository(SupabaseCloudService()),
-      CalendarServiceRepository(createCalendarService()),
+      calendarService ?? CalendarServiceRepository(createCalendarService()),
       NotificationServiceRepository(createNotificationService()),
       ImportantAlarmService(enabled: false),
       TaskSchedulerService(),
@@ -206,6 +210,7 @@ class TodoWorkspace extends ChangeNotifier {
   final List<Recipe> _recipes = <Recipe>[];
   final List<WeeklyMenu> _weeklyMenus = <WeeklyMenu>[];
   final List<JournalEntry> _journalEntries = <JournalEntry>[];
+  final List<MiniatureKit> _miniatureKits = <MiniatureKit>[];
   final List<Trip> _trips = <Trip>[];
   final List<FocusSession> _focusSessions = <FocusSession>[];
   ActiveFocus? _activeFocus;
@@ -214,6 +219,8 @@ class TodoWorkspace extends ChangeNotifier {
   final HouseholdAssetService _householdAssets = HouseholdAssetService();
   final HouseholdAssetService _journalAssets =
       HouseholdAssetService(directoryName: 'journal');
+  final HouseholdAssetService _miniatureAssets =
+      HouseholdAssetService(directoryName: 'miniatures');
   final HouseholdAssetService _tripAssets =
       HouseholdAssetService(directoryName: 'trips');
   final HouseholdAssetService _shoppingAssets =
@@ -240,12 +247,16 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryAreaView _libraryAreaView = LibraryAreaView.library;
   List<AppSection> _navOrder = List<AppSection>.of(defaultNavOrder);
   AppVisibilitySettings _visibilitySettings = const AppVisibilitySettings();
+  bool _darkMode = false;
   DateTime? _manualLogicalDate;
   DateTime? _manualLogicalDateStartedAt;
   DateTime? _lastSavedAt;
   String _saveError = '';
   bool _loadedFromPersistence = false;
   bool _calendarBusy = false;
+  bool _calendarSyncing = false;
+  bool _calendarSyncAgain = false;
+  Timer? _calendarSyncTimer;
   bool _notificationBusy = false;
   bool _notificationAvailable = false;
   int _scheduledNotificationCount = 0;
@@ -317,6 +328,8 @@ class TodoWorkspace extends ChangeNotifier {
       List<WeeklyMenu>.unmodifiable(_weeklyMenus);
   List<JournalEntry> get journalEntries =>
       List<JournalEntry>.unmodifiable(_journalEntries);
+  List<MiniatureKit> get miniatureKits =>
+      List<MiniatureKit>.unmodifiable(_miniatureKits);
   List<Trip> get trips => List<Trip>.unmodifiable(_trips);
   List<FocusSession> get focusSessions =>
       List<FocusSession>.unmodifiable(_focusSessions);
@@ -338,12 +351,12 @@ class TodoWorkspace extends ChangeNotifier {
   LibraryAreaView get libraryAreaView => _libraryAreaView;
   List<AppSection> get navOrder => List<AppSection>.unmodifiable(_navOrder);
   AppVisibilitySettings get visibilitySettings => _visibilitySettings;
-  List<AppSection> get visibleNavOrder =>
-      navOrder
-          .where((section) =>
-              section != AppSection.completed &&
-              _visibilitySettings.sectionVisible(section))
-          .toList();
+  bool get darkMode => _darkMode;
+  List<AppSection> get visibleNavOrder => navOrder
+      .where((section) =>
+          section != AppSection.completed &&
+          _visibilitySettings.sectionVisible(section))
+      .toList();
 
   void setSectionVisible(AppSection section, bool visible) {
     if (section == AppSection.settings) return;
@@ -353,11 +366,8 @@ class TodoWorkspace extends ChangeNotifier {
     } else {
       hidden.add(section.name);
     }
-    _visibilitySettings = AppVisibilitySettings(
-      hiddenSections: hidden.toList(),
-      hiddenTabs: _visibilitySettings.hiddenTabs,
-      hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
-    );
+    _visibilitySettings =
+        _visibilitySettings.copyWith(hiddenSections: hidden.toList());
     if (!_visibilitySettings.sectionVisible(_section)) {
       _section = visibleNavOrder.first;
       _openKnowledgeLibraryItem = null;
@@ -377,14 +387,10 @@ class TodoWorkspace extends ChangeNotifier {
     } else {
       hidden.add(tab);
     }
-    _visibilitySettings = AppVisibilitySettings(
-      hiddenSections: _visibilitySettings.hiddenSections,
-      hiddenTabs: {
-        ..._visibilitySettings.hiddenTabs,
-        section.name: hidden.toList()
-      },
-      hiddenCollectionWorks: _visibilitySettings.hiddenCollectionWorks,
-    );
+    _visibilitySettings = _visibilitySettings.copyWith(hiddenTabs: {
+      ..._visibilitySettings.hiddenTabs,
+      section.name: hidden.toList()
+    });
     _commit();
   }
 
@@ -396,10 +402,73 @@ class TodoWorkspace extends ChangeNotifier {
     } else {
       obras.remove(clave);
     }
-    _visibilitySettings = AppVisibilitySettings(
-      hiddenSections: _visibilitySettings.hiddenSections,
-      hiddenTabs: _visibilitySettings.hiddenTabs,
-      hiddenCollectionWorks: obras.toList(),
+    _visibilitySettings =
+        _visibilitySettings.copyWith(hiddenCollectionWorks: obras.toList());
+    _commit();
+  }
+
+  /// Guarda el orden elegido a mano para un apartado de una colección, con
+  /// la clave `coleccion/orden:Apartado`. Una lista vacía vuelve al orden del
+  /// catálogo.
+  void setCollectionGroupOrder(String clave, List<String> ids) {
+    final prefijo = '$clave=';
+    final obras = _visibilitySettings.hiddenCollectionWorks
+        .where((entrada) => !entrada.startsWith(prefijo))
+        .toList();
+    if (ids.isNotEmpty) obras.add('$prefijo${ids.join('|')}');
+    _visibilitySettings =
+        _visibilitySettings.copyWith(hiddenCollectionWorks: obras);
+    _commit();
+  }
+
+  /// Guarda los cambios propios de una obra del catálogo de Colecciones
+  /// (`clave` es `coleccion/obra`); con `null` vuelve a los datos originales.
+  void setCollectionWorkEdit(String clave, Map<String, dynamic>? campos) {
+    final ediciones = {..._visibilitySettings.collectionWorkEdits};
+    if (campos == null) {
+      ediciones.remove(clave);
+    } else {
+      ediciones[clave] = campos;
+    }
+    _visibilitySettings =
+        _visibilitySettings.copyWith(collectionWorkEdits: ediciones);
+    _commit();
+  }
+
+  /// Muestra u oculta el acceso «Club de lectura» de la vista de libros.
+  void setReadingClubVisible(bool visible) {
+    if (_visibilitySettings.readingClubVisible == visible) return;
+    _visibilitySettings =
+        _visibilitySettings.copyWith(readingClubVisible: visible);
+    _commit();
+  }
+
+  /// Alterna el club entre la vista por clubs y la vista por fecha.
+  void setReadingClubByDate(bool porFecha) {
+    if (_visibilitySettings.readingClubByDate == porFecha) return;
+    _visibilitySettings =
+        _visibilitySettings.copyWith(readingClubByDate: porFecha);
+    _commit();
+  }
+
+  /// Añade una sesión de club o sustituye la que tenga el mismo `id`.
+  void saveReadingClubMeeting(ReadingClubMeeting meeting) {
+    final sesiones = [
+      for (final actual in _visibilitySettings.readingClubMeetings)
+        if (actual.id != meeting.id) actual,
+      meeting,
+    ];
+    _visibilitySettings =
+        _visibilitySettings.copyWith(readingClubMeetings: sesiones);
+    _commit();
+  }
+
+  void deleteReadingClubMeeting(String id) {
+    _visibilitySettings = _visibilitySettings.copyWith(
+      readingClubMeetings: [
+        for (final actual in _visibilitySettings.readingClubMeetings)
+          if (actual.id != id) actual,
+      ],
     );
     _commit();
   }
@@ -410,6 +479,7 @@ class TodoWorkspace extends ChangeNotifier {
   String get saveError => _saveError;
   bool get loadedFromPersistence => _loadedFromPersistence;
   bool get calendarBusy => _calendarBusy;
+  bool get isCalendarSyncing => _calendarSyncing;
   bool get notificationBusy => _notificationBusy;
   bool get notificationAvailable => _notificationAvailable;
   int get scheduledNotificationCount => _scheduledNotificationCount;
@@ -506,9 +576,8 @@ class TodoWorkspace extends ChangeNotifier {
     next.insert(newIndex.clamp(0, next.length), moved);
     var visibleIndex = 0;
     _navOrder = _navOrder
-        .map((section) => next.contains(section)
-            ? next[visibleIndex++]
-            : section)
+        .map((section) =>
+            next.contains(section) ? next[visibleIndex++] : section)
         .toList();
     _commit();
   }
@@ -543,16 +612,23 @@ class TodoWorkspace extends ChangeNotifier {
   }
 
   TaskAgenda get _taskAgenda => TaskAgenda(
-    tasks: _tasks, daySettings: _daySettings, now: now,
-    manualDate: _manualLogicalDate, manualStartedAt: _manualLogicalDateStartedAt,
-    sort: _todaySort,
-    categoryNames: TaskAgenda.firstNames(_categories.map((item) => (item.id, item.name))),
-    projectNames: TaskAgenda.firstNames(_projects.map((item) => (item.id, item.name))),
-  );
+        tasks: _tasks,
+        daySettings: _daySettings,
+        now: now,
+        manualDate: _manualLogicalDate,
+        manualStartedAt: _manualLogicalDateStartedAt,
+        sort: _todaySort,
+        categoryNames: TaskAgenda.firstNames(
+            _categories.map((item) => (item.id, item.name))),
+        projectNames: TaskAgenda.firstNames(
+            _projects.map((item) => (item.id, item.name))),
+      );
 
   DateTime logicalDate([DateTime? instant]) => _taskAgenda.logicalDate(instant);
-  DateTime _ruleBasedLogicalDate(DateTime value) => _taskAgenda.ruleBasedLogicalDate(value);
-  DateTime? _activeManualLogicalDate(DateTime value) => _taskAgenda.activeManualDate(value);
+  DateTime _ruleBasedLogicalDate(DateTime value) =>
+      _taskAgenda.ruleBasedLogicalDate(value);
+  DateTime? _activeManualLogicalDate(DateTime value) =>
+      _taskAgenda.activeManualDate(value);
 
   void advanceToNextLogicalDay() {
     final value = now;
@@ -615,12 +691,14 @@ class TodoWorkspace extends ChangeNotifier {
       recipes: recipes,
       weeklyMenus: weeklyMenus,
       journalEntries: journalEntries,
+      miniatureKits: miniatureKits,
       trips: trips,
       focusSessions: focusSessions,
       calendarEvents: calendarEvents,
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
       visibilitySettings: visibilitySettings,
+      darkMode: darkMode,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       navOrder: navOrder,
@@ -629,6 +707,12 @@ class TodoWorkspace extends ChangeNotifier {
 
   void updateSettings(DaySettings value) {
     _daySettings = value;
+    _commit();
+  }
+
+  void setDarkMode(bool value) {
+    if (_darkMode == value) return;
+    _darkMode = value;
     _commit();
   }
 
@@ -695,8 +779,11 @@ class TodoWorkspace extends ChangeNotifier {
 
   Future<void> _initializeStartupIntegrations() async {
     if (_calendarAccount != null) {
-      unawaited(refreshCalendarEvents());
+      unawaited(syncCalendar());
     }
+    // Cada pocos minutos se traen y envían los cambios del calendario.
+    _calendarSyncTimer = Timer.periodic(
+        const Duration(minutes: 5), (_) => unawaited(syncCalendar()));
     try {
       _cloudBusy = true;
       notifyListeners();
@@ -813,6 +900,9 @@ class TodoWorkspace extends ChangeNotifier {
     _journalEntries
       ..clear()
       ..addAll(snapshot.journalEntries);
+    _miniatureKits
+      ..clear()
+      ..addAll(snapshot.miniatureKits);
     _trips
       ..clear()
       ..addAll(snapshot.trips);
@@ -826,6 +916,7 @@ class TodoWorkspace extends ChangeNotifier {
     _daySettings = snapshot.daySettings;
     _wardrobeDisplaySettings = snapshot.wardrobeDisplaySettings;
     _visibilitySettings = snapshot.visibilitySettings;
+    _darkMode = snapshot.darkMode;
     _notificationSettings = snapshot.schemaVersion < 4
         ? const DeviceNotificationSettings()
         : snapshot.notificationSettings;
@@ -1290,6 +1381,7 @@ class TodoWorkspace extends ChangeNotifier {
       recipes: recipes,
       weeklyMenus: weeklyMenus,
       journalEntries: journalEntries,
+      miniatureKits: miniatureKits,
       trips: trips,
       focusSessions: focusSessions,
       activeFocus: _activeFocus,
@@ -1297,6 +1389,7 @@ class TodoWorkspace extends ChangeNotifier {
       daySettings: daySettings,
       wardrobeDisplaySettings: wardrobeDisplaySettings,
       visibilitySettings: visibilitySettings,
+      darkMode: darkMode,
       notificationSettings: notificationSettings,
       calendarSettings: calendarSettings,
       section: section,
@@ -1317,7 +1410,8 @@ class TodoWorkspace extends ChangeNotifier {
     );
   }
 
-  bool _recursOnDay(TaskModel task, DateTime day) => TaskAgenda.recursOnDay(task, day);
+  bool _recursOnDay(TaskModel task, DateTime day) =>
+      TaskAgenda.recursOnDay(task, day);
 
   Iterable<TaskModel> _completedRecurringOccurrences(TaskModel task) {
     return task.recurrenceCompletions.entries.map((entry) {
@@ -1422,6 +1516,7 @@ class TodoWorkspace extends ChangeNotifier {
     _recipes.clear();
     _weeklyMenus.clear();
     _journalEntries.clear();
+    _miniatureKits.clear();
     _trips.clear();
     _focusSessions.clear();
     _activeFocus = null;
@@ -1429,6 +1524,7 @@ class TodoWorkspace extends ChangeNotifier {
     _daySettings = const DaySettings();
     _wardrobeDisplaySettings = const WardrobeDisplaySettings();
     _visibilitySettings = const AppVisibilitySettings();
+    _darkMode = false;
     _notificationSettings = const DeviceNotificationSettings();
     _calendarSettings = const CalendarIntegrationSettings();
     _calendarAccount = null;
@@ -1452,10 +1548,20 @@ class TodoWorkspace extends ChangeNotifier {
         next.add(section);
       }
     }
-    for (final section in defaultNavOrder) {
-      if (!next.contains(section)) {
-        next.add(section);
+    // Una sección nueva aparece detrás de la que la precede en el orden por
+    // defecto, en lugar de al final de la barra.
+    for (var index = 0; index < defaultNavOrder.length; index++) {
+      final section = defaultNavOrder[index];
+      if (next.contains(section)) continue;
+      var position = next.length;
+      for (var previous = index - 1; previous >= 0; previous--) {
+        final found = next.indexOf(defaultNavOrder[previous]);
+        if (found != -1) {
+          position = found + 1;
+          break;
+        }
       }
+      next.insert(position, section);
     }
     return next;
   }
@@ -1682,6 +1788,7 @@ class TodoWorkspace extends ChangeNotifier {
     unawaited(_writerLock?.release());
     _saveDebounce?.cancel();
     _focusTimer?.cancel();
+    _calendarSyncTimer?.cancel();
     unawaited(_notificationActionSubscription.cancel());
     _importantAlarmService.removeListener(_handleImportantAlarmChange);
     _importantAlarmService.dispose();

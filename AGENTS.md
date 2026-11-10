@@ -2,17 +2,18 @@
 
 ## Lecciones
 
-- Cuando se añadan textos al ejecutable nativo de Windows, compilar sus fuentes en UTF-8 y comprobar las tildes en el binario instalado.
-- Cuando se unifiquen las fichas de Biblioteca, fijar la misma altura de cabecera para todas y colocar saga y orden a la derecha del título; mantener los datos en una columna ajustada al alto disponible sin scroll. En lectura, integrar «Información» y «Citas» en la cabecera, omitir «Libro», colocar el porcentaje en la esquina de las portadas y mostrar página, total y capítulo al pasar el cursor, sin fechas ni posiciones técnicas en las citas.
+- Cuando se pida ocultar el texto desde la rotación de la barra del Kindle, incluir un paso de solo barra, sin porcentaje, páginas ni tiempos, y conservar el interruptor de porcentaje en «Barra de estado». Mostrar el porcentaje total por defecto en los demás pasos, sin la etiqueta «Libro» ni un paso separado de porcentaje; usar todo el ancho entre márgenes con un trazo continuo sin marcas de capítulos y el dato debajo. Distinguir el tiempo del capítulo, conservar el formato de tiempo elegido y comprobar el carrusel mediante capturas y su persistencia, sin hora, batería ni páginas restantes.
+- Cuando se actualicen logros, notificar al instante a portadas, filtros y Recientes; limitar las acciones masivas a los juegos de la vista filtrada. En Recientes, mostrar porcentaje solo en libros y juegos en curso. Al registrar juegos, usar «Plataforma» para indicar dónde juega el usuario, con «PC» por defecto; cambiarla solo por indicación expresa o si no existe versión de PC y no hay una excepción acordada, como Bloodborne. No enumerar plataformas disponibles ni confundir Steam con la plataforma.
+- Cuando el Kindle despierte desde un libro, recuperar directamente la lectura y reservar Todo y la portada interactiva para cuando ya estuvieran abiertos. En navegación, hacer que la casa y el botón de explorador dentro de un libro abran «Mis libros», ofrecer un botón visible para volver a Todo, configurar KOReader en español y conservar Todo como inicio tras un arranque; al abrir un libro, mostrar un aviso breve sin rutas de archivos.
+- Cuando se presenten citas en varias vistas, reutilizar las mismas acciones de edición, borrado con confirmación y copia, y distinguir la nota personal en cursiva. En las fichas de Biblioteca, fijar la misma altura de cabecera para todas y colocar saga y orden a la derecha del título; mantener los datos en una columna ajustada al alto disponible sin scroll. Ajustar los selectores de fila al contenido y a su tipografía, con el menú justo debajo. En lectura, integrar «Información» y «Citas» en la cabecera, omitir «Libro», permitir editar el progreso en «Información», colocar el porcentaje en la esquina de las portadas y mostrar página, total y capítulo al pasar el cursor. Aprovechar la altura de «Citas» con varias citas y edición individual, paginando solo las que no quepan, sin fechas, posiciones técnicas ni títulos o contadores redundantes.
+- Cuando un aviso inferior sea temporal, indicar `persist: false` aunque incluya una acción y comprobar que desaparece al vencer su duración; Flutter hace permanentes por defecto los avisos con acciones.
+- Cuando se actualice la instalación de Windows, recompilar también el agente LAN y verificar el ejecutable instalado, una operación real de lectura y su reinicio automático tras una caída, sin depender de abrir Ajustes; no interpretar un estado antiguo como prueba de que sigue activo. Al añadir textos al ejecutable nativo, compilar sus fuentes en UTF-8 y comprobar las tildes en el binario instalado.
+- Cuando se revise la UI mediante capturas, usar la app maximizada y capturar cada vista completa, incluidos menús y diálogos, antes y después de corregirla; al ajustar un tema oscuro, adaptar también los fondos seleccionados y comprobar el contraste de textos y contadores en los dos temas.
+- Cuando se muestre lectura de KOReader, usar el mapa de la edición si existe; si falta, buscar un mapa compatible por ISBN o una fuente paginada antes de dar por cerrada la revisión. Calibre no garantiza ese mapa. Distinguir internamente pantallas y mapas sintéticos de páginas editoriales y conservar el porcentaje recibido sin mezclar totales. Contar las páginas leídas sobre el mismo mapa fijo, reuniendo sus fragmentos y conservando los segundos; no limitarse a renombrar pantallas. Si el usuario acepta una estimación, respetar su preferencia de mostrar solo «Página» en Todo, incluidas citas y descripciones del progreso.
 - Cuando se cotejen o trasladen libros del Kindle, normalizar metadatos y enlazar las fichas existentes, incluidas las completadas, antes de crear otras; comprobar la apertura real de los formatos ofrecidos y preparar EPUB para AZW3/KF8.
-- Cuando se ajuste la ficha de lectura, mostrar el progreso editable en «Información» y aprovechar la altura de «Citas» con varias citas y edición individual; paginar solo las que no quepan, sin scroll ni títulos o contadores redundantes.
-- Cuando se ajuste la barra de lectura del Kindle, usar todo el ancho entre márgenes con un trazo continuo sin marcas de capítulos y el dato debajo; sincronizar la escala con «Libro» o «Capítulo», conservar el formato de tiempo elegido y comprobar el carrusel mediante capturas y su persistencia, sin hora, batería ni páginas restantes.
-- Cuando se termine una instalación del Kindle, retirar los instaladores, marcadores informativos, volcados de diagnóstico y sus carpetas auxiliares; comprobar la limpieza sin borrar libros ni componentes activos.
-- Cuando se use un selector dentro de una fila de Biblioteca, ajustar el control al contenido y anclar su menú justo debajo; mantener la tipografía del valor de la fila.
 - Cuando se revise el índice de un ómnibus, distinguir las obras, sus capítulos y sus epígrafes, y contrastar las entradas con los encabezados del texto antes de afirmar que está completo.
-- Cuando se cambie una función del Kindle, mantener su fuente y pruebas en `kindle/` y verificar la actualización en el Kindle definitivo; conservar sus credenciales, libros, progreso y citas. No preparar paquetes ni perfiles de traslado salvo petición nueva del usuario.
+- Cuando se instale o actualice una función del Kindle, mantener su fuente y pruebas en `kindle/`, verificarla en el Kindle definitivo y retirar los instaladores, marcadores informativos, volcados de diagnóstico y sus carpetas auxiliares. Comprobar la limpieza conservando componentes activos, credenciales, libros, progreso y citas. No preparar paquetes ni perfiles de traslado salvo petición nueva del usuario.
 - Cuando se revise una pantalla congelada en KOReader, comprobar primero si el lector sigue vivo y revisar su error; probar los accesos a Todo desde lectura y explorador con las API de cierre propias de cada menú. Verificar también el refresco físico y los controles posteriores, porque el framebuffer no valida la tinta electrónica; mantener cancelables las consultas de red y probar con el PC inaccesible.
-- Cuando se facilite el acceso a los libros del Kindle, hacer que la casa y el botón de explorador dentro de un libro abran «Mis libros», ofrecer un botón visible para volver a Todo, configurar KOReader en español y conservar Todo como inicio predeterminado; al abrir un libro, mostrar un aviso breve sin rutas de archivos.
 - Cuando se ajuste la vista del Kindle, mostrar las subtareas con sus casillas desplazadas a la derecha según su nivel, aprovechar la altura útil y equilibrar la cabecera; ocultar prioridades, el reloj durante el reposo y los mensajes explicativos de reposo.
 - Cuando se agrupen elementos en carpetas, ofrecer desagrupar y volver a agrupar desde la interfaz, y conservar esa elección al reiniciar.
 - Cuando se amplíe la conexión de ChatGPT, reutilizar las herramientas del MCP local existente y añadir solo la adaptación necesaria del transporte y las escrituras de Todo abierto.
@@ -108,6 +109,10 @@ La app tiene:
   portadas en `assets/colecciones/portadas/`; sus obras usan los campos de
   `LibraryItem` y solo entran en Biblioteca al añadirlas. Las obras quitadas se
   guardan en `visibilitySettings.hiddenCollectionWorks`
+- `lib/presentation/shell/miniatures_page.dart`: Miniaturas (cajas de
+  Warhammer y similares con el estado de cada figura, guía de pintura editable
+  con lista de pinturas y fotos propias). Datos en `miniatureKits`; imágenes en
+  `Documents\Todo\miniatures`
 - `lib/presentation/shell/plants_page.dart`: catálogo de Plantas, fichas de
   cuidados, seguridad felina y rutinas enlazadas con tareas
 - `lib/presentation/shell/recipes_page.dart`: recetario visual, importación,
@@ -142,6 +147,7 @@ Secciones:
 - `--section=settings`
 - `--section=wardrobe`
 - `--section=household`
+- `--section=miniatures`
 - `--section=plants`
 - `--section=recipes`
 - `--section=journal`
@@ -216,6 +222,12 @@ inserción directa en la aplicación.
 Regla permanente: todo elemento que se añada a Biblioteca lleva metadatos y
 portada, y todo en castellano salvo que el usuario indique lo contrario.
 
+En juegos, `platform` describe la plataforma en la que juega el usuario, no
+la lista de versiones disponibles. Usar «PC» por defecto, también cuando se
+utilice Steam; respetar otra plataforma indicada expresamente o, si no existe
+versión de PC, la exclusiva correspondiente. Mantener las excepciones que el
+usuario haya pedido, como Bloodborne en «PC».
+
 1. Buscar datos reales (TMDB con `?language=es-ES`, Netflix, IGDB, Open
    Library…): título en castellano si existe, título original, año, director o
    autor, género, duración, país, sinopsis y reparto. Si hay varias obras con
@@ -244,6 +256,7 @@ en el MCP): es obligatorio al completar los metadatos de un libro o una películ
   `letterboxd.com/film/<slug>/` en el navegador integrado y comprobar título, año
   y director antes de guardar (`og:title`).
 - Mangas: enlazar siempre el tomo 1 en Goodreads, aunque la serie tenga más tomos.
+- Juegos: enlazar la página de Steam (`https://store.steampowered.com/app/<appid>/`) solo si el juego está en Steam; los demás (p. ej. Bloodborne) sin enlace.
 - Si hay duda razonable entre varias fichas, no adivinar: dejar el elemento sin
   enlace y preguntar al usuario.
 - En la app se edita en el diálogo del elemento y se abre con el botón de la ficha
@@ -282,6 +295,11 @@ referencia está en:
 ```text
 C:\Users\aries\AppData\Local\Programs\Todo\todo.exe
 ```
+
+Se instala siempre la compilación final, nunca la de depuración, que ocupa el
+doble de memoria: `flutter build windows --release` y después
+`tooling\install_todo_windows.ps1`, que ya toma la carpeta `Release` y rechaza
+una compilación de depuración.
 
 Antes de dar por terminada una actualización, hay que verificar técnicamente que
 la instalación contiene la compilación nueva. Codex no debe abrir ni manejar la

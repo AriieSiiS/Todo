@@ -36,6 +36,22 @@ minutos y botón para actualizar. Los datos que Steam no devuelve se muestran co
 desconocidos; un juego sin logros se distingue de una consulta fallida.
 Al abrir el trofeo se consulta automáticamente la conexión. No hay consultas
 periódicas en segundo plano.
+
+En Biblioteca → Juegos, el icono «Actualizar logros de esta vista» actualiza los
+juegos incluidos por el estado, año, búsqueda, universo y saga actuales. Conserva
+la selección inicial mientras termina, evita consultas duplicadas al mismo juego
+y resume los actualizados, los que necesitan enlace y los que fallaron. El botón
+muestra actividad y no admite otra actualización simultánea.
+Las portadas, el filtro de juegos al 100 % y «Recientes» reciben los cambios al
+actualizar logros, también desde la ficha individual. En «Recientes» solo los
+libros y juegos en curso muestran porcentaje: lectura para libros y logros para
+juegos. Si los logros todavía no están disponibles, se muestra solo el estado.
+Los juegos con todos los logros obtenidos muestran un borde plateado de 2 píxeles
+y un halo azulado, con un reflejo diagonal de 1,8 segundos cada 6 segundos,
+siguiendo el efecto de la web local Platino. El distintivo «100 %» se conserva.
+El reflejo se detiene al desactivar las animaciones del sistema y no intercepta
+clics ni menús de la portada. El efecto aparece y desaparece con los logros
+actualizados, sin cambiar el estado del juego.
 El título visible se obtiene de la biblioteca de Steam: el esquema de logros
 puede devolver un nombre interno distinto. Los porcentajes globales se
 normalizan tanto si Steam los envía como números como si los envía como texto.

@@ -128,7 +128,7 @@ class _LibraryGoalDetailsDialogState extends State<_LibraryGoalDetailsDialog> {
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(100, 48),
-                        backgroundColor: const Color(0xFFFFFCF8),
+                        backgroundColor: visuals.panel,
                         foregroundColor: visuals.textStrong,
                         side: const BorderSide(color: Color(0xFFE3D8CB)),
                         shape: RoundedRectangleBorder(
@@ -207,7 +207,7 @@ class _LibraryGoalDetailCover extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFCF8),
+              color: context.visuals.panel,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFFE3D8CB)),
             ),

@@ -53,9 +53,12 @@ class TaskAgenda {
         value.isBefore(manualStartedAt!)) {
       return null;
     }
-    return sameDay(ruleBasedLogicalDate(value), manualDate!)
-        ? null
-        : manualDate;
+    // El día manual solo vale mientras no cambie el día según la regla: si el
+    // día real avanza después de fijarlo, deja de aplicarse para siempre.
+    return sameDay(
+            ruleBasedLogicalDate(value), ruleBasedLogicalDate(manualStartedAt!))
+        ? manualDate
+        : null;
   }
 
   DateTime logicalDate([DateTime? instant]) {

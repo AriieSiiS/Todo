@@ -483,8 +483,8 @@ class _QuickCaptureBar extends StatelessWidget {
     final action = FilledButton.tonal(
       onPressed: () => showQuickNoteComposer(context, controller),
       style: FilledButton.styleFrom(
-        backgroundColor: const Color(0xFFF7F1E8),
-        foregroundColor: const Color(0xFF243127),
+        backgroundColor: visuals.panelAlt,
+        foregroundColor: visuals.textStrong,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
@@ -690,7 +690,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                         height: 58,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F0E8),
+                          color: visuals.panelAlt,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE2D5C4)),
                         ),
@@ -773,7 +773,7 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                   child: Container(
                     key: const ValueKey('editorContenidoNota'),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFCF8),
+                      color: visuals.panel,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0xFFE2D5C4)),
                     ),
@@ -788,16 +788,20 @@ class _QuickNoteComposerDialogState extends State<_QuickNoteComposerDialog> {
                       characterShortcutEvents: _noteCharacterShortcutEvents,
                       editorStyle: EditorStyle.desktop(
                         padding: const EdgeInsets.all(18),
-                        cursorColor: const Color(0xFF607A4D),
-                        selectionColor: const Color(0xFFD8E4CF),
-                        textStyleConfiguration: const TextStyleConfiguration(
+                        cursorColor: visuals.accent,
+                        selectionColor: visuals.accent.withValues(alpha: 0.3),
+                        textStyleConfiguration: TextStyleConfiguration(
                           text: TextStyle(
                             fontSize: 16,
                             height: 1.15,
-                            color: Color(0xFF2D2A25),
+                            color: visuals.textStrong,
+                            fontFamily: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.fontFamily,
                           ),
                           lineHeight: 1.15,
-                          bold: TextStyle(fontWeight: FontWeight.w800),
+                          bold: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -980,7 +984,7 @@ class _NoteFormattingToolbar extends StatelessWidget {
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F0E8),
+            color: context.visuals.panelAlt,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -1095,8 +1099,10 @@ class _NoteFormatButton extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       style: IconButton.styleFrom(
-        backgroundColor: active ? const Color(0xFFDCE8D3) : Colors.transparent,
-        foregroundColor: const Color(0xFF31472F),
+        backgroundColor: active
+            ? context.visuals.accent.withValues(alpha: 0.16)
+            : Colors.transparent,
+        foregroundColor: context.visuals.textStrong,
       ),
       icon: Icon(icon, size: 20),
     );
@@ -1116,10 +1122,10 @@ class _SurfaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.74),
+        color: context.visuals.panel,
         borderRadius: BorderRadius.circular(26),
         border: Border.all(
-          color: const Color(0xFFE5D8C7),
+          color: context.visuals.panelBorder,
         ),
         boxShadow: const [
           BoxShadow(
@@ -1154,14 +1160,14 @@ class _SoftChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color?.withValues(alpha: 0.14) ?? const Color(0xFFF0E7DA),
+        color: color?.withValues(alpha: 0.14) ?? context.visuals.panelAlt,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: color ?? const Color(0xFF5A5A57)),
+            Icon(icon, size: 15, color: color ?? context.visuals.textMuted),
             const SizedBox(width: 6),
           ],
           Text(label, style: const TextStyle(letterSpacing: 0)),
@@ -1200,7 +1206,10 @@ class _HeaderActionButton extends StatelessWidget {
           backgroundColor: const Color(0xFF263625),
           foregroundColor: const Color(0xFFFFFCF8),
           padding: const EdgeInsets.symmetric(horizontal: 18),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: Theme.of(context)
+              .textTheme
+              .labelLarge!
+              .copyWith(fontSize: 15, fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
@@ -1237,10 +1246,13 @@ class _HeaderSecondaryButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(154, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18),
-          backgroundColor: Colors.white.withValues(alpha: 0.62),
-          side: const BorderSide(color: Color(0xFFE8DCCB)),
-          foregroundColor: const Color(0xFF2D2A25),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          backgroundColor: context.visuals.panel,
+          side: BorderSide(color: context.visuals.panelBorder),
+          foregroundColor: context.visuals.textStrong,
+          textStyle: Theme.of(context)
+              .textTheme
+              .labelLarge!
+              .copyWith(fontSize: 15, fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
@@ -1371,7 +1383,7 @@ class _SectionTabBar extends StatelessWidget {
           width: 2,
         ),
       ),
-      labelColor: const Color(0xFF51693E),
+      labelColor: visuals.accent,
       unselectedLabelColor: visuals.textMuted,
       labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       unselectedLabelStyle:
@@ -1414,7 +1426,8 @@ class _FilterPill extends StatelessWidget {
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE8F1DD) : Colors.white,
+          color:
+              selected ? visuals.accent.withValues(alpha: 0.16) : visuals.panel,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: visuals.pageBorder),
         ),
@@ -1425,7 +1438,7 @@ class _FilterPill extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: const Color(0xFF61764C),
+                color: visuals.accent,
               ),
               const SizedBox(width: 7),
             ],

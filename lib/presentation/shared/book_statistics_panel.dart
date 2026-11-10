@@ -4,14 +4,18 @@ import '../../domain/models.dart';
 String _statisticsPageUnit(Iterable<BookReadingStatistics> sources) {
   final units = {
     for (final source in sources)
-      if (source.periods.any((p) => p.pages > 0)) source.pageUnit
+      if (source.periods.any((p) => p.pages > 0))
+        source.pageUnit == 'estimated_page' ? 'page' : source.pageUnit
   };
-  return units.length == 1 ? units.single : 'unknown';
+  return units.isEmpty
+      ? 'page'
+      : (units.length == 1 ? units.single : 'unknown');
 }
 
 String _statisticsPageTitle(String unit) => switch (unit) {
       'screen' => 'Pantallas leídas',
       'page' => 'Páginas leídas',
+      'estimated_page' => 'Páginas leídas',
       _ => 'Posiciones registradas'
     };
 

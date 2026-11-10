@@ -28,20 +28,30 @@ class HouseholdAssetService {
   final String directoryName;
 
   Future<Directory> householdDirectory() async {
-    if (_rootOverride != null) {
-      await _rootOverride.create(recursive: true);
-      return _rootOverride;
-    }
+    final directory = _directory();
+    await directory.create(recursive: true);
+    return directory;
+  }
+
+  Directory _directory() {
+    if (_rootOverride != null) return _rootOverride;
     final home = Platform.environment['USERPROFILE'] ??
         Platform.environment['HOME'] ??
         Directory.current.path;
     final documents = Directory('$home${Platform.pathSeparator}Documents');
     final base = documents.existsSync() ? documents : Directory(home);
-    final directory = Directory(
+    return Directory(
       '${base.path}${Platform.pathSeparator}Todo${Platform.pathSeparator}$directoryName',
     );
-    await directory.create(recursive: true);
-    return directory;
+  }
+
+  /// Ruta absoluta sin crear la carpeta: sirve para pintar imágenes que ya
+  /// existen sin esperar a una operación de disco.
+  String absolutePathSync(String relativePath) {
+    if (relativePath.trim().isEmpty) return '';
+    final normalized = relativePath.replaceAll('\\', '/');
+    if (normalized.startsWith('/') || normalized.contains('../')) return '';
+    return '${_directory().path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
   }
 
   Future<String> absolutePath(String relativePath) async {

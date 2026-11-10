@@ -16,10 +16,23 @@ class TaskSchedulerService {
     }
 
     final plans = <NotificationPlan>[];
+    final tasksById = {for (final task in tasks) task.id: task};
+    bool belongsToPausedRoutine(TaskModel task) {
+      final visited = <String>{};
+      TaskModel? current = task;
+      while (current != null && visited.add(current.id)) {
+        if (current.routinePaused && current.status == TaskStatus.archived) {
+          return true;
+        }
+        current = tasksById[current.parentTaskId];
+      }
+      return false;
+    }
 
     for (final task in tasks) {
       final scheduledAt = task.scheduledAt;
       if (task.status != TaskStatus.active ||
+          belongsToPausedRoutine(task) ||
           scheduledAt == null ||
           task.reminderRules.isEmpty) {
         continue;
@@ -67,7 +80,7 @@ class TaskSchedulerService {
             id: 100000000 + _dateKey(trigger),
             title: 'Comienza tu día real',
             body:
-                'Tienes ${tasks.where((task) => task.status == TaskStatus.active).length} tareas activas para revisar.',
+                'Tienes ${tasks.where((task) => task.status == TaskStatus.active && !belongsToPausedRoutine(task)).length} tareas activas para revisar.',
             when: trigger,
           ),
         );

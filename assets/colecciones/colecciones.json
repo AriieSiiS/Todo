@@ -65,7 +65,687 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/28-dias-despues.jpg"
+  },
+  {
+   "id": "agatha-christie",
+   "nombre": "Agatha Christie",
+   "alias": [
+    "Miss Marple",
+    "Tommy y Tuppence"
+   ],
+   "universo": "Agatha Christie",
+   "grupos": [
+    {
+     "nombre": "Miss Marple",
+     "obras": [
+      {
+       "id": "muerte-en-la-vicaria",
+       "type": "book",
+       "title": "Muerte en la vicaría",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-muerte-en-la-vicaria.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El coronel Protheroe aparece muerto en el despacho del vicario de St. Mary Mead y Miss Marple sospecha de medio pueblo. Primera novela de la detective.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1930,
+       "pages": "420",
+       "externalUrl": "https://www.goodreads.com/book/show/42090921",
+       "collectionNumber": 1
+      },
+      {
+       "id": "un-cadaver-en-la-biblioteca",
+       "type": "book",
+       "title": "Un cadáver en la biblioteca",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-un-cadaver-en-la-biblioteca.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El cuerpo de una joven desconocida aparece una mañana en la biblioteca de los Bantry, amigos de Miss Marple.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1942,
+       "pages": "173",
+       "externalUrl": "https://www.goodreads.com/book/show/36548277-un-cad-ver-en-la-biblioteca",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-caso-de-los-anonimos",
+       "type": "book",
+       "title": "El caso de los anónimos",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-caso-de-los-anonimos.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una oleada de cartas anónimas envenena la vida de un pueblo hasta que una de ellas acaba en suicidio.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1942,
+       "pages": "238",
+       "externalUrl": "https://www.goodreads.com/book/show/1577200",
+       "collectionNumber": 3
+      },
+      {
+       "id": "se-anuncia-un-asesinato",
+       "type": "book",
+       "title": "Se anuncia un asesinato",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-se-anuncia-un-asesinato.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un anuncio en el periódico local cita a los vecinos a un asesinato que ocurrirá un viernes a las seis y media.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1950,
+       "pages": "320",
+       "externalUrl": "https://www.goodreads.com/book/show/601519",
+       "collectionNumber": 4
+      },
+      {
+       "id": "el-truco-de-los-espejos",
+       "type": "book",
+       "title": "El truco de los espejos",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-truco-de-los-espejos.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Miss Marple visita a una amiga de la infancia en una mansión convertida en reformatorio, donde un disparo acaba en asesinato.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1952,
+       "pages": "217",
+       "externalUrl": "https://www.goodreads.com/book/show/74501981",
+       "collectionNumber": 5
+      },
+      {
+       "id": "un-punado-de-centeno",
+       "type": "book",
+       "title": "Un puñado de centeno",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-un-punado-de-centeno.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un financiero muere envenenado con centeno en el bolsillo, y otras muertes en la casa siguen una canción infantil.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1953,
+       "pages": "195",
+       "externalUrl": "https://www.goodreads.com/book/show/24769233",
+       "collectionNumber": 6
+      },
+      {
+       "id": "el-tren-de-las-4-50",
+       "type": "book",
+       "title": "El tren de las 4.50",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-tren-de-las-4-50.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una amiga de Miss Marple ve desde su tren cómo estrangulan a una mujer en otro que circula en paralelo, pero nadie encuentra el cadáver.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1957,
+       "pages": "283",
+       "externalUrl": "https://www.goodreads.com/book/show/60380332",
+       "collectionNumber": 7
+      },
+      {
+       "id": "el-espejo-se-rajo-de-parte-a-parte",
+       "type": "book",
+       "title": "El espejo se rajó de parte a parte",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-espejo-se-rajo-de-parte-a-parte.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una vecina muere envenenada durante la fiesta de una famosa actriz que se ha mudado a St. Mary Mead.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1962,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/9644696",
+       "collectionNumber": 8
+      },
+      {
+       "id": "misterio-en-el-caribe",
+       "type": "book",
+       "title": "Misterio en el Caribe",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-misterio-en-el-caribe.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "De vacaciones en el Caribe, Miss Marple escucha la historia de un asesino justo antes de que el narrador muera.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1964,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/516122",
+       "collectionNumber": 9
+      },
+      {
+       "id": "en-el-hotel-bertram",
+       "type": "book",
+       "title": "En el hotel Bertram",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-en-el-hotel-bertram.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un elegante hotel londinense que parece detenido en el tiempo esconde algo más que nostalgia eduardiana.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1965,
+       "pages": "255",
+       "externalUrl": "https://www.goodreads.com/book/show/212706541-en-el-hotel-bertram",
+       "collectionNumber": 10
+      },
+      {
+       "id": "nemesis",
+       "type": "book",
+       "title": "Némesis",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-nemesis.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un millonario fallecido deja a Miss Marple un encargo póstumo: resolver un crimen del que no le da ningún detalle.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1971,
+       "pages": "272",
+       "externalUrl": "https://www.goodreads.com/book/show/151463934",
+       "collectionNumber": 11
+      },
+      {
+       "id": "un-crimen-dormido",
+       "type": "book",
+       "title": "Un crimen dormido",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-un-crimen-dormido.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una joven compra una casa en Inglaterra que le resulta extrañamente familiar y recuerda un asesinato que vio de niña.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1976,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/24114030",
+       "collectionNumber": 12
+      },
+      {
+       "id": "miss-marple-y-trece-problemas",
+       "type": "book",
+       "title": "Miss Marple y trece problemas",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-miss-marple-y-trece-problemas.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Trece casos que Miss Marple y sus amigos plantean en reuniones de sobremesa, con la anciana resolviéndolos todos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1932,
+       "pages": "238",
+       "externalUrl": "https://www.goodreads.com/book/show/42274356"
+      },
+      {
+       "id": "los-ultimos-casos-de-miss-marple",
+       "type": "book",
+       "title": "Los últimos casos de Miss Marple",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-los-ultimos-casos-de-miss-marple.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Relatos publicados después de la muerte de la autora con los últimos casos de la detective.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1979,
+       "pages": "189",
+       "externalUrl": "https://www.goodreads.com/book/show/202719063"
+      }
+     ]
+    },
+    {
+     "nombre": "Tommy y Tuppence",
+     "obras": [
+      {
+       "id": "el-misterioso-senor-brown",
+       "type": "book",
+       "title": "El misterioso señor Brown",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterioso-senor-brown.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Tommy y Tuppence, dos amigos sin trabajo tras la Primera Guerra Mundial, montan una agencia de aventuras y se topan con una conspiración.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1922,
+       "pages": "298",
+       "externalUrl": "https://www.goodreads.com/book/show/61375936",
+       "collectionNumber": 1
+      },
+      {
+       "id": "matrimonio-de-sabuesos",
+       "type": "book",
+       "title": "Matrimonio de sabuesos",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-matrimonio-de-sabuesos.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Ya casados, Tommy y Tuppence dirigen una agencia de detectives y resuelven casos imitando a detectives famosos. Relatos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1929,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/25069512",
+       "collectionNumber": 2
+      },
+      {
+       "id": "el-misterio-de-sans-souci",
+       "type": "book",
+       "title": "El misterio de Sans-Souci",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterio-de-sans-souci.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "En plena Segunda Guerra Mundial, la pareja busca a dos espías nazis escondidos en una pensión de la costa inglesa.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1941,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/686180",
+       "collectionNumber": 3
+      },
+      {
+       "id": "el-cuadro",
+       "type": "book",
+       "title": "El cuadro",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-cuadro.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Tras visitar a una tía en una residencia, Tuppence se obsesiona con un cuadro y con una anciana que desaparece.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1968,
+       "pages": "253",
+       "externalUrl": "https://www.goodreads.com/book/show/13272360",
+       "collectionNumber": 4
+      },
+      {
+       "id": "la-puerta-del-destino",
+       "type": "book",
+       "title": "La puerta del destino",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-puerta-del-destino.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "En su nueva casa, Tommy y Tuppence descubren en un libro infantil un mensaje sobre una muerte ocurrida hace décadas. Última novela escrita por la autora.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1973,
+       "pages": "249",
+       "externalUrl": "https://www.goodreads.com/book/show/601528",
+       "collectionNumber": 5
+      }
+     ]
+    },
+    {
+     "nombre": "Otras novelas",
+     "obras": [
+      {
+       "id": "el-hombre-del-traje-color-castano",
+       "type": "book",
+       "title": "El hombre del traje color castaño",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-hombre-del-traje-color-castano.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una joven aventurera presencia una muerte en el metro de Londres y sigue la pista hasta un barco rumbo a Sudáfrica.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1924,
+       "pages": "312",
+       "externalUrl": "https://www.goodreads.com/book/show/205027295"
+      },
+      {
+       "id": "el-secreto-de-chimneys",
+       "type": "book",
+       "title": "El secreto de Chimneys",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-secreto-de-chimneys.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Unas memorias comprometedoras y una joya robada reúnen a diplomáticos, ladrones y aristócratas en la mansión de Chimneys.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1925,
+       "pages": "272",
+       "externalUrl": "https://www.goodreads.com/book/show/213631954"
+      },
+      {
+       "id": "el-misterio-de-las-siete-esferas",
+       "type": "book",
+       "title": "El misterio de las siete esferas",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterio-de-las-siete-esferas.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un joven muere tras una broma con siete despertadores, y Bundle Brent descubre una sociedad secreta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1929,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/9292849"
+      },
+      {
+       "id": "el-misterio-de-sittaford",
+       "type": "book",
+       "title": "El misterio de Sittaford",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterio-de-sittaford.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Durante una sesión de espiritismo en una casa aislada por la nieve, un espíritu anuncia un asesinato que resulta cierto.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1931,
+       "pages": "255",
+       "externalUrl": "https://www.goodreads.com/book/show/1577202"
+      },
+      {
+       "id": "por-que-no-le-preguntan-a-evans",
+       "type": "book",
+       "title": "¿Por qué no le preguntan a Evans?",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-por-que-no-le-preguntan-a-evans.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Las últimas palabras de un moribundo al pie de un acantilado empujan a dos jóvenes a investigar por su cuenta.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1934,
+       "pages": "267",
+       "externalUrl": "https://www.goodreads.com/book/show/74809260"
+      },
+      {
+       "id": "y-no-quedo-ninguno",
+       "type": "book",
+       "title": "Y no quedó ninguno",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-y-no-quedo-ninguno.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Diez desconocidos invitados a una isla van muriendo uno a uno según una vieja canción. Antes se publicó en España como «Diez negritos».",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1939,
+       "pages": "222",
+       "externalUrl": "https://www.goodreads.com/book/show/2468267"
+      },
+      {
+       "id": "matar-es-facil",
+       "type": "book",
+       "title": "Matar es fácil",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-matar-es-facil.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una anciana cuenta en un tren que hay un asesino en su pueblo y muere antes de poder avisar a Scotland Yard.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1939,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/25982972"
+      },
+      {
+       "id": "hacia-cero",
+       "type": "book",
+       "title": "Hacia cero",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-hacia-cero.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El superintendente Battle descubre un asesinato preparado durante años que culmina en una casa junto al mar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1944,
+       "pages": "251",
+       "externalUrl": "https://www.goodreads.com/book/show/9920788"
+      },
+      {
+       "id": "la-venganza-de-nofret",
+       "type": "book",
+       "title": "La venganza de Nofret",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-venganza-de-nofret.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "En el antiguo Egipto, la concubina de un sacerdote siembra la discordia en la familia y su muerte desata una serie de crímenes.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1944,
+       "pages": "203",
+       "externalUrl": "https://www.goodreads.com/book/show/8605412"
+      },
+      {
+       "id": "cianuro-espumoso",
+       "type": "book",
+       "title": "Cianuro espumoso",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-cianuro-espumoso.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una mujer muere envenenada en su cumpleaños y, un año después, su viudo reúne a los mismos invitados en el mismo restaurante.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1945,
+       "pages": "284",
+       "externalUrl": "https://www.goodreads.com/book/show/42625037"
+      },
+      {
+       "id": "la-casa-torcida",
+       "type": "book",
+       "title": "La casa torcida",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-casa-torcida.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un anciano millonario muere envenenado y todos los miembros de su extraña familia tenían motivos. Una de sus favoritas de la autora.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1949,
+       "pages": "239",
+       "externalUrl": "https://www.goodreads.com/book/show/38531615"
+      },
+      {
+       "id": "intriga-en-bagdad",
+       "type": "book",
+       "title": "Intriga en Bagdad",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-intriga-en-bagdad.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una joven sin oficio viaja a Bagdad tras un enamoramiento y queda atrapada en una conspiración internacional.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1951,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/601510"
+      },
+      {
+       "id": "destino-desconocido",
+       "type": "book",
+       "title": "Destino desconocido",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-destino-desconocido.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una mujer dispuesta a morir acepta suplantar a otra para seguir la pista de científicos desaparecidos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1954,
+       "pages": "255",
+       "externalUrl": "https://www.goodreads.com/book/show/7981311"
+      },
+      {
+       "id": "inocencia-tragica",
+       "type": "book",
+       "title": "Inocencia trágica",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-inocencia-tragica.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un hombre aparece con la coartada que habría salvado a un joven condenado por matar a su madre adoptiva, pero llega tarde.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1958,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/9310268"
+      },
+      {
+       "id": "el-misterio-de-pale-horse",
+       "type": "book",
+       "title": "El misterio de Pale Horse",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterio-de-pale-horse.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Una lista de nombres hallada en el zapato de un sacerdote asesinado lleva a una posada donde viven tres supuestas brujas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1961,
+       "pages": "251",
+       "externalUrl": "https://www.goodreads.com/book/show/74459836"
+      },
+      {
+       "id": "noche-eterna",
+       "type": "book",
+       "title": "Noche eterna",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-noche-eterna.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un joven sin recursos se casa con una heredera y construye la casa de sus sueños en un terreno que, según dicen, está maldito.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1967,
+       "pages": "238",
+       "externalUrl": "https://www.goodreads.com/book/show/2282585"
+      },
+      {
+       "id": "pasajero-para-francfort",
+       "type": "book",
+       "title": "Pasajero para Fráncfort",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-pasajero-para-francfort.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Un diplomático presta su pasaporte a una desconocida en un aeropuerto y se ve arrastrado a una conspiración mundial.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1970,
+       "pages": "239",
+       "externalUrl": "https://www.goodreads.com/book/show/601527"
+      }
+     ]
+    },
+    {
+     "nombre": "Relatos",
+     "obras": [
+      {
+       "id": "el-enigmatico-senor-quin",
+       "type": "book",
+       "title": "El enigmático señor Quin",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-enigmatico-senor-quin.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "El señor Satterthwaite resuelve misterios con la ayuda del enigmático Harley Quin, que aparece y desaparece cuando se le necesita.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1930,
+       "externalUrl": "https://www.goodreads.com/book/show/40866159"
+      },
+      {
+       "id": "el-podenco-de-la-muerte",
+       "type": "book",
+       "title": "El podenco de la muerte",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-podenco-de-la-muerte.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Relatos de misterio con un toque sobrenatural, entre ellos el que dio origen a «Testigo de cargo».",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1933,
+       "pages": "160",
+       "externalUrl": "https://www.goodreads.com/book/show/243376386"
+      },
+      {
+       "id": "parker-pyne-investiga",
+       "type": "book",
+       "title": "Parker Pyne investiga",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-parker-pyne-investiga.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "«¿Es usted feliz? Si no lo es, consulte a Parker Pyne»: un antiguo funcionario arregla los problemas de quienes responden a su anuncio.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1934,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/247338169"
+      },
+      {
+       "id": "el-misterio-de-listerdale",
+       "type": "book",
+       "title": "El misterio de Listerdale",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-el-misterio-de-listerdale.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Doce relatos de intriga, romance y misterio, la mayoría sin detectives famosos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1934,
+       "pages": "240",
+       "externalUrl": "https://www.goodreads.com/book/show/7864332"
+      },
+      {
+       "id": "testigo-de-cargo",
+       "type": "book",
+       "title": "Testigo de cargo",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-testigo-de-cargo.jpg",
+       "author": "Agatha Christie",
+       "genre": "Novela policíaca",
+       "note": "Relatos encabezados por el de un hombre acusado de asesinato cuya esposa declara contra él. Lo adaptó Billy Wilder.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1948,
+       "pages": "224",
+       "externalUrl": "https://www.goodreads.com/book/show/32884026-testigo-de-cargo"
+      }
+     ]
+    },
+    {
+     "nombre": "Teatro",
+     "obras": [
+      {
+       "id": "la-ratonera",
+       "type": "book",
+       "title": "La ratonera",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-ratonera.jpg",
+       "author": "Agatha Christie",
+       "genre": "Teatro, misterio",
+       "note": "Una nevada aísla a los huéspedes de una casa de huéspedes recién abierta mientras un asesino actúa entre ellos. La obra de teatro que más tiempo lleva en cartel.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1952,
+       "pages": "128",
+       "externalUrl": "https://www.goodreads.com/book/show/123028651"
+      }
+     ]
+    },
+    {
+     "nombre": "Como Mary Westmacott",
+     "obras": [
+      {
+       "id": "un-amor-sin-nombre",
+       "type": "book",
+       "title": "Un amor sin nombre",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-un-amor-sin-nombre.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "Un compositor dividido entre el amor y su música, en la primera novela que la autora firmó como Mary Westmacott.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1930,
+       "externalUrl": "https://www.goodreads.com/book/show/11396701"
+      },
+      {
+       "id": "retrato-inacabado",
+       "type": "book",
+       "title": "Retrato inacabado",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-retrato-inacabado.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "La vida de una mujer desde la infancia hasta un matrimonio roto, considerada la más autobiográfica de la autora.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1934,
+       "pages": "336",
+       "externalUrl": "https://www.goodreads.com/book/show/18368159"
+      },
+      {
+       "id": "lejos-de-ti-esta-primavera",
+       "type": "book",
+       "title": "Lejos de ti esta primavera",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-lejos-de-ti-esta-primavera.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "Una mujer queda varada en una posada del desierto y, sin nada que hacer, empieza a ver su vida con otros ojos.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1944,
+       "pages": "218",
+       "externalUrl": "https://www.goodreads.com/book/show/33792718"
+      },
+      {
+       "id": "la-rosa-de-sangre",
+       "type": "book",
+       "title": "La rosa de sangre",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-rosa-de-sangre.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "Un político ambicioso y una joven aristócrata en un pueblo de Cornualles durante las elecciones de posguerra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1948,
+       "pages": "281",
+       "externalUrl": "https://www.goodreads.com/book/show/31569785-la-rosa-de-sangre"
+      },
+      {
+       "id": "una-hija-es-una-hija",
+       "type": "book",
+       "title": "Una hija es una hija",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-una-hija-es-una-hija.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "Una viuda renuncia a volver a casarse por su hija, y el resentimiento entre ambas crece durante años. No hay portada disponible de la edición española (Grijalbo), así que se muestra la inglesa.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1952,
+       "externalUrl": "https://www.goodreads.com/book/show/69264132"
+      },
+      {
+       "id": "la-carga",
+       "type": "book",
+       "title": "La carga",
+       "coverUrl": "assets/colecciones/portadas/agatha-christie-la-carga.jpg",
+       "author": "Mary Westmacott (Agatha Christie)",
+       "genre": "Novela",
+       "note": "Una mujer que ha vivido para proteger a su hermana pequeña descubre que el amor también puede ser una carga.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1956,
+       "externalUrl": "https://www.goodreads.com/book/show/7377466"
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/agatha-christie.jpg"
   },
   {
    "id": "bioshock",
@@ -112,7 +792,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/bioshock.jpg"
   },
   {
    "id": "blasphemous",
@@ -147,7 +828,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/blasphemous.jpg"
   },
   {
    "id": "carl-el-mazmorrero",
@@ -242,16 +924,32 @@
       {
        "id": "esta-ruina-inevitable",
        "type": "book",
-       "title": "Esta ruina inevitable",
+       "title": "La desgracia inevitable",
        "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-esta-ruina-inevitable.jpg",
        "author": "Matt Dinniman",
        "genre": "LitRPG, fantasía y humor negro",
-       "note": "Séptimo libro de la saga de Carl y Princesa Donut, a la espera de su edición en español.",
+       "note": "Séptimo libro de la saga de Carl y Princesa Donut. La edición en español, de Nova, está en preventa.",
        "creatorOrDirector": "Novela",
        "releaseYear": 2024,
        "pages": "870",
        "externalUrl": "https://www.goodreads.com/book/show/232497556-this-inevitable-ruin",
-       "collectionNumber": 7
+       "collectionNumber": 7,
+       "fechaPrevista": "28 de enero de 2027 (edición en español)"
+      },
+      {
+       "id": "a-parade-of-horribles",
+       "type": "book",
+       "title": "Un desfile de tragedias",
+       "coverUrl": "assets/colecciones/portadas/carl-el-mazmorrero-a-parade-of-horribles.jpg",
+       "author": "Matt Dinniman",
+       "genre": "LitRPG, fantasía y humor negro",
+       "note": "Octavo libro de la saga: con el caos extendiéndose fuera de la mazmorra, Carl y Donut llegan al décimo piso, donde tienen que competir en una carrera. Todavía sin edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2026,
+       "pages": "704",
+       "externalUrl": "https://www.goodreads.com/book/show/228928465-a-parade-of-horribles",
+       "collectionNumber": 8,
+       "fechaPrevista": "1 de abril de 2027 (edición en español, sin confirmar por Nova)"
       }
      ]
     }
@@ -306,7 +1004,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/control.jpg"
   },
   {
    "id": "cosmere",
@@ -629,53 +1328,6 @@
    ]
   },
   {
-   "id": "dark-souls",
-   "nombre": "Dark Souls",
-   "grupos": [
-    {
-     "nombre": "Saga principal",
-     "obras": [
-      {
-       "id": "dark-souls-remastered",
-       "type": "game",
-       "title": "Dark Souls Remastered",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-remastered.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2011,
-       "genre": "Rol de acción",
-       "note": "Un no muerto maldito viaja a Lordran para decidir el destino de la Era del Fuego. Es la versión mejorada del original, con todo su contenido adicional.",
-       "collectionNumber": 1
-      },
-      {
-       "id": "dark-souls-ii-scholar-of-the-first-sin",
-       "type": "game",
-       "title": "Dark Souls II: Scholar of the First Sin",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-ii-scholar-of-the-first-sin.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2014,
-       "genre": "Rol de acción",
-       "note": "Un maldito llega a Drangleic en busca de la cura a su condición. Esta edición incluye las expansiones y reordena enemigos y encuentros.",
-       "collectionNumber": 2
-      },
-      {
-       "id": "dark-souls-iii",
-       "type": "game",
-       "title": "Dark Souls III",
-       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-iii.jpg",
-       "platform": "PC",
-       "developer": "FromSoftware",
-       "releaseYear": 2016,
-       "genre": "Rol de acción",
-       "note": "Un Latente debe devolver a sus tronos a los Señores de la Ceniza en un mundo que agoniza. Es el cierre de la trilogía.",
-       "collectionNumber": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "dead-space",
    "nombre": "Dead Space",
    "grupos": [
@@ -732,7 +1384,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/dead-space.jpg"
   },
   {
    "id": "death-stranding",
@@ -764,6 +1417,72 @@
        "genre": "Acción y exploración",
        "note": "Sam vuelve a ponerse en marcha para conectar Australia a la red quiral, en un viaje con un reparto nuevo y un mundo más hostil. Llegó a PC en 2026.",
        "collectionNumber": 2
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/death-stranding.jpg"
+  },
+  {
+   "id": "dig-it",
+   "nombre": "Dig It",
+   "grupos": [
+    {
+     "nombre": "Manga",
+     "obras": [
+      {
+       "id": "dig-it-1",
+       "type": "book",
+       "title": "Dig It 1",
+       "coverUrl": "assets/colecciones/portadas/dig-it-tomo-1.jpg",
+       "author": "Yoshidamaru",
+       "genre": "Manga deportivo, voleibol",
+       "note": "Gaku, hijo de un antiguo as del voleibol japonés, se esfuerza por superar sus límites después de que su padre descubra el talento de otro jugador. Tomo 1 de la edición española de Milky Way Ediciones, publicado el 28 de mayo de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 1,
+       "externalUrl": "https://www.goodreads.com/book/show/241737929-1-dig-it-1"
+      },
+      {
+       "id": "dig-it-2",
+       "type": "book",
+       "title": "Dig It 2",
+       "coverUrl": "assets/colecciones/portadas/dig-it-tomo-2.jpg",
+       "author": "Yoshidamaru",
+       "genre": "Manga deportivo, voleibol",
+       "note": "Tomo 2 de la edición española de Milky Way Ediciones, publicado el 29 de julio de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 2,
+       "externalUrl": "https://www.goodreads.com/book/show/241737929-1-dig-it-1"
+      },
+      {
+       "id": "dig-it-3",
+       "type": "book",
+       "title": "Dig It 3",
+       "coverUrl": "assets/colecciones/portadas/dig-it-tomo-3.jpg",
+       "author": "Yoshidamaru",
+       "genre": "Manga deportivo, voleibol",
+       "note": "Publicado en Japón el 23 de abril de 2026. Milky Way aún no ha anunciado su fecha en España.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 3,
+       "externalUrl": "https://www.goodreads.com/book/show/241737929-1-dig-it-1",
+       "fechaPrevista": "Sin fecha en España"
+      },
+      {
+       "id": "dig-it-4",
+       "type": "book",
+       "title": "Dig It 4",
+       "coverUrl": "assets/colecciones/portadas/dig-it-tomo-4.jpg",
+       "author": "Yoshidamaru",
+       "genre": "Manga deportivo, voleibol",
+       "note": "Publicado en Japón el 21 de agosto de 2026. Milky Way aún no ha anunciado su fecha en España.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 4,
+       "externalUrl": "https://www.goodreads.com/book/show/241737929-1-dig-it-1",
+       "fechaPrevista": "Sin fecha en España"
       }
      ]
     }
@@ -819,7 +1538,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/distrito-13.jpg"
   },
   {
    "id": "dragon-age",
@@ -878,7 +1598,419 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/dragon-age.jpg"
+  },
+  {
+   "id": "dune",
+   "nombre": "Dune",
+   "universo": "Dune",
+   "grupos": [
+    {
+     "nombre": "Las crónicas de Dune",
+     "obras": [
+      {
+       "id": "dune",
+       "type": "book",
+       "title": "Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "En el planeta desierto de Arrakis, única fuente de la especia, el joven Paul Atreides ve cómo su familia es traicionada y encuentra su destino entre los fremen.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1965,
+       "pages": "704",
+       "externalUrl": "https://www.goodreads.com/book/show/53363733-dune",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-mesias-de-dune",
+       "type": "book",
+       "title": "El mesías de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-el-mesias-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Doce años después, Paul es emperador y su yihad ha arrasado la galaxia. Una conspiración busca derribarlo mientras él lucha contra su propio destino.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1969,
+       "pages": "306",
+       "externalUrl": "https://www.goodreads.com/book/show/53728.El_mes_as_de_Dune",
+       "collectionNumber": 2
+      },
+      {
+       "id": "hijos-de-dune",
+       "type": "book",
+       "title": "Hijos de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-hijos-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Los gemelos de Paul, Leto y Ghanima, crecen en un imperio en manos de la regente Alia mientras Arrakis empieza a cambiar.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1976,
+       "pages": "546",
+       "externalUrl": "https://www.goodreads.com/book/show/53707.Hijos_de_Dune",
+       "collectionNumber": 3
+      },
+      {
+       "id": "dios-emperador-de-dune",
+       "type": "book",
+       "title": "Dios emperador de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dios-emperador-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Tres mil años después, Leto II, convertido en un ser medio gusano, gobierna como tirano para conducir a la humanidad por su Senda de Oro.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1981,
+       "pages": "568",
+       "externalUrl": "https://www.goodreads.com/book/show/111.Dios_emperador_de_Dune",
+       "collectionNumber": 4
+      },
+      {
+       "id": "herejes-de-dune",
+       "type": "book",
+       "title": "Herejes de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-herejes-de-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Milenios tras la muerte de Leto II, la Bene Gesserit se enfrenta a las Honoradas Matres, que regresan de la Dispersión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1984,
+       "pages": "565",
+       "externalUrl": "https://www.goodreads.com/book/show/15831109-herejes-de-dune",
+       "collectionNumber": 5
+      },
+      {
+       "id": "casa-capitular-dune",
+       "type": "book",
+       "title": "Casa capitular Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-casa-capitular-dune.jpg",
+       "author": "Frank Herbert",
+       "genre": "Ciencia ficción",
+       "note": "Con Arrakis destruido, la Bene Gesserit intenta convertir su planeta capitular en un nuevo Dune para sobrevivir.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1985,
+       "pages": "640",
+       "externalUrl": "https://www.goodreads.com/book/show/53772.Casa_capitular_Dune",
+       "collectionNumber": 6
+      }
+     ]
+    },
+    {
+     "nombre": "Películas y series",
+     "obras": [
+      {
+       "id": "dune-1984",
+       "type": "movieSeries",
+       "title": "Dune (1984)",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-1984.jpg",
+       "releaseYear": 1984,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "Primera adaptación al cine de la novela, dirigida por David Lynch, con Kyle MacLachlan como Paul Atreides.",
+       "mediaType": "movie",
+       "duration": "2h 16m",
+       "creatorOrDirector": "David Lynch",
+       "externalUrl": "https://letterboxd.com/film/dune/"
+      },
+      {
+       "id": "dune-2021",
+       "type": "movieSeries",
+       "title": "Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-2021.jpg",
+       "releaseYear": 2021,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Paul Atreides llega con su familia a Arrakis, el planeta de la especia, donde una traición lo obliga a refugiarse entre los fremen.",
+       "mediaType": "movie",
+       "duration": "2h 35m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/dune-2021/"
+      },
+      {
+       "id": "dune-parte-dos",
+       "type": "movieSeries",
+       "title": "Dune: Parte dos",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-parte-dos.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Paul se une a Chani y a los fremen para vengarse de quienes destruyeron a su familia, mientras intenta evitar el futuro terrible que ve en sus visiones.",
+       "mediaType": "movie",
+       "duration": "2h 47m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/dune-part-two/"
+      },
+      {
+       "id": "dune-parte-tres",
+       "type": "movieSeries",
+       "title": "Dune: Parte tres",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-parte-tres.jpg",
+       "releaseYear": 2026,
+       "genre": "Ciencia ficción, aventura",
+       "note": "Adaptación de El mesías de Dune, con Paul convertido en emperador años después de Parte dos.",
+       "mediaType": "movie",
+       "duration": "2h 20m",
+       "creatorOrDirector": "Denis Villeneuve",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/dune-part-three/",
+       "fechaPrevista": "18 de diciembre de 2026 en España"
+      },
+      {
+       "id": "dune-la-profecia",
+       "type": "movieSeries",
+       "title": "Dune: La profecía",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-la-profecia.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, drama",
+       "note": "Serie ambientada diez mil años antes de Paul Atreides, sobre las hermanas Harkonnen que fundan la orden que será la Bene Gesserit.",
+       "mediaType": "series"
+      }
+     ]
+    },
+    {
+     "nombre": "Preludio a Dune",
+     "obras": [
+      {
+       "id": "la-casa-atreides",
+       "type": "book",
+       "title": "La Casa Atreides",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-atreides.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Precuela ambientada una generación antes de Dune, con el joven Leto Atreides y las intrigas que llevarán a la guerra entre casas.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1999,
+       "pages": "784",
+       "externalUrl": "https://www.goodreads.com/book/show/719712.La_Casa_Atreides"
+      },
+      {
+       "id": "la-casa-harkonnen",
+       "type": "book",
+       "title": "La Casa Harkonnen",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-harkonnen.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Segunda parte del Preludio: el ascenso del duque Leto y los planes del barón Harkonnen.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2000,
+       "pages": "688",
+       "externalUrl": "https://www.goodreads.com/book/show/502654.La_casa_Harkonnen"
+      },
+      {
+       "id": "la-casa-corrino",
+       "type": "book",
+       "title": "La Casa Corrino",
+       "coverUrl": "assets/colecciones/portadas/dune-la-casa-corrino.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Cierre del Preludio, justo antes del nacimiento de Paul, con el emperador Shaddam IV y la especia artificial.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2001,
+       "pages": "640",
+       "externalUrl": "https://www.goodreads.com/book/show/396995.La_Casa_Corrino"
+      }
+     ]
+    },
+    {
+     "nombre": "Leyendas de Dune",
+     "obras": [
+      {
+       "id": "la-yihad-butleriana",
+       "type": "book",
+       "title": "La Yihad Butleriana",
+       "coverUrl": "assets/colecciones/portadas/dune-la-yihad-butleriana.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Diez mil años antes de Dune, la humanidad se rebela contra las máquinas pensantes que la esclavizan.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2002,
+       "pages": "637",
+       "externalUrl": "https://www.goodreads.com/book/show/719690.Dune"
+      },
+      {
+       "id": "la-cruzada-de-las-maquinas",
+       "type": "book",
+       "title": "La cruzada de las máquinas",
+       "coverUrl": "assets/colecciones/portadas/dune-la-cruzada-de-las-maquinas.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "La guerra contra las máquinas se prolonga durante décadas y siembra el origen de las grandes órdenes del universo de Dune.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2003,
+       "pages": "807",
+       "externalUrl": "https://www.goodreads.com/book/show/719718.La_cruzada_de_las_m_quinas"
+      },
+      {
+       "id": "la-batalla-de-corrin",
+       "type": "book",
+       "title": "La batalla de Corrin",
+       "coverUrl": "assets/colecciones/portadas/dune-la-batalla-de-corrin.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "El final de la Yihad Butleriana y la batalla que acaba con las máquinas pensantes.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2004,
+       "pages": "732",
+       "externalUrl": "https://www.goodreads.com/book/show/3139724-la-batalla-de-corrin"
+      }
+     ]
+    },
+    {
+     "nombre": "Continuación",
+     "obras": [
+      {
+       "id": "cazadores-de-dune",
+       "type": "book",
+       "title": "Cazadores de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-cazadores-de-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Continuación de Casa capitular Dune, basada en las notas de Frank Herbert, con la huida de la nave no-nave por el universo.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "524",
+       "externalUrl": "https://www.goodreads.com/book/show/29473423-cazadores-de-dune",
+       "collectionNumber": 7
+      },
+      {
+       "id": "gusanos-de-arena-de-dune",
+       "type": "book",
+       "title": "Gusanos de arena de Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-gusanos-de-arena-de-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Desenlace de la saga original: el enfrentamiento final contra el enemigo que acecha desde la Dispersión.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "576",
+       "externalUrl": "https://www.goodreads.com/book/show/8734026-gusanos-de-arena-de-dune",
+       "collectionNumber": 8
+      }
+     ]
+    },
+    {
+     "nombre": "Héroes de Dune",
+     "obras": [
+      {
+       "id": "paul-of-dune",
+       "type": "book",
+       "title": "Paul of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-paul-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Entre Dune y El mesías de Dune: la yihad de Paul y episodios de su juventud. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2008
+      },
+      {
+       "id": "the-winds-of-dune",
+       "type": "book",
+       "title": "The Winds of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-the-winds-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Tras la desaparición de Paul en el desierto, Jessica y la familia Atreides se enfrentan a sus consecuencias. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "externalUrl": "https://www.goodreads.com/book/show/6072318-the-winds-of-dune"
+      },
+      {
+       "id": "princess-of-dune",
+       "type": "book",
+       "title": "Princess of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-princess-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Las historias de Irulan y Chani antes de que conozcan a Paul. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2023,
+       "externalUrl": "https://www.goodreads.com/book/show/123274967-princess-of-dune"
+      }
+     ]
+    },
+    {
+     "nombre": "Escuelas de Dune",
+     "obras": [
+      {
+       "id": "sisterhood-of-dune",
+       "type": "book",
+       "title": "Sisterhood of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-sisterhood-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Tras la Yihad Butleriana nacen la Bene Gesserit y las otras grandes escuelas. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2012,
+       "externalUrl": "https://www.goodreads.com/book/show/11754793-sisterhood-of-dune"
+      },
+      {
+       "id": "mentats-of-dune",
+       "type": "book",
+       "title": "Mentats of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-mentats-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Los mentats y la Hermandad se disputan el futuro mientras los butlerianos persiguen cualquier tecnología. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2014,
+       "externalUrl": "https://www.goodreads.com/book/show/17910044-mentats-of-dune"
+      },
+      {
+       "id": "navigators-of-dune",
+       "type": "book",
+       "title": "Navigators of Dune",
+       "coverUrl": "assets/colecciones/portadas/dune-navigators-of-dune.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Cierre de la trilogía: el origen de la Cofradía Espacial y sus navegantes. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2016,
+       "externalUrl": "https://www.goodreads.com/book/show/26031829-navigators-of-dune"
+      }
+     ]
+    },
+    {
+     "nombre": "Trilogía de Caladan",
+     "obras": [
+      {
+       "id": "dune-the-duke-of-caladan",
+       "type": "book",
+       "title": "Dune: The Duke of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-duke-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Un año antes de Dune, el duque Leto descubre un complot contra el emperador. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2020,
+       "externalUrl": "https://www.goodreads.com/book/show/49247261-dune"
+      },
+      {
+       "id": "dune-the-lady-of-caladan",
+       "type": "book",
+       "title": "Dune: The Lady of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-lady-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Jessica regresa a la Bene Gesserit mientras crece el enfrentamiento entre Atreides y Harkonnen. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2021,
+       "externalUrl": "https://www.goodreads.com/book/show/56179363-dune"
+      },
+      {
+       "id": "dune-the-heir-of-caladan",
+       "type": "book",
+       "title": "Dune: The Heir of Caladan",
+       "coverUrl": "assets/colecciones/portadas/dune-dune-the-heir-of-caladan.jpg",
+       "author": "Brian Herbert y Kevin J. Anderson",
+       "genre": "Ciencia ficción",
+       "note": "Paul se prepara para su destino justo antes de la llegada a Arrakis. No tiene edición en español.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2022,
+       "externalUrl": "https://www.goodreads.com/book/show/59808129-dune"
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/dune.jpg"
   },
   {
    "id": "eisenhorn",
@@ -1020,7 +2152,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/eisenhorn.jpg"
   },
   {
    "id": "el-padrino",
@@ -1073,7 +2206,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/el-padrino.jpg"
   },
   {
    "id": "final-fantasy",
@@ -1225,6 +2359,31 @@
        "genre": "JRPG por turnos",
        "note": "Tidus, estrella del blitzbol, llega a Spira y acompaña a la invocadora Yuna en su peregrinación contra Sinh. La edición HD incluye Final Fantasy X-2.",
        "collectionNumber": 10
+      },
+      {
+       "id": "final-fantasy-x-2",
+       "type": "game",
+       "title": "Final Fantasy X-2",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-x-2.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2003,
+       "genre": "Rol",
+       "note": "Dos años después de Final Fantasy X, Yuna se hace cazaesferas junto a Rikku y Paine. Viene en el mismo paquete que la remasterización de X.",
+       "collectionNumber": 10,
+       "externalUrl": "https://store.steampowered.com/app/359870/"
+      },
+      {
+       "id": "final-fantasy-xi-online",
+       "type": "game",
+       "title": "Final Fantasy XI Online",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-xi-online.jpg",
+       "platform": "PC",
+       "developer": "Square Enix",
+       "releaseYear": 2002,
+       "genre": "Rol multijugador masivo",
+       "note": "El primer Final Fantasy multijugador masivo, ambientado en Vana'diel. Sigue activo en PC a través de PlayOnline.",
+       "collectionNumber": 11
       },
       {
        "id": "final-fantasy-xii-the-zodiac-age",
@@ -1380,10 +2539,259 @@
        "releaseYear": 2018,
        "genre": "Lucha",
        "note": "Combates de tres contra tres con héroes y villanos de toda la saga."
+      },
+      {
+       "id": "final-fantasy-crystal-chronicles-remastered-edition",
+       "type": "game",
+       "title": "Final Fantasy Crystal Chronicles Remastered Edition",
+       "coverUrl": "assets/colecciones/portadas/final-fantasy-final-fantasy-crystal-chronicles-remastered-edition.jpg",
+       "platform": "Nintendo Switch",
+       "developer": "Square Enix",
+       "releaseYear": 2003,
+       "genre": "Rol de acción",
+       "note": "Caravanas de aventureros recorren el mundo para recoger la mirra que protege sus pueblos del miasma. Remasterización de 2020 del juego de GameCube; no tiene versión de PC."
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/final-fantasy.jpg"
+  },
+  {
+   "id": "gachiakuta",
+   "nombre": "Gachiakuta",
+   "grupos": [
+    {
+     "nombre": "Manga",
+     "obras": [
+      {
+       "id": "gachiakuta-1",
+       "type": "book",
+       "title": "Gachiakuta 1",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-1.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Rudo, un chico de los barrios bajos, es acusado de un asesinato que no cometió y arrojado al Abismo, donde se une a los Limpiadores para combatir bestias nacidas de la basura. Tomo 1 de la edición española de Norma, publicado el 8 de septiembre de 2023.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2023,
+       "collectionNumber": 1,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-2",
+       "type": "book",
+       "title": "Gachiakuta 2",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-2.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 2 de la edición española de Norma, publicado el 10 de noviembre de 2023.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2023,
+       "collectionNumber": 2,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-3",
+       "type": "book",
+       "title": "Gachiakuta 3",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-3.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 3 de la edición española de Norma, publicado el 1 de marzo de 2024.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 3,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-4",
+       "type": "book",
+       "title": "Gachiakuta 4",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-4.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 4 de la edición española de Norma, publicado el 3 de mayo de 2024.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 4,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-5",
+       "type": "book",
+       "title": "Gachiakuta 5",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-5.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 5 de la edición española de Norma, publicado el 5 de julio de 2024.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 5,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-6",
+       "type": "book",
+       "title": "Gachiakuta 6",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-6.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 6 de la edición española de Norma, publicado el 6 de septiembre de 2024.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 6,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-7",
+       "type": "book",
+       "title": "Gachiakuta 7",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-7.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 7 de la edición española de Norma, publicado el 8 de noviembre de 2024.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 7,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-8",
+       "type": "book",
+       "title": "Gachiakuta 8",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-8.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 8 de la edición española de Norma, publicado el 7 de marzo de 2025.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 8,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-9",
+       "type": "book",
+       "title": "Gachiakuta 9",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-9.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 9 de la edición española de Norma, publicado el 9 de mayo de 2025.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 9,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-10",
+       "type": "book",
+       "title": "Gachiakuta 10",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-10.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 10 de la edición española de Norma, publicado el 4 de julio de 2025.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 10,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-11",
+       "type": "book",
+       "title": "Gachiakuta 11",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-11.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 11 de la edición española de Norma, publicado el 5 de septiembre de 2025.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 11,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-12",
+       "type": "book",
+       "title": "Gachiakuta 12",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-12.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 12 de la edición española de Norma, publicado el 7 de noviembre de 2025.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 12,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-13",
+       "type": "book",
+       "title": "Gachiakuta 13",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-13.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 13 de la edición española de Norma, publicado el 16 de enero de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 13,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-14",
+       "type": "book",
+       "title": "Gachiakuta 14",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-14.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 14 de la edición española de Norma, publicado el 6 de marzo de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 14,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-15",
+       "type": "book",
+       "title": "Gachiakuta 15",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-15.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 15 de la edición española de Norma, publicado el 2 de mayo de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 15,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      },
+      {
+       "id": "gachiakuta-16",
+       "type": "book",
+       "title": "Gachiakuta 16",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-tomo-16.jpg",
+       "author": "Kei Urana",
+       "genre": "Manga, acción, fantasía oscura",
+       "note": "Tomo 16 de la edición española de Norma, publicado el 3 de julio de 2026.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 16,
+       "externalUrl": "https://www.goodreads.com/book/show/196313804-gachiakuta-vol-1"
+      }
+     ]
+    },
+    {
+     "nombre": "Anime",
+     "obras": [
+      {
+       "id": "gachiakuta-anime",
+       "type": "movieSeries",
+       "title": "Gachiakuta",
+       "mediaType": "series",
+       "coverUrl": "assets/colecciones/portadas/gachiakuta-anime.jpg",
+       "releaseYear": 2025,
+       "genre": "Anime, acción, fantasía oscura",
+       "creatorOrDirector": "Fumihiko Suganuma",
+       "duration": "24 episodios",
+       "note": "Adaptación al anime del estudio Bones Film. Primera temporada de 24 episodios en 2025; la segunda está confirmada."
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/gachiakuta.jpg"
   },
   {
    "id": "goool",
@@ -1436,7 +2844,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/goool.jpg"
   },
   {
    "id": "half-life",
@@ -1544,7 +2953,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/half-life.jpg"
   },
   {
    "id": "hercules-poirot",
@@ -2071,7 +3481,9 @@
       }
      ]
     }
-   ]
+   ],
+   "universo": "Agatha Christie",
+   "fondo": "assets/colecciones/fondos/hercules-poirot.jpg"
   },
   {
    "id": "high-school-musical",
@@ -2124,7 +3536,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/high-school-musical.jpg"
   },
   {
    "id": "hollow-knight",
@@ -2159,7 +3572,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/hollow-knight.jpg"
   },
   {
    "id": "hora-punta",
@@ -2212,7 +3626,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/hora-punta.jpg"
   },
   {
    "id": "kill-bill",
@@ -2264,7 +3679,9 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/kill-bill.jpg",
+   "universo": "Quentin Tarantino"
   },
   {
    "id": "la-herejia-de-horus",
@@ -3085,7 +4502,8 @@
        "releaseYear": 2023,
        "pages": "659",
        "externalUrl": "https://www.goodreads.com/book/show/62609258-the-end-and-the-death",
-       "collectionNumber": 8
+       "collectionNumber": 8,
+       "fechaPrevista": ""
       },
       {
        "id": "the-end-and-the-death-volume-ii",
@@ -3099,7 +4517,8 @@
        "releaseYear": 2023,
        "pages": "752",
        "externalUrl": "https://www.goodreads.com/book/show/172922673-the-end-and-the-death",
-       "collectionNumber": 9
+       "collectionNumber": 9,
+       "fechaPrevista": ""
       },
       {
        "id": "the-end-and-the-death-volume-iii",
@@ -3113,11 +4532,13 @@
        "releaseYear": 2024,
        "pages": "507",
        "externalUrl": "https://www.goodreads.com/book/show/199239938-the-end-and-the-death",
-       "collectionNumber": 10
+       "collectionNumber": 10,
+       "fechaPrevista": ""
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/la-herejia-de-horus.jpg"
   },
   {
    "id": "la-tierra-media",
@@ -3417,7 +4838,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/la-tierra-media.jpg"
   },
   {
    "id": "las-raices-del-caos",
@@ -3429,7 +4851,7 @@
       {
        "id": "a-day-of-fallen-night",
        "type": "book",
-       "title": "A Day of Fallen Night",
+       "title": "El día que se abrió el cielo",
        "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-a-day-of-fallen-night.jpg",
        "author": "Samantha Shannon",
        "genre": "Fantasía épica",
@@ -3456,11 +4878,11 @@
       {
        "id": "among-the-burning-flowers",
        "type": "book",
-       "title": "Among the Burning Flowers",
+       "title": "Las flores en llamas",
        "coverUrl": "assets/colecciones/portadas/las-raices-del-caos-among-the-burning-flowers.jpg",
        "author": "Samantha Shannon",
        "genre": "Fantasía épica",
-       "note": "Nueva novela de la saga, ambientada entre las otras dos y centrada en la princesa Sabran. Todavía sin edición confirmada en español.",
+       "note": "Nueva novela de la saga, ambientada entre las otras dos y centrada en la princesa Sabran. Roca la publica en español como «Las flores en llamas».",
        "creatorOrDirector": "Novela",
        "releaseYear": 2025,
        "pages": "288",
@@ -4023,7 +5445,530 @@
        "duration": "2h 45m",
        "creatorOrDirector": "Joe Russo, Anthony Russo",
        "collectionNumber": 39,
-       "externalUrl": "https://letterboxd.com/film/avengers-doomsday/"
+       "externalUrl": "https://letterboxd.com/film/avengers-doomsday/",
+       "fechaPrevista": "17 de diciembre de 2026 en España"
+      }
+     ]
+    },
+    {
+     "nombre": "Spider-Man de Sony",
+     "obras": [
+      {
+       "id": "spider-man-2002",
+       "type": "movieSeries",
+       "title": "Spider-Man",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-2002.jpg",
+       "releaseYear": 2002,
+       "genre": "Acción, ciencia ficción",
+       "note": "Peter Parker recibe la picadura de una araña modificada y aprende a usar sus poderes mientras el Duende Verde siembra el caos.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Sam Raimi",
+       "duration": "2h 1m",
+       "externalUrl": "https://letterboxd.com/film/spider-man/"
+      },
+      {
+       "id": "spider-man-2",
+       "type": "movieSeries",
+       "title": "Spider-Man 2",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-2.jpg",
+       "releaseYear": 2004,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Peter intenta compaginar su vida con ser Spider-Man mientras el Doctor Octopus amenaza Nueva York.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Sam Raimi",
+       "duration": "2h 15m",
+       "externalUrl": "https://letterboxd.com/film/spider-man-2/"
+      },
+      {
+       "id": "spider-man-3",
+       "type": "movieSeries",
+       "title": "Spider-Man 3",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-3.jpg",
+       "releaseYear": 2007,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Un simbionte alienígena saca el lado oscuro de Peter mientras el Hombre de Arena y Venom van a por él.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Sam Raimi",
+       "duration": "2h 19m",
+       "externalUrl": "https://letterboxd.com/film/spider-man-3/"
+      },
+      {
+       "id": "the-amazing-spider-man",
+       "type": "movieSeries",
+       "title": "The Amazing Spider-Man",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-amazing-spider-man.jpg",
+       "releaseYear": 2012,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Nuevo origen de Spider-Man con Andrew Garfield: Peter investiga el pasado de sus padres y se enfrenta al Lagarto.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Marc Webb",
+       "duration": "2h 16m",
+       "externalUrl": "https://letterboxd.com/film/the-amazing-spider-man/"
+      },
+      {
+       "id": "the-amazing-spider-man-2-el-poder-de-electro",
+       "type": "movieSeries",
+       "title": "The Amazing Spider-Man 2: El poder de Electro",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-amazing-spider-man-2-el-poder-de-electro.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Peter no puede cumplir la promesa de alejarse de Gwen mientras aparecen Electro y un Harry Osborn cambiado.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Marc Webb",
+       "duration": "2h 21m",
+       "externalUrl": "https://letterboxd.com/film/the-amazing-spider-man-2/"
+      },
+      {
+       "id": "venom-2018",
+       "type": "movieSeries",
+       "title": "Venom",
+       "coverUrl": "assets/colecciones/portadas/marvel-venom-2018.jpg",
+       "releaseYear": 2018,
+       "genre": "Ciencia ficción, acción",
+       "note": "El periodista Eddie Brock se une a un simbionte alienígena mientras investiga los experimentos de la Fundación Vida.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Ruben Fleischer",
+       "duration": "1h 52m",
+       "externalUrl": "https://letterboxd.com/film/venom-2018/"
+      },
+      {
+       "id": "venom-habra-matanza",
+       "type": "movieSeries",
+       "title": "Venom: Habrá matanza",
+       "coverUrl": "assets/colecciones/portadas/marvel-venom-habra-matanza.jpg",
+       "releaseYear": 2021,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Eddie y Venom aún aprenden a convivir cuando el asesino Cletus Kasady se convierte en Carnage.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Andy Serkis",
+       "duration": "1h 37m",
+       "externalUrl": "https://letterboxd.com/film/venom-let-there-be-carnage/"
+      },
+      {
+       "id": "venom-el-ultimo-baile",
+       "type": "movieSeries",
+       "title": "Venom: El último baile",
+       "coverUrl": "assets/colecciones/portadas/marvel-venom-el-ultimo-baile.jpg",
+       "releaseYear": 2024,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Perseguidos por los dos mundos, Eddie y Venom se ven obligados a tomar una decisión definitiva. Cierre de la trilogía.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Kelly Marcel",
+       "duration": "1h 49m",
+       "externalUrl": "https://letterboxd.com/film/venom-the-last-dance/"
+      },
+      {
+       "id": "morbius",
+       "type": "movieSeries",
+       "title": "Morbius",
+       "coverUrl": "assets/colecciones/portadas/marvel-morbius.jpg",
+       "releaseYear": 2022,
+       "genre": "Acción, ciencia ficción, fantasía",
+       "note": "El doctor Michael Morbius busca curar su enfermedad de la sangre y acaba convertido en un ser con sed de sangre.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Daniel Espinosa",
+       "duration": "1h 49m",
+       "externalUrl": "https://letterboxd.com/film/morbius/"
+      },
+      {
+       "id": "madame-web",
+       "type": "movieSeries",
+       "title": "Madame Web",
+       "coverUrl": "assets/colecciones/portadas/marvel-madame-web.jpg",
+       "releaseYear": 2024,
+       "genre": "Acción, fantasía",
+       "note": "Una paramédica de Manhattan con visiones del futuro protege a tres jóvenes de un hombre que quiere matarlas.",
+       "mediaType": "movie",
+       "creatorOrDirector": "SJ Clarkson",
+       "duration": "1h 57m",
+       "externalUrl": "https://letterboxd.com/film/madame-web/"
+      },
+      {
+       "id": "kraven-el-cazador",
+       "type": "movieSeries",
+       "title": "Kraven el cazador",
+       "coverUrl": "assets/colecciones/portadas/marvel-kraven-el-cazador.jpg",
+       "releaseYear": 2024,
+       "genre": "Acción, aventura, suspense",
+       "note": "El origen de Kraven, cuya relación con su despiadado padre lo convierte en el cazador más temido del mundo.",
+       "mediaType": "movie",
+       "creatorOrDirector": "J.C. Chandor",
+       "duration": "2h 6m",
+       "externalUrl": "https://letterboxd.com/film/kraven-the-hunter/"
+      },
+      {
+       "id": "spider-man-un-nuevo-universo",
+       "type": "movieSeries",
+       "title": "Spider-Man: Un nuevo universo",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-un-nuevo-universo.jpg",
+       "releaseYear": 2018,
+       "genre": "Animación, acción, aventura",
+       "note": "Miles Morales se convierte en Spider-Man y conoce a otras versiones del héroe llegadas de universos paralelos.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bob Persichetti, Peter Ramsey, Rodney Rothman",
+       "duration": "1h 56m",
+       "externalUrl": "https://letterboxd.com/film/spider-man-into-the-spider-verse/"
+      },
+      {
+       "id": "spider-man-cruzando-el-multiverso",
+       "type": "movieSeries",
+       "title": "Spider-Man: Cruzando el Multiverso",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-cruzando-el-multiverso.jpg",
+       "releaseYear": 2023,
+       "genre": "Animación, acción, aventura",
+       "note": "Miles viaja por el multiverso con Gwen Stacy y choca con la Sociedad Araña por cómo enfrentarse a una nueva amenaza.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Joaquim Dos Santos, Kemp Powers, Justin K. Thompson",
+       "duration": "2h 20m",
+       "externalUrl": "https://letterboxd.com/film/spider-man-across-the-spider-verse/"
+      },
+      {
+       "id": "spider-man-beyond-the-spider-verse",
+       "type": "movieSeries",
+       "title": "Spider-Man: Beyond the Spider-Verse",
+       "coverUrl": "assets/colecciones/portadas/marvel-spider-man-beyond-the-spider-verse.jpg",
+       "releaseYear": 2027,
+       "genre": "Animación, acción, aventura",
+       "note": "Conclusión de la trilogía animada de Miles Morales. Aún no tiene título en español.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bob Persichetti, Justin K. Thompson",
+       "externalUrl": "https://letterboxd.com/film/spider-man-beyond-the-spider-verse/",
+       "fechaPrevista": "18 de junio de 2027 en Estados Unidos"
+      }
+     ]
+    },
+    {
+     "nombre": "X-Men",
+     "obras": [
+      {
+       "id": "x-men-2000",
+       "type": "movieSeries",
+       "title": "X-Men",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-2000.jpg",
+       "releaseYear": 2000,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "Lobezno y Pícara llegan a la escuela del profesor Xavier mientras Magneto planea enfrentar a mutantes y humanos.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bryan Singer",
+       "duration": "1h 44m",
+       "externalUrl": "https://letterboxd.com/film/x-men/"
+      },
+      {
+       "id": "x-men-2",
+       "type": "movieSeries",
+       "title": "X-Men 2",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-2.jpg",
+       "releaseYear": 2003,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "El coronel William Stryker ataca la escuela de Xavier y obliga a los X-Men a aliarse con Magneto.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bryan Singer",
+       "duration": "2h 13m",
+       "externalUrl": "https://letterboxd.com/film/x2/"
+      },
+      {
+       "id": "x-men-la-decision-final",
+       "type": "movieSeries",
+       "title": "X-Men: La decisión final",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-la-decision-final.jpg",
+       "releaseYear": 2006,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "Aparece una cura para los mutantes y Jean Grey regresa convertida en Fénix.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Brett Ratner",
+       "duration": "1h 45m",
+       "externalUrl": "https://letterboxd.com/film/x-men-the-last-stand/"
+      },
+      {
+       "id": "x-men-origenes-lobezno",
+       "type": "movieSeries",
+       "title": "X-Men orígenes: Lobezno",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-origenes-lobezno.jpg",
+       "releaseYear": 2009,
+       "genre": "Aventura, acción, ciencia ficción",
+       "note": "El pasado de Logan, su relación con Victor Creed y el programa Arma X que le dio su esqueleto de adamantium.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Gavin Hood",
+       "duration": "1h 47m",
+       "externalUrl": "https://letterboxd.com/film/x-men-origins-wolverine/"
+      },
+      {
+       "id": "x-men-primera-generacion",
+       "type": "movieSeries",
+       "title": "X-Men: Primera generación",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-primera-generacion.jpg",
+       "releaseYear": 2011,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "En plena crisis de los misiles de Cuba, Charles Xavier y Erik Lehnsherr forman el primer equipo de mutantes.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Matthew Vaughn",
+       "duration": "2h 11m",
+       "externalUrl": "https://letterboxd.com/film/x-men-first-class/"
+      },
+      {
+       "id": "lobezno-inmortal",
+       "type": "movieSeries",
+       "title": "Lobezno inmortal",
+       "coverUrl": "assets/colecciones/portadas/marvel-lobezno-inmortal.jpg",
+       "releaseYear": 2013,
+       "genre": "Acción, ciencia ficción, aventura",
+       "note": "Logan viaja a Japón, donde pierde su capacidad de curarse y se enfrenta a yakuzas, ninjas y el Samurái de Plata.",
+       "mediaType": "movie",
+       "creatorOrDirector": "James Mangold",
+       "duration": "2h 6m",
+       "externalUrl": "https://letterboxd.com/film/the-wolverine/"
+      },
+      {
+       "id": "x-men-dias-del-futuro-pasado",
+       "type": "movieSeries",
+       "title": "X-Men: Días del futuro pasado",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-dias-del-futuro-pasado.jpg",
+       "releaseYear": 2014,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Lobezno viaja a los años setenta para evitar el futuro en el que los Centinelas exterminan a los mutantes.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bryan Singer",
+       "duration": "2h 10m",
+       "externalUrl": "https://letterboxd.com/film/x-men-days-of-future-past/"
+      },
+      {
+       "id": "x-men-apocalipsis",
+       "type": "movieSeries",
+       "title": "X-Men: Apocalipsis",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-apocalipsis.jpg",
+       "releaseYear": 2016,
+       "genre": "Ciencia ficción, fantasía, acción",
+       "note": "El primer mutante despierta tras miles de años y recluta a Magneto para arrasar el mundo.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Bryan Singer",
+       "duration": "2h 24m",
+       "externalUrl": "https://letterboxd.com/film/x-men-apocalypse/"
+      },
+      {
+       "id": "logan-2017",
+       "type": "movieSeries",
+       "title": "Logan",
+       "coverUrl": "assets/colecciones/portadas/marvel-logan-2017.jpg",
+       "releaseYear": 2017,
+       "genre": "Acción, drama, ciencia ficción",
+       "note": "Un Logan envejecido cuida de un Charles Xavier enfermo y protege a una niña mutante que se parece demasiado a él.",
+       "mediaType": "movie",
+       "creatorOrDirector": "James Mangold",
+       "duration": "2h 17m",
+       "externalUrl": "https://letterboxd.com/film/logan-2017/"
+      },
+      {
+       "id": "deadpool-2016",
+       "type": "movieSeries",
+       "title": "Deadpool",
+       "coverUrl": "assets/colecciones/portadas/marvel-deadpool-2016.jpg",
+       "releaseYear": 2016,
+       "genre": "Acción, aventura, comedia",
+       "note": "El mercenario Wade Wilson sobrevive a un experimento que lo deja desfigurado y con un factor de curación, y busca venganza.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Tim Miller",
+       "duration": "1h 49m",
+       "externalUrl": "https://letterboxd.com/film/deadpool/"
+      },
+      {
+       "id": "deadpool-2",
+       "type": "movieSeries",
+       "title": "Deadpool 2",
+       "coverUrl": "assets/colecciones/portadas/marvel-deadpool-2.jpg",
+       "releaseYear": 2018,
+       "genre": "Acción, comedia, aventura",
+       "note": "Deadpool forma la X-Force para proteger a un joven mutante de Cable, un soldado llegado del futuro.",
+       "mediaType": "movie",
+       "creatorOrDirector": "David Leitch",
+       "duration": "2h 3m",
+       "externalUrl": "https://letterboxd.com/film/deadpool-2/"
+      },
+      {
+       "id": "x-men-fenix-oscura",
+       "type": "movieSeries",
+       "title": "X-Men: Fénix Oscura",
+       "coverUrl": "assets/colecciones/portadas/marvel-x-men-fenix-oscura.jpg",
+       "releaseYear": 2019,
+       "genre": "Ciencia ficción, acción, aventura",
+       "note": "Una fuerza cósmica alcanza a Jean Grey durante una misión espacial y la vuelve tan poderosa como inestable.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Simon Kinberg",
+       "duration": "1h 56m",
+       "externalUrl": "https://letterboxd.com/film/dark-phoenix/"
+      },
+      {
+       "id": "los-nuevos-mutantes",
+       "type": "movieSeries",
+       "title": "Los nuevos mutantes",
+       "coverUrl": "assets/colecciones/portadas/marvel-los-nuevos-mutantes.jpg",
+       "releaseYear": 2020,
+       "genre": "Ciencia ficción, terror",
+       "note": "Cinco jóvenes mutantes encerrados en una instalación secreta intentan escapar de sus miedos.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Josh Boone",
+       "duration": "1h 34m",
+       "externalUrl": "https://letterboxd.com/film/the-new-mutants/"
+      }
+     ]
+    },
+    {
+     "nombre": "Otras películas de Marvel",
+     "obras": [
+      {
+       "id": "blade-1998",
+       "type": "movieSeries",
+       "title": "Blade",
+       "coverUrl": "assets/colecciones/portadas/marvel-blade-1998.jpg",
+       "releaseYear": 1998,
+       "genre": "Terror, acción",
+       "note": "Blade, mitad humano y mitad vampiro, caza a los vampiros que mordieron a su madre.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Stephen Norrington",
+       "duration": "2h",
+       "externalUrl": "https://letterboxd.com/film/blade/"
+      },
+      {
+       "id": "blade-ii",
+       "type": "movieSeries",
+       "title": "Blade II",
+       "coverUrl": "assets/colecciones/portadas/marvel-blade-ii.jpg",
+       "releaseYear": 2002,
+       "genre": "Fantasía, terror, acción",
+       "note": "Blade se alía con los vampiros para combatir a los Reapers, una nueva especie que se alimenta de humanos y vampiros.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Guillermo del Toro",
+       "duration": "1h 57m",
+       "externalUrl": "https://letterboxd.com/film/blade-ii/"
+      },
+      {
+       "id": "blade-trinity",
+       "type": "movieSeries",
+       "title": "Blade: Trinity",
+       "coverUrl": "assets/colecciones/portadas/marvel-blade-trinity.jpg",
+       "releaseYear": 2004,
+       "genre": "Acción, terror, ciencia ficción",
+       "note": "Perseguido por el FBI, Blade se une a los Nightstalkers para enfrentarse a Drácula.",
+       "mediaType": "movie",
+       "creatorOrDirector": "David S. Goyer",
+       "duration": "1h 53m",
+       "externalUrl": "https://letterboxd.com/film/blade-trinity/"
+      },
+      {
+       "id": "hulk-2003",
+       "type": "movieSeries",
+       "title": "Hulk",
+       "coverUrl": "assets/colecciones/portadas/marvel-hulk-2003.jpg",
+       "releaseYear": 2003,
+       "genre": "Ciencia ficción, acción, drama",
+       "note": "Un accidente con rayos gamma despierta en el científico Bruce Banner una criatura incontrolable.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Ang Lee",
+       "duration": "2h 13m",
+       "externalUrl": "https://letterboxd.com/film/hulk/"
+      },
+      {
+       "id": "daredevil-2003",
+       "type": "movieSeries",
+       "title": "Daredevil",
+       "coverUrl": "assets/colecciones/portadas/marvel-daredevil-2003.jpg",
+       "releaseYear": 2003,
+       "genre": "Fantasía, acción",
+       "note": "El abogado ciego Matt Murdock se convierte de noche en Daredevil, el justiciero de Hell's Kitchen.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Mark Steven Johnson",
+       "duration": "1h 43m",
+       "externalUrl": "https://letterboxd.com/film/daredevil/"
+      },
+      {
+       "id": "the-punisher-el-castigador",
+       "type": "movieSeries",
+       "title": "The Punisher (El castigador)",
+       "coverUrl": "assets/colecciones/portadas/marvel-the-punisher-el-castigador.jpg",
+       "releaseYear": 2004,
+       "genre": "Acción, crimen, drama",
+       "note": "Frank Castle busca venganza contra el mafioso que mandó asesinar a toda su familia.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Jonathan Hensleigh",
+       "duration": "2h 4m",
+       "externalUrl": "https://letterboxd.com/film/the-punisher-2004/"
+      },
+      {
+       "id": "elektra-2005",
+       "type": "movieSeries",
+       "title": "Elektra",
+       "coverUrl": "assets/colecciones/portadas/marvel-elektra-2005.jpg",
+       "releaseYear": 2005,
+       "genre": "Acción, fantasía, aventura",
+       "note": "Tras volver de la muerte, la asesina Elektra recibe un encargo que la obliga a elegir entre su oficio y proteger a sus objetivos.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Rob Bowman",
+       "duration": "1h 37m",
+       "externalUrl": "https://letterboxd.com/film/elektra/"
+      },
+      {
+       "id": "los-4-fantasticos",
+       "type": "movieSeries",
+       "title": "Los 4 fantásticos",
+       "coverUrl": "assets/colecciones/portadas/marvel-los-4-fantasticos.jpg",
+       "releaseYear": 2005,
+       "genre": "Acción, fantasía, ciencia ficción",
+       "note": "Una tormenta cósmica da poderes a cuatro astronautas, que se enfrentan a Victor von Muerte.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Tim Story",
+       "duration": "1h 45m",
+       "externalUrl": "https://letterboxd.com/film/fantastic-four-2005/"
+      },
+      {
+       "id": "los-4-fantasticos-y-silver-surfer",
+       "type": "movieSeries",
+       "title": "Los 4 fantásticos y Silver Surfer",
+       "coverUrl": "assets/colecciones/portadas/marvel-los-4-fantasticos-y-silver-surfer.jpg",
+       "releaseYear": 2007,
+       "genre": "Ciencia ficción, aventura, acción",
+       "note": "Un heraldo intergaláctico llega a la Tierra para preparar su destrucción mientras regresa el Doctor Muerte.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Tim Story",
+       "duration": "1h 32m",
+       "externalUrl": "https://letterboxd.com/film/fantastic-four-rise-of-the-silver-surfer/"
+      },
+      {
+       "id": "ghost-rider-el-motorista-fantasma",
+       "type": "movieSeries",
+       "title": "Ghost Rider: El motorista fantasma",
+       "coverUrl": "assets/colecciones/portadas/marvel-ghost-rider-el-motorista-fantasma.jpg",
+       "releaseYear": 2007,
+       "genre": "Suspense, acción, fantasía",
+       "note": "El acróbata Johnny Blaze vendió su alma al diablo y ahora debe cazar demonios como Ghost Rider.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Mark Steven Johnson",
+       "duration": "1h 50m",
+       "externalUrl": "https://letterboxd.com/film/ghost-rider/"
+      },
+      {
+       "id": "ghost-rider-espiritu-de-venganza",
+       "type": "movieSeries",
+       "title": "Ghost Rider: Espíritu de venganza",
+       "coverUrl": "assets/colecciones/portadas/marvel-ghost-rider-espiritu-de-venganza.jpg",
+       "releaseYear": 2011,
+       "genre": "Acción, fantasía, suspense",
+       "note": "Johnny Blaze vive escondido en Europa hasta que un monje le pide proteger a un niño que busca el diablo.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Mark Neveldine, Brian Taylor",
+       "duration": "1h 36m",
+       "externalUrl": "https://letterboxd.com/film/ghost-rider-spirit-of-vengeance/"
+      },
+      {
+       "id": "cuatro-fantasticos",
+       "type": "movieSeries",
+       "title": "Cuatro Fantásticos",
+       "coverUrl": "assets/colecciones/portadas/marvel-cuatro-fantasticos.jpg",
+       "releaseYear": 2015,
+       "genre": "Acción, aventura, ciencia ficción",
+       "note": "Cuatro jóvenes se teletransportan a un universo alternativo que les da extraños poderes.",
+       "mediaType": "movie",
+       "creatorOrDirector": "Josh Trank",
+       "duration": "1h 40m",
+       "externalUrl": "https://letterboxd.com/film/fantastic-four/"
       }
      ]
     },
@@ -4217,7 +6162,115 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/marvel.jpg"
+  },
+  {
+   "id": "mitologia-griega",
+   "nombre": "Mitología griega",
+   "alias": [
+    "Mitología"
+   ],
+   "universo": "Mitología griega",
+   "grupos": [
+    {
+     "nombre": "Libros",
+     "obras": [
+      {
+       "id": "la-iliada",
+       "type": "book",
+       "title": "La Ilíada",
+       "author": "Homero",
+       "genre": "Poesía épica",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-iliada.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/16147035-la-il-ada",
+       "note": "La cólera de Aquiles durante cincuenta y un días del último año de la guerra de Troya. Es el poema más antiguo de la literatura occidental; se compuso hacia el siglo VIII a. C."
+      },
+      {
+       "id": "la-odisea",
+       "type": "book",
+       "title": "La Odisea",
+       "author": "Homero",
+       "genre": "Poesía épica",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-odisea.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/61431.La_Odisea_de_Homero",
+       "note": "Tras la guerra de Troya, Odiseo tarda diez años en volver a Ítaca, donde Penélope y Telémaco resisten a los pretendientes. Se compuso hacia el siglo VIII a. C."
+      },
+      {
+       "id": "teogonia",
+       "type": "book",
+       "title": "Teogonía",
+       "author": "Hesíodo",
+       "genre": "Poesía épica, mitología",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-teogonia.jpg",
+       "pages": "70",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/75008993-teogon-a",
+       "note": "El origen del mundo y la genealogía de los dioses griegos, desde el Caos hasta el reinado de Zeus. Se compuso hacia el siglo VII a. C."
+      },
+      {
+       "id": "la-cancion-de-aquiles",
+       "type": "book",
+       "title": "La canción de Aquiles",
+       "author": "Madeline Miller",
+       "genre": "Fantasía mitológica, ficción histórica",
+       "releaseYear": 2011,
+       "pages": "497",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-cancion-de-aquiles.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/15709854-la-canci-n-de-aquiles",
+       "note": "Patroclo cuenta su vida junto a Aquiles, desde su infancia hasta la guerra de Troya. Premio Orange de 2012."
+      },
+      {
+       "id": "circe",
+       "type": "book",
+       "title": "Circe",
+       "author": "Madeline Miller",
+       "genre": "Fantasía mitológica, ficción literaria",
+       "releaseYear": 2018,
+       "pages": "393",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-circe.jpg",
+       "creatorOrDirector": "Libro",
+       "externalUrl": "https://www.goodreads.com/book/show/43297341-circe",
+       "note": "La hechicera hija de Helios, desterrada a la isla de Eea, cruza su vida con Hermes, Dédalo, el Minotauro y Odiseo."
+      }
+     ]
+    },
+    {
+     "nombre": "Películas",
+     "obras": [
+      {
+       "id": "troya",
+       "type": "movieSeries",
+       "mediaType": "movie",
+       "title": "Troya",
+       "releaseYear": 2004,
+       "duration": "2h 43m",
+       "creatorOrDirector": "Wolfgang Petersen",
+       "genre": "Épica, acción, drama histórico",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-troya.jpg",
+       "externalUrl": "https://letterboxd.com/film/troy/",
+       "note": "Versión libre de la Ilíada: el rapto de Helena desata la guerra entre griegos y troyanos, con Brad Pitt como Aquiles."
+      },
+      {
+       "id": "la-odisea-2026",
+       "type": "movieSeries",
+       "mediaType": "movie",
+       "title": "La Odisea",
+       "releaseYear": 2026,
+       "duration": "2h 52m",
+       "creatorOrDirector": "Christopher Nolan",
+       "genre": "Aventura épica, acción, fantasía",
+       "coverUrl": "assets/colecciones/portadas/mitologia-griega-la-odisea-2026.jpg",
+       "externalUrl": "https://letterboxd.com/film/the-odyssey-2026/",
+       "note": "Adaptación de la epopeya de Homero dirigida por Christopher Nolan, con Matt Damon como Odiseo."
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/mitologia-griega.jpg"
   },
   {
    "id": "orcs-must-die",
@@ -4276,7 +6329,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/orcs-must-die.jpg"
   },
   {
    "id": "persona",
@@ -4404,7 +6458,8 @@
        "releaseYear": 2027,
        "genre": "JRPG, simulación social y mazmorras",
        "collectionNumber": 4,
-       "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series."
+       "note": "Remake de Persona 4 Golden con gráficos, interfaz, combate y escenas renovados. Sale el 18 de febrero de 2027 en PC, PS5 y Xbox Series.",
+       "fechaPrevista": "18 de febrero de 2027"
       },
       {
        "id": "persona-5",
@@ -4439,7 +6494,8 @@
        "developer": "Atlus",
        "genre": "JRPG, simulación social y mazmorras",
        "collectionNumber": 6,
-       "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival."
+       "note": "Nueva entrega principal, anunciada en junio de 2026, con historia independiente y reparto nuevo. Todavía no tiene fecha de lanzamiento: Atlus solo ha confirmado que llegará después de Persona 4 Revival.",
+       "fechaPrevista": ""
       }
      ]
     },
@@ -4558,7 +6614,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/persona.jpg"
   },
   {
    "id": "practical-magic",
@@ -4597,7 +6654,202 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/practical-magic.jpg"
+  },
+  {
+   "id": "quentin-tarantino",
+   "nombre": "Quentin Tarantino",
+   "alias": [
+    "Tarantino"
+   ],
+   "universo": "Quentin Tarantino",
+   "grupos": [
+    {
+     "nombre": "Como director",
+     "obras": [
+      {
+       "id": "reservoir-dogs",
+       "type": "movieSeries",
+       "title": "Reservoir Dogs",
+       "coverUrl": "assets/colecciones/portadas/tarantino-reservoir-dogs.jpg",
+       "releaseYear": 1992,
+       "genre": "Crimen, suspense",
+       "note": "Tras un atraco fallido, los ladrones se reúnen en un almacén convencidos de que uno de ellos es un policía infiltrado. Su primer largometraje.",
+       "mediaType": "movie",
+       "duration": "1h 39m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 1,
+       "externalUrl": "https://letterboxd.com/film/reservoir-dogs/"
+      },
+      {
+       "id": "pulp-fiction",
+       "type": "movieSeries",
+       "title": "Pulp Fiction",
+       "coverUrl": "assets/colecciones/portadas/tarantino-pulp-fiction.jpg",
+       "releaseYear": 1994,
+       "genre": "Suspense, crimen, comedia",
+       "note": "Dos sicarios, un boxeador, la mujer de un gánster y una pareja de atracadores cruzan sus historias en Los Ángeles. Palma de Oro en Cannes.",
+       "mediaType": "movie",
+       "duration": "2h 34m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 2,
+       "externalUrl": "https://letterboxd.com/film/pulp-fiction/"
+      },
+      {
+       "id": "jackie-brown",
+       "type": "movieSeries",
+       "title": "Jackie Brown",
+       "coverUrl": "assets/colecciones/portadas/tarantino-jackie-brown.jpg",
+       "releaseYear": 1997,
+       "genre": "Crimen, drama, suspense",
+       "note": "Una azafata que pasa dinero para un traficante de armas planea engañar a la vez a él y a la policía. Adaptación de una novela de Elmore Leonard.",
+       "mediaType": "movie",
+       "duration": "2h 34m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 3,
+       "externalUrl": "https://letterboxd.com/film/jackie-brown/"
+      },
+      {
+       "ref": "kill-bill/kill-bill-vol-1"
+      },
+      {
+       "ref": "kill-bill/kill-bill-vol-2"
+      },
+      {
+       "id": "death-proof",
+       "type": "movieSeries",
+       "title": "Death Proof",
+       "coverUrl": "assets/colecciones/portadas/tarantino-death-proof.jpg",
+       "releaseYear": 2007,
+       "genre": "Acción, suspense",
+       "note": "Un especialista de cine usa su coche «a prueba de muerte» para cazar mujeres en la carretera. Su mitad del programa doble Grindhouse.",
+       "mediaType": "movie",
+       "duration": "1h 54m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 6,
+       "externalUrl": "https://letterboxd.com/film/death-proof/"
+      },
+      {
+       "id": "malditos-bastardos",
+       "type": "movieSeries",
+       "title": "Malditos bastardos",
+       "coverUrl": "assets/colecciones/portadas/tarantino-malditos-bastardos.jpg",
+       "releaseYear": 2009,
+       "genre": "Drama, suspense, bélica",
+       "note": "En la Francia ocupada, un grupo de soldados judíos estadounidenses y una joven dueña de un cine planean acabar con la cúpula nazi.",
+       "mediaType": "movie",
+       "duration": "2h 33m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 7,
+       "externalUrl": "https://letterboxd.com/film/inglourious-basterds/"
+      },
+      {
+       "id": "django-desencadenado",
+       "type": "movieSeries",
+       "title": "Django desencadenado",
+       "coverUrl": "assets/colecciones/portadas/tarantino-django-desencadenado.jpg",
+       "releaseYear": 2012,
+       "genre": "Drama, western",
+       "note": "Un esclavo liberado se une a un cazarrecompensas alemán para rescatar a su mujer de una plantación de Misisipi.",
+       "mediaType": "movie",
+       "duration": "2h 45m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 8,
+       "externalUrl": "https://letterboxd.com/film/django-unchained/"
+      },
+      {
+       "id": "los-odiosos-ocho",
+       "type": "movieSeries",
+       "title": "Los odiosos ocho",
+       "coverUrl": "assets/colecciones/portadas/tarantino-los-odiosos-ocho.jpg",
+       "releaseYear": 2015,
+       "genre": "Drama, misterio, western",
+       "note": "Una ventisca deja atrapados en una posta de Wyoming a un cazarrecompensas, su prisionera y seis desconocidos en los que nadie confía.",
+       "mediaType": "movie",
+       "duration": "3h 7m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 9,
+       "externalUrl": "https://letterboxd.com/film/the-hateful-eight/"
+      },
+      {
+       "id": "erase-una-vez-en-hollywood",
+       "type": "movieSeries",
+       "title": "Érase una vez en… Hollywood",
+       "coverUrl": "assets/colecciones/portadas/tarantino-erase-una-vez-en-hollywood.jpg",
+       "releaseYear": 2019,
+       "genre": "Comedia, drama, suspense",
+       "note": "Un actor de televisión en decadencia y su doble de acción recorren el Hollywood de 1969, vecinos de Sharon Tate.",
+       "mediaType": "movie",
+       "duration": "2h 42m",
+       "creatorOrDirector": "Quentin Tarantino",
+       "collectionNumber": 10,
+       "externalUrl": "https://letterboxd.com/film/once-upon-a-time-in-hollywood/"
+      },
+      {
+       "ref": "kill-bill/kill-bill-the-whole-bloody-affair"
+      }
+     ]
+    },
+    {
+     "nombre": "Guiones y colaboraciones",
+     "obras": [
+      {
+       "id": "amor-a-quemarropa",
+       "type": "movieSeries",
+       "title": "Amor a quemarropa",
+       "coverUrl": "assets/colecciones/portadas/tarantino-amor-a-quemarropa.jpg",
+       "releaseYear": 1993,
+       "genre": "Acción, crimen, romance",
+       "note": "Un dependiente de cómics y una prostituta huyen con una maleta de cocaína robada a la mafia. Guion de Tarantino dirigido por Tony Scott.",
+       "mediaType": "movie",
+       "duration": "2h",
+       "creatorOrDirector": "Tony Scott",
+       "externalUrl": "https://letterboxd.com/film/true-romance/"
+      },
+      {
+       "id": "asesinos-natos",
+       "type": "movieSeries",
+       "title": "Asesinos natos",
+       "coverUrl": "assets/colecciones/portadas/tarantino-asesinos-natos.jpg",
+       "releaseYear": 1994,
+       "genre": "Crimen, suspense, drama",
+       "note": "Una pareja de asesinos en serie se convierte en un fenómeno mediático. Oliver Stone partió de una historia de Tarantino.",
+       "mediaType": "movie",
+       "duration": "2h",
+       "creatorOrDirector": "Oliver Stone",
+       "externalUrl": "https://letterboxd.com/film/natural-born-killers/"
+      },
+      {
+       "id": "four-rooms",
+       "type": "movieSeries",
+       "title": "Four Rooms",
+       "coverUrl": "assets/colecciones/portadas/tarantino-four-rooms.jpg",
+       "releaseYear": 1995,
+       "genre": "Comedia",
+       "note": "Un botones vive cuatro historias en las habitaciones de un hotel en Nochevieja. Tarantino dirige y protagoniza el último segmento.",
+       "mediaType": "movie",
+       "duration": "1h 37m",
+       "creatorOrDirector": "Allison Anders, Alexandre Rockwell, Robert Rodriguez, Quentin Tarantino",
+       "externalUrl": "https://letterboxd.com/film/four-rooms/"
+      },
+      {
+       "id": "abierto-hasta-el-amanecer",
+       "type": "movieSeries",
+       "title": "Abierto hasta el amanecer",
+       "coverUrl": "assets/colecciones/portadas/tarantino-abierto-hasta-el-amanecer.jpg",
+       "releaseYear": 1996,
+       "genre": "Acción, terror, crimen",
+       "note": "Dos hermanos atracadores huyen a México con una familia como rehén y acaban en un bar lleno de vampiros. Guion y papel de Tarantino.",
+       "mediaType": "movie",
+       "duration": "1h 50m",
+       "creatorOrDirector": "Robert Rodriguez",
+       "externalUrl": "https://letterboxd.com/film/from-dusk-till-dawn/"
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/quentin-tarantino.jpg"
   },
   {
    "id": "resident-evil",
@@ -4770,6 +7022,17 @@
        "collectionNumber": 3
       },
       {
+       "id": "resident-evil-code-veronica-x",
+       "type": "game",
+       "title": "Resident Evil Code: Veronica X",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-code-veronica-x.jpg",
+       "platform": "PlayStation 2",
+       "developer": "Capcom",
+       "releaseYear": 2000,
+       "genre": "Terror de supervivencia",
+       "note": "Claire Redfield busca a su hermano Chris y acaba presa en una isla de Umbrella, donde se enfrenta a los gemelos Ashford. No tiene versión de PC."
+      },
+      {
        "id": "resident-evil-4",
        "type": "game",
        "title": "Resident Evil 4",
@@ -4862,6 +7125,71 @@
        "releaseYear": 2015,
        "genre": "Terror de supervivencia",
        "note": "Claire Redfield y Moira Burton despiertan en una isla-prisión, con Barry Burton en su búsqueda."
+      },
+      {
+       "id": "resident-evil-outbreak",
+       "type": "game",
+       "title": "Resident Evil Outbreak",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-outbreak.jpg",
+       "platform": "PlayStation 2",
+       "developer": "Capcom",
+       "releaseYear": 2003,
+       "genre": "Terror de supervivencia",
+       "note": "Ocho ciudadanos corrientes intentan escapar de Raccoon City durante el brote, en partidas cooperativas en línea. Exclusivo de PlayStation 2."
+      }
+     ]
+    },
+    {
+     "nombre": "Versiones originales",
+     "obras": [
+      {
+       "id": "resident-evil-1996",
+       "type": "game",
+       "title": "Resident Evil (1996)",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-1996.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 1996,
+       "genre": "Terror de supervivencia",
+       "note": "El original de PlayStation: los S.T.A.R.S. quedan atrapados en la mansión Spencer. Está en PC a través de GOG.",
+       "collectionNumber": 1
+      },
+      {
+       "id": "resident-evil-2-1998",
+       "type": "game",
+       "title": "Resident Evil 2 (1998)",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-2-1998.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 1998,
+       "genre": "Terror de supervivencia",
+       "note": "Leon S. Kennedy y Claire Redfield llegan a una Raccoon City arrasada por el virus T. Versión original con cámaras fijas, en PC a través de GOG.",
+       "collectionNumber": 2
+      },
+      {
+       "id": "resident-evil-3-nemesis",
+       "type": "game",
+       "title": "Resident Evil 3: Nemesis",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-3-nemesis.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 1999,
+       "genre": "Terror de supervivencia",
+       "note": "Jill Valentine intenta huir de Raccoon City perseguida por el Némesis. Versión original, en PC a través de GOG.",
+       "collectionNumber": 3
+      },
+      {
+       "id": "resident-evil-4-2005",
+       "type": "game",
+       "title": "Resident Evil 4 (2005)",
+       "coverUrl": "assets/colecciones/portadas/resident-evil-resident-evil-4-2005.jpg",
+       "platform": "PC",
+       "developer": "Capcom",
+       "releaseYear": 2005,
+       "genre": "Terror de supervivencia",
+       "note": "Leon viaja a un pueblo de España para rescatar a la hija del presidente y se topa con una secta. El original que llevó la saga hacia la acción.",
+       "collectionNumber": 4,
+       "externalUrl": "https://store.steampowered.com/app/254700/"
       }
      ]
     },
@@ -4942,7 +7270,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/resident-evil.jpg"
   },
   {
    "id": "sinister",
@@ -4981,7 +7310,137 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/sinister.jpg"
+  },
+  {
+   "id": "souls",
+   "nombre": "Souls",
+   "grupos": [
+    {
+     "nombre": "Dark Souls",
+     "obras": [
+      {
+       "id": "dark-souls-remastered",
+       "type": "game",
+       "title": "Dark Souls Remastered",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-remastered.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2011,
+       "genre": "Rol de acción",
+       "note": "Un no muerto maldito viaja a Lordran para decidir el destino de la Era del Fuego. Es la versión mejorada del original, con todo su contenido adicional.",
+       "collectionNumber": 1,
+       "collectionName": "Dark Souls"
+      },
+      {
+       "id": "dark-souls-ii-scholar-of-the-first-sin",
+       "type": "game",
+       "title": "Dark Souls II: Scholar of the First Sin",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-ii-scholar-of-the-first-sin.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2014,
+       "genre": "Rol de acción",
+       "note": "Un maldito llega a Drangleic en busca de la cura a su condición. Esta edición incluye las expansiones y reordena enemigos y encuentros.",
+       "collectionNumber": 2,
+       "collectionName": "Dark Souls"
+      },
+      {
+       "id": "dark-souls-iii",
+       "type": "game",
+       "title": "Dark Souls III",
+       "coverUrl": "assets/colecciones/portadas/dark-souls-dark-souls-iii.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2016,
+       "genre": "Rol de acción",
+       "note": "Un Latente debe devolver a sus tronos a los Señores de la Ceniza en un mundo que agoniza. Es el cierre de la trilogía.",
+       "collectionNumber": 3,
+       "collectionName": "Dark Souls"
+      }
+     ]
+    },
+    {
+     "nombre": "Otros juegos de FromSoftware",
+     "obras": [
+      {
+       "id": "demons-souls",
+       "type": "game",
+       "title": "Demon's Souls",
+       "coverUrl": "assets/colecciones/portadas/souls-demons-souls.jpg",
+       "platform": "PS5",
+       "developer": "Bluepoint Games / FromSoftware",
+       "releaseYear": 2009,
+       "genre": "Rol de acción",
+       "note": "El origen de la fórmula Souls: un guerrero atraviesa el reino de Boletaria, envuelto en una niebla demoníaca. El original salió en PS3 en 2009 y el remake de Bluepoint, en PS5 en 2020."
+      },
+      {
+       "id": "bloodborne",
+       "type": "game",
+       "title": "Bloodborne",
+       "coverUrl": "assets/colecciones/portadas/souls-bloodborne.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2015,
+       "genre": "Rol de acción y terror gótico",
+       "note": "Un cazador llega a Yharnam, una ciudad gótica asolada por una plaga que convierte a sus habitantes en bestias, en busca de la Sangre Pálida."
+      },
+      {
+       "id": "sekiro",
+       "type": "game",
+       "title": "Sekiro: Shadows Die Twice",
+       "coverUrl": "assets/colecciones/portadas/souls-sekiro.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2019,
+       "genre": "Acción y aventura",
+       "note": "En el Japón de la era Sengoku, el shinobi Lobo intenta rescatar a su joven señor y vengarse de quien le cortó el brazo, con un combate basado en desviar golpes.",
+       "externalUrl": "https://store.steampowered.com/app/814380/"
+      },
+      {
+       "id": "elden-ring",
+       "type": "game",
+       "title": "Elden Ring",
+       "coverUrl": "assets/colecciones/portadas/souls-elden-ring.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2022,
+       "genre": "Rol de acción y mundo abierto",
+       "note": "Un Sinluz recorre las Tierras Intermedias, un mundo abierto creado junto a George R. R. Martin, para convertirse en Señor del Círculo. Tiene la expansión Shadow of the Erdtree.",
+       "externalUrl": "https://store.steampowered.com/app/1245620/"
+      },
+      {
+       "id": "elden-ring-nightreign",
+       "type": "game",
+       "title": "Elden Ring Nightreign",
+       "coverUrl": "assets/colecciones/portadas/souls-elden-ring-nightreign.jpg",
+       "platform": "PC",
+       "developer": "FromSoftware",
+       "releaseYear": 2025,
+       "genre": "Rol de acción cooperativo y roguelike",
+       "note": "Spin-off cooperativo para tres jugadores ambientado en el mundo de Elden Ring: cada partida dura tres días y termina contra un gran jefe.",
+       "externalUrl": "https://store.steampowered.com/app/2622380/"
+      },
+      {
+       "id": "the-duskbloods",
+       "type": "game",
+       "title": "The Duskbloods",
+       "coverUrl": "assets/colecciones/portadas/souls-the-duskbloods.jpg",
+       "platform": "Nintendo Switch 2",
+       "developer": "FromSoftware",
+       "genre": "Acción multijugador",
+       "fechaPrevista": "2027, sin fecha exacta",
+       "note": "Juego de acción multijugador exclusivo de Nintendo Switch 2, con vampiros que compiten en partidas de hasta ocho jugadores. FromSoftware lo ha retrasado a 2027."
+      }
+     ]
+    }
+   ],
+   "universo": "Souls",
+   "alias": [
+    "Dark Souls"
+   ],
+   "fondo": "assets/colecciones/fondos/souls.jpg"
   },
   {
    "id": "styx",
@@ -5028,7 +7487,8 @@
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/styx.jpg"
   },
   {
    "id": "subnautica",
@@ -5071,46 +7531,1191 @@
        "releaseYear": 2026,
        "genre": "Supervivencia y exploración submarina",
        "note": "Nueva aventura en un planeta oceánico diferente, con cooperativo. Está en acceso anticipado.",
-       "collectionNumber": 3
+       "collectionNumber": 3,
+       "fechaPrevista": "Acceso anticipado"
       }
      ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/subnautica.jpg"
   },
   {
-   "id": "the-binding-of-isaac",
-   "nombre": "The Binding of Isaac",
+   "id": "the-witcher",
+   "nombre": "The Witcher",
+   "alias": [
+    "Geralt de Rivia",
+    "Saga de Geralt de Rivia"
+   ],
    "grupos": [
     {
-     "nombre": "Saga principal",
+     "nombre": "Relatos",
      "obras": [
       {
-       "id": "the-binding-of-isaac",
-       "type": "game",
-       "title": "The Binding of Isaac",
-       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac.jpg",
-       "platform": "PC",
-       "developer": "Edmund McMillen",
-       "releaseYear": 2011,
-       "genre": "Roguelike de acción",
-       "note": "Isaac huye de su madre, que quiere sacrificarlo, a un sótano lleno de monstruos en un juego de mazmorras aleatorias.",
+       "id": "el-ultimo-deseo",
+       "type": "book",
+       "title": "El último deseo",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-el-ultimo-deseo.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Relatos que presentan a Geralt de Rivia, un brujo que caza monstruos a sueldo, y a Yennefer y Jaskier.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1993,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/8284655-el-ltimo-deseo",
        "collectionNumber": 1
       },
       {
-       "id": "the-binding-of-isaac-rebirth",
-       "type": "game",
-       "title": "The Binding of Isaac: Rebirth",
-       "coverUrl": "assets/colecciones/portadas/the-binding-of-isaac-the-binding-of-isaac-rebirth.jpg",
-       "platform": "PC",
-       "developer": "Nicalis / Edmund McMillen",
-       "releaseYear": 2014,
-       "genre": "Roguelike de acción",
-       "note": "Versión rehecha y muy ampliada del original, con más de cien horas de contenido.",
+       "id": "la-espada-del-destino",
+       "type": "book",
+       "title": "La espada del destino",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-espada-del-destino.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Más relatos de Geralt, incluido su primer encuentro con Ciri, la niña unida a él por el destino.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1992,
+       "pages": "288",
+       "externalUrl": "https://www.goodreads.com/book/show/9036325-la-espada-del-destino",
        "collectionNumber": 2
       }
      ]
+    },
+    {
+     "nombre": "Saga de Geralt de Rivia",
+     "obras": [
+      {
+       "id": "la-sangre-de-los-elfos",
+       "type": "book",
+       "title": "La sangre de los elfos",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-sangre-de-los-elfos.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Geralt protege a Ciri en Kaer Morhen mientras los reinos del norte se preparan para una nueva guerra con Nilfgaard.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1994,
+       "pages": "253",
+       "externalUrl": "https://www.goodreads.com/book/show/8776687-la-sangre-de-los-elfos",
+       "collectionNumber": 3
+      },
+      {
+       "id": "tiempo-de-odio",
+       "type": "book",
+       "title": "Tiempo de odio",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-tiempo-de-odio.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Un golpe de Estado de los hechiceros en la isla de Thanedd separa a Geralt, Yennefer y Ciri en plena guerra.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1995,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/4943401-tiempo-de-odio",
+       "collectionNumber": 4
+      },
+      {
+       "id": "bautismo-de-fuego",
+       "type": "book",
+       "title": "Bautismo de fuego",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-bautismo-de-fuego.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Herido, Geralt reúne una compañía inesperada para cruzar un continente en guerra en busca de Ciri.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1996,
+       "pages": "256",
+       "externalUrl": "https://www.goodreads.com/book/show/8714958-bautismo-de-fuego",
+       "collectionNumber": 5
+      },
+      {
+       "id": "la-torre-de-la-golondrina",
+       "type": "book",
+       "title": "La torre de la golondrina",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-torre-de-la-golondrina.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Ciri, perseguida por todos, se convierte en la bandida Falka mientras Geralt sigue su rastro.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1997,
+       "pages": "334",
+       "externalUrl": "https://www.goodreads.com/book/show/11568412-la-torre-de-la-golondrina",
+       "collectionNumber": 6
+      },
+      {
+       "id": "la-dama-del-lago",
+       "type": "book",
+       "title": "La dama del lago",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-la-dama-del-lago.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Cierre de la saga: Ciri viaja entre mundos y Geralt llega al final de su búsqueda.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1999,
+       "pages": "464",
+       "externalUrl": "https://www.goodreads.com/book/show/13262017-la-dama-del-lago",
+       "collectionNumber": 7
+      }
+     ]
+    },
+    {
+     "nombre": "Otras novelas",
+     "obras": [
+      {
+       "id": "estacion-de-tormentas",
+       "type": "book",
+       "title": "Estación de tormentas",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-estacion-de-tormentas.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "note": "Novela independiente ambientada entre los relatos de El último deseo: Geralt pierde sus espadas y se ve envuelto en una intriga de hechiceros.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2013,
+       "pages": "312",
+       "externalUrl": "https://www.goodreads.com/book/show/23292117-estaci-n-de-tormentas"
+      },
+      {
+       "id": "crossroads-of-ravens",
+       "type": "book",
+       "title": "Crossroads of Ravens",
+       "coverUrl": "assets/colecciones/portadas/the-witcher-crossroads-of-ravens.jpg",
+       "author": "Andrzej Sapkowski",
+       "genre": "Fantasía oscura",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2024,
+       "fechaPrevista": "",
+       "note": "Precuela con un Geralt de dieciocho años en sus primeros encargos como brujo. Todavía sin edición en español: Alamut, que publica la saga en España, sigue negociando la renovación de los derechos."
+      }
+     ]
     }
-   ]
+   ],
+   "fondo": "assets/colecciones/fondos/the-witcher.jpg"
+  },
+  {
+   "id": "warhammer-40000",
+   "nombre": "Warhammer 40.000",
+   "alias": [
+    "Los Fantasmas de Gaunt",
+    "Gaunt's Ghosts"
+   ],
+   "universo": "Warhammer 40.000",
+   "grupos": [
+    {
+     "nombre": "Los Fantasmas de Gaunt",
+     "obras": [
+      {
+       "id": "los-primeros-de-tanith",
+       "type": "book",
+       "title": "Los primeros de Tanith",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-los-primeros-de-tanith.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "El comisario Ibram Gaunt y el Primero de Tanith, el regimiento que sobrevivió a la destrucción de su mundo, combaten en la Cruzada de los Mundos de Sabbat.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 1999,
+       "pages": "304",
+       "externalUrl": "https://www.goodreads.com/book/show/2637133",
+       "collectionNumber": 1
+      },
+      {
+       "id": "el-hacedor-de-fantasmas",
+       "type": "book",
+       "title": "El hacedor de fantasmas",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-el-hacedor-de-fantasmas.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Relatos enlazados que presentan a los soldados de los Fantasmas de Gaunt durante una campaña.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2000,
+       "pages": "327",
+       "externalUrl": "https://www.goodreads.com/book/show/12340431",
+       "collectionNumber": 2
+      },
+      {
+       "id": "necropolis",
+       "type": "book",
+       "title": "Necrópolis",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-necropolis.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Los Fantasmas defienden la ciudad colmena de Vervunhive frente a un asedio del Caos y una traición interna.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2000,
+       "pages": "336",
+       "externalUrl": "https://www.goodreads.com/book/show/12660204",
+       "collectionNumber": 3
+      },
+      {
+       "id": "guardia-de-honor",
+       "type": "book",
+       "title": "Guardia de honor",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-guardia-de-honor.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Los Fantasmas escoltan las reliquias de la santa Sabbat en el mundo santuario de Hagia.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2001,
+       "pages": "336",
+       "externalUrl": "https://www.goodreads.com/book/show/61793030",
+       "collectionNumber": 4
+      },
+      {
+       "id": "las-armas-de-tanith",
+       "type": "book",
+       "title": "Las armas de Tanith",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-las-armas-de-tanith.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Sin munición ni refuerzos, el regimiento lanza un asalto aerotransportado sobre el mundo forja de Phantine.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2002,
+       "pages": "384",
+       "externalUrl": "https://www.goodreads.com/book/show/8722862",
+       "collectionNumber": 5
+      },
+      {
+       "id": "plata-pura",
+       "type": "book",
+       "title": "Plata pura",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-plata-pura.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Guerra de trincheras en Aexe Cardinal, donde los Fantasmas descubren que el enemigo no es el único peligro.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2002,
+       "pages": "384",
+       "externalUrl": "https://www.goodreads.com/book/show/18131614",
+       "collectionNumber": 6
+      },
+      {
+       "id": "santa-sabbat-martir",
+       "type": "book",
+       "title": "Santa Sabbat mártir",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-santa-sabbat-martir.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "La supuesta reencarnación de la santa Sabbat aparece en Herodor y los Fantasmas deben protegerla.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2003,
+       "pages": "384",
+       "externalUrl": "https://www.goodreads.com/book/show/5025886",
+       "collectionNumber": 7
+      },
+      {
+       "id": "general-traidor",
+       "type": "book",
+       "title": "General traidor",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-general-traidor.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Gaunt dirige un comando tras las líneas enemigas en Gereon para eliminar a un general imperial capturado.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2004,
+       "pages": "352",
+       "externalUrl": "https://www.goodreads.com/book/show/18936938",
+       "collectionNumber": 8
+      },
+      {
+       "id": "la-ultima-orden",
+       "type": "book",
+       "title": "La última orden",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-la-ultima-orden.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Tras años como desaparecido, Gaunt regresa y encuentra a su regimiento disuelto entre otras unidades.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2005,
+       "pages": "332",
+       "externalUrl": "https://www.goodreads.com/book/show/21568010",
+       "collectionNumber": 9
+      },
+      {
+       "id": "la-armadura-del-desprecio",
+       "type": "book",
+       "title": "La armadura del desprecio",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-la-armadura-del-desprecio.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Los Fantasmas vuelven a Gereon para liberarlo, ahora con la desconfianza de los suyos tras su paso por territorio enemigo.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2006,
+       "pages": "336",
+       "externalUrl": "https://www.goodreads.com/book/show/21935329",
+       "collectionNumber": 10
+      },
+      {
+       "id": "solo-en-la-muerte",
+       "type": "book",
+       "title": "Sólo en la muerte",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-solo-en-la-muerte.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "El regimiento debe defender una fortaleza aislada en el mundo de Jago, rodeada de un enemigo invisible.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2007,
+       "pages": "364",
+       "externalUrl": "https://www.goodreads.com/book/show/22030247",
+       "collectionNumber": 11
+      },
+      {
+       "id": "pacto-sangriento",
+       "type": "book",
+       "title": "Pacto sangriento",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-pacto-sangriento.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Un oficial enemigo se entrega en Balhaut y Gaunt debe protegerlo de los asesinos del Pacto Sangriento.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2009,
+       "pages": "320",
+       "externalUrl": "https://www.goodreads.com/book/show/22068807",
+       "collectionNumber": 12
+      },
+      {
+       "id": "salvation-s-reach",
+       "type": "book",
+       "title": "Salvation's Reach",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-salvation-s-reach.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Los Fantasmas emprenden una misión de largo alcance contra una base secreta del enemigo. La edición española mantiene el título original.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2011,
+       "pages": "352",
+       "externalUrl": "https://www.goodreads.com/book/show/22384306",
+       "collectionNumber": 13
+      },
+      {
+       "id": "el-senor-de-la-guerra",
+       "type": "book",
+       "title": "El señor de la guerra",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-el-senor-de-la-guerra.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "Gaunt, ya Lord Militante, regresa a Balhaut mientras la cruzada se decide y los Fantasmas afrontan una nueva amenaza.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2017,
+       "pages": "446",
+       "externalUrl": "https://www.goodreads.com/book/show/40695934",
+       "collectionNumber": 14
+      },
+      {
+       "id": "anarch",
+       "type": "book",
+       "title": "Anarch",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-anarch.jpg",
+       "author": "Dan Abnett",
+       "genre": "Ciencia ficción militar",
+       "note": "La batalla final contra el Anarca en Urdesh cierra la gran saga de los Fantasmas de Gaunt.",
+       "creatorOrDirector": "Novela",
+       "releaseYear": 2019,
+       "pages": "572",
+       "externalUrl": "https://www.goodreads.com/book/show/55198474",
+       "collectionNumber": 15
+      }
+     ]
+    },
+    {
+     "nombre": "Juegos",
+     "obras": [
+      {
+       "id": "juego-final-liberation-warhammer-epic-40-000",
+       "type": "game",
+       "title": "Final Liberation: Warhammer Epic 40,000",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-final-liberation-warhammer-epic-40-000.jpg",
+       "platform": "PC",
+       "developer": "Holistic Design",
+       "releaseYear": 1997,
+       "genre": "Estrategia por turnos",
+       "note": "La Guardia Imperial defiende el mundo de Volistad de una invasión orka a escala Epic, con titanes incluidos.",
+       "externalUrl": "https://store.steampowered.com/app/4280920/"
+      },
+      {
+       "id": "juego-chaos-gate",
+       "type": "game",
+       "title": "Warhammer 40,000: Chaos Gate",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-chaos-gate.jpg",
+       "platform": "PC",
+       "developer": "Random Games",
+       "releaseYear": 1998,
+       "genre": "Táctica por turnos",
+       "note": "Los Ultramarines combaten a la Legión Alfa y a las fuerzas del Caos en el sistema Valinor.",
+       "externalUrl": "https://store.steampowered.com/app/4280890/"
+      },
+      {
+       "id": "juego-rites-of-war",
+       "type": "game",
+       "title": "Warhammer 40,000: Rites of War",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-rites-of-war.jpg",
+       "platform": "PC",
+       "developer": "DreamForge",
+       "releaseYear": 1999,
+       "genre": "Estrategia por turnos",
+       "note": "Los eldar del mundo astronave Iyanden luchan contra los tiránidos y el Imperio por el planeta Davinite.",
+       "externalUrl": "https://store.steampowered.com/app/4280900/"
+      },
+      {
+       "id": "juego-fire-warrior",
+       "type": "game",
+       "title": "Warhammer 40,000: Fire Warrior",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-fire-warrior.jpg",
+       "platform": "PC",
+       "developer": "Kuju Entertainment",
+       "releaseYear": 2003,
+       "genre": "Disparos en primera persona",
+       "note": "Kais, un joven guerrero de fuego tau, se adentra en territorio imperial para rescatar a su comandante etéreo.",
+       "externalUrl": "https://store.steampowered.com/app/4280930/"
+      },
+      {
+       "id": "juego-dawn-of-war-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2004,
+       "genre": "Estrategia en tiempo real",
+       "note": "Los Cuervos Sangrientos se enfrentan a orkos, eldar y fuerzas del Caos en el planeta Tartarus. Incluye sus expansiones.",
+       "externalUrl": "https://store.steampowered.com/app/4570/"
+      },
+      {
+       "id": "juego-dawn-of-war-ii-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War II - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-ii-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2009,
+       "genre": "Estrategia en tiempo real",
+       "note": "Estrategia centrada en escuadras y héroes: los Cuervos Sangrientos defienden el subsector Aurelia de los tiránidos.",
+       "externalUrl": "https://store.steampowered.com/app/15620/"
+      },
+      {
+       "id": "juego-space-marine-anniversary-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine - Anniversary Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-anniversary-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2011,
+       "genre": "Acción en tercera persona",
+       "note": "El capitán Titus y sus Ultramarines defienden un mundo forja de una invasión orka mientras el Caos acecha.",
+       "externalUrl": "https://store.steampowered.com/app/55150/"
+      },
+      {
+       "id": "juego-space-hulk",
+       "type": "game",
+       "title": "Space Hulk",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-hulk.jpg",
+       "platform": "PC",
+       "developer": "Full Control Studios",
+       "releaseYear": 2013,
+       "genre": "Táctica por turnos",
+       "note": "Los exterminadores de los Ángeles Sangrientos limpian un pecio espacial infestado de genestealers.",
+       "externalUrl": "https://store.steampowered.com/app/242570/"
+      },
+      {
+       "id": "juego-armageddon",
+       "type": "game",
+       "title": "Warhammer 40,000: Armageddon",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-armageddon.jpg",
+       "platform": "PC",
+       "developer": "Flashback Games",
+       "releaseYear": 2014,
+       "genre": "Estrategia por turnos",
+       "note": "La Segunda Guerra de Armageddon: la Guardia Imperial y los marines resisten la invasión orka de Ghazghkull.",
+       "externalUrl": "https://store.steampowered.com/app/312370/"
+      },
+      {
+       "id": "juego-space-hulk-ascension",
+       "type": "game",
+       "title": "Space Hulk: Ascension",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-hulk-ascension.jpg",
+       "platform": "PC",
+       "developer": "Full Control Studios",
+       "releaseYear": 2014,
+       "genre": "Táctica por turnos",
+       "note": "Escuadras de exterminadores de varios capítulos exploran pecios espaciales con progresión de rol.",
+       "externalUrl": "https://store.steampowered.com/app/317620/"
+      },
+      {
+       "id": "juego-battlefleet-gothic-armada",
+       "type": "game",
+       "title": "Battlefleet Gothic: Armada",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-battlefleet-gothic-armada.jpg",
+       "platform": "PC",
+       "developer": "Tindalos Interactive",
+       "releaseYear": 2016,
+       "genre": "Estrategia espacial en tiempo real",
+       "note": "Batallas de flotas en el sector Gothic durante la Duodécima Cruzada Negra de Abaddon.",
+       "externalUrl": "https://store.steampowered.com/app/363680/"
+      },
+      {
+       "id": "juego-talisman-the-horus-heresy",
+       "type": "game",
+       "title": "Talisman: The Horus Heresy",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-talisman-the-horus-heresy.jpg",
+       "platform": "PC",
+       "developer": "Nomad Games",
+       "releaseYear": 2016,
+       "genre": "Juego de tablero",
+       "note": "El clásico Talisman llevado a la Herejía de Horus: leales y traidores corren hacia el Palacio Imperial.",
+       "externalUrl": "https://store.steampowered.com/app/358460/"
+      },
+      {
+       "id": "juego-dawn-of-war-iii",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War III",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-iii.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2017,
+       "genre": "Estrategia en tiempo real",
+       "note": "Marines espaciales, orkos y eldar luchan por un arma antigua en el planeta Acheron.",
+       "externalUrl": "https://store.steampowered.com/app/285190/"
+      },
+      {
+       "id": "juego-sanctus-reach",
+       "type": "game",
+       "title": "Warhammer 40,000: Sanctus Reach",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-sanctus-reach.jpg",
+       "platform": "PC",
+       "developer": "Straylight Entertainment",
+       "releaseYear": 2017,
+       "genre": "Táctica por turnos",
+       "note": "Los Lobos Espaciales defienden el sistema Sanctus Reach de la gran horda orka de Grukk Faceripper.",
+       "externalUrl": "https://store.steampowered.com/app/502370/"
+      },
+      {
+       "id": "juego-inquisitor-martyr",
+       "type": "game",
+       "title": "Warhammer 40,000: Inquisitor - Martyr",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-inquisitor-martyr.jpg",
+       "platform": "PC",
+       "developer": "NeocoreGames",
+       "releaseYear": 2018,
+       "genre": "Rol de acción",
+       "note": "Un inquisidor investiga la fortaleza-monasterio Martyr, perdida durante siglos en el Sector Caligari.",
+       "externalUrl": "https://store.steampowered.com/app/527430/"
+      },
+      {
+       "id": "juego-mechanicus",
+       "type": "game",
+       "title": "Warhammer 40,000: Mechanicus",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-mechanicus.jpg",
+       "platform": "PC",
+       "developer": "Bulwark Studios",
+       "releaseYear": 2018,
+       "genre": "Táctica por turnos",
+       "note": "El Adeptus Mechanicus explora tumbas necronas en el planeta Silva Tenebris.",
+       "externalUrl": "https://store.steampowered.com/app/673880/"
+      },
+      {
+       "id": "juego-gladius-relics-of-war",
+       "type": "game",
+       "title": "Warhammer 40,000: Gladius - Relics of War",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-gladius-relics-of-war.jpg",
+       "platform": "PC",
+       "developer": "Proxy Studios",
+       "releaseYear": 2018,
+       "genre": "Estrategia por turnos 4X",
+       "note": "Estrategia por turnos en el planeta Gladius Prime, con varias facciones luchando por su control.",
+       "externalUrl": "https://store.steampowered.com/app/489630/"
+      },
+      {
+       "id": "juego-space-hulk-deathwing-enhanced-edition",
+       "type": "game",
+       "title": "Space Hulk: Deathwing - Enhanced Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-hulk-deathwing-enhanced-edition.jpg",
+       "platform": "PC",
+       "developer": "Streum On Studio",
+       "releaseYear": 2018,
+       "genre": "Disparos en primera persona",
+       "note": "Un bibliotecario de los Ángeles Oscuros dirige a sus exterminadores por un pecio infestado de genestealers.",
+       "externalUrl": "https://store.steampowered.com/app/816090/"
+      },
+      {
+       "id": "juego-space-hulk-tactics",
+       "type": "game",
+       "title": "Space Hulk: Tactics",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-hulk-tactics.jpg",
+       "platform": "PC",
+       "developer": "Cyanide Studio",
+       "releaseYear": 2018,
+       "genre": "Táctica por turnos",
+       "note": "Exterminadores de los Ángeles Sangrientos y genestealers se enfrentan en un pecio con mecánicas de cartas.",
+       "externalUrl": "https://store.steampowered.com/app/492230/"
+      },
+      {
+       "id": "juego-inquisitor-prophecy",
+       "type": "game",
+       "title": "Warhammer 40,000: Inquisitor - Prophecy",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-inquisitor-prophecy.jpg",
+       "platform": "PC",
+       "developer": "NeocoreGames",
+       "releaseYear": 2019,
+       "genre": "Rol de acción",
+       "note": "Expansión independiente de Martyr: el inquisidor sigue la profecía de Hereticus en el sector Caligari.",
+       "externalUrl": "https://store.steampowered.com/app/1042800/"
+      },
+      {
+       "id": "juego-battlefleet-gothic-armada-2",
+       "type": "game",
+       "title": "Battlefleet Gothic: Armada 2",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-battlefleet-gothic-armada-2.jpg",
+       "platform": "PC",
+       "developer": "Tindalos Interactive",
+       "releaseYear": 2019,
+       "genre": "Estrategia espacial en tiempo real",
+       "note": "Tras la caída de Cadia, las flotas del Imperio, los necrones y los tiránidos luchan por el Segmentum Obscurus.",
+       "externalUrl": "https://store.steampowered.com/app/573100/"
+      },
+      {
+       "id": "juego-necromunda-underhive-wars",
+       "type": "game",
+       "title": "Necromunda: Underhive Wars",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-necromunda-underhive-wars.jpg",
+       "platform": "PC",
+       "developer": "Rogue Factor",
+       "releaseYear": 2020,
+       "genre": "Táctica por turnos",
+       "note": "Bandas de las casas de Necromunda se disputan territorio en el subsuelo de la ciudad colmena.",
+       "externalUrl": "https://store.steampowered.com/app/566440/"
+      },
+      {
+       "id": "juego-battlesector",
+       "type": "game",
+       "title": "Warhammer 40,000: Battlesector",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-battlesector.jpg",
+       "platform": "PC",
+       "developer": "Black Lab Games",
+       "releaseYear": 2021,
+       "genre": "Táctica por turnos",
+       "note": "Los Ángeles Sangrientos combaten a los tiránidos en Baal Secundus tras la Plaga del Abismo.",
+       "externalUrl": "https://store.steampowered.com/app/1295500/"
+      },
+      {
+       "id": "juego-necromunda-hired-gun",
+       "type": "game",
+       "title": "Necromunda: Hired Gun",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-necromunda-hired-gun.jpg",
+       "platform": "PC",
+       "developer": "Streum On Studio",
+       "releaseYear": 2021,
+       "genre": "Disparos en primera persona",
+       "note": "Un cazarrecompensas recorre el subsuelo de Necromunda a toda velocidad, con su perro de caza y mejoras biónicas.",
+       "externalUrl": "https://store.steampowered.com/app/1222370/"
+      },
+      {
+       "id": "juego-dakka-squadron-flyboyz-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dakka Squadron - Flyboyz Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dakka-squadron-flyboyz-edition.jpg",
+       "platform": "PC",
+       "developer": "Phosphor Game Studios",
+       "releaseYear": 2021,
+       "genre": "Combate aéreo",
+       "note": "Pilotos orkos se lanzan a combates aéreos frenéticos contra el Imperio y otros orkos.",
+       "externalUrl": "https://store.steampowered.com/app/1253190/"
+      },
+      {
+       "id": "juego-darktide",
+       "type": "game",
+       "title": "Warhammer 40,000: Darktide",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-darktide.jpg",
+       "platform": "PC",
+       "developer": "Fatshark",
+       "releaseYear": 2022,
+       "genre": "Acción cooperativa",
+       "note": "Cuatro reclusos al servicio de la Inquisición combaten la plaga de Nurgle en la ciudad colmena Tertium.",
+       "externalUrl": "https://store.steampowered.com/app/1361210/"
+      },
+      {
+       "id": "juego-chaos-gate-daemonhunters",
+       "type": "game",
+       "title": "Warhammer 40,000: Chaos Gate - Daemonhunters",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-chaos-gate-daemonhunters.jpg",
+       "platform": "PC",
+       "developer": "Complex Games",
+       "releaseYear": 2022,
+       "genre": "Táctica por turnos",
+       "note": "Los Caballeros Grises luchan contra la Plaga de la Floración, una enfermedad del Caos que se extiende por el sector.",
+       "externalUrl": "https://store.steampowered.com/app/1611910/"
+      },
+      {
+       "id": "juego-battle-sister",
+       "type": "game",
+       "title": "Warhammer 40,000: Battle Sister",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-battle-sister.jpg",
+       "platform": "PC",
+       "developer": "Pixel Toys",
+       "releaseYear": 2022,
+       "genre": "Disparos en primera persona (realidad virtual)",
+       "note": "Una hermana de batalla de la Orden de la Rosa Sangrante defiende un mundo santuario del Caos.",
+       "externalUrl": "https://store.steampowered.com/app/1733890/"
+      },
+      {
+       "id": "juego-shootas-blood-y-teef",
+       "type": "game",
+       "title": "Warhammer 40,000: Shootas, Blood & Teef",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-shootas-blood-y-teef.jpg",
+       "platform": "PC",
+       "developer": "Rogueside",
+       "releaseYear": 2022,
+       "genre": "Acción en plataformas",
+       "note": "Un orko recorre la ciudad colmena a tiros y mamporros para recuperar su gorra robada.",
+       "externalUrl": "https://store.steampowered.com/app/1324530/"
+      },
+      {
+       "id": "juego-rogue-trader",
+       "type": "game",
+       "title": "Warhammer 40,000: Rogue Trader",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-rogue-trader.jpg",
+       "platform": "PC",
+       "developer": "Owlcat Games",
+       "releaseYear": 2023,
+       "genre": "Rol por turnos",
+       "note": "Heredas una dinastía de comerciantes independientes y exploras la Expansión Koronus con tu nave.",
+       "externalUrl": "https://store.steampowered.com/app/2186680/"
+      },
+      {
+       "id": "juego-boltgun",
+       "type": "game",
+       "title": "Warhammer 40,000: Boltgun",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-boltgun.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2023,
+       "genre": "Disparos en primera persona",
+       "note": "Disparos con estética de los noventa: un Ultramarine recorre un mundo forja arrasando a las fuerzas del Caos.",
+       "externalUrl": "https://store.steampowered.com/app/2005010/"
+      },
+      {
+       "id": "juego-space-marine-2",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine 2",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-2.jpg",
+       "platform": "PC",
+       "developer": "Saber Interactive",
+       "releaseYear": 2024,
+       "genre": "Acción en tercera persona",
+       "note": "Un siglo después, Titus vuelve como teniente Primaris para combatir a los tiránidos y a los Mil Hijos.",
+       "externalUrl": "https://store.steampowered.com/app/2183900/"
+      },
+      {
+       "id": "juego-boltgun-words-of-vengeance",
+       "type": "game",
+       "title": "Warhammer 40,000: Boltgun - Words of Vengeance",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-boltgun-words-of-vengeance.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2025,
+       "genre": "Disparos en primera persona",
+       "note": "Expansión independiente de Boltgun con nuevos niveles para el sargento Malum Caedo.",
+       "externalUrl": "https://store.steampowered.com/app/3533730/"
+      },
+      {
+       "id": "juego-speed-freeks",
+       "type": "game",
+       "title": "Warhammer 40,000: Speed Freeks",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-speed-freeks.jpg",
+       "platform": "PC",
+       "developer": "Caged Element",
+       "releaseYear": 2025,
+       "genre": "Combate de vehículos",
+       "note": "Carreras y combates multijugador con vehículos orkos llenos de armas.",
+       "externalUrl": "https://store.steampowered.com/app/2078450/"
+      },
+      {
+       "id": "juego-dawn-of-war-definitive-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War - Definitive Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-definitive-edition.jpg",
+       "platform": "PC",
+       "developer": "Relic Entertainment",
+       "releaseYear": 2025,
+       "genre": "Estrategia en tiempo real",
+       "note": "Remasterización del primer Dawn of War con todas sus expansiones y las facciones reunidas.",
+       "externalUrl": "https://store.steampowered.com/app/3556750/"
+      },
+      {
+       "id": "juego-space-marine-master-crafted-edition",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine - Master Crafted Edition",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-master-crafted-edition.jpg",
+       "platform": "PC",
+       "developer": "SneakyBox",
+       "releaseYear": 2025,
+       "genre": "Acción en tercera persona",
+       "note": "Remasterización del primer Space Marine, con gráficos y controles renovados.",
+       "externalUrl": "https://store.steampowered.com/app/3169520/"
+      },
+      {
+       "id": "juego-mechanicus-ii",
+       "type": "game",
+       "title": "Warhammer 40,000: Mechanicus II",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-mechanicus-ii.jpg",
+       "platform": "PC",
+       "developer": "Bulwark Studios",
+       "releaseYear": 2026,
+       "genre": "Táctica por turnos",
+       "note": "El Adeptus Mechanicus vuelve a enfrentarse a los necrones, ahora también con la opción de dirigirlos a ellos.",
+       "externalUrl": "https://store.steampowered.com/app/2532480/"
+      },
+      {
+       "id": "juego-boltgun-2",
+       "type": "game",
+       "title": "Warhammer 40,000: Boltgun 2",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-boltgun-2.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2026,
+       "genre": "Disparos en primera persona",
+       "note": "Continuación de Boltgun, con el mismo estilo de los disparos de los noventa.",
+       "externalUrl": "https://store.steampowered.com/app/3115160/"
+      },
+      {
+       "id": "juego-dawn-of-war-iv",
+       "type": "game",
+       "title": "Warhammer 40,000: Dawn of War IV",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dawn-of-war-iv.jpg",
+       "platform": "PC",
+       "developer": "KING Art",
+       "releaseYear": 2026,
+       "genre": "Estrategia en tiempo real",
+       "note": "La saga Dawn of War regresa al planeta Kronus con marines espaciales, orkos, necrones y Adeptus Mechanicus.",
+       "externalUrl": "https://store.steampowered.com/app/2272360/",
+       "fechaPrevista": "3 de diciembre de 2026"
+      },
+      {
+       "id": "juego-chaos-gate-deathwatch",
+       "type": "game",
+       "title": "Warhammer 40,000: Chaos Gate - Deathwatch",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-chaos-gate-deathwatch.jpg",
+       "platform": "PC",
+       "developer": "Complex Games",
+       "genre": "Táctica por turnos",
+       "note": "La Guardia de la Muerte, cazadores de xenos, protagoniza la nueva entrega táctica de Chaos Gate.",
+       "externalUrl": "https://store.steampowered.com/app/3010270/",
+       "fechaPrevista": ""
+      },
+      {
+       "id": "juego-dark-heresy",
+       "type": "game",
+       "title": "Warhammer 40,000: Dark Heresy",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-dark-heresy.jpg",
+       "platform": "PC",
+       "developer": "Owlcat Games",
+       "genre": "Rol por turnos",
+       "note": "Rol basado en el juego de mesa Dark Heresy: sirves a un inquisidor en una investigación contra la herejía.",
+       "externalUrl": "https://store.steampowered.com/app/3710600/",
+       "fechaPrevista": ""
+      },
+      {
+       "id": "juego-total-war-warhammer-40-000",
+       "type": "game",
+       "title": "Total War: WARHAMMER 40,000",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer-40-000.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "genre": "Estrategia",
+       "note": "La serie Total War llega al universo de Warhammer 40.000, con campaña por turnos y batallas en tiempo real.",
+       "externalUrl": "https://store.steampowered.com/app/4199910/",
+       "fechaPrevista": ""
+      },
+      {
+       "id": "juego-space-marine-3",
+       "type": "game",
+       "title": "Warhammer 40,000: Space Marine 3",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-space-marine-3.jpg",
+       "platform": "PC",
+       "developer": "Saber Interactive",
+       "genre": "Acción en tercera persona",
+       "note": "Tercera entrega de Space Marine, anunciada en 2025. Saber Interactive aún no ha dado fecha ni detalles de la historia.",
+       "fechaPrevista": ""
+      }
+     ]
+    },
+    {
+     "nombre": "Otros juegos de Warhammer",
+     "obras": [
+      {
+       "id": "juego-total-war-warhammer",
+       "type": "game",
+       "title": "Total War: WARHAMMER",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2016,
+       "genre": "Estrategia",
+       "note": "Campaña por turnos y batallas en tiempo real en el Viejo Mundo: el Imperio, enanos, orcos y el Caos luchan por el continente.",
+       "externalUrl": "https://store.steampowered.com/app/364360/"
+      },
+      {
+       "id": "juego-total-war-warhammer-ii",
+       "type": "game",
+       "title": "Total War: WARHAMMER II",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer-ii.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2017,
+       "genre": "Estrategia",
+       "note": "Altos elfos, elfos oscuros, hombres lagarto y skaven se disputan el Gran Vórtice en el Nuevo Mundo.",
+       "externalUrl": "https://store.steampowered.com/app/594570/"
+      },
+      {
+       "id": "juego-total-war-warhammer-iii",
+       "type": "game",
+       "title": "Total War: WARHAMMER III",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-total-war-warhammer-iii.jpg",
+       "platform": "PC",
+       "developer": "Creative Assembly",
+       "releaseYear": 2022,
+       "genre": "Estrategia",
+       "note": "Cierra la trilogía: Kislev, Catay y los dioses del Caos luchan en el Reino del Caos por el destino del dios oso Ursun.",
+       "externalUrl": "https://store.steampowered.com/app/1142710/"
+      },
+      {
+       "id": "juego-warhammer-survivors",
+       "type": "game",
+       "title": "Warhammer Survivors",
+       "coverUrl": "assets/colecciones/portadas/warhammer-40000-juego-warhammer-survivors.jpg",
+       "platform": "PC",
+       "developer": "Auroch Digital",
+       "releaseYear": 2026,
+       "genre": "Acción roguelite",
+       "note": "Supervivencia contra hordas con héroes de Warhammer 40.000, Age of Sigmar y el Viejo Mundo.",
+       "externalUrl": "https://store.steampowered.com/app/3669620/",
+       "fechaPrevista": "10 de noviembre de 2026"
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/warhammer-40000.jpg"
+  },
+  {
+   "id": "witch-hat-atelier",
+   "nombre": "Witch Hat Atelier",
+   "alias": [
+    "Atelier of Witch Hat"
+   ],
+   "grupos": [
+    {
+     "nombre": "Manga",
+     "obras": [
+      {
+       "id": "atelier-of-witch-hat-1",
+       "type": "book",
+       "title": "Atelier of Witch Hat 1",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-1.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Coco sueña con ser bruja, pero solo quienes nacen con el don pueden usar la magia. Todo cambia cuando descubre el secreto de los hechizos y se convierte en aprendiz del brujo Qifrey. Tomo 1 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2018,
+       "collectionNumber": 1,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-2",
+       "type": "book",
+       "title": "Atelier of Witch Hat 2",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-2.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 2 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2018,
+       "collectionNumber": 2,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-3",
+       "type": "book",
+       "title": "Atelier of Witch Hat 3",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-3.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 3 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2018,
+       "collectionNumber": 3,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-4",
+       "type": "book",
+       "title": "Atelier of Witch Hat 4",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-4.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 4 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2019,
+       "collectionNumber": 4,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-5",
+       "type": "book",
+       "title": "Atelier of Witch Hat 5",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-5.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 5 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2019,
+       "collectionNumber": 5,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-6",
+       "type": "book",
+       "title": "Atelier of Witch Hat 6",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-6.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 6 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2020,
+       "collectionNumber": 6,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-7",
+       "type": "book",
+       "title": "Atelier of Witch Hat 7",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-7.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 7 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2021,
+       "collectionNumber": 7,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-8",
+       "type": "book",
+       "title": "Atelier of Witch Hat 8",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-8.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 8 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2021,
+       "collectionNumber": 8,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-9",
+       "type": "book",
+       "title": "Atelier of Witch Hat 9",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-9.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 9 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2022,
+       "collectionNumber": 9,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-10",
+       "type": "book",
+       "title": "Atelier of Witch Hat 10",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-10.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 10 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2022,
+       "collectionNumber": 10,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-11",
+       "type": "book",
+       "title": "Atelier of Witch Hat 11",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-11.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 11 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2023,
+       "collectionNumber": 11,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-12",
+       "type": "book",
+       "title": "Atelier of Witch Hat 12",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-12.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 12 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 12,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-13",
+       "type": "book",
+       "title": "Atelier of Witch Hat 13",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-13.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 13 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2024,
+       "collectionNumber": 13,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-14",
+       "type": "book",
+       "title": "Atelier of Witch Hat 14",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-14.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 14 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2025,
+       "collectionNumber": 14,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      },
+      {
+       "id": "atelier-of-witch-hat-15",
+       "type": "book",
+       "title": "Atelier of Witch Hat 15",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-tomo-15.jpg",
+       "author": "Kamome Shirahama",
+       "genre": "Manga, fantasía, magia",
+       "note": "Tomo 15 de la edición española de Milky Way Ediciones.",
+       "creatorOrDirector": "Manga",
+       "releaseYear": 2026,
+       "collectionNumber": 15,
+       "externalUrl": "https://www.goodreads.com/book/show/41036550-atelier-of-witch-hat-vol-1"
+      }
+     ]
+    },
+    {
+     "nombre": "Anime",
+     "obras": [
+      {
+       "id": "witch-hat-atelier-anime",
+       "type": "movieSeries",
+       "title": "Witch Hat Atelier",
+       "mediaType": "series",
+       "coverUrl": "assets/colecciones/portadas/witch-hat-atelier-anime.jpg",
+       "releaseYear": 2026,
+       "genre": "Anime, fantasía y magia",
+       "creatorOrDirector": "Ayumu Watanabe",
+       "duration": "12 episodios (temporada 1)",
+       "note": "Adaptación al anime de BUG FILMS. Primera temporada de 12 episodios en abril de 2026; la segunda está confirmada."
+      }
+     ]
+    }
+   ],
+   "fondo": "assets/colecciones/fondos/witch-hat-atelier.jpg"
   }
  ]
 }

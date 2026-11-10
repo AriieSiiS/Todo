@@ -8,8 +8,8 @@ const String rutaPlatino =
 
 /// Appid de Steam a partir del enlace de la tienda de un elemento.
 int? appIdDeEnlaceSteam(String? enlace) {
-  final coincidencia = RegExp(r'store\.steampowered\.com/app/(\d+)')
-      .firstMatch(enlace ?? '');
+  final coincidencia =
+      RegExp(r'store\.steampowered\.com/app/(\d+)').firstMatch(enlace ?? '');
   return coincidencia == null ? null : int.tryParse(coincidencia.group(1)!);
 }
 

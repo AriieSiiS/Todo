@@ -269,6 +269,7 @@ class _InboxPageState extends State<InboxPage> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        persist: false,
         content: const Text('Nota archivada.'),
         action: SnackBarAction(
           label: 'Deshacer',
@@ -618,7 +619,7 @@ class _InboxViewToggle extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.visuals.panel,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE3D7C8)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -701,7 +702,7 @@ class _InboxToolbarButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.visuals.panel,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE3D7C8)),
+        border: Border.all(color: context.visuals.panelBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -753,7 +754,7 @@ class _InboxSortButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: context.visuals.panel,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE3D7C8)),
+          border: Border.all(color: context.visuals.panelBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -849,7 +850,7 @@ class _InboxNotesList extends StatelessWidget {
                           ? Icons.push_pin_rounded
                           : Icons.notes_rounded,
                       size: 18,
-                      color: const Color(0xFF31472F)),
+                      color: visuals.accent),
                   const SizedBox(width: 8),
                   Text(group.first.isPinned ? 'Fijadas' : 'Todas',
                       style: TextStyle(
@@ -918,11 +919,11 @@ class _InboxNotesList extends StatelessWidget {
         note,
       ),
       child: Material(
-        color: selected ? const Color(0xFFF2F6ED) : visuals.panel,
+        color: selected ? visuals.panelAlt : visuals.panel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(
-            color: selected ? const Color(0xFF90A884) : const Color(0xFFE3D7C8),
+            color: selected ? visuals.accent : visuals.panelBorder,
             width: selected ? 1.4 : 1,
           ),
         ),
@@ -939,9 +940,8 @@ class _InboxNotesList extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0xFFDDE9D2)
-                        : const Color(0xFFF5F0E8),
+                    color:
+                        selected ? const Color(0xFFDDE9D2) : visuals.panelAlt,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: note.emoji.isNotEmpty
@@ -1173,11 +1173,11 @@ class _InboxNoteGridCard extends StatelessWidget {
         details.globalPosition,
       ),
       child: Material(
-        color: selected ? const Color(0xFFF2F6ED) : visuals.panel,
+        color: selected ? visuals.panelAlt : visuals.panel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(
-            color: selected ? const Color(0xFF90A884) : const Color(0xFFE3D7C8),
+            color: selected ? visuals.accent : visuals.panelBorder,
             width: selected ? 1.4 : 1,
           ),
         ),
@@ -1197,7 +1197,7 @@ class _InboxNoteGridCard extends StatelessWidget {
                       height: 36,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5F0E8),
+                        color: visuals.panelAlt,
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: note.emoji.isEmpty
@@ -1395,16 +1395,16 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.edit_note_rounded,
                 size: 19,
-                color: Color(0xFF607A5A),
+                color: visuals.accent,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Editando nota',
                 style: TextStyle(
-                  color: Color(0xFF607A5A),
+                  color: visuals.accent,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1445,9 +1445,9 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
                   height: 54,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F0E8),
+                    color: context.visuals.panelAlt,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2D5C4)),
+                    border: Border.all(color: visuals.panelBorder),
                   ),
                   child: Text(
                     _emoji.isEmpty ? '＋' : _emoji,
@@ -1527,9 +1527,9 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFCF8),
+                color: context.visuals.panel,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2D5C4)),
+                border: Border.all(color: context.visuals.panelBorder),
               ),
               clipBehavior: Clip.antiAlias,
               child: AppFlowyEditor(
@@ -1541,16 +1541,18 @@ class _InboxNoteInlineEditorState extends State<_InboxNoteInlineEditor> {
                 characterShortcutEvents: _noteCharacterShortcutEvents,
                 editorStyle: EditorStyle.desktop(
                   padding: const EdgeInsets.all(18),
-                  cursorColor: const Color(0xFF607A4D),
-                  selectionColor: const Color(0xFFD8E4CF),
-                  textStyleConfiguration: const TextStyleConfiguration(
+                  cursorColor: visuals.accent,
+                  selectionColor: visuals.accent.withValues(alpha: 0.3),
+                  textStyleConfiguration: TextStyleConfiguration(
                     text: TextStyle(
                       fontSize: 16,
                       height: 1.15,
-                      color: Color(0xFF2D2A25),
+                      color: visuals.textStrong,
+                      fontFamily:
+                          Theme.of(context).textTheme.bodyMedium?.fontFamily,
                     ),
                     lineHeight: 1.15,
-                    bold: TextStyle(fontWeight: FontWeight.w800),
+                    bold: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -1783,8 +1785,8 @@ class _InboxNoteDetail extends StatelessWidget {
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF2F0EC),
+                    decoration: BoxDecoration(
+                      color: visuals.panelAlt,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.add_rounded, size: 18),
@@ -1950,15 +1952,16 @@ class _InboxDirectNoteEditorState extends State<_InboxDirectNoteEditor> {
         characterShortcutEvents: _noteCharacterShortcutEvents,
         editorStyle: EditorStyle.desktop(
           padding: EdgeInsets.zero,
-          cursorColor: const Color(0xFF607A4D),
-          selectionColor: const Color(0xFFD8E4CF),
-          textStyleConfiguration: const TextStyleConfiguration(
+          cursorColor: context.visuals.accent,
+          selectionColor: context.visuals.accent.withValues(alpha: 0.3),
+          textStyleConfiguration: TextStyleConfiguration(
             text: TextStyle(
               fontSize: 17,
               height: 1.55,
-              color: Color(0xFF2D2A25),
+              color: context.visuals.textStrong,
+              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
             ),
-            bold: TextStyle(fontWeight: FontWeight.w800),
+            bold: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
       ),
@@ -2143,6 +2146,7 @@ class _ArchivedNotesDialogState extends State<_ArchivedNotesDialog> {
     controller.restoreNote(note.id);
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
+        persist: false,
         content: const Text('Nota restaurada en Notas.'),
         action: SnackBarAction(
           label: 'Deshacer',

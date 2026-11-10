@@ -32,12 +32,23 @@ class UnsupportedCalendarService implements CalendarService {
       const <CalendarListItemModel>[];
 
   @override
-  Future<List<CalendarEventModel>> listEvents({
-    required CalendarIntegrationSettings settings,
+  Future<CalendarRemoteDelta> pullEvents({
+    required String syncToken,
     required DateTime from,
     required DateTime to,
-  }) async =>
-      const <CalendarEventModel>[];
+  }) async {
+    throw UnsupportedError(_lastError);
+  }
+
+  @override
+  Future<CalendarEventModel> pushEvent(CalendarEventModel event) async {
+    throw UnsupportedError(_lastError);
+  }
+
+  @override
+  Future<void> deleteEvent(String googleEventId) async {
+    throw UnsupportedError(_lastError);
+  }
 
   @override
   Future<void> restoreSession(String? encodedSession) async {}

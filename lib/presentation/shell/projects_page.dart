@@ -339,10 +339,10 @@ class _ReferenceProjectRow extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.72),
+          color: context.visuals.panel,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? const Color(0xFF93A37C) : const Color(0xFFE5D8C7),
+            color: selected ? context.visuals.accent : context.visuals.panelBorder,
             width: selected ? 1.4 : 1,
           ),
         ),

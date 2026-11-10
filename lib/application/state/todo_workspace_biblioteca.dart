@@ -61,9 +61,8 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       duration: duration?.trim().isEmpty == true ? null : duration?.trim(),
       pages: pages?.trim().isEmpty == true ? null : pages?.trim(),
       country: country?.trim().isEmpty == true ? null : country?.trim(),
-      universeName: universeName?.trim().isEmpty == true
-          ? null
-          : universeName?.trim(),
+      universeName:
+          universeName?.trim().isEmpty == true ? null : universeName?.trim(),
       collectionName: collectionName?.trim().isEmpty == true
           ? null
           : collectionName?.trim(),
@@ -172,7 +171,7 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       return false;
     }
     final item = _libraryItems[index];
-    final total = bookPageTotal(item.pages, item.reading);
+    final total = bookPageTotal(item.pages, item.reading, manual: true);
     if (total == null || page < 0 || page > total) return false;
     final old = item.reading;
     final reading = LibraryReading(
@@ -180,10 +179,12 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       observedAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       page: page.toString(),
       totalPages: total,
+      pageUnit: 'page',
       position: '',
       documents: old?.documents ?? const [],
       cursors: old?.cursors ?? const {},
       quotes: old?.quotes ?? const [],
+      deletedQuoteIds: old?.deletedQuoteIds ?? const {},
       statistics: old?.statistics ?? const {},
     );
     updateLibraryItem(item.copyWith(reading: reading), replaceReading: true);
@@ -221,15 +222,70 @@ extension TodoWorkspaceBiblioteca on TodoWorkspace {
       observedAt: old.observedAt,
       page: old.page,
       totalPages: old.totalPages,
+      pageUnit: old.pageUnit,
       position: old.position,
       chapter: old.chapter,
       documents: old.documents,
       cursors: old.cursors,
       quotes: quotes,
+      deletedQuoteIds: old.deletedQuoteIds,
       statistics: old.statistics,
     );
     updateLibraryItem(item.copyWith(reading: reading), replaceReading: true);
     return true;
+  }
+
+  bool deleteBookQuote(String itemId, String quoteId) {
+    final index = _libraryItems.indexWhere((item) => item.id == itemId);
+    if (index == -1) return false;
+    final item = _libraryItems[index];
+    final reading = item.reading;
+    if (item.type != LibraryItemType.book ||
+        reading == null ||
+        !reading.quotes.any((quote) => quote['id'] == quoteId)) {
+      return false;
+    }
+    updateLibraryItem(item.copyWith(reading: reading.withoutQuote(quoteId)),
+        replaceReading: true);
+    return true;
+  }
+
+  /// Enlaza fichas de la Biblioteca con sus obras del catálogo de
+  /// Colecciones (`coleccion/obra`). No cambia la fecha de modificación, para
+  /// que el enlace no altere el orden de «Recientes».
+  void linkLibraryItemsToCatalog(Map<String, List<String>> enlaces) {
+    var cambiado = false;
+    for (var i = 0; i < _libraryItems.length; i++) {
+      final claves = enlaces[_libraryItems[i].id];
+      if (claves == null) continue;
+      final todas = {..._libraryItems[i].catalogKeys, ...claves}.toList();
+      if (todas.length == _libraryItems[i].catalogKeys.length) continue;
+      _libraryItems[i] = _libraryItems[i].copyWith(catalogKeys: todas);
+      cambiado = true;
+    }
+    if (cambiado) _commit();
+  }
+
+  /// Quita de las fichas la saga o el universo con alguno de esos nombres,
+  /// porque su colección ha desaparecido. No cambia la fecha de modificación.
+  void dissolveLibraryCollections(List<String> nombres) {
+    String clave(String? valor) => (valor ?? '').trim().toLowerCase();
+    final buscados = {for (final nombre in nombres) clave(nombre)};
+    var cambiado = false;
+    for (var i = 0; i < _libraryItems.length; i++) {
+      final item = _libraryItems[i];
+      final saga = buscados.contains(clave(item.collectionName));
+      final universo = buscados.contains(clave(item.universeName));
+      if (!saga && !universo) continue;
+      _libraryItems[i] = item.copyWith(
+        clearCollectionName: saga,
+        clearCollectionNumber: saga,
+        showCollectionNumber: saga ? false : item.showCollectionNumber,
+        clearUniverseName: universo,
+      );
+      cambiado = true;
+    }
+    if (cambiado) _commit();
   }
 
   void updateLibraryItemStatus(

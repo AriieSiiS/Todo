@@ -64,6 +64,7 @@ class _TodayPageState extends State<TodayPage> {
             onReorder: controller.reorganizeDay,
             onMovePreviousDay: _moveToPreviousLogicalDay,
             onAdvanceDay: _advanceToNextLogicalDay,
+            onShowPausedRoutines: _showPausedRoutines,
           ),
           const SizedBox(height: 14),
           Expanded(
@@ -120,32 +121,27 @@ class _TodayPageState extends State<TodayPage> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.topCenter,
-                          child: SizedBox(
-                            width: 314,
-                            child: Column(
-                              children: [
-                                _ReferenceWeekPanel(
-                                  controller: controller,
-                                  logicalToday: logicalToday,
-                                  selectedDay: _selectedDay,
-                                  onSelectDay: _setSelectedDay,
-                                ),
-                                const SizedBox(height: 12),
-                                _ReferenceInboxPanel(
-                                    controller: controller, notes: notes),
-                                const SizedBox(height: 12),
-                                _ReferenceSummaryPanel(
-                                  totalTasks: allDayTasks.length,
-                                  completedTasks: todayCompleted.length,
-                                  progress: progress,
-                                ),
-                              ],
-                            ),
+                      SizedBox(
+                        width: 314,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              _ReferenceWeekPanel(
+                                controller: controller,
+                                logicalToday: logicalToday,
+                                selectedDay: _selectedDay,
+                                onSelectDay: _setSelectedDay,
+                              ),
+                              const SizedBox(height: 12),
+                              _ReferenceInboxPanel(
+                                  controller: controller, notes: notes),
+                              const SizedBox(height: 12),
+                              _ReferenceSummaryPanel(
+                                totalTasks: allDayTasks.length,
+                                completedTasks: todayCompleted.length,
+                                progress: progress,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -352,6 +348,51 @@ class _TodayPageState extends State<TodayPage> {
     });
   }
 
+  void _showPausedRoutines() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => ListenableBuilder(
+        listenable: controller,
+        builder: (context, child) {
+          final routines = controller.pausedRoutines();
+          return AlertDialog(
+            title: const Text('Rutinas en pausa'),
+            content: SizedBox(
+              width: 480,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final task in routines)
+                      ListTile(
+                        title: Text(task.title),
+                        trailing: TextButton(
+                          onPressed: () {
+                            controller.setRoutinePaused(task.id, false);
+                            if (controller.pausedRoutines().isEmpty) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                          },
+                          child: const Text('Reanudar'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _toggleTaskCompletion(String taskId) {
     if (_completionMarkedTaskIds.contains(taskId)) {
       return;
@@ -505,6 +546,7 @@ class _ReferenceTodayHeader extends StatelessWidget {
     required this.onReorder,
     required this.onMovePreviousDay,
     required this.onAdvanceDay,
+    required this.onShowPausedRoutines,
   });
   final TodoWorkspace controller;
   final DateTime selectedDay;
@@ -517,10 +559,12 @@ class _ReferenceTodayHeader extends StatelessWidget {
   final VoidCallback onReorder;
   final VoidCallback onMovePreviousDay;
   final VoidCallback onAdvanceDay;
+  final VoidCallback onShowPausedRoutines;
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     final narrow = MediaQuery.sizeOf(context).width < 1080;
+    final pausedRoutines = controller.pausedRoutines();
     final heading =
         _sameDay(selectedDay, logicalToday) ? 'Hoy' : _weekdayLong(selectedDay);
     return Column(
@@ -536,10 +580,30 @@ class _ReferenceTodayHeader extends StatelessWidget {
                   Text(heading,
                       style: Theme.of(context).textTheme.displaySmall),
                   const SizedBox(height: 6),
-                  Text(
-                    '${selectedDay.day}/${selectedDay.month}/${selectedDay.year}',
-                    style: TextStyle(
-                        color: visuals.textMuted, fontSize: 15, height: 1.2),
+                  Row(
+                    children: [
+                      Text(
+                        '${selectedDay.day}/${selectedDay.month}/${selectedDay.year}',
+                        style: TextStyle(
+                            color: visuals.textMuted,
+                            fontSize: 15,
+                            height: 1.2),
+                      ),
+                      if (pausedRoutines.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          key: const ValueKey('today-paused-routines'),
+                          tooltip:
+                              'Rutinas en pausa (${pausedRoutines.length})',
+                          onPressed: onShowPausedRoutines,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints.tightFor(
+                              width: 28, height: 28),
+                          icon: Icon(Icons.pause_circle_outline_rounded,
+                              size: 18, color: visuals.textMuted),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -715,11 +779,9 @@ class _TodayHeaderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visuals = context.visuals;
-    final background =
-        primary ? const Color(0xFF263625) : const Color(0xFFFFFCF8);
+    final background = primary ? const Color(0xFF263625) : visuals.panel;
     final foreground = primary ? const Color(0xFFFFFCF8) : visuals.textStrong;
-    final borderColor =
-        primary ? const Color(0xFF263625) : const Color(0xFFE3D4C2);
+    final borderColor = primary ? const Color(0xFF263625) : visuals.panelBorder;
 
     return Material(
       color: Colors.transparent,
@@ -801,7 +863,7 @@ class _TodayShiftDayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final visuals = context.visuals;
     final background =
-        active ? const Color(0xFFE8F0DF) : const Color(0xFFFFFCF8);
+        active ? visuals.accent.withValues(alpha: 0.16) : visuals.panel;
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -816,9 +878,7 @@ class _TodayShiftDayButton extends StatelessWidget {
               color: background,
               shape: RoundedRectangleBorder(
                 side: BorderSide(
-                  color: active
-                      ? const Color(0xFF9BAF81)
-                      : const Color(0xFFE3D4C2),
+                  color: active ? visuals.accent : visuals.panelBorder,
                 ),
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -826,7 +886,7 @@ class _TodayShiftDayButton extends StatelessWidget {
             child: Icon(
               icon,
               size: 20,
-              color: active ? const Color(0xFF263625) : visuals.textMuted,
+              color: active ? visuals.accent : visuals.textMuted,
             ),
           ),
         ),
@@ -910,32 +970,37 @@ class _ReferenceTodayBoard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
                   child: Row(
                     children: [
-                      Text(
-                        _sameDay(selectedDay, logicalToday)
-                            ? 'Tareas de hoy'
-                            : 'Tareas del día',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(fontSize: 21),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: visuals.panelAlt,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text('${tasks.length}',
-                            style: TextStyle(color: visuals.textMuted)),
-                      ),
-                      if (showFilterBadge) ...[
+                      Expanded(
+                          child: Row(children: [
+                        Flexible(
+                            child: Text(
+                          _sameDay(selectedDay, logicalToday)
+                              ? 'Tareas de hoy'
+                              : 'Tareas del día',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontSize: 21),
+                        )),
                         const SizedBox(width: 10),
-                        const _SoftChip(
-                            label: 'Filtro activo', icon: Icons.tune_rounded),
-                      ],
-                      const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: visuals.panelAlt,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('${tasks.length}',
+                              style: TextStyle(color: visuals.textMuted)),
+                        ),
+                        if (showFilterBadge) ...[
+                          const SizedBox(width: 10),
+                          const _SoftChip(
+                              label: 'Filtro activo', icon: Icons.tune_rounded),
+                        ],
+                      ])),
                       TextButton.icon(
                         onPressed: onToggleSelectionMode,
                         icon: Icon(selectionMode
@@ -959,7 +1024,7 @@ class _ReferenceTodayBoard extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F2E8),
+                      color: visuals.panelAlt,
                       border: Border(
                         bottom: BorderSide(color: visuals.panelBorder),
                       ),
@@ -1426,9 +1491,9 @@ class _ReferenceSubtaskRow extends StatelessWidget {
     final visuals = context.visuals;
     final completed = controller.isTaskCompletedOnDay(task, selectedDay);
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Color(0xFFF0E8DC)),
+          top: BorderSide(color: visuals.panelBorder),
         ),
       ),
       child: GestureDetector(
@@ -1558,12 +1623,10 @@ class _ReferenceWeekPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFF1ECE3)
-                          : Colors.transparent,
+                      color: isSelected ? visuals.panelAlt : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
                       border: isSelected
-                          ? Border.all(color: const Color(0xFFE3D4C2))
+                          ? Border.all(color: visuals.panelBorder)
                           : null,
                     ),
                     child: Padding(
@@ -1587,8 +1650,8 @@ class _ReferenceWeekPanel extends StatelessWidget {
                                 horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFFD8D0C4)
-                                  : const Color(0xFFE5DFD5),
+                                  ? visuals.accent.withValues(alpha: 0.18)
+                                  : visuals.panelAlt,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -1628,6 +1691,10 @@ List<PopupMenuEntry<String>> _taskActionItems(
     const PopupMenuItem(value: 'edit', child: Text('Editar')),
     if (!task.isSubtask)
       const PopupMenuItem(value: 'subtask', child: Text('Crear subtarea')),
+    if (!task.isSubtask &&
+        task.recurrence.isRecurring &&
+        task.status == TaskStatus.active)
+      const PopupMenuItem(value: 'pauseRoutine', child: Text('Pausar rutina')),
     if (controller.canSkipTaskOccurrence(task))
       const PopupMenuItem(
         value: 'skipOccurrence',
@@ -1685,6 +1752,8 @@ Future<void> _handleTaskAction(
     );
   } else if (value == 'skipOccurrence') {
     controller.skipTaskOccurrence(task.id);
+  } else if (value == 'pauseRoutine') {
+    controller.setRoutinePaused(task.id, true);
   } else if (value == 'sync') {
     await controller.syncTaskToCalendar(task.id);
   } else if (value == 'unlink') {
@@ -1747,6 +1816,7 @@ Future<bool> _confirmAndDeleteTasks(
   messenger?.hideCurrentSnackBar();
   messenger?.showSnackBar(
     SnackBar(
+      persist: false,
       content: Text(
           mainCount == 1 ? 'Tarea borrada.' : '$mainCount tareas borradas.'),
       action: SnackBarAction(

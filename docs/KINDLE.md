@@ -195,12 +195,18 @@ acceso superior para volver a las tareas.
 ## Barra de lectura de KOReader
 
 Dentro de los libros se conserva el carrusel de indicadores de la barra
-inferior. Cada toque recorre la página actual/total, el porcentaje leído y los
-tiempos restantes del libro y del capítulo. La hora actual, la batería y las
+inferior. Cada toque recorre la página actual/total, los tiempos restantes
+del libro y del capítulo y un paso de solo barra, sin ningún texto. El toque
+siguiente vuelve al primer indicador. En el paso sin texto, la barra mide el
+avance del libro completo. La elección se conserva al reiniciar KOReader.
+El porcentaje total acompaña a los indicadores con texto por defecto,
+sin ocupar un paso del carrusel. En Ajustes → Barra de estado, «Mostrar porcentaje
+del libro» permite ocultarlo o recuperarlo. La elección se guarda para todos los
+libros y se conserva al reiniciar. La hora actual, la batería y las
 páginas restantes del capítulo y del libro quedan desactivadas en ese carrusel.
 
-Cada indicador identifica su ámbito con «Libro» o «Capítulo». La barra representa
-el libro cuando se muestran sus páginas, porcentaje o tiempo restante; representa
+El tiempo del capítulo se identifica con «Capítulo». La barra representa
+el libro cuando se muestran sus páginas o tiempo restante; representa
 el capítulo al mostrar el tiempo que falta para terminarlo. Su longitud es fija
 entre indicadores, para que cambiar el texto no parezca avanzar la lectura.
 Si el libro no tiene capítulos identificables, el tiempo y la barra corresponden
@@ -210,11 +216,24 @@ Los tiempos utilizan el formato nativo «Letras», con unidades de horas y
 minutos, en lugar de la notación con dos puntos. Estos ajustes pertenecen a
 KOReader: no cambian la cabecera de Todo ni el cálculo de sus estimaciones.
 
+### Marcapáginas
+
+KOReader guarda los marcapáginas con el libro. En el menú superior, el primer
+icono, con forma de marcapáginas, ofrece «Marcar esta página». Al guardar una
+marca aparece la esquina doblada; la misma opción pasa a «Quitar marcapáginas
+de esta página». «Marcadores», en ese menú, permite elegir una marca y volver
+a su posición. Se reutilizan las anotaciones nativas de KOReader, también sin
+conexión, sin crear un segundo registro de marcas.
+
 ## Actualización al despertar
 
 Al despertar se recupera la pantalla anterior y se intenta actualizar la
 agenda de Hoy sin forzar el Wi-Fi. Sin conexión se conserva la agenda descargada
 y la cola. No se programan despertares ni consultas periódicas durante el reposo.
+Si se suspendió mientras se leía, se vuelve directamente a la misma página,
+también cuando Hoy está vacío: la portada del reposo se retira sin abrir el
+panel interactivo ni pedir «Seguir leyendo». Si Todo estaba abierto antes de
+suspender, se recupera su panel. El inicio tras reiniciar sigue siendo Todo.
 La opción «Todo como salvapantallas», en Más herramientas, permite desactivarlo
 y recuperar el salvapantallas habitual de KOReader. No se cambian sus ajustes
 de imágenes, portadas o bloqueo.

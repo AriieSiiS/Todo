@@ -268,6 +268,8 @@ extension TodoWorkspacePlantas on TodoWorkspace {
         continue;
       }
       final current = _tasks[index];
+      final staysPaused =
+          active && current.routinePaused && routine.recurrence.isRecurring;
       final currentDate = current.scheduledAt;
       final scheduledAt = currentDate == null
           ? date
@@ -285,7 +287,9 @@ extension TodoWorkspacePlantas on TodoWorkspace {
         clearDescription: routine.instructions.trim().isEmpty,
         categoryIds: <String>[category.id],
         scheduledAt: scheduledAt,
-        status: active ? TaskStatus.active : TaskStatus.archived,
+        status:
+            active && !staysPaused ? TaskStatus.active : TaskStatus.archived,
+        routinePaused: staysPaused,
         recurrence: routine.recurrence,
         origin: TaskOrigin.plant,
         sourcePlantId: plant.id,
@@ -296,7 +300,8 @@ extension TodoWorkspacePlantas on TodoWorkspace {
       final task = _tasks[index];
       if (task.sourcePlantId == plant.id &&
           !routineIds.contains(task.sourcePlantCareRoutineId)) {
-        _tasks[index] = task.copyWith(status: TaskStatus.archived);
+        _tasks[index] =
+            task.copyWith(status: TaskStatus.archived, routinePaused: false);
       }
     }
   }

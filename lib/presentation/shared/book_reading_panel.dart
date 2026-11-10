@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../domain/entities/library_reading.dart';
+import '../../domain/models.dart';
 
 class BookReadingBadge extends StatelessWidget {
-  const BookReadingBadge({required this.reading, this.totalPages, super.key});
-  final LibraryReading reading;
-  final int? totalPages;
+  const BookReadingBadge({required this.item, super.key});
+  final LibraryItem item;
   @override
   Widget build(BuildContext context) {
-    final total = totalPages ?? reading.totalPages;
-    final percent = bookReadingPercent(reading, total);
+    final reading = item.reading;
+    final total = bookPageTotal(item.pages, reading) ?? 0;
+    final percent = item.readingPercent;
     return Tooltip(
         message: [
           '$percent% leído',
-          if (reading.page.isNotEmpty)
-            'Página ${reading.page}${total > 0 ? ' de $total' : ''}',
-          if (reading.chapter.trim().isNotEmpty) reading.chapter,
+          if (item.status != LibraryItemStatus.completed &&
+              reading != null &&
+              reading.page.isNotEmpty)
+            '${reading.pageLabel} ${reading.page}${total > 0 ? ' de $total' : ''}',
+          if (item.status != LibraryItemStatus.completed &&
+              reading != null &&
+              reading.chapter.trim().isNotEmpty)
+            reading.chapter,
         ].join('\n'),
         child: Container(
             width: 28,
@@ -48,14 +53,24 @@ List<Map<String, dynamic>> orderedBookQuotes(LibraryReading? reading) {
   return [for (final entry in quotes) entry.$2];
 }
 
+String bookQuotePageLabel(Map<String, dynamic> quote) =>
+    switch (quote['page_unit']) {
+      'screen' => 'Pantalla',
+      'page' => 'Página',
+      'estimated_page' => 'Página',
+      _ => quote['document_id'] == null ? 'Página' : 'Posición en KOReader'
+    };
+
 class BookQuotesPanel extends StatefulWidget {
   const BookQuotesPanel({
     required this.reading,
     this.onEdit,
+    this.onDelete,
     super.key,
   });
   final LibraryReading? reading;
   final ValueChanged<Map<String, dynamic>>? onEdit;
+  final ValueChanged<Map<String, dynamic>>? onDelete;
 
   @override
   State<BookQuotesPanel> createState() => _BookQuotesPanelState();
@@ -138,6 +153,9 @@ class _BookQuotesPanelState extends State<BookQuotesPanel> {
                       _BookQuoteCard(
                         quote: quotes[index],
                         layout: layouts[index],
+                        onDelete: widget.onDelete == null
+                            ? null
+                            : () => widget.onDelete!(quotes[index]),
                         onEdit: widget.onEdit == null
                             ? null
                             : () => widget.onEdit!(quotes[index]),
@@ -186,7 +204,10 @@ class _BookQuoteLayout {
     textStyle =
         theme.textTheme.bodyMedium!.copyWith(fontSize: 14, height: 1.35);
     noteStyle = theme.textTheme.bodyMedium!.copyWith(
-        fontSize: 13, height: 1.3, color: theme.colorScheme.onSurfaceVariant);
+        fontSize: 13,
+        height: 1.3,
+        fontStyle: FontStyle.italic,
+        color: theme.colorScheme.onSurfaceVariant);
     TextPainter measure(String text, TextStyle style, int lines) => TextPainter(
           text: TextSpan(text: text, style: style),
           textDirection: Directionality.of(context),
@@ -216,10 +237,11 @@ class _BookQuoteLayout {
 
 class _BookQuoteCard extends StatelessWidget {
   const _BookQuoteCard(
-      {required this.quote, required this.layout, this.onEdit});
+      {required this.quote, required this.layout, this.onEdit, this.onDelete});
   final Map<String, dynamic> quote;
   final _BookQuoteLayout layout;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -241,7 +263,7 @@ class _BookQuoteCard extends StatelessWidget {
               height: 32,
               child: Row(children: [
                 if (page.isNotEmpty) ...[
-                  Text('Página $page',
+                  Text('${bookQuotePageLabel(quote)} $page',
                       style: theme.textTheme.labelMedium?.copyWith(
                           color: colors.primary, fontWeight: FontWeight.w700)),
                   const SizedBox(width: 12),
@@ -252,31 +274,8 @@ class _BookQuoteCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: colors.onSurfaceVariant))),
-                if (onEdit != null)
-                  IconButton(
-                      tooltip: 'Editar cita',
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints.tightFor(width: 32, height: 32),
-                      icon: const Icon(Icons.edit_outlined, size: 17),
-                      onPressed: onEdit),
-                IconButton(
-                    tooltip: 'Copiar cita',
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints.tightFor(width: 32, height: 32),
-                    icon: Icon(Icons.content_copy_rounded,
-                        size: 17, color: colors.onSurfaceVariant),
-                    onPressed: () async {
-                      await Clipboard.setData(
-                          ClipboardData(text: quote['text'] as String));
-                      if (context.mounted) {
-                        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            const SnackBar(
-                                content: Text('Cita copiada'),
-                                duration: Duration(seconds: 2)));
-                      }
-                    }),
+                BookQuoteActions(
+                    quote: quote, onEdit: onEdit, onDelete: onDelete),
               ])),
           const SizedBox(height: 8),
           Text(quote['text'] as String,
@@ -306,8 +305,18 @@ class _BookQuoteCard extends StatelessWidget {
                       scrollable: true,
                       content: SizedBox(
                         width: 560,
-                        child: SelectableText(
-                            '${quote['text']}${note.isEmpty ? '' : '\n\nNota: $note'}'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SelectableText(quote['text'] as String),
+                            if (note.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              SelectableText('Nota: $note',
+                                  style: layout.noteStyle),
+                            ],
+                          ],
+                        ),
                       ),
                       actions: [
                         OutlinedButton(
@@ -321,5 +330,90 @@ class _BookQuoteCard extends StatelessWidget {
                 )),
           ],
         ]));
+  }
+}
+
+class BookQuoteActions extends StatelessWidget {
+  const BookQuoteActions(
+      {required this.quote, this.onEdit, this.onDelete, super.key});
+
+  final Map<String, dynamic> quote;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (onEdit != null)
+        IconButton(
+          tooltip: 'Editar cita',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          icon: const Icon(Icons.edit_outlined, size: 17),
+          onPressed: onEdit,
+        ),
+      if (onDelete != null)
+        IconButton(
+          tooltip: 'Borrar cita',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          icon:
+              Icon(Icons.delete_outline_rounded, size: 18, color: colors.error),
+          onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Borrar cita'),
+                content: SizedBox(
+                  width: 440,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(quote['text'] as String,
+                          maxLines: 3, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 16),
+                      const Text(
+                          'Se borrará de Todo y no volverá a importarse del Kindle. El subrayado del libro se conserva.'),
+                    ],
+                  ),
+                ),
+                actions: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
+                        foregroundColor: colors.onError),
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: const Text('Borrar'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true && context.mounted) onDelete!();
+          },
+        ),
+      IconButton(
+        tooltip: 'Copiar cita',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+        icon: Icon(Icons.content_copy_rounded,
+            size: 17, color: colors.onSurfaceVariant),
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: quote['text'] as String));
+          if (context.mounted) {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+              content: Text('Cita copiada'),
+              persist: false,
+              duration: Duration(seconds: 2),
+            ));
+          }
+        },
+      ),
+    ]);
   }
 }

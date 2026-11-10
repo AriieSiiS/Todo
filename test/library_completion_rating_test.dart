@@ -87,7 +87,7 @@ void main() {
     expect(selectorRect.width, lessThan(160));
     final statusText =
         find.descendant(of: selector, matching: find.text('En curso'));
-    expect(tester.widget<Text>(statusText).style?.fontSize, 14);
+    expect(tester.widget<Text>(statusText).style?.fontSize, 13);
 
     await tester.tap(selector);
     await tester.pumpAndSettle();

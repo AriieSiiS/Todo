@@ -295,8 +295,9 @@ class _CompletedSectionCardState extends State<_CompletedSectionCard> {
                   IconButton(
                     key: ValueKey('completadas-anterior-${section.id}'),
                     tooltip: 'Página anterior',
-                    onPressed:
-                        page > 0 ? () => setState(() => _page = page - 1) : null,
+                    onPressed: page > 0
+                        ? () => setState(() => _page = page - 1)
+                        : null,
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
                   Text(
@@ -557,7 +558,7 @@ class _CompletedMetricTile extends StatelessWidget {
     final visuals = context.visuals;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.58),
+        color: visuals.panel,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: visuals.panelBorder.withValues(alpha: 0.78),
@@ -697,11 +698,11 @@ class _CompletedProgressPanel extends StatelessWidget {
                   minimumSize: const Size(0, 38),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   backgroundColor: visuals.accent,
-                  foregroundColor: Colors.white,
-                  textStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  foregroundColor: visuals.foregroundFor(visuals.accent),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -999,7 +1000,7 @@ class _CompletedCard extends StatelessWidget {
     final visuals = context.visuals;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: visuals.panel,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: visuals.panelBorder.withValues(alpha: 0.82),
@@ -1283,10 +1284,10 @@ class _CompletedRecoverCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 foregroundColor: visuals.accent,
                 side: BorderSide(color: visuals.accent.withValues(alpha: 0.8)),
-                textStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
                 ),

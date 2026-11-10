@@ -144,6 +144,51 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
   int get year => widget.year;
 
   @override
+  void initState() {
+    super.initState();
+    controller.steam.achievementsRevision.addListener(_loadAchievements);
+    unawaited(_loadAchievements());
+  }
+
+  Future<void> _loadAchievements() async {
+    await _refreshLibraryAchievementCache(controller, items);
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant _LibrarySidePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != controller) {
+      oldWidget.controller.steam.achievementsRevision
+          .removeListener(_loadAchievements);
+      controller.steam.achievementsRevision.addListener(_loadAchievements);
+    }
+    unawaited(_loadAchievements());
+  }
+
+  @override
+  void dispose() {
+    controller.steam.achievementsRevision.removeListener(_loadAchievements);
+    super.dispose();
+  }
+
+  String _recentMeta(LibraryItem item) {
+    final status = _libraryItemStatusMeta(item);
+    if (item.status != LibraryItemStatus.inProgress) return status;
+    if (item.type == LibraryItemType.book) {
+      return '${item.readingPercent} % · $status';
+    }
+    final achievements = _libraryAchievementCache[item.id];
+    if (item.type == LibraryItemType.game &&
+        achievements != null &&
+        achievements.$2 > 0) {
+      final percent = (achievements.$1 * 100 / achievements.$2).round();
+      return '$percent % · $status';
+    }
+    return status;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final recent = [...items]..sort((left, right) =>
         (right.completedDate ?? right.updatedAt)
@@ -182,6 +227,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                       position: details.globalPosition,
                       onPages: () =>
                           _openKnowledgeWorkspace(context, controller, item),
+                      onStart: _libraryStartAction(controller, item),
+                      onComplete:
+                          _libraryCompleteAction(context, controller, item),
                       onRating: item.status != LibraryItemStatus.completed
                           ? null
                           : () => _editLibraryRating(context, controller, item),
@@ -232,9 +280,9 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          item.reading == null
-                                              ? _libraryItemStatusMeta(item)
-                                              : '${item.reading!.percent} % · ${_libraryItemStatusMeta(item)}',
+                                          _recentMeta(item),
+                                          key: ValueKey(
+                                              'library-recent-meta-${item.id}'),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.right,
@@ -290,7 +338,7 @@ class _LibrarySidePanelState extends State<_LibrarySidePanel> {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: value == year
-                          ? const Color(0xFFE8F1DD)
+                          ? context.visuals.accent.withValues(alpha: 0.16)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -592,6 +640,7 @@ Future<void> _showLibraryContextMenu({
   required BuildContext context,
   required Offset position,
   VoidCallback? onPages,
+  VoidCallback? onStart,
   VoidCallback? onComplete,
   VoidCallback? onRating,
   VoidCallback? onProgress,
@@ -620,6 +669,15 @@ Future<void> _showLibraryContextMenu({
             dense: true,
             leading: Icon(Icons.description_outlined),
             title: Text('Abrir páginas'),
+          ),
+        ),
+      if (onStart != null)
+        const PopupMenuItem<Object>(
+          value: _LibraryContextAction.start,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.play_arrow_rounded),
+            title: Text('Marcar como en curso'),
           ),
         ),
       if (onComplete != null)
@@ -673,6 +731,8 @@ Future<void> _showLibraryContextMenu({
   );
   if (action == _LibraryContextAction.pages) {
     onPages?.call();
+  } else if (action == _LibraryContextAction.start) {
+    onStart?.call();
   } else if (action == _LibraryContextAction.complete) {
     onComplete?.call();
   } else if (action == _LibraryContextAction.rating) {
@@ -732,6 +792,26 @@ Future<void> _showLibraryAddContextMenu({
   await _openLibraryAddDialog(context, request, type);
 }
 
+bool _libraryCanStart(LibraryItem item) =>
+    item.status == LibraryItemStatus.pending &&
+    (item.type != LibraryItemType.movieSeries ||
+        item.mediaType == LibraryMediaType.series);
+
+VoidCallback? _libraryStartAction(TodoWorkspace controller, LibraryItem item) =>
+    _libraryCanStart(item)
+        ? () => controller.updateLibraryItemStatus(
+            item.id, LibraryItemStatus.inProgress)
+        : null;
+
+VoidCallback? _libraryCompleteAction(
+  BuildContext context,
+  TodoWorkspace controller,
+  LibraryItem item,
+) =>
+    item.status == LibraryItemStatus.completed || _libraryCanStart(item)
+        ? null
+        : () => _completeLibraryItem(context, controller, item);
+
 void _completeLibraryItem(
   BuildContext context,
   TodoWorkspace controller,
@@ -744,9 +824,11 @@ void _completeLibraryItem(
   controller.updateLibraryItemStatus(item.id, LibraryItemStatus.completed);
   final messenger = ScaffoldMessenger.maybeOf(context);
   messenger
-    ?..hideCurrentSnackBar()
+    ?..clearSnackBars()
     ..showSnackBar(
       SnackBar(
+        persist: false,
+        duration: const Duration(seconds: 4),
         content: Text('“${item.title}” marcado como completado.'),
         action: SnackBarAction(
           label: 'Deshacer',
@@ -827,12 +909,73 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
   late int _index;
   int _tab = 0;
 
+  /// Escala con la que la ficha cabe en el alto disponible. El contenido se
+  /// maqueta a lo ancho dividido por ella, para que al reducirse siga
+  /// ocupando todo el ancho y la portada no quede descentrada.
+  double _escalaFicha = 1;
+  final _claveContenidoFicha = GlobalKey();
+
+  void _ajustarEscalaFicha(double altoDisponible) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final caja = _claveContenidoFicha.currentContext?.findRenderObject();
+      if (caja is! RenderBox || !caja.hasSize) return;
+      final alto = caja.size.height;
+      if (alto <= 0) return;
+      final escala = min(1.0, altoDisponible / alto);
+      if ((escala - _escalaFicha).abs() > 0.01) {
+        setState(() => _escalaFicha = escala);
+      }
+    });
+  }
+
+  Uri? _guiaPlatino;
+  String? _horasSteam;
+
   @override
   void initState() {
     super.initState();
     _index = widget.items.indexWhere((item) => item.id == widget.item.id);
     if (_index < 0) {
       _index = 0;
+    }
+    unawaited(_cargarGuiaPlatino());
+    unawaited(_cargarHorasSteam());
+  }
+
+  /// Lee las horas jugadas que Steam guardó con los logros del juego. Es un
+  /// dato de solo lectura para la sección «Información».
+  Future<void> _cargarHorasSteam() async {
+    final actual = item;
+    String? horas;
+    if (actual.type == LibraryItemType.game) {
+      final minutos =
+          await widget.controller.steam.savedPlaytimeMinutes(actual.id);
+      if (minutos != null) {
+        horas = '${(minutos / 60).toStringAsFixed(1).replaceAll('.', ',')} h';
+      }
+    }
+    if (mounted && item.id == actual.id && horas != _horasSteam) {
+      setState(() => _horasSteam = horas);
+    }
+  }
+
+  /// Busca la guía de Platino del juego actual leyendo `juegos.js` de nuevo.
+  Future<void> _cargarGuiaPlatino() async {
+    final actual = item;
+    Uri? guia;
+    if (actual.type == LibraryItemType.game) {
+      var appId = appIdDeEnlaceSteam(actual.externalUrl);
+      if (appId == null) {
+        try {
+          appId = (await widget.controller.steam.binding(actual.id))['appid']
+              as int?;
+        } catch (_) {}
+      }
+      if (appId != null) guia = await guiaPlatinoDe(appId);
+    }
+    if (mounted && item.id == actual.id && guia != _guiaPlatino) {
+      setState(() => _guiaPlatino = guia);
     }
   }
 
@@ -861,7 +1004,18 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
         _index += delta;
         // Conserva la pestaña si el nuevo elemento también la tiene.
         _tab = min(_tab, _lastTab(item.type));
+        _guiaPlatino = null;
+        _horasSteam = null;
+        unawaited(_cargarGuiaPlatino());
+        unawaited(_cargarHorasSteam());
       });
+
+  /// Con las flechas del teclado, al pasar del último se vuelve al primero.
+  void _moveItemCyclic(int delta) {
+    final total = widget.items.length;
+    if (total < 2) return;
+    _moveItem((_index + delta) % total - _index);
+  }
 
   Future<void> _editQuote(LibraryItem item, Map<String, dynamic> quote) async {
     await showDialog<void>(
@@ -888,239 +1042,285 @@ class _LibraryItemDetailsDialogState extends State<_LibraryItemDetailsDialog> {
   @override
   Widget build(BuildContext context) {
     final item = this.item;
-    final fields = _detailFields(item);
+    final fields = _detailFields(item, horasSteam: _horasSteam);
     final collectionLabels = _libraryCollectionLabels(widget.controller, item);
-    return DefaultTabController(
-        key: ValueKey(item.type),
-        initialIndex: _tab,
-        length: item.type == LibraryItemType.book
-            ? 3
-            : item.type == LibraryItemType.game
-                ? 2
-                : 1,
-        child: Dialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-                maxWidth: 1040,
-                maxHeight: min(800, MediaQuery.sizeOf(context).height - 60)),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  LayoutBuilder(builder: (context, constraints) {
-                    final isBook = item.type == LibraryItemType.book;
-                    final isGame = item.type == LibraryItemType.game;
-                    final hasTabs = isBook || isGame;
-                    final inlineTabs = constraints.maxWidth >= 900;
-                    Widget tabs() => _LibraryBookDetailTabs(
-                        isGame: isGame,
-                        count: item.reading?.quotes.length ?? 0,
-                        onTap: (index) => setState(() => _tab = index));
-                    return SizedBox(
-                      height: inlineTabs ? 96 : 140,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 16, 24, 16),
-                        child: Column(children: [
-                          Expanded(
-                              child: Row(
-                            children: [
-                              Icon(_libraryIcon(item.type),
-                                  color: _libraryColor(item.type), size: 30),
-                              const SizedBox(width: 14),
+    return _NavegacionConFlechas(
+        onAnterior: () => _moveItemCyclic(-1),
+        onSiguiente: () => _moveItemCyclic(1),
+        child: DefaultTabController(
+            key: ValueKey(item.type),
+            initialIndex: _tab,
+            length: item.type == LibraryItemType.book
+                ? 3
+                : item.type == LibraryItemType.game
+                    ? 2
+                    : 1,
+            child: Dialog(
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxWidth: 1040,
+                    maxHeight:
+                        min(800, MediaQuery.sizeOf(context).height - 60)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      LayoutBuilder(builder: (context, constraints) {
+                        final isBook = item.type == LibraryItemType.book;
+                        final isGame = item.type == LibraryItemType.game;
+                        final hasTabs = isBook || isGame;
+                        final inlineTabs = constraints.maxWidth >= 900;
+                        Widget tabs() => _LibraryBookDetailTabs(
+                            isGame: isGame,
+                            count: item.reading?.quotes.length ?? 0,
+                            onTap: (index) => setState(() => _tab = index));
+                        return SizedBox(
+                          height: inlineTabs ? 96 : 140,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(28, 16, 24, 16),
+                            child: Column(children: [
                               Expanded(
-                                child: _TextoConAyudaSiRecortado(
-                                  texto: item.title,
-                                  maxLines: 2,
-                                  style: const TextStyle(
-                                      fontSize: 23,
-                                      height: 1.2,
-                                      fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                              if (collectionLabels != null) ...[
-                                const SizedBox(width: 16),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: constraints.maxWidth *
-                                        (isBook && inlineTabs ? .18 : .30),
-                                  ),
-                                  child: Tooltip(
-                                    message: collectionLabels.saga,
-                                    child: _LibraryCollectionChips(
-                                      controller: widget.controller,
-                                      item: item,
-                                      singleLine: true,
-                                      showUniverse: true,
+                                  child: Row(
+                                children: [
+                                  Icon(_libraryIcon(item.type),
+                                      color: _libraryColor(item.type),
+                                      size: 30),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: _TextoConAyudaSiRecortado(
+                                      texto: item.title,
+                                      maxLines: 2,
+                                      style: const TextStyle(
+                                          fontSize: 23,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w800),
                                     ),
                                   ),
-                                ),
-                              ],
-                              if (hasTabs && inlineTabs) ...[
-                                const SizedBox(width: 20),
-                                tabs(),
-                              ],
-                            ],
-                          )),
-                          if (!inlineTabs) ...[
-                            const SizedBox(height: 8),
-                            SizedBox(
-                                height: 44,
-                                child: hasTabs
-                                    ? Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: tabs())
-                                    : null),
-                          ],
-                        ]),
-                      ),
-                    );
-                  }),
-                  const Divider(height: 1),
-                  Flexible(
-                    fit: FlexFit.tight,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(28, 14, 28, 14),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) => item.type ==
-                                    LibraryItemType.book &&
-                                _tab == 1
-                            ? BookQuotesPanel(
-                                key: ValueKey('library-quotes-${item.id}'),
-                                reading: item.reading,
-                                onEdit: (quote) => _editQuote(item, quote),
-                              )
-                            : item.type == LibraryItemType.game && _tab == 1
-                                ? SteamGamePanel(
-                                    key: ValueKey('library-steam-${item.id}'),
-                                    service: widget.controller.steam,
-                                    itemId: item.id,
-                                    title: item.title,
-                                    allowChangeGame: false,
-                                  )
-                                : item.type == LibraryItemType.book && _tab == 2
-                                    ? BookStatisticsPanel(reading: item.reading)
-                                    : FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.center,
-                                        child: SizedBox(
-                                          width: constraints.maxWidth,
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              _LibraryDetailCover(item: item),
-                                              const SizedBox(width: 24),
-                                              Expanded(
-                                                child:
-                                                    _LibraryDetailFieldsColumn(
-                                                  fields: fields,
-                                                  status: item.status,
-                                                  onStatusSelected: (status) =>
-                                                      _changeStatus(
-                                                          item, status),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                  if (collectionLabels != null) ...[
+                                    const SizedBox(width: 16),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: constraints.maxWidth *
+                                            (isBook && inlineTabs ? .18 : .30),
+                                      ),
+                                      child: Tooltip(
+                                        message: collectionLabels.saga,
+                                        child: _LibraryCollectionChips(
+                                          controller: widget.controller,
+                                          item: item,
+                                          singleLine: true,
+                                          showUniverse: true,
                                         ),
                                       ),
+                                    ),
+                                  ],
+                                  if (hasTabs && inlineTabs) ...[
+                                    const SizedBox(width: 20),
+                                    tabs(),
+                                  ],
+                                ],
+                              )),
+                              if (!inlineTabs) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                    height: 44,
+                                    child: hasTabs
+                                        ? Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: tabs())
+                                        : null),
+                              ],
+                            ]),
+                          ),
+                        );
+                      }),
+                      const Divider(height: 1),
+                      Flexible(
+                        fit: FlexFit.tight,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 14, 28, 14),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => item.type ==
+                                        LibraryItemType.book &&
+                                    _tab == 1
+                                ? BookQuotesPanel(
+                                    key: ValueKey('library-quotes-${item.id}'),
+                                    reading: item.reading,
+                                    onEdit: (quote) => _editQuote(item, quote),
+                                    onDelete: (quote) {
+                                      final id = quote['id'];
+                                      if (id is String &&
+                                          widget.controller
+                                              .deleteBookQuote(item.id, id)) {
+                                        setState(() {});
+                                      }
+                                    },
+                                  )
+                                : item.type == LibraryItemType.game && _tab == 1
+                                    ? SteamGamePanel(
+                                        key: ValueKey(
+                                            'library-steam-${item.id}'),
+                                        service: widget.controller.steam,
+                                        itemId: item.id,
+                                        title: item.title,
+                                        allowChangeGame: false,
+                                      )
+                                    : item.type == LibraryItemType.book &&
+                                            _tab == 2
+                                        ? BookStatisticsPanel(
+                                            reading: item.reading)
+                                        : (() {
+                                            _ajustarEscalaFicha(
+                                                constraints.maxHeight);
+                                            return FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.center,
+                                              child: SizedBox(
+                                                key: _claveContenidoFicha,
+                                                width: constraints.maxWidth /
+                                                    _escalaFicha,
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    _LibraryDetailCover(
+                                                        item: item),
+                                                    const SizedBox(width: 24),
+                                                    Expanded(
+                                                      child:
+                                                          _LibraryDetailFieldsColumn(
+                                                        fields: fields,
+                                                        status: item.status,
+                                                        onStatusSelected:
+                                                            (status) =>
+                                                                _changeStatus(
+                                                                    item,
+                                                                    status),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          })(),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
-                    child: Row(
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: _libraryDetailSecondaryButtonStyle(context),
-                          child: const Text('Cerrar'),
-                        ),
-                        const SizedBox(width: 10),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            unawaited(_openKnowledgeWorkspace(
-                              context,
-                              widget.controller,
-                              item,
-                            ));
-                          },
-                          icon:
-                              const Icon(Icons.description_outlined, size: 18),
-                          label: const Text('Abrir páginas'),
-                          style: _libraryDetailSecondaryButtonStyle(context),
-                        ),
-                        if (_enlaceFicha(item) != null) ...[
-                          const SizedBox(width: 10),
-                          OutlinedButton.icon(
-                            key: const ValueKey('library-item-external-link'),
-                            onPressed: () => unawaited(
-                              launchUrl(
-                                _enlaceFicha(item)!,
-                                mode: LaunchMode.externalApplication,
-                              ),
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
+                        child: Row(
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style:
+                                  _libraryDetailSecondaryButtonStyle(context),
+                              child: const Text('Cerrar'),
                             ),
-                            icon:
-                                const Icon(Icons.open_in_new_rounded, size: 18),
-                            label: Text(
-                                'Abrir en ${nombreFichaExterna(item.type)}'),
-                            style: _libraryDetailSecondaryButtonStyle(context),
-                          ),
-                        ],
-                        const Spacer(),
-                        if (_hasPrevious) ...[
-                          _LibraryNavigationButton(
-                            label: 'Anterior',
-                            icon: Icons.chevron_left_rounded,
-                            onPressed: () => _moveItem(-1),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        if (_hasNext) ...[
-                          _LibraryNavigationButton(
-                            label: 'Siguiente',
-                            trailingIcon: Icons.chevron_right_rounded,
-                            onPressed: () => _moveItem(1),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        if (item.type != LibraryItemType.book || _tab != 1)
-                          FilledButton.icon(
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                              await showDialog<void>(
-                                context: context,
-                                builder: (context) => _LibraryItemDialog(
-                                  controller: widget.controller,
-                                  item: item,
+                            const SizedBox(width: 10),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                unawaited(_openKnowledgeWorkspace(
+                                  context,
+                                  widget.controller,
+                                  item,
+                                ));
+                              },
+                              icon: const Icon(Icons.description_outlined,
+                                  size: 18),
+                              label: const Text('Abrir páginas'),
+                              style:
+                                  _libraryDetailSecondaryButtonStyle(context),
+                            ),
+                            if (_enlaceFicha(item) != null) ...[
+                              const SizedBox(width: 10),
+                              OutlinedButton.icon(
+                                key: const ValueKey(
+                                    'library-item-external-link'),
+                                onPressed: () => unawaited(
+                                  launchUrl(
+                                    _enlaceFicha(item)!,
+                                    mode: LaunchMode.externalApplication,
+                                  ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: const Text('Editar'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size(124, 48),
-                              backgroundColor: const Color(0xFF607A4D),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                      ],
-                    ),
+                                icon: const Icon(Icons.open_in_new_rounded,
+                                    size: 18),
+                                label: Text(
+                                    'Abrir en ${nombreFichaExterna(item.type)}'),
+                                style:
+                                    _libraryDetailSecondaryButtonStyle(context),
+                              ),
+                            ],
+                            if (_guiaPlatino != null) ...[
+                              const SizedBox(width: 10),
+                              OutlinedButton.icon(
+                                key: const ValueKey('library-item-platino'),
+                                onPressed: () => unawaited(
+                                  launchUrl(
+                                    _guiaPlatino!,
+                                    mode: LaunchMode.externalApplication,
+                                  ),
+                                ),
+                                icon: const Icon(Icons.emoji_events_outlined,
+                                    size: 18),
+                                label: const Text('Guía'),
+                                style:
+                                    _libraryDetailSecondaryButtonStyle(context),
+                              ),
+                            ],
+                            const Spacer(),
+                            if (_hasPrevious) ...[
+                              _LibraryNavigationButton(
+                                label: 'Anterior',
+                                icon: Icons.chevron_left_rounded,
+                                onPressed: () => _moveItem(-1),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                            if (_hasNext) ...[
+                              _LibraryNavigationButton(
+                                label: 'Siguiente',
+                                trailingIcon: Icons.chevron_right_rounded,
+                                onPressed: () => _moveItem(1),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                            if (item.type != LibraryItemType.book || _tab != 1)
+                              FilledButton.icon(
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  await showDialog<void>(
+                                    context: context,
+                                    builder: (context) => _LibraryItemDialog(
+                                      controller: widget.controller,
+                                      item: item,
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                label: const Text('Editar'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(124, 48),
+                                  backgroundColor: const Color(0xFF607A4D),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ));
+            )));
   }
 }
 
@@ -1198,7 +1398,7 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
         alignmentOffset: const Offset(0, 2),
         style: MenuStyle(
           alignment: AlignmentDirectional.bottomStart,
-          backgroundColor: const WidgetStatePropertyAll(Color(0xFFFFFCF8)),
+          backgroundColor: WidgetStatePropertyAll(context.visuals.panel),
           shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
           minimumSize: const WidgetStatePropertyAll(Size(180, 0)),
@@ -1243,7 +1443,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            // Tan baja como el texto de las demás filas de la ficha.
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1251,7 +1452,8 @@ class _LibraryDetailStatusSelector extends StatelessWidget {
                   _libraryStatusSingularLabel(status),
                   style: TextStyle(
                     color: colors.foreground,
-                    fontSize: 14,
+                    fontSize: 13,
+                    height: 1.2,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1344,7 +1546,8 @@ class _BookQuoteEditDialogState extends State<_BookQuoteEditDialog> {
                 child: TextField(
                   key: const ValueKey('book-quote-page-editor'),
                   controller: _page,
-                  decoration: const InputDecoration(labelText: 'Página'),
+                  decoration: InputDecoration(
+                      labelText: bookQuotePageLabel(widget.quote)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1405,9 +1608,9 @@ class _LibraryDetailCover extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFCF8),
+              color: context.visuals.panel,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE3D8CB)),
+              border: Border.all(color: context.visuals.panelBorder),
             ),
             child: Stack(fit: StackFit.expand, children: [
               _LibraryCoverImage(
@@ -1415,13 +1618,11 @@ class _LibraryDetailCover extends StatelessWidget {
                 type: item.type,
                 iconSize: 34,
               ),
-              if (item.type == LibraryItemType.book && item.reading != null)
+              if (item.type == LibraryItemType.book &&
+                  (item.reading != null ||
+                      item.status == LibraryItemStatus.completed))
                 Positioned(
-                    top: 12,
-                    right: 12,
-                    child: BookReadingBadge(
-                        reading: item.reading!,
-                        totalPages: bookPageTotal(item.pages, item.reading))),
+                    top: 12, right: 12, child: BookReadingBadge(item: item)),
             ]),
           ),
         ),
@@ -1536,9 +1737,9 @@ class _LibraryNavigationButton extends StatelessWidget {
 ButtonStyle _libraryDetailSecondaryButtonStyle(BuildContext context) {
   return OutlinedButton.styleFrom(
     minimumSize: const Size(100, 48),
-    backgroundColor: const Color(0xFFFFFCF8),
+    backgroundColor: context.visuals.panel,
     foregroundColor: context.visuals.textStrong,
-    side: const BorderSide(color: Color(0xFFE3D8CB)),
+    side: BorderSide(color: context.visuals.panelBorder),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
   );
 }
@@ -1561,14 +1762,14 @@ class _LibraryDetailLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF8),
-        border: Border.all(color: const Color(0xFFE3D8CB)),
+        color: context.visuals.panel,
+        border: Border.all(color: context.visuals.panelBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(_detailIcon(label), size: 17, color: const Color(0xFF607A4D)),
+          Icon(_detailIcon(label), size: 17, color: context.visuals.accent),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

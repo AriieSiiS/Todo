@@ -28,6 +28,10 @@ extension KindleReading on KindleWorkspace {
     final page = text('page', 256);
     final chapter = text('chapter', 1024, optional: true);
     final totalPages = args['total_pages'] ?? 0;
+    final pageUnit = readingPageUnit(args['page_unit']);
+    if (args['page_unit'] != null && pageUnit != args['page_unit']) {
+      throw const FormatException('La unidad de paginación no es válida.');
+    }
     final position = text('position', 8192);
     final target = text('library_item_id', 128, optional: true);
     final sequence = args['sequence'];
@@ -66,8 +70,18 @@ extension KindleReading on KindleWorkspace {
         throw const FormatException('La fuente de estadísticas no es válida.');
       }
       statisticsKey = '${rawStatistics['origin']}:${rawStatistics['book_id']}';
-      statistics = BookReadingStatistics.fromJson(
-          {'observedAt': observed, 'periods': rawStatistics['periods']});
+      final statisticsUnit = rawStatistics.containsKey('page_unit')
+          ? readingPageUnit(rawStatistics['page_unit'])
+          : pageUnit;
+      if (rawStatistics.containsKey('page_unit') &&
+          statisticsUnit != rawStatistics['page_unit']) {
+        throw const FormatException('La unidad de estadísticas no es válida.');
+      }
+      statistics = BookReadingStatistics.fromJson({
+        'observedAt': observed,
+        'periods': rawStatistics['periods'],
+        'pageUnit': statisticsUnit
+      });
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       if (statistics.periods.any((p) => p.start > now + 3600)) {
         throw const FormatException(
@@ -82,6 +96,7 @@ extension KindleReading on KindleWorkspace {
                 'text',
                 'note',
                 'page',
+                'page_unit',
                 'chapter',
                 'created_at'
               }.contains(k))) {
@@ -99,6 +114,7 @@ extension KindleReading on KindleWorkspace {
         'text': content,
         'note': text('note', 65536, from: raw),
         'page': text('page', 256, from: raw),
+        'page_unit': readingPageUnit(raw['page_unit']),
         'chapter': text('chapter', 1024, from: raw),
         'created_at': text('created_at', 64, from: raw),
         'observed_at': observed
@@ -138,6 +154,8 @@ extension KindleReading on KindleWorkspace {
       }
       final newer = old == null || observed >= old.observedAt;
       final reading = LibraryReading(
+          deletedQuoteIds: old?.deletedQuoteIds ?? const {},
+          pageUnit: newer ? pageUnit : old.pageUnit,
           progress: newer ? progress.toDouble() : old.progress,
           observedAt: newer ? observed : old.observedAt,
           page: newer ? page : old.page,
@@ -156,8 +174,15 @@ extension KindleReading on KindleWorkspace {
           documents: {...?old?.documents, document}.toList(),
           cursors: {...?old?.cursors, cursor: sequence},
           quotes: combined.values.toList());
+      final started = newer &&
+          book.status == LibraryItemStatus.pending &&
+          reading.progress >= .01;
       _libraryItems[_libraryItems.indexWhere((b) => b.id == book.id)] =
-          book.copyWith(reading: reading, updatedAt: DateTime.now());
+          book.copyWith(
+              reading: reading,
+              status: started ? LibraryItemStatus.inProgress : book.status,
+              clearCompletedDate: started,
+              updatedAt: DateTime.now());
     }
     // Los cursores conservan la idempotencia de los lotes antiguos. Limitar sus
     // recibos evita agotar el registro de marcas con los cambios de página.

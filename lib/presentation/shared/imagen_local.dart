@@ -20,6 +20,7 @@ class ImagenLocal extends StatelessWidget {
     this.gaplessPlayback = false,
     this.errorBuilder,
     this.escala = 1,
+    this.alignment = Alignment.center,
   });
 
   final String ruta;
@@ -27,6 +28,7 @@ class ImagenLocal extends StatelessWidget {
   final bool gaplessPlayback;
   final ImageErrorWidgetBuilder? errorBuilder;
   final double escala;
+  final Alignment alignment;
 
   static const int _paso = 128;
   static const int _maximo = 2560;
@@ -52,6 +54,7 @@ class ImagenLocal extends StatelessWidget {
         return Image.file(
           File(ruta),
           fit: fit,
+          alignment: alignment,
           gaplessPlayback: gaplessPlayback,
           cacheWidth: decodificado,
           errorBuilder: errorBuilder,

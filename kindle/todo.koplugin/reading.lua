@@ -1,4 +1,5 @@
 local Reading={}
+local Pagination=dofile(debug.getinfo(1,'S').source:match('^@(.*/)')..'pagination.lua')
 Reading.__index=Reading
 local function copy(value)
     if type(value)~='table' then return value end
@@ -84,6 +85,7 @@ function Reading.snapshot(ui,now,statistics)
     local progress=reader:getLastPercent()
     if type(progress)~='number' or progress~=progress then return end
     local position=tostring(reader:getLastProgress() or '')
+    local page_unit=ui.document.info.has_pages and 'page' or 'screen'
     local page=ui.view and ui.view.state and ui.view.state.page
     local chapter=''
     if page and ui.toc and ui.toc.getTocTitleByPage then
@@ -92,15 +94,20 @@ function Reading.snapshot(ui,now,statistics)
     end
     local total=ui.document.getPageCount and ui.document:getPageCount() or ui.doc_settings:readSetting('doc_pages')
     if type(total)~='number' then total=0 end
+    local mapped,mapped_total,mapped_unit=Pagination.current(ui)
+    if mapped then page,total,page_unit=mapped,mapped_total,mapped_unit end
     local quotes={}
     for _,item in ipairs(ui.annotation and ui.annotation.annotations or {}) do
         if item.drawer and type(item.text)=='string' and item.text:match('%S') and not item.is_tmp then
+            local quote_page,quote_unit=Pagination.quote(ui,item)
+            if not quote_page and ui.document.info.has_pages then quote_page,quote_unit=item.pageref,'page' end
             quotes[#quotes+1]={anchor=signature({start=item.pos0 or item.page,finish=item.pos1}),
-                text=item.text,note=item.note or '',page=tostring(item.pageref or item.pageno or ''),
+                text=item.text,note=item.note or '',page=tostring(quote_page or item.pageno or ''),
+                page_unit=quote_unit or (ui.document.info.has_pages and 'page' or 'screen'),
                 chapter=item.chapter or '',created_at=item.datetime or ''}
         end
     end
     return {document_id=document,title=title,author=props.authors or '',observed_at=now,statistics=statistics,
-        progress=math.max(0,math.min(1,progress)),page=tostring(page or ''),total_pages=math.floor(total),position=position,chapter=chapter,quotes=quotes}
+        progress=math.max(0,math.min(1,progress)),page=tostring(page or ''),page_unit=page_unit,total_pages=math.floor(total),position=position,chapter=chapter,quotes=quotes}
 end
 return Reading

@@ -17,11 +17,21 @@ Future<void> main(List<String> arguments) async {
   try {
     await agent.start();
   } catch (error, stack) {
+    if (error is SocketException && error.osError?.errorCode == 10048) {
+      // La instancia que ya ocupa el puerto conserva sus conexiones y escrituras.
+      await agent.stop(exitProcess: false);
+      return;
+    }
     await agent.dataDirectory.create(recursive: true);
     await File('${agent.dataDirectory.path}/startup_error.json').writeAsString(
-      jsonEncode({'at': DateTime.now().toUtc().toIso8601String(), 'pid': pid,
-        'type': error.runtimeType.toString(), 'error': error.toString(),
-        'stack': stack.toString()}), flush: true);
+        jsonEncode({
+          'at': DateTime.now().toUtc().toIso8601String(),
+          'pid': pid,
+          'type': error.runtimeType.toString(),
+          'error': error.toString(),
+          'stack': stack.toString()
+        }),
+        flush: true);
     rethrow;
   }
 }
@@ -41,8 +51,10 @@ class TodoLanAgent {
   final bool advertise;
   int get listeningPort => _server?.port ?? port;
 
-  late final KindleBridgeClient _kindleClient = KindleBridgeClient(stateDirectory,
-      allowBackground: () => File('${dataDirectory.path}/kindle_enabled').exists());
+  late final KindleBridgeClient _kindleClient = KindleBridgeClient(
+      stateDirectory,
+      allowBackground: () =>
+          File('${dataDirectory.path}/kindle_enabled').exists());
 
   final Random _random = Random.secure();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
@@ -57,6 +69,7 @@ class TodoLanAgent {
   DateTime _pairingExpiresAt = DateTime.fromMillisecondsSinceEpoch(0);
   Timer? _pairingTimer;
   Timer? _snapshotDebounce;
+  Future<void> _statusPending = Future<void>.value();
   late String _serverId;
   late Map<String, dynamic> _certificateConfig;
 
@@ -114,9 +127,12 @@ class TodoLanAgent {
       InternetAddress.anyIPv4,
       port,
       context,
-      shared: true,
+      shared: false,
     );
-    _subscriptions.add(_server!.listen(_handleRequest));
+    _subscriptions.add(_server!.listen(_handleRequest,
+        onError: (Object error, StackTrace stack) {
+      unawaited(_recordRuntimeError('servidor_https', error, stack));
+    }));
 
     if (await stateDirectory.exists()) {
       _subscriptions.add(
@@ -138,6 +154,8 @@ class TodoLanAgent {
         serverId: _serverId,
         address: addresses.first,
         port: listeningPort,
+        onError: (error, stack) =>
+            unawaited(_recordRuntimeError('anuncio_red', error, stack)),
       );
       await _mdns!.start();
     }
@@ -474,6 +492,33 @@ class TodoLanAgent {
   }
 
   Future<void> _writeStatus() async {
+    final next = _statusPending.then((_) => _publishStatus()).catchError(
+        (Object error, StackTrace stack) =>
+            _recordRuntimeError('publicar_estado', error, stack));
+    _statusPending = next;
+    await next;
+  }
+
+  Future<void> _recordRuntimeError(
+      String phase, Object error, StackTrace stack) async {
+    try {
+      await File('${dataDirectory.path}/runtime_error.json').writeAsString(
+          jsonEncode({
+            'at': DateTime.now().toUtc().toIso8601String(),
+            'phase': phase,
+            'type': error.runtimeType.toString(),
+            'error': error.toString(),
+            'stack': stack
+                .toString()
+                .substring(0, min(6000, stack.toString().length)),
+          }),
+          flush: true);
+    } catch (_) {
+      // Un diagnóstico sin permiso de escritura no debe detener el servicio.
+    }
+  }
+
+  Future<void> _publishStatus() async {
     final addresses = await privateIpv4Addresses();
     final endpoint = addresses.isEmpty
         ? ''
@@ -732,11 +777,13 @@ class MdnsAdvertiser {
     required this.serverId,
     required this.address,
     required this.port,
+    this.onError,
   });
 
   final String serverId;
   final InternetAddress address;
   final int port;
+  final void Function(Object, StackTrace)? onError;
   RawDatagramSocket? _socket;
   Timer? _timer;
 
@@ -759,7 +806,9 @@ class MdnsAdvertiser {
         if (datagram != null && _isRelevantQuery(datagram.data)) {
           _announce();
         }
-      });
+      },
+          onError: (Object error, StackTrace stack) =>
+              onError?.call(error, stack));
       _announce();
       _timer = Timer.periodic(const Duration(seconds: 60), (_) => _announce());
     } catch (_) {
@@ -807,11 +856,11 @@ class MdnsAdvertiser {
           ...version,
         ]));
     _record(builder, _host, 1, address.rawAddress);
-    socket.send(
-      builder.toBytes(),
-      InternetAddress('224.0.0.251'),
-      5353,
-    );
+    try {
+      socket.send(builder.toBytes(), InternetAddress('224.0.0.251'), 5353);
+    } on SocketException catch (error, stack) {
+      onError?.call(error, stack);
+    }
   }
 
   void _record(

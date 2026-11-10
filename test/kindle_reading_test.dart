@@ -58,6 +58,164 @@ void main() {
     workspace.dispose();
     await directory.delete(recursive: true);
   });
+  for (final progress in [0.0, .0099, .01, .10, 1.0]) {
+    test('un pendiente se inicia desde el 1 % sincronizado: $progress',
+        () async {
+      workspace.updateLibraryItemStatus('circe', LibraryItemStatus.pending);
+      final args = event('lectura-inicio-0001', progress: progress);
+      await workspace.executeAgentCommand('sync_kindle_book', args);
+      final saved = (await store.load())!.libraryItems.single;
+      expect(
+          saved.status,
+          progress >= .01
+              ? LibraryItemStatus.inProgress
+              : LibraryItemStatus.pending);
+      expect(saved.completedDate, isNull);
+      expect(saved.reading!.progress, progress);
+      expect(saved.reading!.quotes, hasLength(1));
+      final before = saved.toJson();
+      await workspace.executeAgentCommand('sync_kindle_book', args);
+      expect((await store.load())!.libraryItems.single.toJson(), before);
+    });
+  }
+  test('el estado usa el progreso vigente y no retrocede al volver al inicio',
+      () async {
+    workspace.updateLibraryItemStatus('circe', LibraryItemStatus.pending);
+    await workspace.executeAgentCommand('sync_kindle_book',
+        event('lectura-vigente-0001', progress: 0, time: 200));
+    await workspace.executeAgentCommand('sync_kindle_book',
+        event('lectura-antigua-0002', progress: .10, time: 100, sequence: 2));
+    expect(workspace.libraryItems.single.status, LibraryItemStatus.pending);
+    await workspace.executeAgentCommand('sync_kindle_book',
+        event('lectura-vigente-0003', progress: .10, time: 300, sequence: 3));
+    expect(workspace.libraryItems.single.status, LibraryItemStatus.inProgress);
+    await workspace.executeAgentCommand('sync_kindle_book',
+        event('lectura-vigente-0004', progress: 0, time: 400, sequence: 4));
+    expect(workspace.libraryItems.single.status, LibraryItemStatus.inProgress);
+  });
+
+  test(
+      'un completado sigue al 100 % tras sincronizar y conserva el avance al reabrirlo',
+      () async {
+    await workspace.executeAgentCommand(
+        'sync_kindle_book', event('lectura-completado-0001', progress: .98));
+    final saved = (await store.load())!.libraryItems.single;
+    expect(saved.status, LibraryItemStatus.completed);
+    expect(saved.readingPercent, 100);
+    final originalReading = saved.reading!.toJson();
+    await workspace.executeAgentCommand(
+        'sync_kindle_book',
+        event('lectura-completado-0002',
+            progress: .97, time: 200, sequence: 2));
+    final updated = (await store.load())!.libraryItems.single;
+    expect(updated.readingPercent, 100);
+    expect(updated.reading!.quotes, [
+      for (final quote in originalReading['quotes'] as List)
+        {...quote as Map<String, dynamic>, 'observed_at': 200}
+    ]);
+    workspace.updateLibraryItemStatus('circe', LibraryItemStatus.inProgress);
+    expect(workspace.libraryItems.single.readingPercent, 97);
+    expect(workspace.libraryItems.single.reading!.position,
+        originalReading['position']);
+  });
+
+  test('se guardan las unidades de progreso, citas y estadísticas', () async {
+    final args = event('lectura-unidades-01')..['page_unit'] = 'screen';
+    (args['quotes'] as List).single['page_unit'] = 'page';
+    args['statistics'] = {
+      'origin': 'historial-prueba',
+      'book_id': 1,
+      'periods': [
+        {'start': 3600, 'seconds': 120, 'pages': 2}
+      ]
+    };
+    final result =
+        await workspace.executeAgentCommand('sync_kindle_book', args);
+    expect(result['savedLocally'], true);
+    final saved = (await store.load())!.libraryItems.single.reading!.toJson();
+    expect(saved['pageUnit'], 'screen');
+    expect(saved['quotes'].single['page_unit'], 'page');
+    expect((saved['statistics'] as Map).values.single['pageUnit'], 'screen');
+  });
+  test('una cita borrada no vuelve al sincronizar, editar o unir fichas',
+      () async {
+    await workspace.executeAgentCommand(
+        'sync_kindle_book', event('cita-borrada-0001'));
+    final stale = workspace.libraryItems.single;
+    final id = stale.reading!.quotes.single['id'] as String;
+    expect(workspace.deleteBookQuote('circe', id), true);
+    expect(workspace.deleteBookQuote('circe', id), false);
+    await workspace.flushPendingChanges();
+    final restored = (await store.load())!.libraryItems.single.reading!;
+    expect(restored.quotes, isEmpty);
+    expect(restored.deletedQuoteIds, contains(id));
+    expect(restored.merge(stale.reading).quotes, isEmpty);
+    workspace.updateLibraryItem(stale.copyWith(pages: '500'));
+    expect(workspace.updateBookReadingPage('circe', 20), true);
+    expect(workspace.libraryItems.single.reading!.quotes, isEmpty);
+    expect(
+        workspace.libraryItems.single.reading!.deletedQuoteIds, contains(id));
+    final later = event('cita-borrada-0002', time: 200, sequence: 2);
+    await workspace.executeAgentCommand('sync_kindle_book', later);
+    final anotherDevice = event('cita-borrada-0003', time: 300)
+      ..['source_id'] = 'kindle-segundo';
+    await workspace.executeAgentCommand('sync_kindle_book', anotherDevice);
+    expect(workspace.libraryItems.single.reading!.quotes, isEmpty);
+    final different = event('cita-borrada-0004', time: 400, sequence: 3);
+    (different['quotes'] as List).single['anchor'] = '/body/p[8]';
+    await workspace.executeAgentCommand('sync_kindle_book', different);
+    expect(workspace.libraryItems.single.reading!.quotes, hasLength(1));
+    expect(
+        workspace.libraryItems.single.reading!.deletedQuoteIds, contains(id));
+    await workspace.flushPendingChanges();
+    expect((await store.load())!.libraryItems.single.reading!.deletedQuoteIds,
+        contains(id));
+  });
+  test('la paginación estimada se guarda explícita sin convertir estadísticas',
+      () async {
+    final args = event('lectura-estimada-01')
+      ..['page_unit'] = 'estimated_page'
+      ..['total_pages'] = 1088
+      ..['statistics'] = {
+        'origin': 'historial-prueba',
+        'book_id': 1,
+        'page_unit': 'screen',
+        'periods': [
+          {'start': 3600, 'seconds': 120, 'pages': 2}
+        ]
+      };
+    (args['quotes'] as List).single['page_unit'] = 'estimated_page';
+    await workspace.executeAgentCommand('sync_kindle_book', args);
+    final saved = (await store.load())!.libraryItems.single.reading!;
+    expect(saved.pageUnit, 'estimated_page');
+    expect(saved.pageLabel, 'Página');
+    expect(saved.totalPages, 1088);
+    expect(saved.progress, .14);
+    expect(saved.quotes.single['page_unit'], 'estimated_page');
+    expect(saved.statistics.values.single.pageUnit, 'screen');
+  });
+  test('el mapa editorial no convierte el historial de pantallas en páginas',
+      () async {
+    final args = event('lectura-mapa-editorial-01')
+      ..['page_unit'] = 'page'
+      ..['page'] = '83'
+      ..['total_pages'] = 669
+      ..['statistics'] = {
+        'origin': 'historial-prueba',
+        'book_id': 1,
+        'page_unit': 'screen',
+        'periods': [
+          {'start': 3600, 'seconds': 120, 'pages': 2}
+        ]
+      };
+    await workspace.executeAgentCommand('sync_kindle_book', args);
+    final reading = (await store.load())!.libraryItems.single.reading!;
+    expect(reading.page, '83');
+    expect(reading.totalPages, 669);
+    expect(reading.progress, .14);
+    expect(reading.pageUnit, 'page');
+    expect(reading.statistics.values.single.pageUnit, 'screen');
+  });
   test(
       'las estadísticas acumuladas se sustituyen sin duplicar reintentos y sobreviven a ediciones',
       () async {
@@ -85,7 +243,9 @@ void main() {
     await workspace.executeAgentCommand('sync_kindle_book', next);
     expect(stats().length, 1);
     expect(stats().values.single['periods'].single['seconds'], 180);
-    workspace.updateBookReadingPage('circe', 50);
+    workspace.updateLibraryItem(
+        workspace.libraryItems.single.copyWith(pages: '200'));
+    expect(workspace.updateBookReadingPage('circe', 50), true);
     expect(stats().values.single['periods'].single['seconds'], 180);
     final saved = (await store.load())!;
     expect(saved.libraryItems.single.reading!.toJson()['statistics'], stats());
@@ -124,7 +284,7 @@ void main() {
         throwsFormatException);
   });
   test(
-      'guarda el 14 %, citas y notas sin cambiar el estado; reintento tras reiniciar',
+      'conserva completado al guardar el 14 %, citas y notas; reintento tras reiniciar',
       () async {
     final args = event('lectura-prueba-0001')..['chapter'] = 'Capítulo siete';
     final result =

@@ -227,10 +227,10 @@ class _HouseholdQrTab extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F1DD),
+                  color: context.visuals.accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Icon(Icons.qr_code_2_rounded),
+                child: Icon(Icons.qr_code_2_rounded, color: context.visuals.accent),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -498,7 +498,7 @@ class _HouseholdItemCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ColoredBox(
-                    color: const Color(0xFFF3EEE5),
+                    color: context.visuals.panelAlt,
                     child: FutureBuilder<String>(
                       future: controller.householdImageAbsolutePath(item),
                       builder: (context, snapshot) {
@@ -685,7 +685,7 @@ Future<void> _showHouseholdDetail(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final image = ColoredBox(
-                color: const Color(0xFFF3EEE5),
+                color: context.visuals.panelAlt,
                 child: FutureBuilder<String>(
                   future: controller.householdImageAbsolutePath(
                     item,
@@ -1183,7 +1183,7 @@ class _HouseholdItemEditorDialogState
           behavior: HitTestBehavior.opaque,
           onTap: _imagePasteFocus.requestFocus,
           child: ColoredBox(
-            color: const Color(0xFFF3EEE5),
+            color: context.visuals.panelAlt,
             child: Padding(
               padding: const EdgeInsets.all(22),
               child: Column(

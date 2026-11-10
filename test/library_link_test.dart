@@ -26,6 +26,8 @@ void main() {
     expect(normalizarEnlaceExterno('letterboxd.com/film/heat-1995/'),
         'https://letterboxd.com/film/heat-1995/');
     expect(nombreFichaExterna(LibraryItemType.game), 'Steam');
+    expect(normalizarEnlaceExterno('store.steampowered.com/app/70/'),
+        'https://store.steampowered.com/app/70/');
     expect(normalizarEnlaceExterno('texto sin enlace'), isNull);
     expect(normalizarEnlaceExterno('javascript:alert(1)'), isNull);
   });

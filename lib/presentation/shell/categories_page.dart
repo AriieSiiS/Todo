@@ -18,8 +18,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   Widget build(BuildContext context) {
     final categories = controller.categories
-        .where((category) =>
-            coincideBusqueda(category.name, _query))
+        .where((category) => coincideBusqueda(category.name, _query))
         .toList();
     final selected = _resolveSelectedCategory(categories);
     final wide = MediaQuery.sizeOf(context).width >= 1260;
@@ -237,7 +236,8 @@ class _ReferenceCategoryGrid extends StatelessWidget {
       active:
           rootTasks.where((task) => task.status == TaskStatus.active).length,
       recurring: rootTasks
-          .where((task) => task.status == TaskStatus.active)
+          .where(
+              (task) => task.status == TaskStatus.active || task.routinePaused)
           .where((task) => task.recurrence.isRecurring)
           .length,
       completed:
@@ -252,10 +252,11 @@ class _ReferenceCategoryGrid extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.72),
+          color: context.visuals.panel,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? const Color(0xFF93A37C) : const Color(0xFFE5D8C7),
+            color:
+                selected ? context.visuals.accent : context.visuals.panelBorder,
             width: selected ? 1.4 : 1,
           ),
         ),
@@ -398,7 +399,7 @@ class _ReferenceCategoryDetailPanelState
         tasks.where((task) => task.parentTaskId == null).take(4).toList();
     final recurringTasks = tasks
         .where((task) => task.parentTaskId == null)
-        .where((task) => task.status == TaskStatus.active)
+        .where((task) => task.status == TaskStatus.active || task.routinePaused)
         .where((task) => task.recurrence.isRecurring)
         .toList();
     final visibleRecurringTasks =
@@ -527,6 +528,7 @@ class _ReferenceCategoryDetailPanelState
                               Expanded(
                                   child: Text(task.title,
                                       style: const TextStyle(fontSize: 16))),
+                              const SizedBox(width: 8),
                               if (task.recurrence.isRecurring)
                                 const Padding(
                                   padding: EdgeInsets.only(right: 8),
@@ -537,9 +539,11 @@ class _ReferenceCategoryDetailPanelState
                                   ),
                                 ),
                               _ReferenceTagChip(
-                                label: task.recurrence.isRecurring
-                                    ? _categoryRecurrenceLabel(task)
-                                    : 'Tarea única',
+                                label: task.routinePaused
+                                    ? 'En pausa'
+                                    : task.recurrence.isRecurring
+                                        ? _categoryRecurrenceLabel(task)
+                                        : 'Tarea única',
                                 color: const Color(0xFFF4F1EC),
                                 textColor: const Color(0xFF7D7A73),
                               ),
@@ -589,14 +593,19 @@ class _ReferenceCategoryDetailPanelState
                                   style: const TextStyle(fontSize: 16)),
                               const SizedBox(height: 4),
                               Text(
-                                task.scheduledAt == null
-                                    ? _categoryRecurrenceLabel(task)
-                                    : '${_categoryRecurrenceLabel(task)} · ${_weekdayLabel(task.scheduledAt!)}',
+                                '${task.routinePaused ? 'En pausa · ' : ''}'
+                                '${task.scheduledAt == null ? _categoryRecurrenceLabel(task) : '${_categoryRecurrenceLabel(task)} · ${_weekdayLabel(task.scheduledAt!)}'}',
                                 style:
                                     TextStyle(color: context.visuals.textMuted),
                               ),
                             ],
                           ),
+                        ),
+                        TextButton(
+                          onPressed: () => controller.setRoutinePaused(
+                              task.id, !task.routinePaused),
+                          child:
+                              Text(task.routinePaused ? 'Reanudar' : 'Pausar'),
                         ),
                       ],
                     ),

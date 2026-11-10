@@ -7,10 +7,15 @@ class _LibraryItemDialog extends StatefulWidget {
     this.initialType = LibraryItemType.game,
     this.initialStatus = LibraryItemStatus.pending,
     this.focusRating = false,
+    this.onCatalogSave,
   });
 
   final TodoWorkspace controller;
   final LibraryItem? item;
+
+  /// Edita una obra del catálogo de Colecciones: en vez de guardar en la
+  /// Biblioteca, entrega la obra cambiada.
+  final ValueChanged<LibraryItem>? onCatalogSave;
   final LibraryItemType initialType;
   final LibraryItemStatus initialStatus;
 
@@ -90,7 +95,8 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     _duration.text = item.duration ?? '';
     _country.text = item.country ?? '';
     _pages.text = item.pages ?? '';
-    _currentPage.text = item.reading?.page ?? '';
+    _currentPage.text =
+        item.reading?.position.isEmpty == true ? item.reading!.page : '';
     _note.text = item.note ?? '';
     _rating.text = item.rating?.toString() ?? '';
     _cover.text = item.coverUrl ?? '';
@@ -279,7 +285,7 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(100, 48),
-                        side: const BorderSide(color: Color(0xFFE3D8CB)),
+                        side: BorderSide(color: context.visuals.panelBorder),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                       ),
@@ -428,12 +434,12 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
             const SizedBox(height: 8),
             _dialogField(_pages, 'Páginas / Volúmenes',
                 'Ej. 832 páginas / 3 tomos (opcional)'),
-            if (_isEditing) ...[
+            if (_isEditing && widget.onCatalogSave == null) ...[
               const SizedBox(height: 8),
               _dialogField(
                 _currentPage,
-                'Página actual (progreso)',
-                'Ej. 27; el porcentaje se calcula con el total',
+                'Página de la edición (manual)',
+                'Opcional; sustituye el progreso sincronizado con el Kindle',
                 fieldKey: const ValueKey('library-current-page-editor'),
                 keyboardType: TextInputType.number,
               ),
@@ -607,16 +613,17 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
   }
 
   Widget _statusField() {
+    if (widget.onCatalogSave != null) return const SizedBox.shrink();
     return _LibraryEditLine(
       label: 'Estado',
       child: DropdownButtonFormField<LibraryItemStatus>(
         initialValue: _status,
         decoration: _libraryEditInputDecoration(context, null),
-        style: TextStyle(
-          color: context.visuals.textStrong,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.visuals.textStrong,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
         items: [
           for (final status in LibraryItemStatus.values)
             DropdownMenuItem(
@@ -669,11 +676,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       child: DropdownButtonFormField<LibraryMediaType>(
         initialValue: _mediaType,
         decoration: _libraryEditInputDecoration(context, null),
-        style: TextStyle(
-          color: context.visuals.textStrong,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.visuals.textStrong,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
         items: const [
           DropdownMenuItem(
               value: LibraryMediaType.movie, child: Text('Película')),
@@ -713,11 +720,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       child: DropdownButtonFormField<LibraryPublicationStatus>(
         initialValue: _publicationStatus,
         decoration: _libraryEditInputDecoration(context, 'Selecciona estado'),
-        style: TextStyle(
-          color: context.visuals.textStrong,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.visuals.textStrong,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
         items: const [
           DropdownMenuItem(
             value: LibraryPublicationStatus.ongoing,
@@ -767,11 +774,11 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
       child: DropdownButtonFormField<String>(
         initialValue: current,
         decoration: _libraryEditInputDecoration(context, null),
-        style: TextStyle(
-          color: context.visuals.textStrong,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.visuals.textStrong,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
         items: [
           for (final option in options)
             DropdownMenuItem(value: option, child: Text(option)),
@@ -819,114 +826,117 @@ class _LibraryItemDialogState extends State<_LibraryItemDialog> {
     if (item != null) {
       final pageText = _currentPage.text.trim();
       final pageChanged = _type == LibraryItemType.book &&
-          (pageText != (item.reading?.page ?? '') ||
+          (pageText !=
+                  (item.reading?.position.isEmpty == true
+                      ? item.reading!.page
+                      : '') ||
               _pages.text.trim() != (item.pages ?? ''));
       if (pageChanged && pageText.isNotEmpty) {
-        final total = bookPageTotal(_pages.text.trim(), item.reading);
+        final total =
+            bookPageTotal(_pages.text.trim(), item.reading, manual: true);
         final page = int.tryParse(pageText);
         if (total == null || page == null || page < 0 || page > total) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Indica una página válida y el total de páginas.')));
+              content:
+                  Text('Indica una página válida y el total de páginas.')));
           return;
         }
       }
-      widget.controller.updateLibraryItem(
-        item.copyWith(
-          title: _title.text.trim(),
-          status: _status,
-          completedDate:
-              _status == LibraryItemStatus.completed ? _completedDate : null,
-          clearCompletedDate: _status != LibraryItemStatus.completed,
-          coverUrl: _cover.text.trim().isEmpty ? null : _cover.text.trim(),
-          clearCoverUrl: _cover.text.trim().isEmpty,
-          externalUrl: _validExternalUrl,
-          clearExternalUrl: _validExternalUrl == null,
-          rating: double.tryParse(_rating.text.replaceAll(',', '.')),
-          clearRating: _rating.text.trim().isEmpty,
-          note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          clearNote: _note.text.trim().isEmpty,
-          platform:
-              _type == LibraryItemType.game ? _platform.text.trim() : null,
-          clearPlatform:
-              _type != LibraryItemType.game || _platform.text.trim().isEmpty,
-          developer:
-              _type == LibraryItemType.game ? _developer.text.trim() : null,
-          clearDeveloper:
-              _type != LibraryItemType.game || _developer.text.trim().isEmpty,
-          author: _type == LibraryItemType.book ? _author.text.trim() : null,
-          clearAuthor:
-              _type != LibraryItemType.book || _author.text.trim().isEmpty,
-          mediaType: _type == LibraryItemType.movieSeries ? _mediaType : null,
-          clearMediaType: _type != LibraryItemType.movieSeries,
-          releaseYear: int.tryParse(_releaseYear.text),
-          clearReleaseYear: _releaseYear.text.trim().isEmpty,
-          creatorOrDirector: _type == LibraryItemType.movieSeries ||
-                  _type == LibraryItemType.book
-              ? _creator.text.trim()
-              : null,
-          clearCreatorOrDirector: (_type != LibraryItemType.movieSeries &&
-                  _type != LibraryItemType.book) ||
-              _creator.text.trim().isEmpty,
-          genre: _genre.text.trim().isEmpty ? null : _genre.text.trim(),
-          clearGenre: _genre.text.trim().isEmpty,
-          format: _type == LibraryItemType.game
-              ? 'Digital'
-              : _format.text.trim().isEmpty
-                  ? null
-                  : _format.text.trim(),
-          clearFormat:
-              _type != LibraryItemType.game && _format.text.trim().isEmpty,
-          duration:
-              _duration.text.trim().isEmpty ? null : _duration.text.trim(),
-          clearDuration: _duration.text.trim().isEmpty,
-          pages: _type == LibraryItemType.book ? _pages.text.trim() : null,
-          clearPages:
-              _type != LibraryItemType.book || _pages.text.trim().isEmpty,
-          country: _type == LibraryItemType.movieSeries
-              ? _country.text.trim()
-              : null,
-          clearCountry: _type != LibraryItemType.movieSeries ||
-              _country.text.trim().isEmpty,
-          universeName: _universeName.text.trim().isEmpty
-              ? null
-              : _universeName.text.trim(),
-          clearUniverseName: _universeName.text.trim().isEmpty,
-          collectionName: _collectionName.text.trim().isEmpty
-              ? null
-              : _collectionName.text.trim(),
-          clearCollectionName: _collectionName.text.trim().isEmpty,
-          collectionNumber: _validCollectionNumber,
-          clearCollectionNumber: _validCollectionNumber == null,
-          showCollectionNumber: _validCollectionNumber != null &&
-              _collectionName.text.trim().isNotEmpty &&
-              _showCollectionNumber,
-          seasonCount: _type == LibraryItemType.movieSeries &&
-                  _mediaType == LibraryMediaType.series
-              ? _validSeasonCount
-              : null,
-          clearSeasonCount: _type != LibraryItemType.movieSeries ||
-              _mediaType != LibraryMediaType.series ||
-              _validSeasonCount == null,
-          nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
-              _mediaType == LibraryMediaType.series &&
-              _nextSeasonConfirmed,
-          progressCurrent: _admiteProgreso ? _validProgressCurrent : null,
-          clearProgressCurrent:
-              !_admiteProgreso || _validProgressCurrent == null,
-          progressTotal: _admiteProgreso ? _validProgressTotal : null,
-          clearProgressTotal: !_admiteProgreso || _validProgressTotal == null,
-          progressSeason:
-              _admiteProgresoTemporada ? _validProgressSeason : null,
-          clearProgressSeason:
-              !_admiteProgresoTemporada || _validProgressSeason == null,
-          publicationStatus:
-              _type == LibraryItemType.book && _creator.text == 'Manga'
-                  ? _publicationStatus
-                  : null,
-          clearPublicationStatus:
-              _type != LibraryItemType.book || _creator.text != 'Manga',
-        ),
+      final actualizado = item.copyWith(
+        title: _title.text.trim(),
+        status: _status,
+        completedDate:
+            _status == LibraryItemStatus.completed ? _completedDate : null,
+        clearCompletedDate: _status != LibraryItemStatus.completed,
+        coverUrl: _cover.text.trim().isEmpty ? null : _cover.text.trim(),
+        clearCoverUrl: _cover.text.trim().isEmpty,
+        externalUrl: _validExternalUrl,
+        clearExternalUrl: _validExternalUrl == null,
+        rating: double.tryParse(_rating.text.replaceAll(',', '.')),
+        clearRating: _rating.text.trim().isEmpty,
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+        clearNote: _note.text.trim().isEmpty,
+        platform: _type == LibraryItemType.game ? _platform.text.trim() : null,
+        clearPlatform:
+            _type != LibraryItemType.game || _platform.text.trim().isEmpty,
+        developer:
+            _type == LibraryItemType.game ? _developer.text.trim() : null,
+        clearDeveloper:
+            _type != LibraryItemType.game || _developer.text.trim().isEmpty,
+        author: _type == LibraryItemType.book ? _author.text.trim() : null,
+        clearAuthor:
+            _type != LibraryItemType.book || _author.text.trim().isEmpty,
+        mediaType: _type == LibraryItemType.movieSeries ? _mediaType : null,
+        clearMediaType: _type != LibraryItemType.movieSeries,
+        releaseYear: int.tryParse(_releaseYear.text),
+        clearReleaseYear: _releaseYear.text.trim().isEmpty,
+        creatorOrDirector: _type == LibraryItemType.movieSeries ||
+                _type == LibraryItemType.book
+            ? _creator.text.trim()
+            : null,
+        clearCreatorOrDirector: (_type != LibraryItemType.movieSeries &&
+                _type != LibraryItemType.book) ||
+            _creator.text.trim().isEmpty,
+        genre: _genre.text.trim().isEmpty ? null : _genre.text.trim(),
+        clearGenre: _genre.text.trim().isEmpty,
+        format: _type == LibraryItemType.game
+            ? 'Digital'
+            : _format.text.trim().isEmpty
+                ? null
+                : _format.text.trim(),
+        clearFormat:
+            _type != LibraryItemType.game && _format.text.trim().isEmpty,
+        duration: _duration.text.trim().isEmpty ? null : _duration.text.trim(),
+        clearDuration: _duration.text.trim().isEmpty,
+        pages: _type == LibraryItemType.book ? _pages.text.trim() : null,
+        clearPages: _type != LibraryItemType.book || _pages.text.trim().isEmpty,
+        country:
+            _type == LibraryItemType.movieSeries ? _country.text.trim() : null,
+        clearCountry: _type != LibraryItemType.movieSeries ||
+            _country.text.trim().isEmpty,
+        universeName: _universeName.text.trim().isEmpty
+            ? null
+            : _universeName.text.trim(),
+        clearUniverseName: _universeName.text.trim().isEmpty,
+        collectionName: _collectionName.text.trim().isEmpty
+            ? null
+            : _collectionName.text.trim(),
+        clearCollectionName: _collectionName.text.trim().isEmpty,
+        collectionNumber: _validCollectionNumber,
+        clearCollectionNumber: _validCollectionNumber == null,
+        showCollectionNumber: _validCollectionNumber != null &&
+            _collectionName.text.trim().isNotEmpty &&
+            _showCollectionNumber,
+        seasonCount: _type == LibraryItemType.movieSeries &&
+                _mediaType == LibraryMediaType.series
+            ? _validSeasonCount
+            : null,
+        clearSeasonCount: _type != LibraryItemType.movieSeries ||
+            _mediaType != LibraryMediaType.series ||
+            _validSeasonCount == null,
+        nextSeasonConfirmed: _type == LibraryItemType.movieSeries &&
+            _mediaType == LibraryMediaType.series &&
+            _nextSeasonConfirmed,
+        progressCurrent: _admiteProgreso ? _validProgressCurrent : null,
+        clearProgressCurrent: !_admiteProgreso || _validProgressCurrent == null,
+        progressTotal: _admiteProgreso ? _validProgressTotal : null,
+        clearProgressTotal: !_admiteProgreso || _validProgressTotal == null,
+        progressSeason: _admiteProgresoTemporada ? _validProgressSeason : null,
+        clearProgressSeason:
+            !_admiteProgresoTemporada || _validProgressSeason == null,
+        publicationStatus:
+            _type == LibraryItemType.book && _creator.text == 'Manga'
+                ? _publicationStatus
+                : null,
+        clearPublicationStatus:
+            _type != LibraryItemType.book || _creator.text != 'Manga',
       );
+      if (widget.onCatalogSave != null) {
+        widget.onCatalogSave!(actualizado);
+        Navigator.of(context).pop();
+        return;
+      }
+      widget.controller.updateLibraryItem(actualizado);
       if (pageChanged && pageText.isNotEmpty) {
         widget.controller.updateBookReadingPage(item.id, int.parse(pageText));
       }
@@ -1128,8 +1138,8 @@ class _LibraryEditLine extends StatelessWidget {
         vertical: alignTop ? 10 : 2,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF8),
-        border: Border.all(color: const Color(0xFFE3D8CB)),
+        color: context.visuals.panel,
+        border: Border.all(color: context.visuals.panelBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1141,7 +1151,7 @@ class _LibraryEditLine extends StatelessWidget {
             child: Icon(
               _detailIcon(label),
               size: 17,
-              color: const Color(0xFF607A4D),
+              color: context.visuals.accent,
             ),
           ),
           const SizedBox(width: 10),
@@ -1210,16 +1220,17 @@ class _LibraryContentTypeButton extends StatelessWidget {
         height: 68,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.7),
+          color: context.visuals.panel,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: active ? const Color(0xFF607A4D) : const Color(0xFFE3D8CB),
+            color:
+                active ? context.visuals.accent : context.visuals.panelBorder,
             width: active ? 1.4 : 1,
           ),
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: const Color(0xFF607A4D).withValues(alpha: 0.08),
+                    color: context.visuals.accent.withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -1230,7 +1241,7 @@ class _LibraryContentTypeButton extends StatelessWidget {
           children: [
             Icon(icon,
                 color: active
-                    ? const Color(0xFF607A4D)
+                    ? context.visuals.accent
                     : context.visuals.textStrong),
             const SizedBox(width: 12),
             Expanded(
@@ -1240,7 +1251,7 @@ class _LibraryContentTypeButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active
-                      ? const Color(0xFF607A4D)
+                      ? context.visuals.accent
                       : context.visuals.textStrong,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                 ),
@@ -1307,9 +1318,9 @@ class _LibraryImageDropFieldState extends State<_LibraryImageDropField> {
                 child: Container(
                   height: widget.height,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFCF8),
+                    color: context.visuals.panel,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE3D8CB)),
+                    border: Border.all(color: context.visuals.panelBorder),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x260F1B0C),
@@ -1547,9 +1558,17 @@ String _libraryItemStatusMeta(LibraryItem item) {
   final collectionName = item.collectionName?.trim();
   final collectionNumber = item.collectionNumber;
   final universe = item.universeName?.trim();
-  if (collectionName == null || collectionName.isEmpty) {
+  // Una chapa que se llama igual que la propia ficha solo repetiría el título.
+  final titulo = _libraryCollectionKey(item.title);
+  bool repiteTitulo(String? nombre) =>
+      nombre != null && _libraryCollectionKey(nombre) == titulo;
+  if (collectionName == null ||
+      collectionName.isEmpty ||
+      repiteTitulo(collectionName)) {
     // Sin saga propia, el universo hace de chapa para poder abrir su colección.
-    if (universe == null || universe.isEmpty) return null;
+    if (universe == null || universe.isEmpty || repiteTitulo(universe)) {
+      return null;
+    }
     return (saga: universe, installment: null, universe: null);
   }
   final collectionKey = _libraryCollectionKey(collectionName);
@@ -1687,24 +1706,45 @@ String _detailTitle(LibraryItemType _) => 'Información';
 String _goalDetailTitle(LibraryItemType type) => _detailTitle(type);
 
 String _bookProgressLabel(LibraryItem item) {
+  if (item.status == LibraryItemStatus.completed) return '100 %';
   final total = bookPageTotal(item.pages, item.reading);
   if (total == null) return 'Indica el total de páginas en Editar';
   final page = item.reading?.page.isNotEmpty == true ? item.reading!.page : '0';
-  return 'Página $page de $total · ${bookReadingPercent(item.reading, total)} %';
+  return '${item.reading?.pageLabel ?? 'Página'} $page de $total · ${item.readingPercent} %';
 }
 
-List<(String, String)> _detailFields(LibraryItem item) {
+/// Tomos como «1–3, 5»: los consecutivos se agrupan en un intervalo.
+String _textoTomos(List<int> tomos) {
+  final orden = [...tomos]..sort();
+  final partes = <String>[];
+  var i = 0;
+  while (i < orden.length) {
+    var j = i;
+    while (j + 1 < orden.length && orden[j + 1] == orden[j] + 1) {
+      j++;
+    }
+    partes.add(j == i ? '${orden[i]}' : '${orden[i]}–${orden[j]}');
+    i = j + 1;
+  }
+  return partes.join(', ');
+}
+
+List<(String, String)> _detailFields(LibraryItem item, {String? horasSteam}) {
   final common = <(String, String)>[
     ('Estado', _libraryStatusSingularLabel(item.status)),
-    if (item.universeName?.isNotEmpty == true)
-      ('Universo', item.universeName!),
+    if (item.universeName?.isNotEmpty == true) ('Universo', item.universeName!),
     if (item.collectionName?.isNotEmpty == true)
       ('Saga / colección', item.collectionName!),
     if (item.collectionNumber != null)
       ('Número de entrega', '#${item.collectionNumber}'),
     if (item.rewatchCount > 1) ('Rewatch', 'x${item.rewatchCount}'),
-    if (textoProgresoManual(item) != null)
-      ('Progreso', textoProgresoManual(item)!),
+    // Siempre presente en series y mangas, para que cambiar de estado no
+    // añada ni quite filas y la ficha no cambie de tamaño.
+    if (admiteProgresoManual(item))
+      (
+        item.type == LibraryItemType.book ? 'Capítulos' : 'Progreso',
+        textoProgresoManual(item) ?? 'Sin empezar',
+      ),
     if (item.completedDate != null)
       ('Fecha completado', _libraryDate(item.completedDate!)),
     if (item.releaseYear != null) ('Año', item.releaseYear.toString()),
@@ -1719,7 +1759,9 @@ List<(String, String)> _detailFields(LibraryItem item) {
         ...common,
         if (item.developer?.isNotEmpty == true)
           ('Desarrollador', item.developer!),
-        if (item.duration?.isNotEmpty == true)
+        if (horasSteam != null)
+          ('Horas jugadas', horasSteam)
+        else if (item.duration?.isNotEmpty == true)
           ('Horas jugadas', item.duration!),
         if (item.rating != null) ('Valoración', item.rating!.toString()),
       ],
@@ -1736,6 +1778,10 @@ List<(String, String)> _detailFields(LibraryItem item) {
                 ? 'En publicación'
                 : 'Finalizado'
           ),
+        if (item.readVolumes.isNotEmpty)
+          ('Tomos leídos', _textoTomos(item.readVolumes)),
+        if (item.currentVolume != null)
+          ('Leyendo', 'Tomo ${item.currentVolume}'),
         if (item.pages?.isNotEmpty == true)
           ('Páginas / volúmenes', item.pages!),
         if (item.rating != null) ('Valoración', item.rating!.toString()),
@@ -1926,6 +1972,67 @@ List<LibrarySortOrder> _sortOptionsForAll() => const [
       LibrarySortOrder.genreAsc,
     ];
 
+/// Ordena la lista. En el orden por defecto (recientes primero) los elementos
+/// parecidos salen juntos, en la posición de su miembro más reciente: primero
+/// por universo, dentro de él por saga y número, y los libros sin saga, por
+/// autor (La Ilíada junto a La Odisea). El resto de órdenes no se agrupan.
+List<LibraryItem> _sortLibraryItems(
+  Iterable<LibraryItem> source,
+  LibrarySortOrder order,
+) {
+  final sorted = [...source]
+    ..sort((left, right) => _compareLibraryItems(left, right, order));
+  if (order != LibrarySortOrder.newestFirst) return sorted;
+  String clave(String? valor) => _sortText(valor);
+  final grupos = <String, List<LibraryItem>>{};
+  for (final item in sorted) {
+    final universo = clave(item.universeName);
+    final saga = clave(item.collectionName);
+    final autor = _autorParaAgrupar(item);
+    final id = universo.isNotEmpty
+        ? 'u:$universo'
+        : saga.isNotEmpty
+            ? 's:$saga'
+            : autor.isNotEmpty
+                ? 'a:$autor'
+                : 'i:${item.id}';
+    grupos.putIfAbsent(id, () => []).add(item);
+  }
+  final resultado = <LibraryItem>[];
+  for (final grupo in grupos.values) {
+    if (grupo.length > 1) {
+      // Dentro del universo, cada saga junta y por número, y los libros sin
+      // saga, por autor; el orden estable conserva lo más reciente primero
+      // entre empates.
+      String subgrupo(LibraryItem item) {
+        final saga = clave(item.collectionName);
+        return saga.isNotEmpty ? 's:$saga' : 'a:${_autorParaAgrupar(item)}';
+      }
+
+      final primeraSaga = <String, int>{};
+      for (var i = 0; i < grupo.length; i++) {
+        primeraSaga.putIfAbsent(subgrupo(grupo[i]), () => i);
+      }
+      final indices = {for (var i = 0; i < grupo.length; i++) grupo[i].id: i};
+      grupo.sort((a, b) {
+        final porSaga =
+            primeraSaga[subgrupo(a)]!.compareTo(primeraSaga[subgrupo(b)]!);
+        if (porSaga != 0) return porSaga;
+        final porNumero = (a.collectionNumber ?? 1 << 30)
+            .compareTo(b.collectionNumber ?? 1 << 30);
+        if (porNumero != 0) return porNumero;
+        return indices[a.id]!.compareTo(indices[b.id]!);
+      });
+    }
+    resultado.addAll(grupo);
+  }
+  return resultado;
+}
+
+/// Autor de un libro para juntar sus obras; vacío en el resto de tipos.
+String _autorParaAgrupar(LibraryItem item) =>
+    item.type == LibraryItemType.book ? _sortText(item.author) : '';
+
 int _compareLibraryItems(
   LibraryItem left,
   LibraryItem right,
@@ -1978,6 +2085,23 @@ int _compareLibraryItems(
 /// Logros guardados en local de cada juego (desbloqueados, total). Se rellena
 /// al abrir Juegos leyendo del disco; nunca consulta la red.
 final Map<String, (int, int)> _libraryAchievementCache = {};
+
+Future<void> _refreshLibraryAchievementCache(
+    TodoWorkspace controller, Iterable<LibraryItem> items) async {
+  for (final item in items) {
+    if (item.type != LibraryItemType.game) continue;
+    final saved = await controller.steam.savedAchievements(item.id);
+    final achievements = saved?['achievements'];
+    if (achievements is! List || achievements.isEmpty) {
+      _libraryAchievementCache.remove(item.id);
+    } else {
+      _libraryAchievementCache[item.id] = (
+        achievements.where((a) => a is Map && a['unlocked'] == true).length,
+        achievements.length,
+      );
+    }
+  }
+}
 
 /// Porcentaje de logros de 0 a 100; los juegos sin datos van al final (-1).
 double _libraryAchievementPercent(LibraryItem item) {

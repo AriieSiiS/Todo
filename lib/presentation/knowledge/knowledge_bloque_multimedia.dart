@@ -60,6 +60,9 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
     final current = asset;
     if (current?.kind == KnowledgeAssetKind.audio ||
         current?.kind == KnowledgeAssetKind.video) {
+      // El reproductor solo se prepara al mostrar un audio o un vídeo, no al
+      // abrir Todo: así no ocupa memoria mientras no se usa.
+      MediaKit.ensureInitialized();
       _player = Player();
       if (current?.kind == KnowledgeAssetKind.video) {
         _videoController = VideoController(_player!);
@@ -132,8 +135,8 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F4EE),
-          border: Border.all(color: const Color(0xFFE3D8CB)),
+          color: context.visuals.panelAlt,
+          border: Border.all(color: context.visuals.panelBorder),
           borderRadius: BorderRadius.circular(10),
         ),
         clipBehavior: Clip.antiAlias,
@@ -182,11 +185,11 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4EE),
+                        color: context.visuals.panelAlt,
                         border: Border.all(
                           color: _imageSelected
-                              ? const Color(0xFF708A5B)
-                              : const Color(0xFFE3D8CB),
+                              ? context.visuals.accent
+                              : context.visuals.panelBorder,
                           width: _imageSelected ? 2 : 1,
                         ),
                         borderRadius: BorderRadius.circular(10),
@@ -303,14 +306,14 @@ class _KnowledgeMediaBlockState extends State<_KnowledgeMediaBlock> {
     required double maxWidth,
   }) {
     return Material(
-      color: const Color(0xF7FFFCF8),
+      color: context.visuals.panel,
       elevation: 3,
       borderRadius: BorderRadius.circular(9),
       child: Container(
         height: 38,
         padding: const EdgeInsets.only(left: 10),
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFD9CCBD)),
+          border: Border.all(color: context.visuals.panelBorder),
           borderRadius: BorderRadius.circular(9),
         ),
         child: Row(
@@ -503,11 +506,11 @@ class _KnowledgeImageCropDialogState extends State<_KnowledgeImageCropDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.crop_rounded, color: Color(0xFF607A4D)),
-                  SizedBox(width: 10),
-                  Text('Recortar imagen',
+                  Icon(Icons.crop_rounded, color: context.visuals.accent),
+                  const SizedBox(width: 10),
+                  const Text('Recortar imagen',
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                 ],
@@ -587,9 +590,10 @@ class _KnowledgeImageCropDialogState extends State<_KnowledgeImageCropDialog> {
                       ),
                     ],
                   ),
-                const Text(
+                Text(
                   'Arrastra la imagen en la vista previa para elegir el punto de enfoque.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF777168)),
+                  style:
+                      TextStyle(fontSize: 12, color: context.visuals.textMuted),
                 ),
               ],
               const SizedBox(height: 14),

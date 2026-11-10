@@ -287,7 +287,7 @@ class _WardrobeItemCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ColoredBox(
-                    color: const Color(0xFFF3EEE5),
+                    color: context.visuals.panelAlt,
                     child: FutureBuilder<String>(
                       future: controller.wardrobeImageAbsolutePath(item),
                       builder: (context, snapshot) {
@@ -542,7 +542,7 @@ class _WardrobeOutfitComposition extends StatelessWidget {
     final usesShortBottom =
         lower.isNotEmpty && lower.every(_isShortOutfitBottom);
     return ColoredBox(
-      color: const Color(0xFFF1EADF),
+      color: context.visuals.panelAlt,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 82),
         child: Column(
@@ -691,7 +691,7 @@ class _WardrobePlannerTab extends StatelessWidget {
                   entry.date.day == day.day)
               .firstOrNull;
           return ListTile(
-              tileColor: Colors.white.withValues(alpha: .58),
+              tileColor: context.visuals.panel,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
               leading: CircleAvatar(child: Text('${day.day}')),
@@ -1384,7 +1384,7 @@ Future<void> _showWardrobeItemDetail(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 720;
             final image = ColoredBox(
-              color: const Color(0xFFF3EEE5),
+              color: context.visuals.panelAlt,
               child: FutureBuilder<String>(
                 future: controller.wardrobeImageAbsolutePath(
                   item,

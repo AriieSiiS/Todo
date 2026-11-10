@@ -28,12 +28,20 @@ class CalendarServiceRepository implements CalendarRepository {
       _service.importEventAsTask(event: event);
 
   @override
-  Future<List<CalendarEventModel>> listEvents({
-    required CalendarIntegrationSettings settings,
+  Future<CalendarRemoteDelta> pullEvents({
+    required String syncToken,
     required DateTime from,
     required DateTime to,
   }) =>
-      _service.listEvents(settings: settings, from: from, to: to);
+      _service.pullEvents(syncToken: syncToken, from: from, to: to);
+
+  @override
+  Future<CalendarEventModel> pushEvent(CalendarEventModel event) =>
+      _service.pushEvent(event);
+
+  @override
+  Future<void> deleteEvent(String googleEventId) =>
+      _service.deleteEvent(googleEventId);
 
   @override
   Future<void> restoreSession(String? encodedSession) =>

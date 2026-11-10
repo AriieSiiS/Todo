@@ -24,9 +24,8 @@ _LibraryCardProgress? _libraryCardProgress(
   if (item.status == LibraryItemStatus.completed) return null;
   final enCurso = item.status == LibraryItemStatus.inProgress;
   // El progreso manual se ve en cuanto hay algo visto, aunque esté pendiente.
-  final manual = progresoActualEfectivo(item) >= 1
-      ? textoProgresoManual(item)
-      : null;
+  final manual =
+      progresoActualEfectivo(item) >= 1 ? textoProgresoManual(item) : null;
   switch (item.type) {
     case LibraryItemType.game:
       if (!enCurso || achievements == null || achievements.$2 <= 0) return null;
@@ -44,19 +43,19 @@ _LibraryCardProgress? _libraryCardProgress(
       final reading = item.reading;
       if (reading != null && enCurso) {
         final total = bookPageTotal(item.pages, reading);
-        final percent = bookReadingPercent(reading, total);
+        final percent = item.readingPercent;
         final page = reading.page.trim();
         return _LibraryCardProgress(
-            label: page.isEmpty
+          label: page.isEmpty
               ? 'Leyendo'
               : total != null
-                  ? '$page / $total páginas'
-                  : 'Página $page',
-          fraction: percent / 100,
+                  ? '$page / $total ${readingPageUnitLabel(reading.effectivePageUnit, plural: true)}'
+                  : '${reading.pageLabel} $page',
+          fraction: reading.progress,
           tooltip: [
             '$percent% leído',
             if (page.isNotEmpty)
-              'Página $page${total != null ? ' de $total' : ''}',
+              '${reading.pageLabel} $page${total != null ? ' de $total' : ''}',
             if (reading.chapter.trim().isNotEmpty) reading.chapter,
           ].join('\n'),
         );
@@ -89,9 +88,10 @@ VoidCallback? _libraryMarkProgressAction(
     final enTotal =
         total != null && total > 0 && progresoActualEfectivo(nuevo) >= total;
     messenger
-      ..hideCurrentSnackBar()
+      ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
+          persist: false,
           duration: const Duration(seconds: 4),
           content: Text(
             igual
@@ -141,30 +141,47 @@ class _LibraryCoverGridCard extends StatefulWidget {
 class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
   bool _hovered = false;
   (int, int)? _achievements;
+  int _loadRevision = 0;
 
   @override
   void initState() {
     super.initState();
+    widget.controller.steam.achievementsRevision.addListener(_loadAchievements);
     unawaited(_loadAchievements());
   }
 
   @override
   void didUpdateWidget(covariant _LibraryCoverGridCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.item.id != widget.item.id) {
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.steam.achievementsRevision
+          .removeListener(_loadAchievements);
+      widget.controller.steam.achievementsRevision
+          .addListener(_loadAchievements);
+    }
+    if (oldWidget.item.id != widget.item.id ||
+        oldWidget.controller != widget.controller) {
       unawaited(_loadAchievements());
     }
   }
 
+  @override
+  void dispose() {
+    widget.controller.steam.achievementsRevision
+        .removeListener(_loadAchievements);
+    super.dispose();
+  }
+
   /// Lee los logros ya guardados en disco; nunca consulta la red.
   Future<void> _loadAchievements() async {
+    final revision = ++_loadRevision;
     final item = widget.item;
     if (item.type != LibraryItemType.game) {
       if (_achievements != null) setState(() => _achievements = null);
       return;
     }
     final saved = await widget.controller.steam.savedAchievements(item.id);
-    if (!mounted) return;
+    if (!mounted || revision != _loadRevision) return;
     final list = saved?['achievements'];
     final found = list is List && list.isNotEmpty
         ? (
@@ -186,9 +203,8 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
         widget.controller,
         item,
       ),
-      onComplete: item.status == LibraryItemStatus.completed
-          ? null
-          : () => _completeLibraryItem(context, widget.controller, item),
+      onStart: _libraryStartAction(widget.controller, item),
+      onComplete: _libraryCompleteAction(context, widget.controller, item),
       onRating: item.status != LibraryItemStatus.completed
           ? null
           : () => _editLibraryRating(context, widget.controller, item),
@@ -236,7 +252,12 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
               color: const Color(0xFF18202A),
               borderRadius: BorderRadius.circular(7),
               boxShadow: [
-                if (item.status == LibraryItemStatus.completed)
+                if (allAchievements)
+                  const BoxShadow(
+                    color: Color(0xB0B9CDF0),
+                    blurRadius: 36,
+                  )
+                else if (item.status == LibraryItemStatus.completed)
                   BoxShadow(
                     color: const Color(0xFF5F7F49).withValues(alpha: 0.38),
                     blurRadius: _hovered ? 26 : 18,
@@ -249,15 +270,18 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                 ),
               ],
             ),
-            foregroundDecoration: item.status == LibraryItemStatus.completed
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: const Color(0xFF5F7F49),
-                      width: 4,
-                    ),
-                  )
-                : null,
+            foregroundDecoration:
+                allAchievements || item.status == LibraryItemStatus.completed
+                    ? BoxDecoration(
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: allAchievements
+                              ? const Color(0xFFE8F0FD)
+                              : const Color(0xFF5F7F49),
+                          width: allAchievements ? 2 : 4,
+                        ),
+                      )
+                    : null,
             clipBehavior: Clip.antiAlias,
             child: Stack(
               fit: StackFit.expand,
@@ -267,6 +291,9 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                   type: item.type,
                   iconSize: 44,
                 ),
+                if (allAchievements)
+                  const LibraryPlatinumShine(
+                      key: ValueKey('library-platinum-shine')),
                 AnimatedOpacity(
                   opacity: _hovered ? 1 : 0,
                   duration: const Duration(milliseconds: 150),
@@ -371,38 +398,38 @@ class _LibraryCoverGridCardState extends State<_LibraryCoverGridCard> {
                     ),
                   )
                 else
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 8,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xE63B4654),
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.26),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 8,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xE63B4654),
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.26),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          _libraryItemStatusMeta(item),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        _libraryItemStatusMeta(item),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
-                ),
                 if (widget.showStatus)
                   Positioned(
                     left: 8,
@@ -470,67 +497,67 @@ class _LibraryProgressStrip extends StatelessWidget {
           ),
         ),
         Padding(
-        padding: const EdgeInsets.fromLTRB(11, 26, 11, 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    progress.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      shadows: [
-                        Shadow(color: Color(0xCC000000), blurRadius: 6),
-                      ],
+          padding: const EdgeInsets.fromLTRB(11, 26, 11, 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      progress.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        shadows: [
+                          Shadow(color: Color(0xCC000000), blurRadius: 6),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (percent != null) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    '$percent %',
-                    style: const TextStyle(
-                      color: Color(0xFFF3C77A),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      shadows: [
-                        Shadow(color: Color(0xCC000000), blurRadius: 6),
-                      ],
+                  if (percent != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$percent %',
+                      style: const TextStyle(
+                        color: Color(0xFFF3C77A),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        shadows: [
+                          Shadow(color: Color(0xCC000000), blurRadius: 6),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
-            ),
-            if (fraction != null) ...[
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: SizedBox(
-                  height: 4,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ColoredBox(
-                        color: Colors.white.withValues(alpha: 0.22),
-                      ),
-                      FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: fraction,
-                        child: const ColoredBox(color: Color(0xFFE8A23B)),
-                      ),
-                    ],
+              ),
+              if (fraction != null) ...[
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: SizedBox(
+                    height: 4,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ColoredBox(
+                          color: Colors.white.withValues(alpha: 0.22),
+                        ),
+                        FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: fraction,
+                          child: const ColoredBox(color: Color(0xFFE8A23B)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
-        ),
+          ),
         ),
       ],
     );
@@ -573,7 +600,7 @@ class _LibraryPosterBadge extends StatelessWidget {
   }
 }
 
-/// Trofeo dorado de los juegos con todos los logros conseguidos.
+/// Etiqueta dorada del cien por cien de logros, independiente del estado.
 class _LibraryAllAchievementsBadge extends StatelessWidget {
   const _LibraryAllAchievementsBadge();
 
@@ -583,19 +610,34 @@ class _LibraryAllAchievementsBadge extends StatelessWidget {
       message: 'Todos los logros conseguidos',
       child: Container(
         key: const ValueKey('library-all-achievements'),
-        width: 28,
         height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: const Color(0xD9202732),
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: const Color(0xFFF7D36B).withValues(alpha: 0.7),
+            color: const Color(0xFFF7D36B).withValues(alpha: 0.85),
           ),
         ),
-        child: const Icon(
-          Icons.emoji_events_rounded,
-          size: 16,
-          color: Color(0xFFF7D36B),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.emoji_events_rounded,
+              size: 16,
+              color: Color(0xFFF7D36B),
+            ),
+            SizedBox(width: 5),
+            Text(
+              '100 %',
+              style: TextStyle(
+                color: Color(0xFFF7D36B),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -657,9 +699,12 @@ class _LibraryRewatchBadge extends StatelessWidget {
 }
 
 class _LibraryStatusBadge extends StatelessWidget {
-  const _LibraryStatusBadge({required this.status});
+  const _LibraryStatusBadge({required this.status, this.label});
 
   final LibraryItemStatus status;
+
+  /// Texto propio en lugar del nombre del estado, como «Leído» en un tomo.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -695,7 +740,7 @@ class _LibraryStatusBadge extends StatelessWidget {
           Icon(style.icon, size: 12, color: style.foreground),
           const SizedBox(width: 3),
           Text(
-            style.label,
+            label ?? style.label,
             style: TextStyle(
               color: style.foreground,
               fontSize: 10.5,
@@ -759,9 +804,8 @@ class _LibraryItemRow extends StatelessWidget {
         context: context,
         position: details.globalPosition,
         onPages: () => _openKnowledgeWorkspace(context, controller, item),
-        onComplete: item.status == LibraryItemStatus.completed
-            ? null
-            : () => _completeLibraryItem(context, controller, item),
+        onStart: _libraryStartAction(controller, item),
+        onComplete: _libraryCompleteAction(context, controller, item),
         onRating: item.status != LibraryItemStatus.completed
             ? null
             : () => _editLibraryRating(context, controller, item),
@@ -977,7 +1021,11 @@ class _LibraryCollectionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _libraryColor(item.type);
-    final coleccion = _coleccionPorNombre(label);
+    final encontrada = _coleccionPorNombre(label);
+    final coleccion =
+        encontrada != null && _coleccionVigente(controller, encontrada)
+            ? encontrada
+            : null;
     final chip = Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,

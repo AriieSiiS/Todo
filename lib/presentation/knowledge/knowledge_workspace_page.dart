@@ -12,6 +12,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/todo_theme.dart';
 import '../../application/state/todo_workspace.dart';
 import '../../domain/models.dart';
 import '../../services/knowledge_service.dart';
@@ -21,6 +22,10 @@ import '../shared/texto_busqueda.dart';
 part 'knowledge_arbol.dart';
 part 'knowledge_bloque_multimedia.dart';
 part 'knowledge_bloques.dart';
+
+extension _KnowledgeVisuals on BuildContext {
+  TodoVisuals get visuals => Theme.of(this).extension<TodoVisuals>()!;
+}
 
 class KnowledgeWorkspacePage extends StatefulWidget {
   const KnowledgeWorkspacePage({
@@ -154,7 +159,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
   Widget build(BuildContext context) {
     final page = _activePage;
     final content = ColoredBox(
-      color: const Color(0xFFF5F1EA),
+      color: context.visuals.pageSurface,
       child: Column(
         children: [
           _buildTopBar(context),
@@ -183,7 +188,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       return content;
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F1EA),
+      backgroundColor: context.visuals.pageSurface,
       body: SafeArea(child: content),
     );
   }
@@ -192,9 +197,9 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
     return Container(
       height: 62,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFFCF8),
-        border: Border(bottom: BorderSide(color: Color(0xFFE3D8CB))),
+      decoration: BoxDecoration(
+        color: context.visuals.panel,
+        border: Border(bottom: BorderSide(color: context.visuals.panelBorder)),
       ),
       child: Row(
         children: [
@@ -215,7 +220,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
             icon: const Icon(Icons.arrow_forward_ios_rounded, size: 17),
           ),
           const SizedBox(width: 6),
-          const Icon(Icons.hub_outlined, color: Color(0xFF607A4D)),
+          Icon(Icons.hub_outlined, color: context.visuals.accent),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -238,8 +243,8 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
                             : 'Solo lectura: página bloqueada'),
                     style: TextStyle(
                       color: _editable
-                          ? const Color(0xFF6F7868)
-                          : const Color(0xFF9B4D43),
+                          ? context.visuals.textMuted
+                          : context.visuals.danger,
                       fontSize: 12,
                     ),
                   ),
@@ -270,7 +275,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
   Widget _buildTabs() {
     return Container(
       height: 45,
-      color: const Color(0xFFF8F4EE),
+      color: context.visuals.panelAlt,
       child: ReorderableListView.builder(
         scrollDirection: Axis.horizontal,
         buildDefaultDragHandles: false,
@@ -296,13 +301,13 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
                 constraints: const BoxConstraints(minWidth: 145, maxWidth: 230),
                 padding: const EdgeInsets.fromLTRB(13, 0, 5, 0),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFFFFCF8) : Colors.transparent,
+                  color: active ? context.visuals.panel : Colors.transparent,
                   border: Border(
-                    right: const BorderSide(color: Color(0xFFE3D8CB)),
+                    right: BorderSide(color: context.visuals.panelBorder),
                     bottom: BorderSide(
                       color: active
-                          ? const Color(0xFF607A4D)
-                          : const Color(0xFFE3D8CB),
+                          ? context.visuals.accent
+                          : context.visuals.panelBorder,
                       width: active ? 2 : 1,
                     ),
                   ),
@@ -408,12 +413,17 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
         // AppFlowy aplica este padding a cada bloque, no al documento entero.
         padding: const EdgeInsets.fromLTRB(72, 3, 72, 3),
         maxWidth: 900,
-        cursorColor: const Color(0xFF607A4D),
-        selectionColor: const Color(0xFFD8E4CF),
-        textStyleConfiguration: const TextStyleConfiguration(
-          text: TextStyle(fontSize: 16, height: 1.55, color: Color(0xFF2D2A25)),
-          bold: TextStyle(fontWeight: FontWeight.w800),
-          code: TextStyle(fontFamily: 'monospace', color: Color(0xFF7E443D)),
+        cursorColor: context.visuals.accent,
+        selectionColor: context.visuals.accent.withValues(alpha: .25),
+        textStyleConfiguration: TextStyleConfiguration(
+          text: TextStyle(
+              fontSize: 16,
+              height: 1.55,
+              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+              color: context.visuals.textStrong),
+          bold: const TextStyle(fontWeight: FontWeight.w800),
+          code: TextStyle(
+              fontFamily: 'monospace', color: context.visuals.accentAlt),
         ),
       ),
       contextMenuBuilder: (context, position, state, onPressed) => ContextMenu(
@@ -424,7 +434,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
       ),
     );
     return Container(
-      color: const Color(0xFFFFFCF8),
+      color: context.visuals.panel,
       child: Column(
         children: [
           Padding(
@@ -488,13 +498,13 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: source?.lastError == null
-                ? const Color(0xFFF1F6EC)
-                : const Color(0xFFFFF0EC),
+                ? context.visuals.accent.withValues(alpha: .12)
+                : context.visuals.danger.withValues(alpha: .12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: source?.lastError == null
-                  ? const Color(0xFFC7D8BA)
-                  : const Color(0xFFE8B8AA),
+                  ? context.visuals.accent.withValues(alpha: .4)
+                  : context.visuals.danger.withValues(alpha: .4),
             ),
           ),
           child: Column(
@@ -502,7 +512,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.sync_rounded, color: Color(0xFF607A4D)),
+                  Icon(Icons.sync_rounded, color: context.visuals.accent),
                   const SizedBox(width: 9),
                   const Expanded(
                     child: Text('Sincronización de Repentance+',
@@ -539,7 +549,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
               if (source?.lastError != null) ...[
                 const SizedBox(height: 5),
                 Text(source!.lastError!,
-                    style: const TextStyle(color: Color(0xFF9B312D))),
+                    style: TextStyle(color: context.visuals.danger)),
               ],
               if (entries.isNotEmpty) ...[
                 const SizedBox(height: 7),
@@ -550,9 +560,10 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
                 ),
               ],
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Solo lectura: Todo nunca modifica ni sube el archivo .dat.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF6E685F)),
+                style:
+                    TextStyle(fontSize: 12.5, color: context.visuals.textMuted),
               ),
             ],
           ),
@@ -619,7 +630,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
         .whereType<String>()
         .toList();
     return Container(
-      color: const Color(0xFFF8F4EE),
+      color: context.visuals.panelAlt,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
         children: [
@@ -698,7 +709,7 @@ class _KnowledgeWorkspacePageState extends State<KnowledgeWorkspacePage> {
 
   Widget _inspectorTitle(String title, IconData icon) => Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF607A4D)),
+          Icon(icon, size: 18, color: context.visuals.accent),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
