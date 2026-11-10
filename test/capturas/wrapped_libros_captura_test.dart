@@ -74,7 +74,7 @@ void main() {
     final r = w.resumen;
     final slides = w.diapositivas;
     // ignore: avoid_print
-    print('datos listos: ${slides.length} diapositivas');
+    print('datos listos: ${slides.length} diapositivas: ${slides.map((d) => d.id).join(', ')}');
     // Las portadas se cargan antes, fuera del reloj falso de las pruebas.
     await tester.runAsync(() async {
       for (final fuente in portadasDe(r)) {

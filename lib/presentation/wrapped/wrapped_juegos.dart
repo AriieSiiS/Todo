@@ -37,17 +37,23 @@ List<DiapositivaWrapped> _diapositivasJuegos(ResumenJuegos r) {
     ..comunes('terminados');
   if (r.hayLogros) {
     d.anadir('logros', Paleta.oro, (c, t) => _Logros(r: r, t: t));
-    d.anadir('calendario', d.paleta(), (c, t) => _CalendarioLogros(r: r, t: t),
-        duracion: 1.15);
-    if (r.diaRecordLogros != null) {
+    if (r.logrosPorDia.length >= 5) {
+      d.anadir(
+          'calendario', d.paleta(), (c, t) => _CalendarioLogros(r: r, t: t),
+          duracion: 1.15);
+    }
+    if (r.diaRecordLogros != null && r.logrosDiaRecord >= 3) {
       d.anadir('dia-record', d.paleta(r.juegoDiaRecord),
           (c, t) => _DiaDeVicio(r: r, t: t));
     }
-    d.anadir('reloj', Paleta.noche, (c, t) => _RelojJuegos(r: r, t: t));
-    if (r.logroMasRaro != null) {
+    if (r.logrosDelAno.length >= 15) {
+      d.anadir('reloj', Paleta.noche, (c, t) => _RelojJuegos(r: r, t: t));
+    }
+    if (r.logroMasRaro != null &&
+        (r.logroMasRaro!.porcentajeGlobal ?? 100) < 25) {
       d.anadir('raro', Paleta.orquidea, (c, t) => _LogroRaro(r: r, t: t));
     }
-    if (r.porLogros.length >= 2) {
+    if (r.porLogros.length >= 3) {
       d.anadir('top-logros', d.paleta(r.porLogros.first.juego),
           (c, t) => _TopLogros(r: r, t: t),
           duracion: 1.15);
@@ -56,7 +62,7 @@ List<DiapositivaWrapped> _diapositivasJuegos(ResumenJuegos r) {
   if (r.completados.isNotEmpty) {
     d.anadir('cien', Paleta.oro, (c, t) => _Cien(r: r, t: t));
   }
-  if (r.porHoras.length >= 2) {
+  if (r.porHoras.length >= 3) {
     d.anadir('horas', d.paleta(r.porHoras.first.juego),
         (c, t) => _HorasSteam(r: r, t: t),
         duracion: 1.1);

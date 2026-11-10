@@ -490,7 +490,8 @@ class _Sagas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final saga = r.sagas.first;
-    final otras = r.sagas.skip(1).take(3).toList();
+    final otras =
+        r.sagas.skip(1).where((s) => s.leidos.length >= 2).take(3).toList();
     // Solo se anuncia lo que está por salir o lo que ya se está leyendo.
     final siguiente = saga.siguiente != null &&
             (_esEstreno(saga.siguiente!, r.year) ||

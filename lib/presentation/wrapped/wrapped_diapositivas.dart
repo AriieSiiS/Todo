@@ -643,7 +643,9 @@ class _Lista {
               (c, t) => _Terminados(r: r, t: t));
         }
       case 'meses':
-        if (r.terminados.length >= 3) {
+        // Al menos cuatro obras repartidas en dos meses o más.
+        if (r.terminados.length >= 4 &&
+            r.terminadosPorMes.where((n) => n > 0).length >= 2) {
           anadir('meses', paleta(), (c, t) => _Meses(r: r, t: t),
               duracion: 1.1);
         }
@@ -653,19 +655,21 @@ class _Lista {
               (c, t) => _Autor(r: r, t: t));
         }
       case 'sagas':
-        if (r.sagas.isNotEmpty) {
+        // Solo si de una misma saga se terminaron dos entregas o más.
+        if (r.sagas.isNotEmpty && r.sagas.first.leidos.length >= 2) {
           anadir('sagas', paleta(r.sagas.first.leidos.last),
               (c, t) => _Sagas(r: r, t: t),
               duracion: 1.15);
         }
       case 'generos':
-        if (r.generos.length >= 2) {
+        if (r.generos.length >= 3 && r.generos.first.value >= 2) {
           anadir('generos', paleta(), (c, t) => _Generos(r: r, t: t));
         }
       case 'epocas':
         if (r.anoMasAntiguo != null &&
             r.anoMasReciente != null &&
-            r.anoMasReciente! - r.anoMasAntiguo! >= 10) {
+            r.anoMasReciente! - r.anoMasAntiguo! >= 10 &&
+            r.terminados.where((o) => (o.releaseYear ?? 0) > 0).length >= 3) {
           anadir('epocas', paleta(r.obraMasAntigua),
               (c, t) => _Epocas(r: r, t: t));
         }
@@ -679,17 +683,21 @@ class _Lista {
           anadir('notas', Paleta.oro, (c, t) => _Notas(r: r, t: t));
         }
       case 'propositos':
-        if (r.propositos > 0) {
+        if (r.propositos >= 2) {
           anadir('propositos', paleta(), (c, t) => _Propositos(r: r, t: t));
         }
       case 'destacado':
-        if (r.destacado != null) {
+        // Elegir «lo mejor del año» solo tiene sentido entre varias obras.
+        if (r.destacado != null &&
+            (r.terminados.length >= 2 || r.destacado!.rating != null)) {
           anadir('destacado', paleta(r.destacado),
               (c, t) => _LibroDelAno(r: r, t: t),
               duracion: 1.15);
         }
       case 'perfil':
-        anadir('perfil', paleta(), (c, t) => _Perfil(r: r, t: t));
+        if (_perfil(r).rasgos.length >= 2) {
+          anadir('perfil', paleta(), (c, t) => _Perfil(r: r, t: t));
+        }
       case 'lo-que-viene':
         if (_hayFuturo(r)) {
           anadir(

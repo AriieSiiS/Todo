@@ -530,7 +530,7 @@ void main() {
       ];
       for (final r in resumenes) {
         final slides = diapositivasDe(r);
-        expect(slides.length, greaterThan(8));
+        expect(slides.length, greaterThan(4));
         for (final slide in slides) {
           for (final t in [0.0, .3, 1.0]) {
             await tester.pumpWidget(MaterialApp(

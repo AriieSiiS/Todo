@@ -44,19 +44,19 @@ List<DiapositivaWrapped> _diapositivasPantalla(ResumenPantalla r) {
     d.anadir('maraton', d.paleta(r.terminadosDiaRecord.first),
         (c, t) => _Maraton(r: r, t: t));
   }
-  if (r.terminados.length >= 5) {
+  if (r.terminados.length >= 8) {
     d.anadir('semana', d.paleta(), (c, t) => _DiaDeSofa(r: r, t: t));
   }
   d
     ..comunes('meses')
     ..comunes('creador');
-  if (r.paises.length >= 2) {
+  if (r.paises.length >= 3) {
     d.anadir('paises', Paleta.oceano, (c, t) => _Paises(r: r, t: t));
   }
   d
     ..comunes('sagas')
     ..comunes('generos');
-  if (r.estrenos.length >= 2) {
+  if (r.estrenos.length >= 3) {
     d.anadir(
         'estrenos', d.paleta(r.estrenos.last), (c, t) => _Estrenos(r: r, t: t));
   }

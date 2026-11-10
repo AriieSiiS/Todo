@@ -44,10 +44,10 @@ List<DiapositivaWrapped> _diapositivasGeneral(ResumenGeneral r) {
         duracion: 1.15);
   }
   d.comunes('meses');
-  if (r.diaMasAnadidos != null || r.diaMasTerminados != null) {
+  if (r.anadidosDiaRecord >= 3 || r.terminadosDiaRecord.length >= 2) {
     d.anadir('dias', d.paleta(), (c, t) => _DiasClave(r: r, t: t));
   }
-  if (r.universos.isNotEmpty) {
+  if (r.universos.isNotEmpty && r.universos.first.obras.length >= 2) {
     d.anadir('universo', d.paleta(r.universos.first.obras.first),
         (c, t) => _Universo(r: r, t: t));
   }
@@ -424,9 +424,15 @@ class _DiasClave extends StatelessWidget {
     return _Marco(r: r, children: [
       _etiqueta(t, 0, 'Tus días clave'),
       const SizedBox(height: 6),
-      _titular(t, .03, 'Dos días que dicen mucho de ti', size: 30),
+      _titular(
+          t,
+          .03,
+          r.anadidosDiaRecord >= 3 && r.terminadosDiaRecord.length >= 2
+              ? 'Dos días que dicen mucho de ti'
+              : 'Un día que dice mucho de ti',
+          size: 30),
       const Spacer(),
-      if (r.diaMasAnadidos != null)
+      if (r.diaMasAnadidos != null && r.anadidosDiaRecord >= 3)
         tarjeta(
           .14,
           'El día que más añadiste',
@@ -438,7 +444,7 @@ class _DiasClave extends StatelessWidget {
           [],
         ),
       const SizedBox(height: 14),
-      if (r.diaMasTerminados != null)
+      if (r.diaMasTerminados != null && r.terminadosDiaRecord.length >= 2)
         tarjeta(
             .26,
             'El día que más terminaste',

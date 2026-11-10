@@ -36,12 +36,15 @@ List<DiapositivaWrapped> diapositivasLibros(ResumenLibros r) {
   d
     ..comunes('inicio')
     ..comunes('terminados');
-  if (r.paginas > 0) {
+  if (r.paginasPorLibro.length >= 2) {
     d.anadir('paginas', d.paleta(), (c, t) => _Paginas(r: r, t: t));
   }
-  if (r.hayKindle) {
+  // Las del Kindle piden algo de historial para no quedarse en anécdota.
+  if (r.hayKindle && r.segundos >= 3600) {
     d.anadir('kindle', d.paleta(r.porTiempo.first.libro),
         (c, t) => _Kindle(r: r, t: t));
+  }
+  if (r.diasConLectura >= 5) {
     d.anadir('calendario', d.paleta(), (c, t) => _Calendario(r: r, t: t),
         duracion: 1.15);
     if (r.diaRecord != null) {
