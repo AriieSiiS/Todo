@@ -16,12 +16,14 @@ import 'package:todo/application/wrapped/resumen_libros.dart';
 import 'package:todo/domain/models.dart';
 import 'package:todo/presentation/wrapped/wrapped_libros.dart';
 import 'package:todo/presentation/wrapped/wrapped_piezas.dart';
+import 'package:todo/presentation/wrapped/wrapped_render.dart';
 
 const _salida = String.fromEnvironment('CAPTURAS');
 const _fuentes = String.fromEnvironment('FUENTES');
 const _year = int.fromEnvironment('YEAR', defaultValue: 2026);
 const _momentos = String.fromEnvironment('MOMENTOS', defaultValue: '1');
 const _solo = String.fromEnvironment('SOLO');
+const _video = bool.fromEnvironment('VIDEO');
 
 void main() {
   testWidgets('capturas del Wrapped de libros', (tester) async {
@@ -97,6 +99,45 @@ void main() {
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+
+    if (_video) {
+      // Mismo camino que «Descargar el vídeo», con un segundo por diapositiva.
+      await tester.runAsync(() async {
+        final reloj = Stopwatch()..start();
+        final lienzo = LienzoFueraDePantalla(
+            vista: tester.view, diapositivas: slides);
+        final proceso = await Process.start('ffmpeg', [
+          '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba',
+          '-s', '1080x1920', '-r', '30', '-i', '-', '-c:v', 'libx264',
+          '-preset', 'fast', '-crf', '19', '-pix_fmt', 'yuv420p',
+          '$_salida/prueba-video.mp4',
+        ], runInShell: true);
+        unawaited(proceso.stderr.drain<void>());
+        for (var i = 0; i < slides.length; i++) {
+          for (var f = 0; f < 30; f++) {
+            final imagen = await lienzo.capturar(i, f / 30);
+            final datos =
+                await imagen.toByteData(format: ui.ImageByteFormat.rawRgba);
+            imagen.dispose();
+            proceso.stdin.add(datos!.buffer.asUint8List());
+          }
+          await proceso.stdin.flush();
+          // Una imagen del final de cada diapositiva para comprobar el dibujo.
+          if (i < 3) {
+            final img = await lienzo.capturar(i, 1);
+            final png = await img.toByteData(format: ui.ImageByteFormat.png);
+            File('$_salida/fuera-$i.png')
+                .writeAsBytesSync(png!.buffer.asUint8List());
+          }
+        }
+        lienzo.dispose();
+        await proceso.stdin.close();
+        expect(await proceso.exitCode, 0);
+        // ignore: avoid_print
+        print('vídeo de ${slides.length * 30} fotogramas en ${reloj.elapsed}');
+      });
+      return;
+    }
 
     final momentos = _momentos.split(',').map(double.parse).toList();
     for (var i = 0; i < slides.length; i++) {

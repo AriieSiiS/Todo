@@ -3,12 +3,12 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../application/wrapped/wrapped_modelo.dart';
 import 'wrapped_piezas.dart';
+import 'wrapped_render.dart';
 
 /// Indica al resto de la app que suena un Wrapped (para pausar otra música).
 final wrappedReproduciendo = ValueNotifier<bool>(false);
@@ -242,12 +242,9 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
 
   // ------------------------------------------------------------ exportación
 
-  Future<ui.Image?> _fotograma() async {
-    await WidgetsBinding.instance.endOfFrame;
-    final objeto = _lienzo.currentContext?.findRenderObject();
-    if (objeto is! RenderRepaintBoundary) return null;
-    return objeto.toImage(pixelRatio: 1080 / anchoLienzo);
-  }
+  /// Lienzo independiente del que se ve: no espera al refresco de pantalla.
+  LienzoFueraDePantalla _lienzoExportacion() =>
+      LienzoFueraDePantalla(vista: View.of(context), diapositivas: _slides);
 
   Future<T?> _comoTarea<T>(String texto, Future<T> Function() trabajo) async {
     if (_tarea != null) return null;
@@ -287,12 +284,12 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
     return carpeta;
   }
 
-  Future<File?> _guardarImagen(int i, Directory carpeta) async {
-    setState(() => _indice = i);
-    _reloj.value = 1;
-    await Future<void>.delayed(const Duration(milliseconds: 220));
-    final imagen = await _fotograma();
-    if (imagen == null) return null;
+  Future<File?> _guardarImagen(
+      LienzoFueraDePantalla lienzo, int i, Directory carpeta) async {
+    // El primer dibujo pide las portadas que falten; el segundo ya las tiene.
+    (await lienzo.capturar(i, 1)).dispose();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final imagen = await lienzo.capturar(i, 1);
     final datos = await imagen.toByteData(format: ui.ImageByteFormat.png);
     imagen.dispose();
     if (datos == null) return null;
@@ -305,7 +302,12 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
   Future<void> _descargarActual() async {
     final archivo = await _comoTarea('Guardando la imagen…', () async {
       final carpeta = await _carpeta();
-      return _guardarImagen(_indice, carpeta);
+      final lienzo = _lienzoExportacion();
+      try {
+        return await _guardarImagen(lienzo, _indice, carpeta);
+      } finally {
+        lienzo.dispose();
+      }
     });
     if (archivo != null) {
       _avisar('Imagen guardada en ${archivo.parent.path}', archivo.parent);
@@ -317,9 +319,14 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
   Future<void> _descargarTodas() async {
     final carpeta = await _comoTarea('Guardando las imágenes…', () async {
       final carpeta = await _carpeta();
-      for (var i = 0; i < _slides.length && !_cancelar; i++) {
-        await _guardarImagen(i, carpeta);
-        if (mounted) setState(() => _avanceTarea = (i + 1) / _slides.length);
+      final lienzo = _lienzoExportacion();
+      try {
+        for (var i = 0; i < _slides.length && !_cancelar; i++) {
+          await _guardarImagen(lienzo, i, carpeta);
+          if (mounted) setState(() => _avanceTarea = (i + 1) / _slides.length);
+        }
+      } finally {
+        lienzo.dispose();
       }
       return carpeta;
     });
@@ -336,6 +343,9 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       return;
     }
     const fps = 30;
+    // Fotogramas que se rasterizan a la vez mientras ffmpeg codifica.
+    const enVuelo = 6;
+    final inicio = DateTime.now();
     final salida = await _comoTarea('Creando el vídeo…', () async {
       final carpeta = await _carpeta();
       final ruta = '${carpeta.path}${Platform.pathSeparator}'
@@ -365,7 +375,7 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
         '-c:v',
         'libx264',
         '-preset',
-        'medium',
+        'fast',
         '-crf',
         '19',
         '-pix_fmt',
@@ -389,29 +399,42 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
           .transform(const SystemEncoding().decoder)
           .forEach(errores.write));
       unawaited(proceso.stdout.drain<void>());
-      var hechos = 0;
+      final lienzo = _lienzoExportacion();
+      final cola = <Future<Uint8List?>>[];
+      Future<Uint8List?> bytes(Future<ui.Image> imagen) async {
+        final img = await imagen;
+        final datos = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+        img.dispose();
+        return datos?.buffer.asUint8List();
+      }
+
+      var escritos = 0;
+      Future<void> escribirSiguiente() async {
+        final datos = await cola.removeAt(0);
+        if (datos != null) proceso.stdin.add(datos);
+        escritos++;
+        if (escritos % 15 == 0) {
+          await proceso.stdin.flush();
+          if (mounted) setState(() => _avanceTarea = escritos / fotogramas);
+        }
+      }
+
       try {
         for (var i = 0; i < _slides.length && !_cancelar; i++) {
-          setState(() => _indice = i);
-          _reloj.value = 0;
-          await Future<void>.delayed(const Duration(milliseconds: 120));
+          // Primer dibujo de la diapositiva para pedir sus portadas.
+          (await lienzo.capturar(i, 0)).dispose();
+          await Future<void>.delayed(const Duration(milliseconds: 40));
           for (var f = 0; f < total[i] && !_cancelar; f++) {
-            _reloj.value = f / total[i];
-            final imagen = await _fotograma();
-            if (imagen == null) continue;
-            final datos =
-                await imagen.toByteData(format: ui.ImageByteFormat.rawRgba);
-            imagen.dispose();
-            if (datos == null) continue;
-            proceso.stdin.add(datos.buffer.asUint8List());
-            await proceso.stdin.flush();
-            hechos++;
-            if (hechos % 6 == 0 && mounted) {
-              setState(() => _avanceTarea = hechos / fotogramas);
-            }
+            cola.add(bytes(lienzo.capturar(i, f / total[i])));
+            if (cola.length >= enVuelo) await escribirSiguiente();
           }
         }
+        while (cola.isNotEmpty && !_cancelar) {
+          await escribirSiguiente();
+        }
       } finally {
+        lienzo.dispose();
+        await proceso.stdin.flush();
         await proceso.stdin.close();
       }
       final codigo = await proceso.exitCode;
@@ -425,7 +448,8 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       return File(ruta);
     }).catchError((Object _) => null);
     if (salida != null) {
-      _avisar('Vídeo guardado en ${salida.path}', salida.parent);
+      final tardo = DateTime.now().difference(inicio).inSeconds;
+      _avisar('Vídeo listo en $tardo s: ${salida.path}', salida.parent);
     } else if (mounted && !_cancelar) {
       _avisar('No se pudo crear el vídeo.');
     }
@@ -682,23 +706,8 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       boton(Icons.download_rounded, 'Descargar esta imagen', _descargarActual),
       boton(Icons.collections_rounded, 'Descargar todas las imágenes',
           _descargarTodas),
-      Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Tooltip(
-          message: 'Descargar el vídeo entero con música (MP4)',
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-            onPressed: _tarea == null ? _exportarVideo : null,
-            icon: const Icon(Icons.movie_creation_rounded, size: 20),
-            label: const Text('Descargar vídeo',
-                style: TextStyle(fontWeight: FontWeight.w800)),
-          ),
-        ),
-      ),
+      boton(Icons.movie_creation_outlined,
+          'Descargar el vídeo entero con música', _exportarVideo),
       if (widget.onPersonalizar != null) ...[
         const SizedBox(height: 10),
         boton(Icons.tune_rounded, 'Personalizar',
