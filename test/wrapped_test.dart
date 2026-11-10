@@ -307,7 +307,7 @@ void main() {
     await tester.tap(find.byTooltip('Pausar'));
     await tester.pump();
     expect(find.byTooltip('Reanudar'), findsOneWidget);
-    expect(find.byTooltip('Crear el vídeo con música'), findsOneWidget);
+    expect(find.text('Descargar vídeo'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     expect(wrappedReproduciendo.value, isFalse);

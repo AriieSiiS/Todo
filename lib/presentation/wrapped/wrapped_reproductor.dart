@@ -682,8 +682,23 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       boton(Icons.download_rounded, 'Descargar esta imagen', _descargarActual),
       boton(Icons.collections_rounded, 'Descargar todas las imágenes',
           _descargarTodas),
-      boton(Icons.movie_creation_outlined, 'Crear el vídeo con música',
-          _exportarVideo),
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Tooltip(
+          message: 'Descargar el vídeo entero con música (MP4)',
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            onPressed: _tarea == null ? _exportarVideo : null,
+            icon: const Icon(Icons.movie_creation_rounded, size: 20),
+            label: const Text('Descargar vídeo',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ),
+      ),
       if (widget.onPersonalizar != null) ...[
         const SizedBox(height: 10),
         boton(Icons.tune_rounded, 'Personalizar',
