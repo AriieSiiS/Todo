@@ -477,3 +477,43 @@ String normalizarTituloWrapped(String texto) {
   }
   return salida.toString().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
 }
+
+/// Banda sonora del catálogo propio del Wrapped (composiciones originales).
+class PistaWrapped {
+  const PistaWrapped(this.id, this.nombre, this.estilo, this.archivo);
+  final String id;
+  final String nombre;
+  final String estilo;
+  final String archivo;
+
+  String get fuente => 'asset:assets/wrapped/musica/$archivo';
+}
+
+const pistasWrapped = [
+  PistaWrapped('aurora', 'Aurora', 'Épica suave', 'aurora.mp3'),
+  PistaWrapped('taberna', 'Taberna del bardo', 'Lofi medieval', 'taberna.mp3'),
+  PistaWrapped('bardo', 'Nocturno del bardo', 'Lofi medieval con lluvia',
+      'bardo.mp3'),
+  PistaWrapped('cafe', 'Café y papel', 'Lofi jazz', 'cafe.mp3'),
+  PistaWrapped('cronica', 'Crónica', 'Épica orquestal', 'cronica.mp3'),
+  PistaWrapped('neon', 'Páginas de neón', 'Synthwave', 'neon.mp3'),
+];
+
+const pistaWrappedPorDefecto = 'aurora';
+
+PistaWrapped? pistaWrapped(String? valor) {
+  final clave = valor?.trim().toLowerCase();
+  for (final pista in pistasWrapped) {
+    if (pista.id == clave) return pista;
+  }
+  return null;
+}
+
+/// Fuente de audio para un valor de `musica`: una pista del catálogo, un
+/// archivo propio o `null` si es `ninguna`. Sin valor, la pista por defecto.
+String? fuenteMusicaWrapped(String? valor) {
+  final v = valor?.trim();
+  if (v == null || v.isEmpty) return pistaWrapped(pistaWrappedPorDefecto)!.fuente;
+  if (v.toLowerCase() == 'ninguna') return null;
+  return pistaWrapped(v)?.fuente ?? v;
+}

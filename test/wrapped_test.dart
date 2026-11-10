@@ -8,6 +8,7 @@ import 'package:todo/domain/models.dart';
 import 'package:todo/presentation/wrapped/wrapped_libros.dart';
 import 'package:todo/presentation/wrapped/wrapped_piezas.dart';
 import 'package:todo/presentation/wrapped/wrapped_reproductor.dart';
+import 'package:todo/presentation/wrapped/wrapped_video.dart';
 
 int _hora(DateTime d) => d.millisecondsSinceEpoch ~/ 1000 ~/ 3600 * 3600;
 
@@ -135,6 +136,31 @@ void main() {
       final vuelta = AjustesWrapped.desdeJson(ajustes.toJson());
       expect(vuelta.para(WrappedTipo.libros, 2026).portada, 'Circe');
       expect(vuelta.toJson().containsKey('desconocido'), isFalse);
+    });
+
+    test('la música admite pistas del catálogo, rutas propias o nada', () {
+      expect(fuenteMusicaWrapped(null), contains('aurora.mp3'));
+      expect(fuenteMusicaWrapped('Taberna'),
+          'asset:assets/wrapped/musica/taberna.mp3');
+      expect(fuenteMusicaWrapped('ninguna'), isNull);
+      expect(fuenteMusicaWrapped(r'C:\m.mp3'), r'C:\m.mp3');
+      for (final pista in pistasWrapped) {
+        expect(
+            File('assets/wrapped/musica/${pista.archivo}').existsSync(), isTrue,
+            reason: pista.id);
+      }
+    });
+
+    test('la firma del vídeo cambia con la música y los datos', () {
+      final r = ResumenLibros.calcular(biblioteca: _biblioteca(), year: 2026);
+      final slides = diapositivasLibros(r);
+      final a = firmaVideoWrapped('datos', 'taberna', 7, slides);
+      expect(firmaVideoWrapped('datos', 'taberna', 7, slides), a);
+      expect(firmaVideoWrapped('datos', 'neon', 7, slides), isNot(a));
+      expect(firmaVideoWrapped('otros', 'taberna', 7, slides), isNot(a));
+      expect(firmaVideoWrapped('datos', 'taberna', 8, slides), isNot(a));
+      expect(duracionesWrapped(slides, 7).first,
+          Duration(milliseconds: (7000 * slides.first.duracion).round()));
     });
 
     test('publicar en enero se refiere al año ya cerrado', () {

@@ -9,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../application/wrapped/wrapped_modelo.dart';
 import 'wrapped_piezas.dart';
 import 'wrapped_render.dart';
+import 'wrapped_video.dart';
 
 /// Indica al resto de la app que suena un Wrapped (para pausar otra música).
 final wrappedReproduciendo = ValueNotifier<bool>(false);
@@ -50,6 +51,9 @@ class ReproductorWrapped extends StatefulWidget {
     this.onPersonalizar,
     this.indiceInicial = 0,
     this.precargar,
+    this.onMusica,
+    this.firmaVideo,
+    this.portadas = const [],
     super.key,
   });
 
@@ -58,8 +62,19 @@ class ReproductorWrapped extends StatefulWidget {
   final List<DiapositivaWrapped> diapositivas;
   final int segundosPorDiapositiva;
 
-  /// Ruta de un archivo de audio o `asset:` seguido de la ruta del recurso.
+  /// Valor de `musica` de los ajustes: id de una pista, ruta propia o
+  /// `ninguna`. Sin valor suena la pista por defecto.
   final String? musica;
+
+  /// Se llama al elegir otra pista en el reproductor, para guardarla.
+  final ValueChanged<String>? onMusica;
+
+  /// Firma de los datos y ajustes (sin la música). Si llega, el vídeo se va
+  /// preparando solo en segundo plano.
+  final String? firmaVideo;
+
+  /// Portadas que usa el Wrapped, para retenerlas al generar el vídeo.
+  final Iterable<String?> portadas;
 
   /// Texto de aviso cuando aún no ha llegado la fecha de publicación.
   final String? vistaPrevia;
@@ -86,6 +101,8 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
   AudioPlayer? _audio;
   bool _musicaActiva = true;
   String? _rutaMusica;
+  late String? _valorMusica = widget.musica;
+  int _generacionAudio = 0;
 
   /// Progreso de una exportación (null si no hay ninguna).
   String? _tarea;
@@ -108,9 +125,9 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
     unawaited(_preparar());
   }
 
-  Duration _duracionDe(int i) => Duration(
-      milliseconds:
-          (widget.segundosPorDiapositiva * 1000 * _slides[i].duracion).round());
+  late final List<Duration> _duraciones =
+      duracionesWrapped(_slides, widget.segundosPorDiapositiva);
+  Duration _duracionDe(int i) => _duraciones[i];
 
   Future<void> _preparar() async {
     await TipografiaWrapped.precargar();
@@ -125,30 +142,75 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
   }
 
   Future<void> _iniciarMusica() async {
-    final fuente = widget.musica;
+    final generacion = ++_generacionAudio;
+    final previo = _audio;
+    _audio = null;
+    if (previo != null) unawaited(previo.dispose());
+    final fuente = fuenteMusicaWrapped(_valorMusica);
+    _rutaMusica = null;
     if (fuente == null) {
-      _musicaActiva = false;
       if (mounted) setState(() {});
+      _prepararVideo();
       return;
     }
     try {
-      _rutaMusica = await rutaDeAudio(fuente);
-      if (_rutaMusica == null || !mounted) return;
+      final ruta = await rutaDeAudio(fuente);
+      if (ruta == null || !mounted || generacion != _generacionAudio) return;
+      _rutaMusica = ruta;
+      _prepararVideo();
       final audio = _audio = AudioPlayer();
-      await audio.setFilePath(_rutaMusica!);
+      await audio.setFilePath(ruta);
       await audio.setLoopMode(LoopMode.all);
       await audio.setVolume(0);
-      if (!mounted) return;
-      if (_musicaActiva && !_pausado) unawaited(audio.play());
+      if (!mounted || generacion != _generacionAudio) return;
+      if (_musicaActiva && !_pausado && _tarea == null) {
+        unawaited(audio.play());
+      }
       // Entrada suave.
       for (var i = 1; i <= 12 && mounted; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 90));
+        if (generacion != _generacionAudio) return;
         await audio.setVolume(.7 * i / 12);
       }
     } catch (_) {
-      _musicaActiva = false;
       if (mounted) setState(() {});
     }
+  }
+
+  /// Cambia de pista al momento y la guarda en los ajustes.
+  void _elegirMusica(String valor) {
+    setState(() {
+      _valorMusica = valor;
+      _musicaActiva = valor != 'ninguna';
+    });
+    widget.onMusica?.call(valor);
+    unawaited(_iniciarMusica());
+  }
+
+  // ------------------------------------------------------------ vídeo
+
+  String? get _firmaCompleta => widget.firmaVideo == null
+      ? null
+      : firmaVideoWrapped(
+          widget.firmaVideo!,
+          _rutaMusica == null ? null : fuenteMusicaWrapped(_valorMusica),
+          widget.segundosPorDiapositiva,
+          _slides);
+
+  /// Arranca (o reutiliza) la generación del vídeo en segundo plano.
+  TrabajoVideo? _prepararVideo({bool prisa = false}) {
+    final firma = _firmaCompleta;
+    if (firma == null || !mounted) return null;
+    return VideosWrapped.preparar(
+      clave: '${widget.tipo.clave}-${widget.year}',
+      firma: firma,
+      diapositivas: _slides,
+      duraciones: [for (var i = 0; i < _slides.length; i++) _duracionDe(i)],
+      portadas: widget.portadas,
+      rutaMusica: _rutaMusica,
+      vista: View.of(context),
+      prisa: prisa,
+    );
   }
 
   @override
@@ -337,120 +399,61 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
   }
 
   Future<void> _exportarVideo() async {
-    final ffmpeg = await buscarFfmpeg();
-    if (ffmpeg == null) {
+    final vista = View.of(context);
+    if (await buscarFfmpeg() == null) {
       _avisar('Para crear el vídeo hace falta ffmpeg instalado.');
       return;
     }
-    const fps = 30;
-    // Fotogramas que se rasterizan a la vez mientras ffmpeg codifica.
-    const enVuelo = 6;
-    final inicio = DateTime.now();
-    final salida = await _comoTarea('Creando el vídeo…', () async {
+    final trabajo = _prepararVideo(prisa: true) ??
+        VideosWrapped.preparar(
+          clave: '${widget.tipo.clave}-${widget.year}',
+          firma: VideosWrapped.firmaDe(
+              [for (final d in _slides) d.id, _rutaMusica, DateTime.now().day]),
+          diapositivas: _slides,
+          duraciones: [for (var i = 0; i < _slides.length; i++) _duracionDe(i)],
+          portadas: widget.portadas,
+          rutaMusica: _rutaMusica,
+          vista: vista,
+          prisa: true,
+        );
+    Future<File?> copiar() async {
+      final hecho = await trabajo.resultado;
+      if (hecho == null) return null;
       final carpeta = await _carpeta();
-      final ruta = '${carpeta.path}${Platform.pathSeparator}'
-          'wrapped-${widget.tipo.clave}-${widget.year}.mp4';
-      final total = [
-        for (var i = 0; i < _slides.length; i++)
-          (_duracionDe(i).inMilliseconds * fps / 1000).round()
-      ];
-      final fotogramas = total.fold<int>(0, (a, b) => a + b);
-      final segundos = fotogramas / fps;
-      final conMusica = _musicaActiva && _rutaMusica != null;
-      final proceso = await Process.start(ffmpeg, [
-        '-y',
-        '-loglevel',
-        'error',
-        '-f',
-        'rawvideo',
-        '-pix_fmt',
-        'rgba',
-        '-s',
-        '1080x1920',
-        '-r',
-        '$fps',
-        '-i',
-        '-',
-        if (conMusica) ...['-stream_loop', '-1', '-i', _rutaMusica!],
-        '-c:v',
-        'libx264',
-        '-preset',
-        'fast',
-        '-crf',
-        '19',
-        '-pix_fmt',
-        'yuv420p',
-        '-movflags',
-        '+faststart',
-        if (conMusica) ...[
-          '-c:a',
-          'aac',
-          '-b:a',
-          '192k',
-          '-af',
-          'afade=t=in:d=1,afade=t=out:st=${(segundos - 2.5).toStringAsFixed(2)}:d=2.5',
-          '-t',
-          segundos.toStringAsFixed(2),
-        ],
-        ruta,
-      ]);
-      final errores = StringBuffer();
-      unawaited(proceso.stderr
-          .transform(const SystemEncoding().decoder)
-          .forEach(errores.write));
-      unawaited(proceso.stdout.drain<void>());
-      final lienzo = _lienzoExportacion();
-      final cola = <Future<Uint8List?>>[];
-      Future<Uint8List?> bytes(Future<ui.Image> imagen) async {
-        final img = await imagen;
-        final datos = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
-        img.dispose();
-        return datos?.buffer.asUint8List();
+      final destino = File('${carpeta.path}${Platform.pathSeparator}'
+          'wrapped-${widget.tipo.clave}-${widget.year}.mp4');
+      return hecho.copy(destino.path);
+    }
+
+    File? salida;
+    if (trabajo.terminado) {
+      salida = await copiar();
+    } else {
+      void avance() {
+        if (mounted) setState(() => _avanceTarea = trabajo.progreso.value);
       }
 
-      var escritos = 0;
-      Future<void> escribirSiguiente() async {
-        final datos = await cola.removeAt(0);
-        if (datos != null) proceso.stdin.add(datos);
-        escritos++;
-        if (escritos % 15 == 0) {
-          await proceso.stdin.flush();
-          if (mounted) setState(() => _avanceTarea = escritos / fotogramas);
+      trabajo.progreso.addListener(avance);
+      salida = await _comoTarea<File?>('Terminando el vídeo…', () async {
+        final espera = Completer<File?>();
+        unawaited(copiar()
+            .then(espera.complete, onError: (_) => espera.complete(null)));
+        // «Cancelar» solo cierra el aviso: el vídeo sigue haciéndose.
+        while (!espera.isCompleted && !_cancelar) {
+          await Future<void>.delayed(const Duration(milliseconds: 120));
         }
-      }
-
-      try {
-        for (var i = 0; i < _slides.length && !_cancelar; i++) {
-          // Primer dibujo de la diapositiva para pedir sus portadas.
-          (await lienzo.capturar(i, 0)).dispose();
-          await Future<void>.delayed(const Duration(milliseconds: 40));
-          for (var f = 0; f < total[i] && !_cancelar; f++) {
-            cola.add(bytes(lienzo.capturar(i, f / total[i])));
-            if (cola.length >= enVuelo) await escribirSiguiente();
-          }
-        }
-        while (cola.isNotEmpty && !_cancelar) {
-          await escribirSiguiente();
-        }
-      } finally {
-        lienzo.dispose();
-        await proceso.stdin.flush();
-        await proceso.stdin.close();
-      }
-      final codigo = await proceso.exitCode;
+        return espera.isCompleted ? await espera.future : null;
+      });
+      trabajo.progreso.removeListener(avance);
       if (_cancelar) {
-        try {
-          await File(ruta).delete();
-        } catch (_) {}
-        return null;
+        trabajo.prisa = false;
+        _avisar('El vídeo se sigue preparando en segundo plano.');
+        return;
       }
-      if (codigo != 0) throw Exception(errores.toString());
-      return File(ruta);
-    }).catchError((Object _) => null);
+    }
     if (salida != null) {
-      final tardo = DateTime.now().difference(inicio).inSeconds;
-      _avisar('Vídeo listo en $tardo s: ${salida.path}', salida.parent);
-    } else if (mounted && !_cancelar) {
+      _avisar('Vídeo guardado en ${salida.path}', salida.parent);
+    } else if (mounted) {
       _avisar('No se pudo crear el vídeo.');
     }
   }
@@ -697,11 +700,68 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
               : (_pausado ? Icons.play_arrow_rounded : Icons.pause_rounded),
           _terminado ? 'Ver otra vez' : (_pausado ? 'Reanudar' : 'Pausar'),
           _alternarPausa),
-      if (widget.musica != null)
-        boton(
-            _musicaActiva ? Icons.music_note_rounded : Icons.music_off_rounded,
-            _musicaActiva ? 'Silenciar la música' : 'Poner la música',
-            _alternarMusica),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: PopupMenuButton<String>(
+          tooltip: 'Música',
+          color: const Color(0xFF1B1B26),
+          position: PopupMenuPosition.under,
+          onSelected: _elegirMusica,
+          itemBuilder: (_) {
+            final actual = pistaWrapped(_valorMusica)?.id ??
+                ((_valorMusica ?? '').isEmpty
+                    ? pistaWrappedPorDefecto
+                    : (_valorMusica!.toLowerCase() == 'ninguna'
+                        ? 'ninguna'
+                        : 'propia'));
+            PopupMenuItem<String> item(
+                    String valor, String titulo, String? sub) =>
+                PopupMenuItem(
+                  value: valor,
+                  child: Row(children: [
+                    Icon(
+                        actual == valor
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        size: 18,
+                        color: Colors.white),
+                    const SizedBox(width: 10),
+                    Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(titulo,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700)),
+                          if (sub != null)
+                            Text(sub,
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 12)),
+                        ]),
+                  ]),
+                );
+            return [
+              for (final p in pistasWrapped) item(p.id, p.nombre, p.estilo),
+              if (actual == 'propia') item(_valorMusica!, 'Tu música', null),
+              item('ninguna', 'Sin música', null),
+            ];
+          },
+          child: Material(
+            color: Colors.white.withValues(alpha: .09),
+            shape: const CircleBorder(),
+            child: SizedBox.square(
+              dimension: 46,
+              child: Icon(
+                  _rutaMusica != null && _musicaActiva
+                      ? Icons.music_note_rounded
+                      : Icons.music_off_rounded,
+                  size: 21,
+                  color: Colors.white),
+            ),
+          ),
+        ),
+      ),
       const SizedBox(height: 10),
       boton(Icons.download_rounded, 'Descargar esta imagen', _descargarActual),
       boton(Icons.collections_rounded, 'Descargar todas las imágenes',

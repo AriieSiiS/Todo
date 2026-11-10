@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +11,111 @@ import '../../domain/models.dart';
 import 'wrapped_libros.dart';
 import 'wrapped_piezas.dart';
 import 'wrapped_reproductor.dart';
+import 'wrapped_video.dart';
 
-const _musicaLibros = 'asset:assets/wrapped/musica/libros.mp3';
+/// Huella de los datos y ajustes de un Wrapped (sin la música), para saber
+/// si un vídeo ya generado sigue valiendo. Incluye la fecha del ejecutable:
+/// tras cada actualización de la app se vuelve a generar con el diseño nuevo.
+String firmaBaseWrapped(
+    WrappedTipo tipo,
+    int year,
+    List<LibraryItem> biblioteca,
+    List<LibraryGoal> propositos,
+    AjustesWrappedTipo ajustes) {
+  String? ejecutable;
+  try {
+    ejecutable =
+        File(Platform.resolvedExecutable).lastModifiedSync().toIso8601String();
+  } catch (_) {}
+  final sinMusica = Map.of(ajustes.toJson())..remove('musica');
+  return VideosWrapped.firmaDe([
+    tipo.clave,
+    year,
+    ejecutable,
+    sinMusica,
+    [
+      for (final l in biblioteca)
+        if (l.type == LibraryItemType.book)
+          [
+            l.id,
+            l.updatedAt.toIso8601String(),
+            l.status.name,
+            l.completedDate?.toIso8601String(),
+            l.rating,
+            l.coverUrl,
+            l.reading?.observedAt,
+            l.reading?.statistics.values
+                .fold<int>(0, (a, b) => a + b.observedAt),
+            l.reading?.quotes.length,
+          ]
+    ],
+    [
+      for (final m in propositos)
+        if (m.targetYear == year) [m.id, m.status.name, m.linkedLibraryItemId]
+    ],
+  ]);
+}
+
+/// Datos y diapositivas listos para reproducir o para generar el vídeo.
+class WrappedPreparado {
+  WrappedPreparado(
+      this.resumen, this.diapositivas, this.ajustes, this.firmaBase);
+  final ResumenLibros resumen;
+  final List<DiapositivaWrapped> diapositivas;
+  final AjustesWrappedTipo ajustes;
+  final String firmaBase;
+
+  int get segundos => ajustes.segundosPorDiapositiva ?? 7;
+  Iterable<String?> get portadas => portadasDeLibros(resumen);
+}
+
+Future<WrappedPreparado> prepararWrapped(
+    {required WrappedTipo tipo,
+    required int year,
+    required List<LibraryItem> biblioteca,
+    required List<LibraryGoal> propositos,
+    required AjustesWrapped ajustes}) async {
+  final colecciones = await _cargarColecciones();
+  final ajustesTipo = ajustes.para(tipo, year);
+  final resumen = ResumenLibros.calcular(
+    biblioteca: biblioteca,
+    propositos: propositos,
+    colecciones: colecciones,
+    year: year,
+    ajustes: ajustesTipo,
+  );
+  await ColoresPortada.precargar(portadasDeLibros(resumen));
+  return WrappedPreparado(resumen, diapositivasLibros(resumen), ajustesTipo,
+      firmaBaseWrapped(tipo, year, biblioteca, propositos, ajustesTipo));
+}
+
+/// Genera el vídeo de un Wrapped sin abrirlo, para que esté listo al pedirlo.
+Future<void> prepararVideoEnSegundoPlano(
+    {required WrappedTipo tipo,
+    required int year,
+    required List<LibraryItem> biblioteca,
+    required List<LibraryGoal> propositos,
+    required AlmacenWrapped almacen}) async {
+  if (await buscarFfmpeg() == null) return;
+  final ajustes = almacen.leerAjustes();
+  final w = await prepararWrapped(
+      tipo: tipo,
+      year: year,
+      biblioteca: biblioteca,
+      propositos: propositos,
+      ajustes: ajustes);
+  final fuente = fuenteMusicaWrapped(w.ajustes.musica);
+  final ruta = fuente == null ? null : await rutaDeAudio(fuente);
+  VideosWrapped.preparar(
+    clave: '${tipo.clave}-$year',
+    firma: firmaVideoWrapped(
+        w.firmaBase, ruta == null ? null : fuente, w.segundos, w.diapositivas),
+    diapositivas: w.diapositivas,
+    duraciones: duracionesWrapped(w.diapositivas, w.segundos),
+    portadas: w.portadas,
+    rutaMusica: ruta,
+  );
+}
 
 List<Coleccion>? _colecciones;
 
@@ -116,6 +220,7 @@ class _PantallaWrapped extends StatefulWidget {
 class _PantallaWrappedState extends State<_PantallaWrapped> {
   late AjustesWrapped _ajustes;
   ResumenLibros? _resumen;
+  WrappedPreparado? _preparado;
   List<DiapositivaWrapped> _slides = const [];
   int _version = 0;
   int _indice = 0;
@@ -140,21 +245,31 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
   }
 
   Future<void> _calcular() async {
-    final colecciones = await _cargarColecciones();
-    final resumen = ResumenLibros.calcular(
+    final w = await prepararWrapped(
+      tipo: widget.tipo,
+      year: widget.year,
       biblioteca: widget.biblioteca(),
       propositos: widget.propositos(),
-      colecciones: colecciones,
-      year: widget.year,
-      ajustes: _ajustes.para(widget.tipo, widget.year),
+      ajustes: _ajustes,
     );
-    await ColoresPortada.precargar(portadasDeLibros(resumen));
     if (!mounted) return;
     setState(() {
-      _resumen = resumen;
-      _slides = diapositivasLibros(resumen);
+      _preparado = w;
+      _resumen = w.resumen;
+      _slides = w.diapositivas;
       _version++;
     });
+  }
+
+  /// Guarda la pista elegida en el reproductor sin reiniciarlo.
+  void _guardarMusica(String valor) {
+    final clave = AjustesWrapped.claveDe(widget.tipo, widget.year);
+    final propio = _ajustes.porClave[clave] ?? const AjustesWrappedTipo();
+    _ajustes = _ajustes.conTipo(
+        widget.tipo, widget.year, propio.copiaCon(musica: valor));
+    try {
+      widget.almacen.guardarAjustes(_ajustes);
+    } catch (_) {}
   }
 
   Future<void> _precargar(BuildContext context) async {
@@ -165,12 +280,6 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
         if (proveedorPortada(fuente) case final proveedor?)
           precacheImage(proveedor, context).catchError((Object _) {}),
     ]).timeout(const Duration(seconds: 8), onTimeout: () => const []);
-  }
-
-  String? get _musica {
-    final ajustes = _ajustes.para(widget.tipo, widget.year);
-    if (ajustes.sinMusica) return null;
-    return ajustes.musica ?? _musicaLibros;
   }
 
   String? get _vistaPrevia {
@@ -228,7 +337,10 @@ class _PantallaWrappedState extends State<_PantallaWrapped> {
       indiceInicial: _indice.clamp(0, _slides.length - 1),
       segundosPorDiapositiva:
           _ajustes.para(widget.tipo, widget.year).segundosPorDiapositiva ?? 7,
-      musica: _musica,
+      musica: _ajustes.para(widget.tipo, widget.year).musica,
+      onMusica: _guardarMusica,
+      firmaVideo: _preparado?.firmaBase,
+      portadas: _preparado?.portadas ?? const [],
       vistaPrevia: _vistaPrevia,
       precargar: _precargar,
       onPersonalizar: _personalizar,
@@ -365,16 +477,25 @@ class _PanelPersonalizarState extends State<_PanelPersonalizar> {
                   runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    for (final pista in pistasWrapped)
+                      ChoiceChip(
+                        label: Text('${pista.nombre} · ${pista.estilo}'),
+                        selected: (pistaWrapped(_musica)?.id ??
+                                (_musica == null
+                                    ? pistaWrappedPorDefecto
+                                    : null)) ==
+                            pista.id,
+                        onSelected: (_) => setState(() => _musica = pista.id),
+                      ),
                     ChoiceChip(
-                      label: const Text('Banda sonora original'),
-                      selected: _musica == null,
-                      onSelected: (_) => setState(() => _musica = null),
-                    ),
-                    ChoiceChip(
-                      label: Text(_musica != null && !sinMusica
+                      label: Text(_musica != null &&
+                              !sinMusica &&
+                              pistaWrapped(_musica) == null
                           ? 'Propia: ${_musica!.split(RegExp(r'[\\/]')).last}'
                           : 'Elegir un mp3…'),
-                      selected: _musica != null && !sinMusica,
+                      selected: _musica != null &&
+                          !sinMusica &&
+                          pistaWrapped(_musica) == null,
                       onSelected: (_) async {
                         final archivo =
                             await openFile(acceptedTypeGroups: const [
@@ -662,6 +783,13 @@ class _AvisoWrappedState extends State<AvisoWrapped> {
         conDatos: (tipo, year) => hayDatosWrapped(tipo, year, biblioteca),
       );
       for (final w in listos) {
+        unawaited(prepararVideoEnSegundoPlano(
+                tipo: w.tipo,
+                year: w.year,
+                biblioteca: biblioteca,
+                propositos: widget.propositos(),
+                almacen: _almacen)
+            .catchError((Object _) {}));
         if (estado.avisado(w.tipo, w.year)) continue;
         estado = estado.marcarAvisado(w.tipo, w.year, ahora);
         unawaited(widget.notificarSistema?.call(

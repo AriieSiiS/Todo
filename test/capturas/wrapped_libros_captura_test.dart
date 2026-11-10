@@ -16,7 +16,9 @@ import 'package:todo/application/wrapped/resumen_libros.dart';
 import 'package:todo/domain/models.dart';
 import 'package:todo/presentation/wrapped/wrapped_libros.dart';
 import 'package:todo/presentation/wrapped/wrapped_piezas.dart';
-import 'package:todo/presentation/wrapped/wrapped_render.dart';
+import 'package:todo/application/wrapped/wrapped_modelo.dart';
+import 'package:todo/presentation/wrapped/wrapped_reproductor.dart';
+import 'package:todo/presentation/wrapped/wrapped_video.dart';
 
 const _salida = String.fromEnvironment('CAPTURAS');
 const _fuentes = String.fromEnvironment('FUENTES');
@@ -90,7 +92,8 @@ void main() {
           if (!listo.isCompleted) listo.complete();
         });
         flujo.addListener(oyente);
-        await listo.future.timeout(const Duration(seconds: 5), onTimeout: () {});
+        await listo.future
+            .timeout(const Duration(seconds: 5), onTimeout: () {});
       }
     });
     Directory(_salida).createSync(recursive: true);
@@ -101,38 +104,25 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     if (_video) {
-      // Mismo camino que «Descargar el vídeo», con un segundo por diapositiva.
+      // El mismo generador que usa la app, con un segundo por diapositiva.
       await tester.runAsync(() async {
         final reloj = Stopwatch()..start();
-        final lienzo = LienzoFueraDePantalla(
-            vista: tester.view, diapositivas: slides);
-        final proceso = await Process.start('ffmpeg', [
-          '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgba',
-          '-s', '1080x1920', '-r', '30', '-i', '-', '-c:v', 'libx264',
-          '-preset', 'fast', '-crf', '19', '-pix_fmt', 'yuv420p',
-          '$_salida/prueba-video.mp4',
-        ], runInShell: true);
-        unawaited(proceso.stderr.drain<void>());
-        for (var i = 0; i < slides.length; i++) {
-          for (var f = 0; f < 30; f++) {
-            final imagen = await lienzo.capturar(i, f / 30);
-            final datos =
-                await imagen.toByteData(format: ui.ImageByteFormat.rawRgba);
-            imagen.dispose();
-            proceso.stdin.add(datos!.buffer.asUint8List());
-          }
-          await proceso.stdin.flush();
-          // Una imagen del final de cada diapositiva para comprobar el dibujo.
-          if (i < 3) {
-            final img = await lienzo.capturar(i, 1);
-            final png = await img.toByteData(format: ui.ImageByteFormat.png);
-            File('$_salida/fuera-$i.png')
-                .writeAsBytesSync(png!.buffer.asUint8List());
-          }
-        }
-        lienzo.dispose();
-        await proceso.stdin.close();
-        expect(await proceso.exitCode, 0);
+        final musica = await rutaDeAudio(fuenteMusicaWrapped('taberna')!);
+        final trabajo = VideosWrapped.preparar(
+          clave: 'prueba-captura',
+          firma: VideosWrapped.firmaDe([DateTime.now().toIso8601String()]),
+          diapositivas: slides,
+          duraciones: [for (final _ in slides) const Duration(seconds: 1)],
+          portadas: portadasDeLibros(r),
+          rutaMusica: musica,
+          vista: tester.view,
+          prisa: true,
+        );
+        final archivo = await trabajo.resultado;
+        expect(archivo, isNotNull);
+        final copia = File('$_salida/prueba-video.mp4');
+        await archivo!.copy(copia.path);
+        await archivo.delete();
         // ignore: avoid_print
         print('vídeo de ${slides.length * 30} fotogramas en ${reloj.elapsed}');
       });
@@ -141,7 +131,9 @@ void main() {
 
     final momentos = _momentos.split(',').map(double.parse).toList();
     for (var i = 0; i < slides.length; i++) {
-      if (_solo.isNotEmpty && !_solo.split(',').contains(slides[i].id)) continue;
+      if (_solo.isNotEmpty && !_solo.split(',').contains(slides[i].id)) {
+        continue;
+      }
       for (final t in momentos) {
         final clave = GlobalKey();
         await tester.pumpWidget(MaterialApp(
