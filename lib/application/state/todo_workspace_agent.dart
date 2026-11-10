@@ -18,7 +18,14 @@ extension TodoWorkspaceAgent on TodoWorkspace {
     _agentClosing = true;
     try {
       await _agentCommandQueue;
-      await _guardarParaCerrar();
+      try {
+        await _guardarParaCerrar();
+      } catch (_) {
+        // Un bloqueo pasajero del archivo no debe impedir cerrar: segundo
+        // intento con todo el estado tras una pausa breve.
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        await _persist(soloLocal: true);
+      }
       await _agentBridge?.stop();
     } catch (_) {
       _agentClosing = false;

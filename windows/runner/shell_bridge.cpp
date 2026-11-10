@@ -59,8 +59,22 @@ ShellBridge::ShellBridge(flutter::BinaryMessenger* messenger, HWND window)
           exit_requested_ = false;
           ::EnableWindow(window_, TRUE);
           BringToFront();
-          ::MessageBoxW(window_, L"No se pudieron guardar los cambios. Todo sigue abierto para que puedas reintentarlo.",
-                        L"Todo", MB_OK | MB_ICONERROR);
+          std::wstring mensaje =
+              L"No se pudieron guardar los cambios. Todo sigue abierto para que puedas reintentarlo.";
+          // El motivo llega en UTF-8 desde Dart; se añade para poder investigarlo.
+          if (const auto* motivo = std::get_if<std::string>(call.arguments())) {
+            const int largo = ::MultiByteToWideChar(
+                CP_UTF8, 0, motivo->c_str(), static_cast<int>(motivo->size()),
+                nullptr, 0);
+            if (largo > 0) {
+              std::wstring ancho(static_cast<size_t>(largo), L'\0');
+              ::MultiByteToWideChar(CP_UTF8, 0, motivo->c_str(),
+                                    static_cast<int>(motivo->size()),
+                                    ancho.data(), largo);
+              mensaje += L"\n\nMotivo: " + ancho.substr(0, 300);
+            }
+          }
+          ::MessageBoxW(window_, mensaje.c_str(), L"Todo", MB_OK | MB_ICONERROR);
           result->Success();
         } else {
           result->NotImplemented();

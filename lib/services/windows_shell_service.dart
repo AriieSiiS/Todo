@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -37,10 +38,11 @@ class WindowsShellService extends ChangeNotifier {
       switch (call.method) {
         case 'requestExit':
           try {
-            await beforeExit?.call().timeout(const Duration(seconds: 10));
+            await beforeExit?.call().timeout(const Duration(seconds: 15));
             await _channel.invokeMethod<void>('finishExit');
-          } catch (_) {
-            await _channel.invokeMethod<void>('exitFailed');
+          } catch (error) {
+            _registrarFallo(error);
+            await _channel.invokeMethod<void>('exitFailed', '$error');
           }
           break;
         case 'quickCapture':
@@ -99,6 +101,22 @@ class WindowsShellService extends ChangeNotifier {
   }
 
   Future<bool> toggleFullScreen() => setFullScreen(!fullScreen);
+
+  /// Deja constancia de por qué no se pudo cerrar, para poder investigarlo.
+  static void _registrarFallo(Object error) {
+    try {
+      final inicio = Platform.environment['USERPROFILE'] ?? '';
+      final s = Platform.pathSeparator;
+      final archivo =
+          File('$inicio${s}Documents${s}Todo${s}runtime${s}cierres_fallidos.log');
+      if (archivo.existsSync() && archivo.lengthSync() > 200000) {
+        archivo.deleteSync();
+      }
+      archivo.writeAsStringSync(
+          '${DateTime.now().toIso8601String()}  $error\n',
+          mode: FileMode.append);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

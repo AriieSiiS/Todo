@@ -201,23 +201,38 @@ class FileBackedLocalStore implements LocalStore {
     if (!await temp.parent.exists()) {
       await temp.parent.create(recursive: true);
     }
-    await temp.writeAsString(contents, flush: true);
+    await conReintentos(() => temp.writeAsString(contents, flush: true));
     if (await file.exists()) {
-      await file.copy(previous.path);
+      await conReintentos(() => file.copy(previous.path));
     }
     try {
-      if (await file.exists()) {
-        await file.delete();
-      }
-      await temp.rename(file.path);
-      if (await previous.exists()) {
-        await previous.delete();
-      }
+      // En Windows, renombrar reemplaza el archivo de una vez: nunca queda un
+      // hueco sin estado guardado.
+      await conReintentos(() => temp.rename(file.path));
     } catch (_) {
       if (!await file.exists() && await previous.exists()) {
         await previous.copy(file.path);
       }
       rethrow;
+    }
+    try {
+      if (await previous.exists()) await previous.delete();
+    } catch (_) {
+      // La copia previa sobrante no impide dar el guardado por bueno.
+    }
+  }
+
+  /// Windows deja a veces el archivo bloqueado unos milisegundos (antivirus,
+  /// indexador o copia de seguridad leyéndolo). Se reintenta antes de fallar.
+  static Future<T> conReintentos<T>(Future<T> Function() accion,
+      {int intentos = 10}) async {
+    for (var i = 1;; i++) {
+      try {
+        return await accion();
+      } on FileSystemException {
+        if (i >= intentos) rethrow;
+        await Future<void>.delayed(Duration(milliseconds: 60 * i));
+      }
     }
   }
 
