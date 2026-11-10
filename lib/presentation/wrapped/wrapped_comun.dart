@@ -463,6 +463,10 @@ class _Autor extends StatelessWidget {
 
 // ============================================================ 11. sagas
 
+/// Entrega que aún no ha salido: tiene fecha prevista o sale más adelante.
+bool _esEstreno(SiguienteEntrega s, int year) =>
+    s.fechaPrevista != null || (s.anoSalida ?? 0) > year;
+
 String _textoSalida(SiguienteEntrega s, int year) {
   if (s.libro?.status == LibraryItemStatus.inProgress) {
     final p = _porcentaje(s.libro!);
@@ -487,7 +491,12 @@ class _Sagas extends StatelessWidget {
   Widget build(BuildContext context) {
     final saga = r.sagas.first;
     final otras = r.sagas.skip(1).take(3).toList();
-    final siguiente = saga.siguiente;
+    // Solo se anuncia lo que está por salir o lo que ya se está leyendo.
+    final siguiente = saga.siguiente != null &&
+            (_esEstreno(saga.siguiente!, r.year) ||
+                saga.siguiente!.libro?.status == LibraryItemStatus.inProgress)
+        ? saga.siguiente
+        : null;
     return _Marco(r: r, children: [
       _etiqueta(t, 0, 'La saga que te atrapó'),
       const SizedBox(height: 6),
@@ -1340,7 +1349,7 @@ class _Perfil extends StatelessWidget {
 bool _hayFuturo(ResumenObras r) =>
     r.enCurso.isNotEmpty ||
     r.pendientes > 0 ||
-    r.sagas.any((s) => s.siguiente != null);
+    r.sagas.any((s) => s.siguiente != null && _esEstreno(s.siguiente!, r.year));
 
 class _LoQueViene extends StatelessWidget {
   const _LoQueViene({required this.r, required this.t});
@@ -1355,6 +1364,7 @@ class _LoQueViene extends StatelessWidget {
     final estrenos = [
       for (final s in r.sagas)
         if (s.siguiente != null &&
+            _esEstreno(s.siguiente!, r.year) &&
             s.siguiente!.libro?.status != LibraryItemStatus.inProgress)
           (saga: s.nombre, entrega: s.siguiente!),
     ].take(2).toList();

@@ -338,6 +338,8 @@ void main() {
         find.byTooltip('Descargar el vídeo entero con música'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+    // El fundido de salida de la música termina solo.
+    await tester.pump(const Duration(seconds: 1));
     expect(wrappedReproduciendo.value, isFalse);
   });
 

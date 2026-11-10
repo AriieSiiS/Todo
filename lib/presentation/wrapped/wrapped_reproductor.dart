@@ -173,6 +173,10 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
         await audio.setVolume(.7 * i / 12);
       }
     } catch (_) {
+      // Sin reproductor de audio disponible: se sigue sin música.
+      final fallido = _audio;
+      _audio = null;
+      if (fallido != null) unawaited(fallido.dispose().catchError((_) {}));
       if (mounted) setState(() {});
     }
   }
