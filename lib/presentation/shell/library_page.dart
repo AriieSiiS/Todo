@@ -172,6 +172,9 @@ class _LibraryPageState extends State<LibraryPage> {
                     ),
                   ),
                 ),
+                onYearSummary: () => abrirCentroWrapped(context,
+                    biblioteca: () => controller.libraryItems,
+                    propositos: () => controller.libraryGoals),
                 onStatistics: () => showDialog<void>(
                     context: context,
                     builder: (_) => ListenableBuilder(
@@ -463,6 +466,7 @@ class _LibraryHeader extends StatelessWidget {
     required this.onYearChanged,
     required this.onAdd,
     required this.onStatistics,
+    required this.onYearSummary,
     required this.onQuotes,
     required this.showGameActions,
     required this.refreshingGames,
@@ -481,6 +485,7 @@ class _LibraryHeader extends StatelessWidget {
   final ValueChanged<int> onYearChanged;
   final VoidCallback onAdd;
   final VoidCallback onStatistics;
+  final VoidCallback onYearSummary;
   final VoidCallback onQuotes;
   final bool showGameActions;
   final bool refreshingGames;
@@ -522,6 +527,11 @@ class _LibraryHeader extends StatelessWidget {
                 tooltip: 'Citas de todos los libros',
                 onPressed: onQuotes,
                 icon: const Icon(Icons.format_quote_rounded)),
+            IconButton(
+                key: const ValueKey('library-year-summary'),
+                tooltip: 'Wrapped: tu año en libros',
+                onPressed: onYearSummary,
+                icon: const Icon(Icons.auto_awesome_rounded)),
             IconButton(
                 tooltip: 'Estadísticas de lectura',
                 onPressed: onStatistics,

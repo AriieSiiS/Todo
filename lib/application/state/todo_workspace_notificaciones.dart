@@ -1,6 +1,11 @@
 part of 'todo_workspace.dart';
 
 extension TodoWorkspaceNotificaciones on TodoWorkspace {
+  /// Notificación de sistema inmediata que no abre ninguna tarea.
+  Future<void> showSystemNotice(
+          {required int id, required String title, required String body}) =>
+      _notificationService.showNow(id: id, title: title, body: body);
+
   Future<void> updateNotificationSettings(
       DeviceNotificationSettings value) async {
     _notificationSettings = value;

@@ -46,6 +46,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _shellArguments = _windowShell.arguments.listen(_handleLaunchArgument);
     unawaited(_windowShell.initialize());
     WidgetsBinding.instance.addObserver(this);
+    wrappedReproduciendo.addListener(_onWrappedPlayback);
     if (_shouldInitializeMusic) {
       _musicController.initialize();
     }
@@ -55,6 +56,7 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    wrappedReproduciendo.removeListener(_onWrappedPlayback);
     unawaited(_shellArguments?.cancel());
     _windowShell
       ..removeListener(_onWindowShellChanged)
@@ -228,6 +230,18 @@ class _AppShellState extends ConsumerState<AppShell>
                     onRetry: controller.retrySave,
                   ),
                 ),
+              if (!_windowShell.compact && !_isWidgetTest())
+                Positioned(
+                  right: 28,
+                  bottom: 28,
+                  child: AvisoWrapped(
+                    biblioteca: () => controller.libraryItems,
+                    propositos: () => controller.libraryGoals,
+                    notificarSistema: (titulo, cuerpo) =>
+                        controller.showSystemNotice(
+                            id: 920031, title: titulo, body: cuerpo),
+                  ),
+                ),
               if (alarm != null)
                 Positioned.fill(
                   child: _ImportantAlarmOverlay(
@@ -246,6 +260,18 @@ class _AppShellState extends ConsumerState<AppShell>
 
   void _onWindowShellChanged() {
     if (mounted) setState(() {});
+  }
+
+  /// El Wrapped trae su propia música: la ambiental se pausa mientras suena.
+  bool _musicPausedForWrapped = false;
+  void _onWrappedPlayback() {
+    if (wrappedReproduciendo.value) {
+      _musicPausedForWrapped = _musicController.isPlaying;
+      if (_musicPausedForWrapped) unawaited(_musicController.pause());
+    } else if (_musicPausedForWrapped) {
+      _musicPausedForWrapped = false;
+      unawaited(_musicController.play());
+    }
   }
 
   /// Atiende un argumento de arranque que llega con la app ya abierta (atajo

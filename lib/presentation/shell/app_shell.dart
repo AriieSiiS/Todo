@@ -1,6 +1,8 @@
 import 'dart:async';
 import '../shared/book_reading_panel.dart';
 import '../shared/book_statistics_panel.dart';
+import '../wrapped/wrapped_centro.dart';
+import '../wrapped/wrapped_reproductor.dart' show wrappedReproduciendo;
 import '../shared/library_quotes_dialog.dart';
 import '../shared/library_platinum_shine.dart';
 import '../shared/drag_mouse_cursors.dart';
