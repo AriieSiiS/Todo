@@ -302,6 +302,10 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
       _anterior();
     } else if (k == LogicalKeyboardKey.keyM) {
       _alternarMusica();
+    } else if (k == LogicalKeyboardKey.escape) {
+      // Una descarga en curso sigue en segundo plano; el Wrapped se cierra.
+      _cancelar = true;
+      unawaited(Navigator.of(context).maybePop());
     } else {
       return KeyEventResult.ignored;
     }
@@ -539,7 +543,7 @@ class _ReproductorWrappedState extends State<ReproductorWrapped>
               right: 0,
               bottom: 10,
               child: Text(
-                'Espacio: pausa · ← →: moverse · M: música',
+                'Espacio: pausa · ← →: moverse · M: música · Esc: salir',
                 textAlign: TextAlign.center,
                 style: TipografiaWrapped.texto(size: 11, color: Colors.white38),
               ),

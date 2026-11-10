@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo/application/wrapped/resumen_general.dart';
 import 'package:todo/application/wrapped/wrapped_modelo.dart';
@@ -308,6 +309,36 @@ void main() {
         expect(tester.takeException(), isNull, reason: '${slide.id} t=$t');
       }
     }
+  });
+
+  testWidgets('Escape cierra el Wrapped', (tester) async {
+    TipografiaWrapped.usarFuentesLocales = true;
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final slides = diapositivasLibros(
+        ResumenLibros.calcular(biblioteca: _biblioteca(), year: 2026));
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => ReproductorWrapped(
+                  tipo: WrappedTipo.libros,
+                  year: 2026,
+                  diapositivas: slides,
+                  musica: 'ninguna'))),
+          child: const Text('abrir'),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.byType(ReproductorWrapped), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(ReproductorWrapped), findsNothing);
   });
 
   testWidgets('el reproductor avanza, pausa y se cierra', (tester) async {
